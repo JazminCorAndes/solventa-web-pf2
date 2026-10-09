@@ -1,4 +1,4 @@
-name: CI
+name: Integración continua
 
 on:
   push:
@@ -19,33 +19,33 @@ concurrency:
 
 jobs:
   quality:
-    name: Quality
+    name: Calidad
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
-      - name: Check out repository
+      - name: Descargar repositorio
         uses: actions/checkout@v6
 
-      - name: Install pnpm
+      - name: Instalar pnpm
         uses: pnpm/action-setup@v5
         with:
           version: 11.19.0
 
-      - name: Set up Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Install dependencies
+      - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
-      - name: Run lint
+      - name: Ejecutar lint
         run: pnpm lint
 
-      - name: Run tests
+      - name: Ejecutar pruebas
         run: pnpm test:ci
 
-      - name: Build application
+      - name: Compilar aplicación
         run: pnpm build
