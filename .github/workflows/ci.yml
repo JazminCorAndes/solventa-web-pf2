@@ -1,0 +1,51 @@
+name: Integración continua
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - master
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Calidad
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 11.19.0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Ejecutar lint
+        run: pnpm lint
+
+      - name: Ejecutar pruebas
+        run: pnpm test:ci
+
+      - name: Compilar aplicación
+        run: pnpm build
