@@ -31,6 +31,7 @@
   "navigation": {
     "menu": "Menú",
     "dashboard": "Inicio",
+    "quotes": "Cotizaciones",
     "policies": "Mis seguros",
     "claims": "Siniestros",
     "notifications": "Notificaciones",
@@ -57,6 +58,66 @@
     }
   },
   "common": {
+    "back": "Volver",
     "retry": "Reintentar"
+  },
+  "offers": {
+    "back": "Volver a solicitud",
+    "title": "Resultado de cotización",
+    "loading": "Actualizando ofertas disponibles",
+    "recommendedPlan": "Plan recomendado",
+    "monthlyPremium": "Prima mensual",
+    "mainCoverage": "Cobertura principal",
+    "generalConditions": "Condiciones generales",
+    "viewOffer": "Ver oferta",
+    "calculationInfo": "Información del cálculo",
+    "quoteId": "ID cotización",
+    "validity": "Vigencia del cálculo",
+    "appliedRate": "Tasa aplicada",
+    "securityAnalysis": "Curva de riesgo proyectada",
+    "listTitle": "Oferta de seguro",
+    "availableCount": "{{ available }} de {{ total }} opciones disponibles",
+    "selectedBadge": "Selección actual",
+    "recommendedBadge": "Recomendada",
+    "coverage": "Cobertura",
+    "deductible": "Deducible",
+    "term": "Vigencia",
+    "liability": "Responsabilidad civil",
+    "finalMonthlyPrice": "Precio final mensual",
+    "taxIncluded": "Incluye costos e impuestos",
+    "select": "Seleccionar oferta",
+    "selected": "Oferta seleccionada",
+    "viewDetails": "Ver detalle",
+    "hideDetails": "Ocultar detalle",
+    "coveragesTitle": "Coberturas",
+    "conditionsTitle": "Condiciones principales",
+    "unavailableMessage": "Esta oferta ya no puede seleccionarse.",
+    "selectToContinue": "Selecciona una oferta vigente para continuar.",
+    "readyToContinue": "{{ name }} está lista para continuar.",
+    "continue": "Continuar a aceptación",
+    "confirming": "Confirmando",
+    "refreshNote": "Puedes comparar esta oferta con otras alternativas en el listado.",
+    "status": {
+      "available": "Disponible",
+      "expired": "Vencida",
+      "withdrawn": "Retirada"
+    },
+    "empty": {
+      "title": "No hay ofertas disponibles",
+      "body": "No encontramos ofertas vigentes para esta cotización. Puedes volver a intentarlo más adelante."
+    },
+    "errors": {
+      "loadTitle": "No pudimos cargar las ofertas",
+      "loadBody": "Inténtalo nuevamente para consultar las opciones disponibles.",
+      "unavailable": "La oferta seleccionada cambió o venció. Revisa las opciones actualizadas.",
+      "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente."
+    }
+  },
+  "acceptance": {
+    "step": "Siguiente paso",
+    "title": "Aceptación de la oferta",
+    "selectedOffer": "Oferta seleccionada",
+    "body": "La aceptación formal de condiciones y coberturas se implementará en la historia correspondiente.",
+    "backToOffers": "Volver a las ofertas"
   }
 }

@@ -137,5 +137,13 @@ GitHub Actions ejecuta en cada pull request dirigido a `master` o `develop`:
 ## Alcance actual
 
 La aplicación incluye inicio de sesión simulado, sesión de cliente, rutas protegidas, cierre de
-sesión y un dashboard con datos simulados. Cotizaciones, siniestros, detalle de pólizas,
-notificaciones y recuperación de contraseña permanecen fuera del alcance actual.
+sesión, un dashboard y comparación de ofertas calculadas con datos simulados. El cliente puede
+consultar coberturas y condiciones, seleccionar una oferta vigente y continuar hacia una
+pantalla mínima de aceptación.
+
+La selección se conserva temporalmente en `sessionStorage`. Las ofertas vencidas o retiradas
+permanecen visibles para comparación, pero no se pueden seleccionar. El adaptador de ofertas
+está aislado para sustituirlo posteriormente por la API real.
+
+La aceptación formal, nuevas cotizaciones, siniestros, detalle de pólizas, notificaciones y
+recuperación de contraseña permanecen fuera del alcance actual.
