@@ -1,0 +1,224 @@
+<section class="quote-request-page">
+  <header>
+    <a routerLink="/app/dashboard">← {{ 'quoteRequest.back' | transloco }}</a>
+    <h1>{{ 'quoteRequest.title' | transloco }}</h1>
+    <p>{{ 'quoteRequest.subtitle' | transloco }}</p>
+  </header>
+
+  <div class="request-grid">
+    <div class="request-column">
+      <mat-card appearance="outlined" class="product-card">
+        <mat-card-content>
+          <span class="product-symbol" aria-hidden="true">▣</span>
+          <div class="product-copy">
+            <span>{{ 'quoteRequest.selectedInsurance' | transloco }}</span>
+            <strong>
+              {{
+                selectedProduct()?.name ?? ('quoteRequest.selectInsurancePlaceholder' | transloco)
+              }}
+            </strong>
+          </div>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'quoteRequest.changeInsurance' | transloco }}</mat-label>
+            <mat-select [formControl]="form.controls.productId" (selectionChange)="clearMessages()">
+              @for (product of quotes.products(); track product.id) {
+                <mat-option [value]="product.id" [disabled]="!product.available">
+                  {{ product.name }}
+                  @if (!product.available) {
+                    — {{ 'quoteRequest.comingSoon' | transloco }}
+                  }
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined" class="form-card">
+        <mat-card-content>
+          @if (quotes.catalogStatus() === 'loading') {
+            <div class="catalog-status" role="status">
+              <mat-spinner diameter="22" />
+              {{ 'quoteRequest.loadingProducts' | transloco }}
+            </div>
+          } @else if (quotes.catalogStatus() === 'error') {
+            <div class="inline-alert error" role="alert">
+              {{ 'quoteRequest.errors.products' | transloco }}
+              <button mat-button type="button" (click)="quotes.loadProducts()">
+                {{ 'common.retry' | transloco }}
+              </button>
+            </div>
+          }
+
+          <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+            <span id="customer-type-label" class="field-label">
+              {{ 'quoteRequest.customerType' | transloco }}
+            </span>
+            <mat-button-toggle-group
+              formControlName="customerType"
+              hideSingleSelectionIndicator
+              aria-labelledby="customer-type-label"
+            >
+              <mat-button-toggle value="natural">
+                {{ 'quoteRequest.naturalPerson' | transloco }}
+              </mat-button-toggle>
+            </mat-button-toggle-group>
+
+            <div class="field-grid">
+              <div>
+                <label for="national-id">{{ 'quoteRequest.nationalId' | transloco }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <input
+                    matInput
+                    id="national-id"
+                    autocomplete="off"
+                    formControlName="nationalId"
+                    placeholder="12.345.678-9"
+                  />
+                  @if (showError('nationalId')) {
+                    <mat-error>{{ 'quoteRequest.validation.nationalId' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+
+              <div>
+                <label for="vehicle-plate">{{ 'quoteRequest.vehiclePlate' | transloco }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <input
+                    matInput
+                    id="vehicle-plate"
+                    autocomplete="off"
+                    formControlName="vehiclePlate"
+                    placeholder="ABCD-12"
+                  />
+                  @if (showError('vehiclePlate')) {
+                    <mat-error>{{ 'quoteRequest.validation.vehiclePlate' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+            </div>
+
+            <label for="quote-email">{{ 'quoteRequest.email' | transloco }}</label>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <input
+                matInput
+                id="quote-email"
+                type="email"
+                autocomplete="email"
+                formControlName="email"
+                placeholder="ejemplo@correo.com"
+              />
+              @if (showError('email')) {
+                <mat-error>{{ 'quoteRequest.validation.email' | transloco }}</mat-error>
+              }
+            </mat-form-field>
+
+            <label for="quote-phone">{{ 'quoteRequest.phone' | transloco }}</label>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <span matTextPrefix class="phone-prefix">+56</span>
+              <input
+                matInput
+                id="quote-phone"
+                type="tel"
+                autocomplete="tel"
+                formControlName="phone"
+                placeholder="9 1234 5678"
+              />
+              @if (showError('phone')) {
+                <mat-error>{{ 'quoteRequest.validation.phone' | transloco }}</mat-error>
+              }
+            </mat-form-field>
+
+            @if (attempted() && form.invalid) {
+              <div class="inline-alert error" role="alert">
+                <span aria-hidden="true">!</span>
+                {{ 'quoteRequest.validation.summary' | transloco }}
+              </div>
+            }
+
+            @if (errorKey()) {
+              <div class="inline-alert error" role="alert">
+                <span aria-hidden="true">!</span>
+                {{ errorKey()! | transloco }}
+              </div>
+            }
+
+            @if (submittedRequest(); as request) {
+              <div class="inline-alert success" role="status">
+                <div>
+                  <strong>{{ 'quoteRequest.success.title' | transloco }}</strong>
+                  <span>
+                    {{ 'quoteRequest.success.id' | transloco: { id: request.id } }}
+                  </span>
+                </div>
+                <a mat-stroked-button routerLink="/app/cotizaciones/ofertas">
+                  {{ 'quoteRequest.success.viewOffers' | transloco }}
+                </a>
+              </div>
+            }
+
+            <button
+              mat-flat-button
+              type="submit"
+              class="submit-button"
+              [disabled]="submitting() || !!submittedRequest()"
+            >
+              @if (submitting()) {
+                <mat-spinner diameter="20" />
+                {{ 'quoteRequest.processing' | transloco }}
+              } @else if (submittedRequest()) {
+                {{ 'quoteRequest.received' | transloco }}
+              } @else {
+                {{ 'quoteRequest.submit' | transloco }} →
+              }
+            </button>
+
+            @if (submitting()) {
+              <span class="processing-note" role="status">
+                {{ 'quoteRequest.riskProcessing' | transloco }}
+              </span>
+            }
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <mat-card appearance="outlined" class="context-card">
+      <mat-card-content>
+        <h2>{{ 'quoteRequest.context.title' | transloco }}</h2>
+        <dl>
+          <div>
+            <dt>{{ 'quoteRequest.customerType' | transloco }}</dt>
+            <dd>{{ 'quoteRequest.naturalPerson' | transloco }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'quoteRequest.context.financialInfo' | transloco }}</dt>
+            <dd>
+              {{ 'quoteRequest.context.lowRisk' | transloco }}
+              <small>{{ 'quoteRequest.context.creditBureau' | transloco }}</small>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ 'quoteRequest.context.variables' | transloco }}</dt>
+            <dd>{{ 'quoteRequest.context.variablesValue' | transloco }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'quoteRequest.context.date' | transloco }}</dt>
+            <dd>{{ consultationDate | date: 'mediumDate' }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'quoteRequest.context.source' | transloco }}</dt>
+            <dd>{{ 'quoteRequest.context.sourceValue' | transloco }}</dd>
+          </div>
+        </dl>
+
+        <div class="privacy-note">
+          <span aria-hidden="true">i</span>
+          <p>{{ 'quoteRequest.context.privacy' | transloco }}</p>
+        </div>
+
+        <div class="risk-placeholder">{{ 'quoteRequest.context.riskChart' | transloco }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</section>

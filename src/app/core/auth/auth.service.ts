@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { finalize, map, Observable, tap } from 'rxjs';
 import { AUTH_GATEWAY } from './auth.gateway';
 import { AuthSession, LoginCredentials } from './auth.models';
 import { AUTH_STORAGE } from './auth-storage.service';
@@ -22,9 +22,22 @@ export class AuthService {
     );
   }
 
-  logout(): void {
-    this.storage.clear();
-    this.sessionState.set(null);
+  synchronizeSession(): Observable<void> {
+    return this.gateway.currentSession().pipe(
+      tap((session) => {
+        if (session) {
+          this.storage.write(session);
+          this.sessionState.set(session);
+        } else {
+          this.clearLocalSession();
+        }
+      }),
+      map(() => undefined),
+    );
+  }
+
+  logout(): Observable<void> {
+    return this.gateway.logout().pipe(finalize(() => this.clearLocalSession()));
   }
 
   hasActiveSession(): boolean {
@@ -34,7 +47,7 @@ export class AuthService {
     }
 
     if (session.expiresAt <= Date.now()) {
-      this.logout();
+      this.clearLocalSession();
       return false;
     }
 
@@ -48,5 +61,10 @@ export class AuthService {
       return null;
     }
     return session;
+  }
+
+  private clearLocalSession(): void {
+    this.storage.clear();
+    this.sessionState.set(null);
   }
 }

@@ -6,7 +6,9 @@
       <p>{{ 'dashboard.subtitle' | transloco }}</p>
     </div>
     <div class="heading-actions">
-      <button mat-flat-button type="button" disabled>{{ 'dashboard.newQuote' | transloco }}</button>
+      <a mat-flat-button routerLink="/app/cotizaciones/solicitar">
+        {{ 'dashboard.newQuote' | transloco }}
+      </a>
       <button mat-stroked-button type="button" disabled>
         {{ 'dashboard.reportClaim' | transloco }}
       </button>

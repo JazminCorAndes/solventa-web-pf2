@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { finalize, Observable, take, tap, throwError } from 'rxjs';
+import { finalize, map, Observable, switchMap, take, tap, throwError } from 'rxjs';
 import { OfferSelectionRequiredError, OfferUnavailableError } from './offer.errors';
 import { OFFER_GATEWAY } from './offer.gateway';
 import { InsuranceOffer, OfferCalculation, SelectedOfferRecord } from './offer.models';
@@ -54,6 +54,11 @@ export class OfferSelectionService {
     this.gateway
       .loadOffers()
       .pipe(
+        switchMap((calculation) =>
+          this.gateway
+            .loadSelection(calculation.quoteId)
+            .pipe(map((selection) => ({ calculation, selection }))),
+        ),
         take(1),
         finalize(() => {
           if (this.statusState() === 'loading') {
@@ -62,8 +67,13 @@ export class OfferSelectionService {
         }),
       )
       .subscribe({
-        next: (calculation) => {
+        next: ({ calculation, selection }) => {
           this.calculationState.set(calculation);
+          if (selection) {
+            this.storage.write(selection);
+          } else {
+            this.storage.clear();
+          }
           this.reconcileStoredSelection(calculation);
           this.statusState.set(calculation.offers.length ? 'ready' : 'empty');
         },
