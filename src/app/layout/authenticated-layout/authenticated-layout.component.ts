@@ -51,7 +51,12 @@ export class AuthenticatedLayoutComponent {
   }
 
   logout(): void {
-    this.auth.logout();
-    void this.router.navigate(['/iniciar-sesion']);
+    this.auth.logout().subscribe({
+      next: () => void this.router.navigate(['/iniciar-sesion']),
+      error: (error: unknown) => {
+        console.error('The remote session could not be closed.', error);
+        void this.router.navigate(['/iniciar-sesion']);
+      },
+    });
   }
 }
