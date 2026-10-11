@@ -61,7 +61,7 @@ public/
   assets/i18n/        Traducciones estáticas
 src/
   app/
-    core/             Autenticación, dashboard e internacionalización
+    core/             Contratos y lógica de autenticación, cotizaciones y ofertas
     data-access/      Adaptadores reemplazables para acceso a datos
     features/         Pantallas organizadas por funcionalidad
     layout/           Estructuras de navegación
@@ -137,13 +137,14 @@ GitHub Actions ejecuta en cada pull request dirigido a `master` o `develop`:
 ## Alcance actual
 
 La aplicación incluye inicio de sesión simulado, sesión de cliente, rutas protegidas, cierre de
-sesión, un dashboard y comparación de ofertas calculadas con datos simulados. El cliente puede
-consultar coberturas y condiciones, seleccionar una oferta vigente y continuar hacia una
-pantalla mínima de aceptación.
+sesión, un dashboard, solicitud de cotización y comparación de ofertas calculadas con datos
+simulados. El cliente puede seleccionar el seguro disponible, ingresar y validar sus datos,
+registrar la solicitud con un identificador y continuar a las ofertas asociadas.
 
-La selección se conserva temporalmente en `sessionStorage`. Las ofertas vencidas o retiradas
-permanecen visibles para comparación, pero no se pueden seleccionar. El adaptador de ofertas
-está aislado para sustituirlo posteriormente por la API real.
+La última solicitud y la selección de oferta se conservan temporalmente en `sessionStorage`.
+Las ofertas vencidas o retiradas permanecen visibles para comparación, pero no se pueden
+seleccionar. Los adaptadores de solicitudes y ofertas están aislados para sustituirlos
+posteriormente por la API real.
 
-La aceptación formal, nuevas cotizaciones, siniestros, detalle de pólizas, notificaciones y
-recuperación de contraseña permanecen fuera del alcance actual.
+La aceptación formal, siniestros, detalle de pólizas, notificaciones y recuperación de
+contraseña permanecen fuera del alcance actual.

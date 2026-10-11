@@ -57,6 +57,57 @@
       "pending": "Pendiente"
     }
   },
+  "quoteRequest": {
+    "back": "Volver a seguros",
+    "title": "Solicitar cotización",
+    "subtitle": "Completa los datos para generar una propuesta personalizada.",
+    "selectedInsurance": "Seguro seleccionado",
+    "selectInsurancePlaceholder": "Selecciona un seguro",
+    "changeInsurance": "Elegir seguro",
+    "comingSoon": "Próximamente",
+    "loadingProducts": "Cargando seguros disponibles",
+    "customerType": "Tipo de cliente",
+    "naturalPerson": "Persona natural",
+    "nationalId": "RUT / Identificación",
+    "vehiclePlate": "Patente del vehículo",
+    "email": "Correo electrónico",
+    "phone": "Teléfono de contacto",
+    "submit": "Solicitar cotización",
+    "processing": "Enviando solicitud",
+    "riskProcessing": "Procesando solicitud de riesgo...",
+    "received": "Solicitud recibida",
+    "validation": {
+      "nationalId": "Ingresa una identificación válida.",
+      "vehiclePlate": "Ingresa una patente válida.",
+      "email": "Ingresa un correo válido.",
+      "phone": "Ingresa un teléfono válido.",
+      "summary": "Completa correctamente todos los campos obligatorios para continuar."
+    },
+    "success": {
+      "title": "Solicitud recibida correctamente",
+      "id": "Identificador: {{ id }}",
+      "viewOffers": "Ver ofertas"
+    },
+    "errors": {
+      "products": "No fue posible cargar los seguros disponibles.",
+      "unavailable": "No fue posible enviar la solicitud en este momento. Inténtalo nuevamente.",
+      "productUnavailable": "El seguro seleccionado ya no está disponible.",
+      "unexpected": "Ocurrió un error inesperado al enviar la solicitud."
+    },
+    "context": {
+      "title": "Información utilizada para el perfilamiento",
+      "financialInfo": "Información financiera",
+      "lowRisk": "Nivel de riesgo: Bajo",
+      "creditBureau": "Buró de crédito",
+      "variables": "Variables de cálculo",
+      "variablesValue": "Edad, historial, modelo",
+      "date": "Fecha de consulta",
+      "source": "Fuente de información",
+      "sourceValue": "Adaptador simulado Solventa",
+      "privacy": "Tus datos son tratados bajo protocolos de seguridad y solo se utilizarán para calcular la prima del seguro solicitado.",
+      "riskChart": "Gráfico de scoring simulado"
+    }
+  },
   "common": {
     "back": "Volver",
     "retry": "Reintentar"
