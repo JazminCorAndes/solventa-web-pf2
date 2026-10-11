@@ -8,6 +8,7 @@ gestiona en Jira y las decisiones visuales deben seguir la versión más recient
 ## Tecnologías
 
 - Angular 22
+- Angular Material 22
 - TypeScript 6 en modo estricto
 - pnpm 11
 - SCSS
@@ -60,10 +61,15 @@ public/
   assets/i18n/        Traducciones estáticas
 src/
   app/
-    core/i18n/        Configuración de internacionalización
+    core/             Autenticación, dashboard e internacionalización
+    data-access/      Adaptadores reemplazables para acceso a datos
+    features/         Pantallas organizadas por funcionalidad
+    layout/           Estructuras de navegación
+    shared/           Componentes reutilizables
     app.config.ts     Proveedores globales
     app.routes.ts     Rutas de la aplicación
-  styles.scss         Estilos globales
+  styles/             Tokens, tema Material y estilos base
+  styles.scss         Punto de entrada de estilos
 ```
 
 ## Internacionalización
@@ -73,6 +79,37 @@ adicional. Las traducciones se encuentran en:
 
 - `public/assets/i18n/es.json`
 - `public/assets/i18n/en.json`
+
+## Autenticación de desarrollo
+
+La aplicación usa temporalmente un adaptador simulado reemplazable. No se almacenan
+contraseñas y la sesión se conserva únicamente en `sessionStorage`.
+
+Credenciales de desarrollo:
+
+```text
+Correo: cliente@solventa.co
+Contraseña: Solventa123!
+```
+
+El adaptador simulado está aislado detrás de un contrato para poder sustituirlo por la API sin
+reescribir el formulario, los guards ni el dashboard.
+
+## Sistema visual
+
+Angular Material es la biblioteca base de componentes. Cada componente standalone importa
+solamente los módulos Material que utiliza; no existe un módulo global que exporte toda la
+biblioteca.
+
+Los estilos se organizan así:
+
+- `src/styles/_tokens.scss`: colores, espaciado, radios y valores de Solventa.
+- `src/styles/_material-theme.scss`: tema y overrides oficiales de Angular Material.
+- `src/styles/_base.scss`: estilos base y reglas generales de accesibilidad.
+- Archivos SCSS de componentes: distribución y comportamiento responsive local.
+
+Las personalizaciones deben usar primero el tema, los tokens y las APIs oficiales de overrides.
+No se deben modificar clases internas de Material.
 
 ## Flujo de trabajo Git
 
@@ -99,4 +136,6 @@ GitHub Actions ejecuta en cada pull request dirigido a `master` o `develop`:
 
 ## Alcance actual
 
-Esta etapa no incluye pantallas de negocio, autenticación ni integración con backend.
+La aplicación incluye inicio de sesión simulado, sesión de cliente, rutas protegidas, cierre de
+sesión y un dashboard con datos simulados. Cotizaciones, siniestros, detalle de pólizas,
+notificaciones y recuperación de contraseña permanecen fuera del alcance actual.
