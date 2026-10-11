@@ -41,6 +41,17 @@ pnpm start
 
 La aplicación estará disponible en `http://localhost:4200`.
 
+## Demo en GitHub Pages
+
+La rama `master` se publica automáticamente como una demo con adaptadores simulados:
+
+```text
+https://jazmincorandes.github.io/solventa-web-pf2/
+```
+
+GitHub Pages no ejecuta el backend Python. La demo permite recorrer la interfaz con los datos
+simulados y las credenciales de desarrollo documentadas más adelante.
+
 ## Comandos
 
 | Comando             | Descripción                                 |
