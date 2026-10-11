@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth/auth.guards';
+import { offerSelectionGuard } from './core/offers/offer-selection.guard';
 
 export const routes: Routes = [
   {
@@ -26,6 +27,23 @@ export const routes: Routes = [
             (component) => component.DashboardPageComponent,
           ),
         title: 'Inicio | Solventa',
+      },
+      {
+        path: 'cotizaciones/ofertas',
+        loadComponent: () =>
+          import('./features/offers/offer-selection-page.component').then(
+            (component) => component.OfferSelectionPageComponent,
+          ),
+        title: 'Ofertas de seguro | Solventa',
+      },
+      {
+        path: 'cotizaciones/aceptacion',
+        canActivate: [offerSelectionGuard],
+        loadComponent: () =>
+          import('./features/offers/offer-acceptance-page.component').then(
+            (component) => component.OfferAcceptancePageComponent,
+          ),
+        title: 'Aceptación de oferta | Solventa',
       },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],

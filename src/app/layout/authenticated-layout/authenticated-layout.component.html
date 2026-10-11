@@ -18,6 +18,14 @@
       >
         {{ 'navigation.dashboard' | transloco }}
       </a>
+      <a
+        mat-button
+        routerLink="/app/cotizaciones/ofertas"
+        routerLinkActive="active"
+        (click)="closeMobileMenu()"
+      >
+        {{ 'navigation.quotes' | transloco }}
+      </a>
       <button mat-button type="button" disabled>{{ 'navigation.policies' | transloco }}</button>
       <button mat-button type="button" disabled>{{ 'navigation.claims' | transloco }}</button>
       <button mat-button type="button" disabled>

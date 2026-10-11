@@ -31,6 +31,7 @@
   "navigation": {
     "menu": "Menu",
     "dashboard": "Home",
+    "quotes": "Quotes",
     "policies": "My insurance",
     "claims": "Claims",
     "notifications": "Notifications",
@@ -57,6 +58,66 @@
     }
   },
   "common": {
+    "back": "Back",
     "retry": "Retry"
+  },
+  "offers": {
+    "back": "Back to request",
+    "title": "Quote result",
+    "loading": "Updating available offers",
+    "recommendedPlan": "Recommended plan",
+    "monthlyPremium": "Monthly premium",
+    "mainCoverage": "Main coverage",
+    "generalConditions": "General conditions",
+    "viewOffer": "View offer",
+    "calculationInfo": "Calculation information",
+    "quoteId": "Quote ID",
+    "validity": "Calculation validity",
+    "appliedRate": "Applied rate",
+    "securityAnalysis": "Projected risk curve",
+    "listTitle": "Insurance offer",
+    "availableCount": "{{ available }} of {{ total }} options available",
+    "selectedBadge": "Current selection",
+    "recommendedBadge": "Recommended",
+    "coverage": "Coverage",
+    "deductible": "Deductible",
+    "term": "Term",
+    "liability": "Liability",
+    "finalMonthlyPrice": "Final monthly price",
+    "taxIncluded": "Includes costs and taxes",
+    "select": "Select offer",
+    "selected": "Offer selected",
+    "viewDetails": "View details",
+    "hideDetails": "Hide details",
+    "coveragesTitle": "Coverages",
+    "conditionsTitle": "Main conditions",
+    "unavailableMessage": "This offer can no longer be selected.",
+    "selectToContinue": "Select an available offer to continue.",
+    "readyToContinue": "{{ name }} is ready to continue.",
+    "continue": "Continue to acceptance",
+    "confirming": "Confirming",
+    "refreshNote": "You can compare this offer with other alternatives in the list.",
+    "status": {
+      "available": "Available",
+      "expired": "Expired",
+      "withdrawn": "Withdrawn"
+    },
+    "empty": {
+      "title": "No offers available",
+      "body": "We could not find current offers for this quote. You can try again later."
+    },
+    "errors": {
+      "loadTitle": "We could not load the offers",
+      "loadBody": "Try again to retrieve the available options.",
+      "unavailable": "The selected offer changed or expired. Review the updated options.",
+      "confirmation": "The selection could not be confirmed. Please try again."
+    }
+  },
+  "acceptance": {
+    "step": "Next step",
+    "title": "Offer acceptance",
+    "selectedOffer": "Selected offer",
+    "body": "Formal acceptance of conditions and coverages will be implemented in its corresponding story.",
+    "backToOffers": "Back to offers"
   }
 }

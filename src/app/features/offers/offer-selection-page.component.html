@@ -1,0 +1,249 @@
+<section class="offers-page">
+  <header class="page-header">
+    <div>
+      <a routerLink="/app/dashboard" class="back-link">← {{ 'offers.back' | transloco }}</a>
+      <h1>{{ 'offers.title' | transloco }}</h1>
+    </div>
+    <button mat-stroked-button type="button" routerLink="/app/dashboard">
+      ← {{ 'common.back' | transloco }}
+    </button>
+  </header>
+
+  @if (offers.status() === 'loading' || offers.status() === 'idle') {
+    <div class="state-panel" role="status">
+      <mat-spinner diameter="36" />
+      <span>{{ 'offers.loading' | transloco }}</span>
+    </div>
+  } @else if (offers.status() === 'error') {
+    <div class="state-panel" role="alert">
+      <h2>{{ 'offers.errors.loadTitle' | transloco }}</h2>
+      <p>{{ 'offers.errors.loadBody' | transloco }}</p>
+      <button mat-stroked-button type="button" (click)="offers.load()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  } @else if (offers.status() === 'empty') {
+    <div class="state-panel empty-state" role="status">
+      <h2>{{ 'offers.empty.title' | transloco }}</h2>
+      <p>{{ 'offers.empty.body' | transloco }}</p>
+    </div>
+  } @else if (offers.calculation(); as calculation) {
+    @if (offers.recommendedOffer(); as recommendedOffer) {
+      <div class="quote-summary-grid">
+        <mat-card appearance="outlined" class="recommended-summary">
+          <mat-card-content>
+            <div class="summary-heading">
+              <div>
+                <span class="eyebrow">{{ 'offers.recommendedPlan' | transloco }}</span>
+                <strong>{{ recommendedOffer.name }}</strong>
+              </div>
+              <div class="premium">
+                <span>{{ 'offers.monthlyPremium' | transloco }}</span>
+                <strong>UF {{ recommendedOffer.monthlyPremiumUf | number: '1.2-2' }}</strong>
+              </div>
+            </div>
+
+            <mat-divider />
+
+            <div class="summary-block">
+              <strong>{{ 'offers.mainCoverage' | transloco }}</strong>
+              <p>✓ {{ recommendedOffer.coverages[0] }}</p>
+            </div>
+
+            <div class="summary-block">
+              <strong>{{ 'offers.generalConditions' | transloco }}</strong>
+              <ul>
+                @for (condition of recommendedOffer.conditions; track condition) {
+                  <li>{{ condition }}</li>
+                }
+              </ul>
+            </div>
+
+            <button mat-flat-button type="button" (click)="showOffer(recommendedOffer.id)">
+              {{ 'offers.viewOffer' | transloco }} →
+            </button>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined" class="calculation-card">
+          <mat-card-content>
+            <span class="eyebrow">{{ 'offers.calculationInfo' | transloco }}</span>
+            <dl>
+              <div>
+                <dt>{{ 'offers.quoteId' | transloco }}</dt>
+                <dd>{{ calculation.quoteId }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'offers.validity' | transloco }}</dt>
+                <dd>{{ calculation.validUntil | date: 'medium' }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'offers.appliedRate' | transloco }}</dt>
+                <dd>{{ calculation.appliedRate }}</dd>
+              </div>
+            </dl>
+            <div class="security-placeholder">{{ 'offers.securityAnalysis' | transloco }}</div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
+
+    <mat-divider class="section-divider" />
+
+    <div class="offers-heading">
+      <h2>{{ 'offers.listTitle' | transloco }}</h2>
+      <span>
+        {{
+          'offers.availableCount'
+            | transloco
+              : { available: offers.availableOffers().length, total: calculation.offers.length }
+        }}
+      </span>
+    </div>
+
+    <div class="offers-list">
+      @for (offer of calculation.offers; track offer.id) {
+        <mat-card
+          [id]="'offer-' + offer.id"
+          appearance="outlined"
+          class="offer-card"
+          [class.selected]="offers.selectedOfferId() === offer.id"
+          [class.unavailable]="!offers.isSelectable(offer)"
+        >
+          @if (offers.selectedOfferId() === offer.id) {
+            <span class="selection-badge">{{ 'offers.selectedBadge' | transloco }}</span>
+          } @else if (offer.recommended) {
+            <span class="selection-badge recommended">
+              {{ 'offers.recommendedBadge' | transloco }}
+            </span>
+          }
+
+          <mat-card-content>
+            <div class="offer-main">
+              <div class="offer-description">
+                <div class="offer-title">
+                  <span class="offer-symbol" aria-hidden="true">◈</span>
+                  <div>
+                    <h3>{{ offer.name }}</h3>
+                    <p>{{ offer.description }}</p>
+                  </div>
+                </div>
+
+                <div class="offer-facts">
+                  <div>
+                    <span>{{ 'offers.coverage' | transloco }}</span>
+                    <strong>{{ offer.coverageLabel }}</strong>
+                  </div>
+                  <div>
+                    <span>{{ 'offers.deductible' | transloco }}</span>
+                    <strong>{{ offer.deductibleLabel }}</strong>
+                  </div>
+                  <div>
+                    <span>{{ 'offers.term' | transloco }}</span>
+                    <strong>{{ offer.validityLabel }}</strong>
+                  </div>
+                  <div>
+                    <span>{{ 'offers.liability' | transloco }}</span>
+                    <strong>{{ offer.liabilityLabel }}</strong>
+                  </div>
+                </div>
+
+                <div class="benefits">
+                  @for (benefit of offer.additionalBenefits; track benefit) {
+                    <mat-chip>{{ benefit }}</mat-chip>
+                  }
+                </div>
+              </div>
+
+              <div class="offer-action">
+                @if (offers.isSelectable(offer)) {
+                  <span>{{ 'offers.finalMonthlyPrice' | transloco }}</span>
+                  <strong>UF {{ offer.monthlyPremiumUf | number: '1.2-2' }}</strong>
+                  <small>{{ 'offers.taxIncluded' | transloco }}</small>
+                  <button
+                    mat-flat-button
+                    type="button"
+                    (click)="selectOffer(offer)"
+                    [disabled]="offers.selectedOfferId() === offer.id"
+                  >
+                    {{
+                      (offers.selectedOfferId() === offer.id ? 'offers.selected' : 'offers.select')
+                        | transloco
+                    }}
+                  </button>
+                } @else {
+                  <mat-chip class="status-chip">
+                    {{ 'offers.status.' + offer.status | transloco }}
+                  </mat-chip>
+                  <p>{{ 'offers.unavailableMessage' | transloco }}</p>
+                }
+
+                <button mat-button type="button" (click)="offers.toggleDetails(offer.id)">
+                  {{
+                    (offers.expandedOfferId() === offer.id
+                      ? 'offers.hideDetails'
+                      : 'offers.viewDetails'
+                    ) | transloco
+                  }}
+                </button>
+              </div>
+            </div>
+
+            @if (offers.expandedOfferId() === offer.id) {
+              <mat-divider />
+              <div class="offer-details">
+                <section>
+                  <h4>{{ 'offers.coveragesTitle' | transloco }}</h4>
+                  <ul>
+                    @for (coverage of offer.coverages; track coverage) {
+                      <li>{{ coverage }}</li>
+                    }
+                  </ul>
+                </section>
+                <section>
+                  <h4>{{ 'offers.conditionsTitle' | transloco }}</h4>
+                  <ul>
+                    @for (condition of offer.conditions; track condition) {
+                      <li>{{ condition }}</li>
+                    }
+                  </ul>
+                </section>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+
+    @if (confirmationErrorKey()) {
+      <div class="confirmation-error" role="alert">
+        {{ confirmationErrorKey()! | transloco }}
+      </div>
+    }
+
+    <div class="continue-bar">
+      <span>
+        {{
+          offers.selectedOffer()
+            ? ('offers.readyToContinue' | transloco: { name: offers.selectedOffer()?.name })
+            : ('offers.selectToContinue' | transloco)
+        }}
+      </span>
+      <button
+        mat-flat-button
+        type="button"
+        [disabled]="!offers.canContinue() || confirming()"
+        (click)="continueToAcceptance()"
+      >
+        @if (confirming()) {
+          <mat-spinner diameter="20" />
+          {{ 'offers.confirming' | transloco }}
+        } @else {
+          {{ 'offers.continue' | transloco }} →
+        }
+      </button>
+    </div>
+
+    <p class="refresh-note">ⓘ {{ 'offers.refreshNote' | transloco }}</p>
+  }
+</section>
