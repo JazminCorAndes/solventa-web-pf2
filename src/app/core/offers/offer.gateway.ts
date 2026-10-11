@@ -4,6 +4,7 @@ import { OfferCalculation, SelectedOfferRecord } from './offer.models';
 
 export interface OfferGateway {
   loadOffers(): Observable<OfferCalculation>;
+  loadSelection(quoteId: string): Observable<SelectedOfferRecord | null>;
   confirmSelection(
     quoteId: string,
     offerId: string,

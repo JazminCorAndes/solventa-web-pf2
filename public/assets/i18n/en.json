@@ -57,12 +57,82 @@
       "pending": "Pending"
     }
   },
+  "quoteRequest": {
+    "back": "Back to quotes",
+    "title": "Request a quote",
+    "subtitle": "Complete the details to generate a personalized proposal.",
+    "selectedInsurance": "Selected insurance",
+    "selectInsurancePlaceholder": "Select insurance",
+    "changeInsurance": "Choose insurance",
+    "comingSoon": "Coming soon",
+    "loadingProducts": "Loading available insurance",
+    "customerType": "Customer type",
+    "naturalPerson": "Individual",
+    "nationalId": "ID number",
+    "vehiclePlate": "Vehicle plate",
+    "email": "Email",
+    "phone": "Contact phone",
+    "submit": "Request quote",
+    "processing": "Sending request",
+    "riskProcessing": "Processing risk request...",
+    "received": "Request received",
+    "validation": {
+      "nationalId": "Enter a valid identification.",
+      "vehiclePlate": "Enter a valid vehicle plate.",
+      "email": "Enter a valid email.",
+      "phone": "Enter a valid phone.",
+      "summary": "Complete all required fields correctly to continue."
+    },
+    "success": {
+      "title": "Request received successfully",
+      "id": "Identifier: {{ id }}",
+      "viewOffers": "View offers"
+    },
+    "errors": {
+      "products": "Available insurance products could not be loaded.",
+      "unavailable": "The request could not be sent at this time. Please try again.",
+      "productUnavailable": "The selected insurance is no longer available.",
+      "unexpected": "An unexpected error occurred while sending the request."
+    },
+    "context": {
+      "title": "Information used for profiling",
+      "financialInfo": "Financial information",
+      "lowRisk": "Risk level: Low",
+      "creditBureau": "Credit bureau",
+      "variables": "Calculation variables",
+      "variablesValue": "Age, history, model",
+      "date": "Consultation date",
+      "source": "Information source",
+      "sourceValue": "Solventa simulated adapter",
+      "privacy": "Your data is handled under security protocols and will only be used to calculate the requested insurance premium.",
+      "riskChart": "Simulated scoring chart"
+    }
+  },
+  "quoteSummary": {
+    "eyebrow": "Summary",
+    "title": "My quotes",
+    "subtitle": "Review your current request or start a new quote.",
+    "newQuote": "New quote",
+    "requestedAt": "Request date",
+    "vehiclePlate": "Vehicle plate",
+    "email": "Email",
+    "phone": "Phone",
+    "viewOffers": "View offers",
+    "status": {
+      "received": "Request received"
+    },
+    "empty": {
+      "title": "You do not have any quotes yet",
+      "body": "Request a quote to compare the available offers for your vehicle.",
+      "action": "Request a quote"
+    }
+  },
   "common": {
     "back": "Back",
     "retry": "Retry"
   },
   "offers": {
-    "back": "Back to request",
+    "back": "Back to quotes",
     "title": "Quote result",
     "loading": "Updating available offers",
     "recommendedPlan": "Recommended plan",

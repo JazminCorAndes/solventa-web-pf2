@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { map, Observable, timer } from 'rxjs';
+import { map, Observable, of, timer } from 'rxjs';
 import {
   AuthenticationUnavailableError,
   InvalidCredentialsError,
@@ -12,6 +12,8 @@ const DEMO_PASSWORD = 'Solventa123!';
 
 @Injectable()
 export class MockAuthGateway implements AuthGateway {
+  private activeSession: AuthSession | null = null;
+
   login(credentials: LoginCredentials): Observable<AuthSession> {
     return timer(650).pipe(
       map(() => {
@@ -22,7 +24,7 @@ export class MockAuthGateway implements AuthGateway {
           throw new InvalidCredentialsError();
         }
 
-        return {
+        this.activeSession = {
           user: {
             id: 'client-001',
             name: 'Natalia Córdoba',
@@ -31,7 +33,17 @@ export class MockAuthGateway implements AuthGateway {
           },
           expiresAt: Date.now() + 8 * 60 * 60 * 1000,
         };
+        return this.activeSession;
       }),
     );
+  }
+
+  currentSession(): Observable<AuthSession | null> {
+    return of(this.activeSession);
+  }
+
+  logout(): Observable<void> {
+    this.activeSession = null;
+    return of(undefined);
   }
 }

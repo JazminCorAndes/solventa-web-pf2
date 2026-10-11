@@ -34,6 +34,9 @@ yarn-error.log
 .sass-cache/
 /connect.lock
 /coverage
+/reports
+/.pnpm-store
+__pycache__/
 /libpeerconnection.log
 testem.log
 /typings
