@@ -2,7 +2,8 @@
 
 Aplicación web de Solventa para Proyecto Final II de la Universidad de los Andes.
 
-Este repositorio contiene la base técnica de la aplicación web. El alcance funcional se gestiona en Jira y las decisiones visuales deben seguir la versión más reciente de Figma.
+Este repositorio contiene la base técnica de la aplicación web. El alcance funcional se
+gestiona en Jira y las decisiones visuales deben seguir la versión más reciente de Figma.
 
 ## Tecnologías
 
@@ -23,7 +24,8 @@ Este repositorio contiene la base técnica de la aplicación web. El alcance fun
 - pnpm 11.19.0
 - Git
 
-La versión esperada de Node.js está declarada en `.nvmrc` y la versión de pnpm en `package.json`.
+La versión esperada de Node.js está declarada en `.nvmrc` y la versión de pnpm en
+`package.json`.
 
 Comprueba las versiones instaladas:
 
@@ -36,7 +38,8 @@ git --version
 ## Instalación
 
 ```bash
-git clone  https://github.com/JazminCorAndes/solventa-web-pf2.git
+git clone https://github.com/JazminCorAndes/solventa-web-pf2.git
+cd solventa-web-pf2
 pnpm install --frozen-lockfile
 ```
 
@@ -171,7 +174,8 @@ Para iniciar sesión se usa el correo configurado en
 4. Ejecuta `pnpm lint`.
 5. Ejecuta `pnpm build`.
 
-Registra cualquier diferencia de versiones o error y actualiza esta guía si se identifica un paso faltante.
+Registra cualquier diferencia de versiones o error y actualiza esta guía si se identifica un
+paso faltante.
 
 ## Estructura del repositorio
 
@@ -193,7 +197,8 @@ src/
 
 ## Internacionalización
 
-Transloco está configurado con español como idioma predeterminado e inglés como idioma adicional. Las traducciones se encuentran en:
+Transloco está configurado con español como idioma predeterminado e inglés como idioma
+adicional. Las traducciones se encuentran en:
 
 - `public/assets/i18n/es.json`
 - `public/assets/i18n/en.json`
@@ -232,7 +237,9 @@ El repositorio usa GitFlow:
 - `release/*`: preparación de versiones.
 - `hotfix/*`: correcciones urgentes de producción.
 
-Todo cambio compartido debe llegar mediante pull request. Las ramas `master` y `develop` requieren al menos una aprobación, conversaciones resueltas y validaciones exitosas antes de integrar cambios.
+Todo cambio compartido debe llegar mediante pull request. Las ramas `master` y `develop`
+requieren al menos una aprobación, conversaciones resueltas y validaciones exitosas antes de
+integrar cambios.
 
 ## Integración continua
 
@@ -243,7 +250,7 @@ GitHub Actions ejecuta en cada pull request dirigido a `master` o `develop`:
 3. Pruebas unitarias.
 4. Build de producción.
 
-## Referencias
+## Alcance actual
 
 La aplicación incluye inicio de sesión, sesión de cliente, rutas protegidas, cierre de sesión,
 dashboard, solicitud de cotización y comparación de ofertas. Autenticación, solicitudes y
@@ -257,3 +264,26 @@ se pueden seleccionar.
 
 La aceptación formal, siniestros, detalle de pólizas, notificaciones y recuperación de
 contraseña permanecen fuera del alcance actual.
+
+## Referencias
+
+- **Jira:** consultar el backlog y los criterios de aceptación aprobados.
+- **Figma:** consultar el archivo de diseño vigente antes de implementar pantallas.
+- **Backend:** consultar la sección de desarrollo local con backend para ejecutar la integración.
+
+## Solución de problemas
+
+### La instalación falla
+
+- Comprueba `node --version` y `pnpm --version`.
+- Confirma que estás en la carpeta que contiene `package.json`.
+- Vuelve a ejecutar `pnpm install --frozen-lockfile` y revisa el mensaje completo.
+
+### El puerto 4200 está ocupado
+
+Cierra el proceso que utiliza el puerto o consulta con el equipo el puerto alternativo acordado.
+
+### Las pruebas o el build fallan
+
+Ejecuta `pnpm test:ci` y `pnpm build` y revisa el primer error reportado. No des por completada
+la validación hasta resolverlo o documentar el bloqueo.
