@@ -1,0 +1,40 @@
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$blue-palette,
+        tertiary: mat.$cyan-palette,
+      ),
+      typography: var(--solventa-font-family),
+      density: 0,
+    )
+  );
+}
+
+:root {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--solventa-color-primary),
+      filled-label-text-color: #ffffff,
+      filled-container-height: 44px,
+      filled-container-shape: var(--solventa-radius-sm),
+    )
+  );
+  @include mat.card-overrides(
+    (
+      elevated-container-color: var(--solventa-color-surface),
+      elevated-container-shape: var(--solventa-radius-md),
+      elevated-container-elevation: var(--solventa-shadow-card),
+    )
+  );
+  @include mat.form-field-overrides(
+    (
+      outlined-container-shape: var(--solventa-radius-sm),
+      outlined-outline-color: var(--solventa-color-border),
+      outlined-hover-outline-color: var(--solventa-color-text-secondary),
+      outlined-focus-outline-color: var(--solventa-color-focus),
+    )
+  );
+}
