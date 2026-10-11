@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth/auth.guards';
 import { offerSelectionGuard } from './core/offers/offer-selection.guard';
+import { quoteRequestGuard } from './core/quotes/quote-request.guard';
 
 export const routes: Routes = [
   {
@@ -29,6 +30,15 @@ export const routes: Routes = [
         title: 'Inicio | Solventa',
       },
       {
+        path: 'cotizaciones',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./features/quotes/quote-summary-page.component').then(
+            (component) => component.QuoteSummaryPageComponent,
+          ),
+        title: 'Cotizaciones | Solventa',
+      },
+      {
         path: 'cotizaciones/solicitar',
         loadComponent: () =>
           import('./features/quotes/quote-request-page.component').then(
@@ -38,6 +48,7 @@ export const routes: Routes = [
       },
       {
         path: 'cotizaciones/ofertas',
+        canActivate: [quoteRequestGuard],
         loadComponent: () =>
           import('./features/offers/offer-selection-page.component').then(
             (component) => component.OfferSelectionPageComponent,
@@ -46,7 +57,7 @@ export const routes: Routes = [
       },
       {
         path: 'cotizaciones/aceptacion',
-        canActivate: [offerSelectionGuard],
+        canActivate: [quoteRequestGuard, offerSelectionGuard],
         loadComponent: () =>
           import('./features/offers/offer-acceptance-page.component').then(
             (component) => component.OfferAcceptancePageComponent,
