@@ -2,6 +2,12 @@
 
 ## Estado
 
+Actualización de preparación del controlador: la App web suministrada por la propietaria es `solventa-web-jenkins-jazmin` (App ID 5277435, instalación 170369065). La credencial `solventa-web-github-app` se guarda únicamente en el store de carpeta `solventa-web`; el PEM se convirtió a PKCS#8 y la prueba de conexión del usuario fue exitosa. No reutilizar credenciales Android.
+
+`infra/jenkins/configure-web.groovy` configura el multibranch `solventa-web/pr-checks` DESACTIVADO, sin programar scans, con supresión de builds automáticos. Verifica el almacén local y el acceso al repositorio antes de configurar la fuente. El scanner web separado está preparado en `configure-comment-trigger.groovy`, pero su instalación/activación requiere herramientas y lifecycle aprobados. Su archivo confiable `web-comment-trigger.json` debe contener owner/repository/credentialId exactos y `enabled: false` inicialmente; no incluir secretos. Mantener un ledger independiente del Android.
+
+El controlador puede compilar los scripts y ejecutar las assertions puras sin activar el scanner. Esto no prueba scheduling, publicación de checks ni builds reales.
+
 Este PR prepara el pipeline web; **no instala Jenkins, crea credenciales ni activa un job**. GitHub Actions y su check `Calidad` se conservan sin cambios. La ejecución real en Jenkins y la publicación de `Solventa Web Jenkins` siguen pendientes. No se configura despliegue/CD ni se declara autenticación backend real.
 
 El pipeline usa los comandos existentes: instalación con lockfile, lint, pruebas Angular/Vitest en jsdom y build de producción. El reporte JUnit utiliza opciones verificadas de `ng test`. No requiere navegador ni emulador; estas pruebas no sustituyen pruebas E2E con backend. No añade cobertura o formato como nuevas condiciones obligatorias.

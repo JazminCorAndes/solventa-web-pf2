@@ -13,6 +13,7 @@ pipeline {
     environment {
         CI = 'true'
         NG_CLI_ANALYTICS = 'false'
+        PATH = "/opt/jenkins-web/node-v22.22.3-linux-x64/bin:/opt/jenkins-web/pnpm-11.19.0/bin:${env.PATH}"
         PNPM_STORE_DIR = "${WORKSPACE}/.pnpm-store"
     }
 

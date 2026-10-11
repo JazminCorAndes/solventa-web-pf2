@@ -36,6 +36,7 @@ yarn-error.log
 /coverage
 /reports
 /.pnpm-store
+__pycache__/
 /libpeerconnection.log
 testem.log
 /typings
