@@ -58,7 +58,7 @@
     }
   },
   "quoteRequest": {
-    "back": "Back to insurance",
+    "back": "Back to quotes",
     "title": "Request a quote",
     "subtitle": "Complete the details to generate a personalized proposal.",
     "selectedInsurance": "Selected insurance",
@@ -108,12 +108,31 @@
       "riskChart": "Simulated scoring chart"
     }
   },
+  "quoteSummary": {
+    "eyebrow": "Summary",
+    "title": "My quotes",
+    "subtitle": "Review your current request or start a new quote.",
+    "newQuote": "New quote",
+    "requestedAt": "Request date",
+    "vehiclePlate": "Vehicle plate",
+    "email": "Email",
+    "phone": "Phone",
+    "viewOffers": "View offers",
+    "status": {
+      "received": "Request received"
+    },
+    "empty": {
+      "title": "You do not have any quotes yet",
+      "body": "Request a quote to compare the available offers for your vehicle.",
+      "action": "Request a quote"
+    }
+  },
   "common": {
     "back": "Back",
     "retry": "Retry"
   },
   "offers": {
-    "back": "Back to request",
+    "back": "Back to quotes",
     "title": "Quote result",
     "loading": "Updating available offers",
     "recommendedPlan": "Recommended plan",

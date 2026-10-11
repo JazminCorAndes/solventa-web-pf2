@@ -58,7 +58,7 @@
     }
   },
   "quoteRequest": {
-    "back": "Volver a seguros",
+    "back": "Volver a cotizaciones",
     "title": "Solicitar cotización",
     "subtitle": "Completa los datos para generar una propuesta personalizada.",
     "selectedInsurance": "Seguro seleccionado",
@@ -108,12 +108,31 @@
       "riskChart": "Gráfico de scoring simulado"
     }
   },
+  "quoteSummary": {
+    "eyebrow": "Resumen",
+    "title": "Mis cotizaciones",
+    "subtitle": "Consulta tu solicitud actual o inicia una nueva cotización.",
+    "newQuote": "Nueva cotización",
+    "requestedAt": "Fecha de solicitud",
+    "vehiclePlate": "Patente del vehículo",
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "viewOffers": "Ver ofertas",
+    "status": {
+      "received": "Solicitud recibida"
+    },
+    "empty": {
+      "title": "Aún no tienes cotizaciones",
+      "body": "Solicita una cotización para comparar las ofertas disponibles para tu vehículo.",
+      "action": "Solicitar cotización"
+    }
+  },
   "common": {
     "back": "Volver",
     "retry": "Reintentar"
   },
   "offers": {
-    "back": "Volver a solicitud",
+    "back": "Volver a cotizaciones",
     "title": "Resultado de cotización",
     "loading": "Actualizando ofertas disponibles",
     "recommendedPlan": "Plan recomendado",
