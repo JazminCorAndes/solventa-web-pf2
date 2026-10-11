@@ -22,6 +22,12 @@ import {
 import { MockAuthGateway } from './data-access/auth/mock-auth.gateway';
 import { MockDashboardGateway } from './data-access/dashboard/mock-dashboard.gateway';
 import { MockOfferGateway } from './data-access/offers/mock-offer.gateway';
+import { QUOTE_REQUEST_GATEWAY } from './core/quotes/quote-request.gateway';
+import {
+  BrowserQuoteRequestStorage,
+  QUOTE_REQUEST_STORAGE,
+} from './core/quotes/quote-request-storage.service';
+import { MockQuoteRequestGateway } from './data-access/quotes/mock-quote-request.gateway';
 
 registerLocaleData(localeEsCo);
 
@@ -36,6 +42,8 @@ export const appConfig: ApplicationConfig = {
     { provide: DASHBOARD_GATEWAY, useClass: MockDashboardGateway },
     { provide: OFFER_GATEWAY, useClass: MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
+    { provide: QUOTE_REQUEST_GATEWAY, useClass: MockQuoteRequestGateway },
+    { provide: QUOTE_REQUEST_STORAGE, useClass: BrowserQuoteRequestStorage },
     provideTransloco({
       config: {
         availableLangs: ['es', 'en'],
