@@ -54,6 +54,10 @@ class TestOfferGateway implements OfferGateway {
     return of(this.calculation);
   }
 
+  loadSelection(): Observable<SelectedOfferRecord | null> {
+    return of(null);
+  }
+
   confirmSelection(
     quoteId: string,
     offerId: string,

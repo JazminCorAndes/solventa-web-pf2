@@ -33,26 +33,128 @@ La versión esperada de Node.js está declarada en `.nvmrc` y la versión de pnp
 pnpm install --frozen-lockfile
 ```
 
-## Desarrollo local
+## Desarrollo local con mocks
 
 ```bash
 pnpm start
 ```
 
-La aplicación estará disponible en `http://localhost:4200`.
+La aplicación estará disponible en `http://localhost:4200`. Este modo usa los adaptadores
+simulados y no requiere ejecutar el backend.
+
+Credenciales del adaptador simulado:
+
+```text
+Correo: cliente@solventa.co
+Contraseña: Solventa123!
+```
+
+## Desarrollo local con backend
+
+Este modo conecta el frontend con el BFF Web y el servicio de cotización reales. Se necesitan
+los repositorios `solventa-web-pf2` y `backend-solventa`, Python 3.12 y tres terminales.
+
+No existe fallback automático a mocks: si el backend no está disponible, la aplicación informa
+el error. Para volver a los mocks, se debe detener el servidor y ejecutar `pnpm start`.
+
+### 1. Preparar el backend
+
+Desde la raíz de `backend-solventa`, en PowerShell:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+
+Get-ChildItem services -Directory |
+  Where-Object { Test-Path "$($_.FullName)\pyproject.toml" } |
+  ForEach-Object { python -m pip install -e "$($_.FullName)[dev]" }
+```
+
+La instalación solo es necesaria la primera vez o cuando cambien las dependencias.
+
+### 2. Preparar y ejecutar cotización
+
+En la primera terminal, desde `backend-solventa`:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+Set-Location services\cotizacion
+$env:DATABASE_URL = "sqlite:///cotizacion.db"
+python -m alembic upgrade head
+python -m flask --app cotizacion.app run --port 5000 --no-reload
+```
+
+El servicio de cotización quedará disponible en `http://localhost:5000`.
+
+### 3. Configurar y ejecutar el BFF
+
+Primero se genera un hash para la contraseña local. El comando solicita la contraseña sin
+mostrarla en la terminal:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+Set-Location services\bff-web
+python -c "from getpass import getpass; from bff_web.infrastructure.passwords import hash_password; print(hash_password(getpass('Contraseña local: ')))"
+```
+
+En la segunda terminal, desde `backend-solventa`, se reemplaza `<HASH_GENERADO>` por el valor
+obtenido y se inicia el BFF:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+Set-Location services\bff-web
+
+$env:AUTH_DEVELOPMENT_USERS_JSON = @'
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "nombre": "Cliente Solventa",
+    "correo": "cliente@solventa.co",
+    "rol": "cliente",
+    "passwordHash": "<HASH_GENERADO>"
+  }
+]
+'@
+
+$env:SESSION_COOKIE_SECURE = "false"
+$env:QUOTE_SERVICE_URL = "http://localhost:5000"
+python -m flask --app bff_web.app run --port 5001 --no-reload
+```
+
+`SESSION_COOKIE_SECURE=false` se usa únicamente para desarrollo local por HTTP. En ambientes
+con HTTPS debe permanecer en `true`.
+
+### 4. Ejecutar el frontend conectado
+
+En la tercera terminal, desde `solventa-web-pf2`:
+
+```powershell
+pnpm install --frozen-lockfile
+pnpm start:backend
+```
+
+La aplicación estará disponible en `http://localhost:4200`. El proxy de desarrollo envía las
+solicitudes `/api` al BFF en `http://localhost:5001`, manteniendo las cookies de sesión en el
+mismo origen del frontend.
+
+Para iniciar sesión se usa el correo configurado en
+`AUTH_DEVELOPMENT_USERS_JSON` y la contraseña utilizada para generar el hash.
 
 ## Comandos
 
-| Comando             | Descripción                                 |
-| ------------------- | ------------------------------------------- |
-| `pnpm start`        | Inicia el servidor de desarrollo            |
-| `pnpm build`        | Genera el build de producción               |
-| `pnpm build:dev`    | Genera un build de desarrollo               |
-| `pnpm test`         | Ejecuta las pruebas en modo interactivo     |
-| `pnpm test:ci`      | Ejecuta las pruebas una sola vez            |
-| `pnpm lint`         | Ejecuta ESLint                              |
-| `pnpm format`       | Formatea el código con Prettier             |
-| `pnpm format:check` | Comprueba el formato sin modificar archivos |
+| Comando              | Descripción                                        |
+| -------------------- | -------------------------------------------------- |
+| `pnpm start`         | Inicia el desarrollo con adaptadores simulados     |
+| `pnpm start:backend` | Inicia el desarrollo conectado al BFF              |
+| `pnpm build`         | Genera el build de producción conectado al backend |
+| `pnpm build:dev`     | Genera un build de desarrollo con mocks            |
+| `pnpm build:backend` | Genera un build de desarrollo conectado al backend |
+| `pnpm test`          | Ejecuta las pruebas en modo interactivo            |
+| `pnpm test:ci`       | Ejecuta las pruebas una sola vez                   |
+| `pnpm lint`          | Ejecuta ESLint                                     |
+| `pnpm format`        | Formatea el código con Prettier                    |
+| `pnpm format:check`  | Comprueba el formato sin modificar archivos        |
 
 ## Estructura
 
@@ -82,18 +184,11 @@ adicional. Las traducciones se encuentran en:
 
 ## Autenticación de desarrollo
 
-La aplicación usa temporalmente un adaptador simulado reemplazable. No se almacenan
-contraseñas y la sesión se conserva únicamente en `sessionStorage`.
+En modo mock, los datos no salen del navegador y la sesión se conserva en `sessionStorage`.
 
-Credenciales de desarrollo:
-
-```text
-Correo: cliente@solventa.co
-Contraseña: Solventa123!
-```
-
-El adaptador simulado está aislado detrás de un contrato para poder sustituirlo por la API sin
-reescribir el formulario, los guards ni el dashboard.
+En modo backend, el BFF controla la sesión con una cookie `HttpOnly`. El frontend conserva
+únicamente los datos no sensibles necesarios para presentar la sesión y siempre consulta al
+BFF al iniciar la aplicación.
 
 ## Sistema visual
 
@@ -136,15 +231,15 @@ GitHub Actions ejecuta en cada pull request dirigido a `master` o `develop`:
 
 ## Alcance actual
 
-La aplicación incluye inicio de sesión simulado, sesión de cliente, rutas protegidas, cierre de
-sesión, un dashboard, solicitud de cotización y comparación de ofertas calculadas con datos
-simulados. El cliente puede seleccionar el seguro disponible, ingresar y validar sus datos,
-registrar la solicitud con un identificador y continuar a las ofertas asociadas.
+La aplicación incluye inicio de sesión, sesión de cliente, rutas protegidas, cierre de sesión,
+dashboard, solicitud de cotización y comparación de ofertas. Autenticación, solicitudes y
+ofertas pueden ejecutarse con adaptadores simulados o contra el BFF real. El dashboard continúa
+usando datos simulados.
 
-La última solicitud y la selección de oferta se conservan temporalmente en `sessionStorage`.
-Las ofertas vencidas o retiradas permanecen visibles para comparación, pero no se pueden
-seleccionar. Los adaptadores de solicitudes y ofertas están aislados para sustituirlos
-posteriormente por la API real.
+En modo backend, las solicitudes y selecciones quedan persistidas por el servicio de
+cotización. `sessionStorage` conserva la referencia necesaria para reanudar el flujo en la
+misma pestaña. Las ofertas vencidas o retiradas permanecen visibles para comparación, pero no
+se pueden seleccionar.
 
 La aceptación formal, siniestros, detalle de pólizas, notificaciones y recuperación de
 contraseña permanecen fuera del alcance actual.

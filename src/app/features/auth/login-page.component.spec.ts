@@ -36,6 +36,14 @@ class TestAuthGateway implements AuthGateway {
     this.calls++;
     return this.response;
   }
+
+  currentSession(): Observable<AuthSession | null> {
+    return of(null);
+  }
+
+  logout(): Observable<void> {
+    return of(undefined);
+  }
 }
 
 describe('LoginPageComponent', () => {

@@ -1,5 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
+import {
+  OFFER_SELECTION_STORAGE,
+  OfferSelectionStorage,
+} from '../../core/offers/offer-selection-storage.service';
+import { SelectedOfferRecord } from '../../core/offers/offer.models';
 import { QuoteRequestRecord } from '../../core/quotes/quote-request.models';
 import {
   QUOTE_REQUEST_STORAGE,
@@ -27,12 +32,21 @@ class TestQuoteRequestStorage implements QuoteRequestStorage {
   clear(): void {}
 }
 
+class TestOfferSelectionStorage implements OfferSelectionStorage {
+  read(): SelectedOfferRecord | null {
+    return null;
+  }
+  write(): void {}
+  clear(): void {}
+}
+
 describe('MockOfferGateway', () => {
   it('uses the latest request identifier in the calculated offers', async () => {
     TestBed.configureTestingModule({
       providers: [
         MockOfferGateway,
         { provide: QUOTE_REQUEST_STORAGE, useClass: TestQuoteRequestStorage },
+        { provide: OFFER_SELECTION_STORAGE, useClass: TestOfferSelectionStorage },
       ],
     });
     const gateway = TestBed.inject(MockOfferGateway);

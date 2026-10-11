@@ -19,6 +19,14 @@ class TestAuthGateway implements AuthGateway {
   login() {
     return of(ACTIVE_SESSION);
   }
+
+  currentSession() {
+    return of(ACTIVE_SESSION);
+  }
+
+  logout() {
+    return of(undefined);
+  }
 }
 
 class TestAuthStorage implements AuthStorage {
@@ -84,7 +92,7 @@ describe('AuthService', () => {
     const service = TestBed.inject(AuthService);
     await firstValueFrom(service.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }));
 
-    service.logout();
+    await firstValueFrom(service.logout());
 
     expect(service.session()).toBeNull();
     expect(storage.stored).toBeNull();

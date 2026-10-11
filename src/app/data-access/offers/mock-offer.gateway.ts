@@ -8,6 +8,7 @@ import {
   SelectedOfferRecord,
 } from '../../core/offers/offer.models';
 import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
+import { OFFER_SELECTION_STORAGE } from '../../core/offers/offer-selection-storage.service';
 
 const OFFERS: InsuranceOffer[] = [
   {
@@ -88,6 +89,7 @@ const CALCULATION: OfferCalculation = {
 @Injectable()
 export class MockOfferGateway implements OfferGateway {
   private readonly quoteRequestStorage = inject(QUOTE_REQUEST_STORAGE);
+  private readonly selectionStorage = inject(OFFER_SELECTION_STORAGE);
 
   loadOffers(): Observable<OfferCalculation> {
     const request = this.quoteRequestStorage.read();
@@ -95,6 +97,10 @@ export class MockOfferGateway implements OfferGateway {
       ...CALCULATION,
       quoteId: request?.id ?? CALCULATION.quoteId,
     }).pipe(delay(450));
+  }
+
+  loadSelection(): Observable<SelectedOfferRecord | null> {
+    return of(this.selectionStorage.read());
   }
 
   confirmSelection(
