@@ -4,7 +4,9 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:backend": "ng serve --configuration backend",
     "build": "ng build",
+    "build:backend": "ng build --configuration backend",
     "build:dev": "ng build --configuration development",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
@@ -19,10 +21,12 @@
     "node": ">=22.22.3"
   },
   "dependencies": {
+    "@angular/cdk": "^22.2.2",
     "@angular/common": "^22.1.0",
     "@angular/compiler": "^22.1.0",
     "@angular/core": "^22.1.0",
     "@angular/forms": "^22.1.0",
+    "@angular/material": "^22.2.2",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
     "@jsverse/transloco": "^8.4.0",

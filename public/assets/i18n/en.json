@@ -1,1 +1,193 @@
-{}
+{
+  "auth": {
+    "title": "Sign in",
+    "email": {
+      "label": "Username or email",
+      "placeholder": "example@email.com"
+    },
+    "password": {
+      "label": "Password",
+      "placeholder": "Enter your password",
+      "show": "Show",
+      "hide": "Hide"
+    },
+    "forgotPassword": "Forgot your password?",
+    "submit": "Sign in",
+    "processing": "Signing in",
+    "noAccount": "Don't have an account?",
+    "contact": "Contact us",
+    "logout": "Sign out",
+    "validation": {
+      "emailRequired": "Email is required.",
+      "emailInvalid": "Enter a valid email.",
+      "passwordRequired": "Password is required."
+    },
+    "errors": {
+      "invalidCredentials": "The username or password is incorrect.",
+      "unavailable": "Sign in is currently unavailable. Please try again.",
+      "unexpected": "An unexpected error occurred. Please try again."
+    }
+  },
+  "navigation": {
+    "menu": "Menu",
+    "dashboard": "Home",
+    "quotes": "Quotes",
+    "policies": "My insurance",
+    "claims": "Claims",
+    "notifications": "Notifications",
+    "comingSoon": "Additional operations will be available soon."
+  },
+  "dashboard": {
+    "summary": "Account summary",
+    "greeting": "Hello, {{ name }}",
+    "subtitle": "Review your insurance status and latest updates.",
+    "newQuote": "New quote",
+    "reportClaim": "Report a claim",
+    "loading": "Loading your information",
+    "error": "The dashboard information could not be loaded.",
+    "activePolicies": "Active insurance",
+    "policiesStatus": "Current policies",
+    "notifications": "Notifications",
+    "unread": "Unread",
+    "upcomingTrip": "Upcoming trip",
+    "trip": "Insured destination",
+    "recentNotifications": "Recent notifications",
+    "status": {
+      "active": "Active",
+      "pending": "Pending"
+    }
+  },
+  "quoteRequest": {
+    "back": "Back to quotes",
+    "title": "Request a quote",
+    "subtitle": "Complete the details to generate a personalized proposal.",
+    "selectedInsurance": "Selected insurance",
+    "selectInsurancePlaceholder": "Select insurance",
+    "changeInsurance": "Choose insurance",
+    "comingSoon": "Coming soon",
+    "loadingProducts": "Loading available insurance",
+    "customerType": "Customer type",
+    "naturalPerson": "Individual",
+    "nationalId": "ID number",
+    "vehiclePlate": "Vehicle plate",
+    "email": "Email",
+    "phone": "Contact phone",
+    "submit": "Request quote",
+    "processing": "Sending request",
+    "riskProcessing": "Processing risk request...",
+    "received": "Request received",
+    "validation": {
+      "nationalId": "Enter a valid identification.",
+      "vehiclePlate": "Enter a valid vehicle plate.",
+      "email": "Enter a valid email.",
+      "phone": "Enter a valid phone.",
+      "summary": "Complete all required fields correctly to continue."
+    },
+    "success": {
+      "title": "Request received successfully",
+      "id": "Identifier: {{ id }}",
+      "viewOffers": "View offers"
+    },
+    "errors": {
+      "products": "Available insurance products could not be loaded.",
+      "unavailable": "The request could not be sent at this time. Please try again.",
+      "productUnavailable": "The selected insurance is no longer available.",
+      "unexpected": "An unexpected error occurred while sending the request."
+    },
+    "context": {
+      "title": "Information used for profiling",
+      "financialInfo": "Financial information",
+      "lowRisk": "Risk level: Low",
+      "creditBureau": "Credit bureau",
+      "variables": "Calculation variables",
+      "variablesValue": "Age, history, model",
+      "date": "Consultation date",
+      "source": "Information source",
+      "sourceValue": "Solventa simulated adapter",
+      "privacy": "Your data is handled under security protocols and will only be used to calculate the requested insurance premium.",
+      "riskChart": "Simulated scoring chart"
+    }
+  },
+  "quoteSummary": {
+    "eyebrow": "Summary",
+    "title": "My quotes",
+    "subtitle": "Review your current request or start a new quote.",
+    "newQuote": "New quote",
+    "requestedAt": "Request date",
+    "vehiclePlate": "Vehicle plate",
+    "email": "Email",
+    "phone": "Phone",
+    "viewOffers": "View offers",
+    "status": {
+      "received": "Request received"
+    },
+    "empty": {
+      "title": "You do not have any quotes yet",
+      "body": "Request a quote to compare the available offers for your vehicle.",
+      "action": "Request a quote"
+    }
+  },
+  "common": {
+    "back": "Back",
+    "retry": "Retry"
+  },
+  "offers": {
+    "back": "Back to quotes",
+    "title": "Quote result",
+    "loading": "Updating available offers",
+    "recommendedPlan": "Recommended plan",
+    "monthlyPremium": "Monthly premium",
+    "mainCoverage": "Main coverage",
+    "generalConditions": "General conditions",
+    "viewOffer": "View offer",
+    "calculationInfo": "Calculation information",
+    "quoteId": "Quote ID",
+    "validity": "Calculation validity",
+    "appliedRate": "Applied rate",
+    "securityAnalysis": "Projected risk curve",
+    "listTitle": "Insurance offer",
+    "availableCount": "{{ available }} of {{ total }} options available",
+    "selectedBadge": "Current selection",
+    "recommendedBadge": "Recommended",
+    "coverage": "Coverage",
+    "deductible": "Deductible",
+    "term": "Term",
+    "liability": "Liability",
+    "finalMonthlyPrice": "Final monthly price",
+    "taxIncluded": "Includes costs and taxes",
+    "select": "Select offer",
+    "selected": "Offer selected",
+    "viewDetails": "View details",
+    "hideDetails": "Hide details",
+    "coveragesTitle": "Coverages",
+    "conditionsTitle": "Main conditions",
+    "unavailableMessage": "This offer can no longer be selected.",
+    "selectToContinue": "Select an available offer to continue.",
+    "readyToContinue": "{{ name }} is ready to continue.",
+    "continue": "Continue to acceptance",
+    "confirming": "Confirming",
+    "refreshNote": "You can compare this offer with other alternatives in the list.",
+    "status": {
+      "available": "Available",
+      "expired": "Expired",
+      "withdrawn": "Withdrawn"
+    },
+    "empty": {
+      "title": "No offers available",
+      "body": "We could not find current offers for this quote. You can try again later."
+    },
+    "errors": {
+      "loadTitle": "We could not load the offers",
+      "loadBody": "Try again to retrieve the available options.",
+      "unavailable": "The selected offer changed or expired. Review the updated options.",
+      "confirmation": "The selection could not be confirmed. Please try again."
+    }
+  },
+  "acceptance": {
+    "step": "Next step",
+    "title": "Offer acceptance",
+    "selectedOffer": "Selected offer",
+    "body": "Formal acceptance of conditions and coverages will be implemented in its corresponding story.",
+    "backToOffers": "Back to offers"
+  }
+}

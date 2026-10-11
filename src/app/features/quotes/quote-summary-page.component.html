@@ -1,0 +1,62 @@
+<section class="quote-summary-page">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">{{ 'quoteSummary.eyebrow' | transloco }}</span>
+      <h1>{{ 'quoteSummary.title' | transloco }}</h1>
+      <p>{{ 'quoteSummary.subtitle' | transloco }}</p>
+    </div>
+    <a mat-flat-button routerLink="/app/cotizaciones/solicitar">
+      {{ 'quoteSummary.newQuote' | transloco }}
+    </a>
+  </header>
+
+  @if (request(); as quote) {
+    <mat-card appearance="outlined" class="summary-card">
+      <mat-card-header>
+        <div>
+          <span class="status">{{ 'quoteSummary.status.' + quote.status | transloco }}</span>
+          <mat-card-title>{{ productName() }}</mat-card-title>
+          <mat-card-subtitle>{{ quote.id }}</mat-card-subtitle>
+        </div>
+      </mat-card-header>
+
+      <mat-card-content>
+        <dl>
+          <div>
+            <dt>{{ 'quoteSummary.requestedAt' | transloco }}</dt>
+            <dd>{{ quote.createdAt | date: 'medium' }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'quoteSummary.vehiclePlate' | transloco }}</dt>
+            <dd>{{ quote.vehiclePlate }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'quoteSummary.email' | transloco }}</dt>
+            <dd>{{ quote.email }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'quoteSummary.phone' | transloco }}</dt>
+            <dd>{{ quote.phone }}</dd>
+          </div>
+        </dl>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <a mat-flat-button routerLink="/app/cotizaciones/ofertas">
+          {{ 'quoteSummary.viewOffers' | transloco }}
+        </a>
+      </mat-card-actions>
+    </mat-card>
+  } @else {
+    <mat-card appearance="outlined" class="empty-card">
+      <mat-card-content>
+        <span class="empty-icon" aria-hidden="true">◇</span>
+        <h2>{{ 'quoteSummary.empty.title' | transloco }}</h2>
+        <p>{{ 'quoteSummary.empty.body' | transloco }}</p>
+        <a mat-flat-button routerLink="/app/cotizaciones/solicitar">
+          {{ 'quoteSummary.empty.action' | transloco }}
+        </a>
+      </mat-card-content>
+    </mat-card>
+  }
+</section>

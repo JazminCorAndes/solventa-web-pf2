@@ -1,0 +1,138 @@
+.dashboard {
+  max-width: var(--solventa-content-max-width);
+  margin: 0 auto;
+}
+
+.dashboard-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--solventa-space-6);
+  margin-bottom: var(--solventa-space-8);
+}
+
+.eyebrow {
+  color: var(--solventa-color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: var(--solventa-space-2) 0;
+  font-size: clamp(1.7rem, 4vw, 2.25rem);
+}
+
+.dashboard-heading p {
+  margin: 0;
+  color: var(--solventa-color-text-secondary);
+}
+
+.heading-actions {
+  display: flex;
+  gap: var(--solventa-space-3);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--solventa-space-4);
+  margin-bottom: var(--solventa-space-5);
+}
+
+.metric-grid mat-card-content {
+  display: grid;
+  gap: var(--solventa-space-2);
+  padding: var(--solventa-space-5);
+}
+
+.metric-grid span,
+.metric-grid small {
+  color: var(--solventa-color-text-secondary);
+}
+
+.metric-grid strong {
+  font-size: 1.9rem;
+}
+
+.accent-card {
+  background: var(--solventa-color-primary);
+  color: #ffffff;
+}
+
+.accent-card span,
+.accent-card small {
+  color: rgb(255 255 255 / 72%);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--solventa-space-5);
+}
+
+mat-card-header {
+  align-items: center;
+  padding: var(--solventa-space-5) var(--solventa-space-5) var(--solventa-space-2);
+}
+
+.card-spacer {
+  flex: 1;
+}
+
+.disabled-action {
+  color: var(--solventa-color-text-secondary);
+  font-size: 0.76rem;
+}
+
+.notification-dot {
+  width: 8px;
+  height: 8px;
+  margin: 0 var(--solventa-space-3) 0 0;
+  border-radius: 50%;
+  background: var(--solventa-color-primary);
+}
+
+.notification-dot.read {
+  background: var(--solventa-color-border);
+}
+
+mat-chip {
+  --mdc-chip-elevated-container-color: #ecfdf3;
+  --mdc-chip-label-text-color: var(--solventa-color-success);
+}
+
+mat-chip.pending {
+  --mdc-chip-elevated-container-color: var(--solventa-color-surface-muted);
+  --mdc-chip-label-text-color: var(--solventa-color-text-secondary);
+}
+
+.state-panel {
+  display: grid;
+  min-height: 300px;
+  align-content: center;
+  justify-items: center;
+  gap: var(--solventa-space-4);
+  border-radius: var(--solventa-radius-md);
+  background: var(--solventa-color-surface);
+}
+
+@media (max-width: 900px) {
+  .metric-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .heading-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,57 @@
+<mat-sidenav-container>
+  <mat-sidenav
+    [mode]="isHandset() ? 'over' : 'side'"
+    [opened]="!isHandset()"
+    [fixedInViewport]="isHandset()"
+    aria-label="Navegación principal"
+  >
+    <div class="sidenav-header">
+      <app-brand [compact]="true" />
+    </div>
+
+    <nav>
+      <a
+        mat-button
+        routerLink="/app/dashboard"
+        routerLinkActive="active"
+        (click)="closeMobileMenu()"
+      >
+        {{ 'navigation.dashboard' | transloco }}
+      </a>
+      <a
+        mat-button
+        routerLink="/app/cotizaciones"
+        routerLinkActive="active"
+        (click)="closeMobileMenu()"
+      >
+        {{ 'navigation.quotes' | transloco }}
+      </a>
+      <button mat-button type="button" disabled>{{ 'navigation.policies' | transloco }}</button>
+      <button mat-button type="button" disabled>{{ 'navigation.claims' | transloco }}</button>
+      <button mat-button type="button" disabled>
+        {{ 'navigation.notifications' | transloco }}
+      </button>
+    </nav>
+
+    <p class="coming-soon">{{ 'navigation.comingSoon' | transloco }}</p>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar>
+      @if (isHandset()) {
+        <button mat-button type="button" (click)="toggleMenu()">
+          {{ 'navigation.menu' | transloco }}
+        </button>
+      }
+      <span class="toolbar-spacer"></span>
+      <span class="user-name">{{ user()?.name }}</span>
+      <button mat-button type="button" (click)="logout()">
+        {{ 'auth.logout' | transloco }}
+      </button>
+    </mat-toolbar>
+
+    <main class="page-content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
