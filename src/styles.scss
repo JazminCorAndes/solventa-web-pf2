@@ -1,9 +1,3 @@
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  min-height: 100%;
-  margin: 0;
-}
+@use 'styles/tokens';
+@use 'styles/material-theme';
+@use 'styles/base';
