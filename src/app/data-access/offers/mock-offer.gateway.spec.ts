@@ -1,0 +1,44 @@
+import { TestBed } from '@angular/core/testing';
+import { firstValueFrom } from 'rxjs';
+import { QuoteRequestRecord } from '../../core/quotes/quote-request.models';
+import {
+  QUOTE_REQUEST_STORAGE,
+  QuoteRequestStorage,
+} from '../../core/quotes/quote-request-storage.service';
+import { MockOfferGateway } from './mock-offer.gateway';
+
+const REQUEST: QuoteRequestRecord = {
+  id: 'AQT-2026-654321',
+  status: 'received',
+  createdAt: '2026-10-11T12:00:00.000Z',
+  productId: 'automotive',
+  customerType: 'natural',
+  nationalId: '12345678-9',
+  vehiclePlate: 'ABC123',
+  email: 'cliente@solventa.co',
+  phone: '912345678',
+};
+
+class TestQuoteRequestStorage implements QuoteRequestStorage {
+  read(): QuoteRequestRecord {
+    return REQUEST;
+  }
+  write(): void {}
+  clear(): void {}
+}
+
+describe('MockOfferGateway', () => {
+  it('uses the latest request identifier in the calculated offers', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        MockOfferGateway,
+        { provide: QUOTE_REQUEST_STORAGE, useClass: TestQuoteRequestStorage },
+      ],
+    });
+    const gateway = TestBed.inject(MockOfferGateway);
+
+    const calculation = await firstValueFrom(gateway.loadOffers());
+
+    expect(calculation.quoteId).toBe('AQT-2026-654321');
+  });
+});

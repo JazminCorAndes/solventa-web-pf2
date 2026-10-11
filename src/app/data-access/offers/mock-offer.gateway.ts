@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { delay, map, Observable, of } from 'rxjs';
 import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferGateway } from '../../core/offers/offer.gateway';
@@ -7,6 +7,7 @@ import {
   OfferCalculation,
   SelectedOfferRecord,
 } from '../../core/offers/offer.models';
+import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
 
 const OFFERS: InsuranceOffer[] = [
   {
@@ -86,8 +87,14 @@ const CALCULATION: OfferCalculation = {
 
 @Injectable()
 export class MockOfferGateway implements OfferGateway {
+  private readonly quoteRequestStorage = inject(QUOTE_REQUEST_STORAGE);
+
   loadOffers(): Observable<OfferCalculation> {
-    return of(CALCULATION).pipe(delay(450));
+    const request = this.quoteRequestStorage.read();
+    return of({
+      ...CALCULATION,
+      quoteId: request?.id ?? CALCULATION.quoteId,
+    }).pipe(delay(450));
   }
 
   confirmSelection(
