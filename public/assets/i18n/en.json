@@ -1,1 +1,62 @@
-{}
+{
+  "auth": {
+    "title": "Sign in",
+    "email": {
+      "label": "Username or email",
+      "placeholder": "example@email.com"
+    },
+    "password": {
+      "label": "Password",
+      "placeholder": "Enter your password",
+      "show": "Show",
+      "hide": "Hide"
+    },
+    "forgotPassword": "Forgot your password?",
+    "submit": "Sign in",
+    "processing": "Signing in",
+    "noAccount": "Don't have an account?",
+    "contact": "Contact us",
+    "logout": "Sign out",
+    "validation": {
+      "emailRequired": "Email is required.",
+      "emailInvalid": "Enter a valid email.",
+      "passwordRequired": "Password is required."
+    },
+    "errors": {
+      "invalidCredentials": "The username or password is incorrect.",
+      "unavailable": "Sign in is currently unavailable. Please try again.",
+      "unexpected": "An unexpected error occurred. Please try again."
+    }
+  },
+  "navigation": {
+    "menu": "Menu",
+    "dashboard": "Home",
+    "policies": "My insurance",
+    "claims": "Claims",
+    "notifications": "Notifications",
+    "comingSoon": "Additional operations will be available soon."
+  },
+  "dashboard": {
+    "summary": "Account summary",
+    "greeting": "Hello, {{ name }}",
+    "subtitle": "Review your insurance status and latest updates.",
+    "newQuote": "New quote",
+    "reportClaim": "Report a claim",
+    "loading": "Loading your information",
+    "error": "The dashboard information could not be loaded.",
+    "activePolicies": "Active insurance",
+    "policiesStatus": "Current policies",
+    "notifications": "Notifications",
+    "unread": "Unread",
+    "upcomingTrip": "Upcoming trip",
+    "trip": "Insured destination",
+    "recentNotifications": "Recent notifications",
+    "status": {
+      "active": "Active",
+      "pending": "Pending"
+    }
+  },
+  "common": {
+    "retry": "Retry"
+  }
+}

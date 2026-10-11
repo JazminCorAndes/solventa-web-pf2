@@ -1,1 +1,62 @@
-{}
+{
+  "auth": {
+    "title": "Iniciar sesión",
+    "email": {
+      "label": "Usuario o correo electrónico",
+      "placeholder": "ejemplo@correo.com"
+    },
+    "password": {
+      "label": "Contraseña",
+      "placeholder": "Ingresa tu contraseña",
+      "show": "Mostrar",
+      "hide": "Ocultar"
+    },
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "submit": "Iniciar sesión",
+    "processing": "Iniciando sesión",
+    "noAccount": "¿No tienes una cuenta?",
+    "contact": "Contáctanos",
+    "logout": "Cerrar sesión",
+    "validation": {
+      "emailRequired": "El correo es obligatorio.",
+      "emailInvalid": "Ingresa un correo válido.",
+      "passwordRequired": "La contraseña es obligatoria."
+    },
+    "errors": {
+      "invalidCredentials": "El usuario o la contraseña son incorrectos.",
+      "unavailable": "No fue posible iniciar sesión en este momento. Inténtalo nuevamente.",
+      "unexpected": "Ocurrió un error inesperado. Inténtalo nuevamente."
+    }
+  },
+  "navigation": {
+    "menu": "Menú",
+    "dashboard": "Inicio",
+    "policies": "Mis seguros",
+    "claims": "Siniestros",
+    "notifications": "Notificaciones",
+    "comingSoon": "Las demás operaciones estarán disponibles próximamente."
+  },
+  "dashboard": {
+    "summary": "Resumen de tu cuenta",
+    "greeting": "Hola, {{ name }}",
+    "subtitle": "Consulta el estado de tus seguros y las novedades más recientes.",
+    "newQuote": "Nueva cotización",
+    "reportClaim": "Reportar siniestro",
+    "loading": "Cargando tu información",
+    "error": "No fue posible cargar la información del dashboard.",
+    "activePolicies": "Seguros activos",
+    "policiesStatus": "Pólizas vigentes",
+    "notifications": "Notificaciones",
+    "unread": "Pendientes por leer",
+    "upcomingTrip": "Próximo viaje",
+    "trip": "Destino asegurado",
+    "recentNotifications": "Notificaciones recientes",
+    "status": {
+      "active": "Activo",
+      "pending": "Pendiente"
+    }
+  },
+  "common": {
+    "retry": "Reintentar"
+  }
+}
