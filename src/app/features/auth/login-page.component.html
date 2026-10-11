@@ -1,0 +1,90 @@
+<main class="login-page">
+  <mat-card class="login-card" appearance="raised">
+    <mat-card-header>
+      <app-brand />
+    </mat-card-header>
+
+    <mat-card-content>
+      <h1>{{ 'auth.title' | transloco }}</h1>
+
+      @if (errorKey()) {
+        <div #authAlert class="auth-alert" role="alert" tabindex="-1">
+          <span class="alert-icon" aria-hidden="true">!</span>
+          <span>{{ errorKey()! | transloco }}</span>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label for="login-email">{{ 'auth.email.label' | transloco }}</label>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <span matTextPrefix aria-hidden="true" class="field-prefix">@</span>
+          <input
+            matInput
+            id="login-email"
+            type="email"
+            autocomplete="email"
+            formControlName="email"
+            [placeholder]="'auth.email.placeholder' | transloco"
+          />
+          @if (showEmailError()) {
+            <mat-error>
+              {{
+                (form.controls.email.hasError('required')
+                  ? 'auth.validation.emailRequired'
+                  : 'auth.validation.emailInvalid'
+                ) | transloco
+              }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <label for="login-password">{{ 'auth.password.label' | transloco }}</label>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <span matTextPrefix aria-hidden="true" class="field-prefix">●</span>
+          <input
+            matInput
+            id="login-password"
+            [type]="passwordVisible() ? 'text' : 'password'"
+            autocomplete="current-password"
+            formControlName="password"
+            [placeholder]="'auth.password.placeholder' | transloco"
+          />
+          <button
+            mat-button
+            matSuffix
+            type="button"
+            class="password-toggle"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="
+              (passwordVisible() ? 'auth.password.hide' : 'auth.password.show') | transloco
+            "
+          >
+            {{ (passwordVisible() ? 'auth.password.hide' : 'auth.password.show') | transloco }}
+          </button>
+          @if (showPasswordError()) {
+            <mat-error>{{ 'auth.validation.passwordRequired' | transloco }}</mat-error>
+          }
+        </mat-form-field>
+
+        <span class="pending-link" aria-disabled="true">{{
+          'auth.forgotPassword' | transloco
+        }}</span>
+
+        <button mat-flat-button type="submit" class="submit-button" [disabled]="loading()">
+          @if (loading()) {
+            <mat-spinner diameter="20" aria-hidden="true" />
+            <span>{{ 'auth.processing' | transloco }}</span>
+          } @else {
+            <span>{{ 'auth.submit' | transloco }}</span>
+            <span aria-hidden="true">→</span>
+          }
+        </button>
+      </form>
+    </mat-card-content>
+
+    <mat-card-footer>
+      <span>{{ 'auth.noAccount' | transloco }}</span>
+      <span class="pending-link" aria-disabled="true">{{ 'auth.contact' | transloco }}</span>
+    </mat-card-footer>
+  </mat-card>
+</main>

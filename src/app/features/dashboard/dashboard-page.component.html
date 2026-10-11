@@ -1,0 +1,104 @@
+<section class="dashboard">
+  <header class="dashboard-heading">
+    <div>
+      <span class="eyebrow">{{ 'dashboard.summary' | transloco }}</span>
+      <h1>{{ 'dashboard.greeting' | transloco: { name: auth.user()?.name } }}</h1>
+      <p>{{ 'dashboard.subtitle' | transloco }}</p>
+    </div>
+    <div class="heading-actions">
+      <button mat-flat-button type="button" disabled>{{ 'dashboard.newQuote' | transloco }}</button>
+      <button mat-stroked-button type="button" disabled>
+        {{ 'dashboard.reportClaim' | transloco }}
+      </button>
+    </div>
+  </header>
+
+  @if (dashboard.status() === 'loading' || dashboard.status() === 'idle') {
+    <div class="state-panel" role="status">
+      <mat-spinner diameter="36" />
+      <span>{{ 'dashboard.loading' | transloco }}</span>
+    </div>
+  } @else if (dashboard.status() === 'error') {
+    <div class="state-panel" role="alert">
+      <p>{{ 'dashboard.error' | transloco }}</p>
+      <button mat-stroked-button type="button" (click)="dashboard.load()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  } @else if (dashboard.snapshot(); as snapshot) {
+    <div class="metric-grid">
+      <mat-card appearance="raised">
+        <mat-card-content>
+          <span>{{ 'dashboard.activePolicies' | transloco }}</span>
+          <strong>{{ dashboard.activePolicies() }}</strong>
+          <small>{{ 'dashboard.policiesStatus' | transloco }}</small>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="raised">
+        <mat-card-content>
+          <span>{{ 'dashboard.notifications' | transloco }}</span>
+          <strong>{{ dashboard.unreadNotifications() }}</strong>
+          <small>{{ 'dashboard.unread' | transloco }}</small>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="raised" class="accent-card">
+        <mat-card-content>
+          <span>{{ 'dashboard.upcomingTrip' | transloco }}</span>
+          <strong>{{ snapshot.upcomingTrip }}</strong>
+          <small>{{ 'dashboard.trip' | transloco }}</small>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="dashboard-grid">
+      <mat-card appearance="raised">
+        <mat-card-header>
+          <mat-card-title>{{ 'dashboard.activePolicies' | transloco }}</mat-card-title>
+          <span class="card-spacer"></span>
+          <span class="disabled-action">{{ 'navigation.policies' | transloco }}</span>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-list>
+            @for (policy of snapshot.policies; track policy.id) {
+              <mat-list-item>
+                <div matListItemTitle>{{ policy.product }}</div>
+                <div matListItemLine>
+                  {{ policy.premiumCop | currency: 'COP' : 'symbol-narrow' : '1.0-0' : 'es-CO' }}
+                </div>
+                <mat-chip matListItemMeta [class.pending]="policy.status === 'pending'">
+                  {{ 'dashboard.status.' + policy.status | transloco }}
+                </mat-chip>
+              </mat-list-item>
+            }
+          </mat-list>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="raised">
+        <mat-card-header>
+          <mat-card-title>{{ 'dashboard.recentNotifications' | transloco }}</mat-card-title>
+          <span class="card-spacer"></span>
+          <span class="disabled-action">{{ 'navigation.notifications' | transloco }}</span>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-list>
+            @for (notification of snapshot.notifications; track notification.id) {
+              <mat-list-item>
+                <span
+                  matListItemIcon
+                  class="notification-dot"
+                  [class.read]="notification.read"
+                  aria-hidden="true"
+                ></span>
+                <div matListItemTitle>{{ notification.title }}</div>
+                <div matListItemLine>
+                  {{ notification.createdAt | date: 'mediumDate' : '' : 'es-CO' }}
+                </div>
+              </mat-list-item>
+            }
+          </mat-list>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</section>

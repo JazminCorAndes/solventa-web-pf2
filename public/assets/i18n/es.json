@@ -1,0 +1,123 @@
+{
+  "auth": {
+    "title": "Iniciar sesión",
+    "email": {
+      "label": "Usuario o correo electrónico",
+      "placeholder": "ejemplo@correo.com"
+    },
+    "password": {
+      "label": "Contraseña",
+      "placeholder": "Ingresa tu contraseña",
+      "show": "Mostrar",
+      "hide": "Ocultar"
+    },
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "submit": "Iniciar sesión",
+    "processing": "Iniciando sesión",
+    "noAccount": "¿No tienes una cuenta?",
+    "contact": "Contáctanos",
+    "logout": "Cerrar sesión",
+    "validation": {
+      "emailRequired": "El correo es obligatorio.",
+      "emailInvalid": "Ingresa un correo válido.",
+      "passwordRequired": "La contraseña es obligatoria."
+    },
+    "errors": {
+      "invalidCredentials": "El usuario o la contraseña son incorrectos.",
+      "unavailable": "No fue posible iniciar sesión en este momento. Inténtalo nuevamente.",
+      "unexpected": "Ocurrió un error inesperado. Inténtalo nuevamente."
+    }
+  },
+  "navigation": {
+    "menu": "Menú",
+    "dashboard": "Inicio",
+    "quotes": "Cotizaciones",
+    "policies": "Mis seguros",
+    "claims": "Siniestros",
+    "notifications": "Notificaciones",
+    "comingSoon": "Las demás operaciones estarán disponibles próximamente."
+  },
+  "dashboard": {
+    "summary": "Resumen de tu cuenta",
+    "greeting": "Hola, {{ name }}",
+    "subtitle": "Consulta el estado de tus seguros y las novedades más recientes.",
+    "newQuote": "Nueva cotización",
+    "reportClaim": "Reportar siniestro",
+    "loading": "Cargando tu información",
+    "error": "No fue posible cargar la información del dashboard.",
+    "activePolicies": "Seguros activos",
+    "policiesStatus": "Pólizas vigentes",
+    "notifications": "Notificaciones",
+    "unread": "Pendientes por leer",
+    "upcomingTrip": "Próximo viaje",
+    "trip": "Destino asegurado",
+    "recentNotifications": "Notificaciones recientes",
+    "status": {
+      "active": "Activo",
+      "pending": "Pendiente"
+    }
+  },
+  "common": {
+    "back": "Volver",
+    "retry": "Reintentar"
+  },
+  "offers": {
+    "back": "Volver a solicitud",
+    "title": "Resultado de cotización",
+    "loading": "Actualizando ofertas disponibles",
+    "recommendedPlan": "Plan recomendado",
+    "monthlyPremium": "Prima mensual",
+    "mainCoverage": "Cobertura principal",
+    "generalConditions": "Condiciones generales",
+    "viewOffer": "Ver oferta",
+    "calculationInfo": "Información del cálculo",
+    "quoteId": "ID cotización",
+    "validity": "Vigencia del cálculo",
+    "appliedRate": "Tasa aplicada",
+    "securityAnalysis": "Curva de riesgo proyectada",
+    "listTitle": "Oferta de seguro",
+    "availableCount": "{{ available }} de {{ total }} opciones disponibles",
+    "selectedBadge": "Selección actual",
+    "recommendedBadge": "Recomendada",
+    "coverage": "Cobertura",
+    "deductible": "Deducible",
+    "term": "Vigencia",
+    "liability": "Responsabilidad civil",
+    "finalMonthlyPrice": "Precio final mensual",
+    "taxIncluded": "Incluye costos e impuestos",
+    "select": "Seleccionar oferta",
+    "selected": "Oferta seleccionada",
+    "viewDetails": "Ver detalle",
+    "hideDetails": "Ocultar detalle",
+    "coveragesTitle": "Coberturas",
+    "conditionsTitle": "Condiciones principales",
+    "unavailableMessage": "Esta oferta ya no puede seleccionarse.",
+    "selectToContinue": "Selecciona una oferta vigente para continuar.",
+    "readyToContinue": "{{ name }} está lista para continuar.",
+    "continue": "Continuar a aceptación",
+    "confirming": "Confirmando",
+    "refreshNote": "Puedes comparar esta oferta con otras alternativas en el listado.",
+    "status": {
+      "available": "Disponible",
+      "expired": "Vencida",
+      "withdrawn": "Retirada"
+    },
+    "empty": {
+      "title": "No hay ofertas disponibles",
+      "body": "No encontramos ofertas vigentes para esta cotización. Puedes volver a intentarlo más adelante."
+    },
+    "errors": {
+      "loadTitle": "No pudimos cargar las ofertas",
+      "loadBody": "Inténtalo nuevamente para consultar las opciones disponibles.",
+      "unavailable": "La oferta seleccionada cambió o venció. Revisa las opciones actualizadas.",
+      "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente."
+    }
+  },
+  "acceptance": {
+    "step": "Siguiente paso",
+    "title": "Aceptación de la oferta",
+    "selectedOffer": "Oferta seleccionada",
+    "body": "La aceptación formal de condiciones y coberturas se implementará en la historia correspondiente.",
+    "backToOffers": "Volver a las ofertas"
+  }
+}
