@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardService } from '../../core/dashboard/dashboard.service';
@@ -20,6 +21,7 @@ import { DashboardService } from '../../core/dashboard/dashboard.service';
     MatChipsModule,
     MatListModule,
     MatProgressSpinnerModule,
+    RouterLink,
     TranslocoPipe,
   ],
   templateUrl: './dashboard-page.component.html',

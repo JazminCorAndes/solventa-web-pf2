@@ -29,6 +29,14 @@ export const routes: Routes = [
         title: 'Inicio | Solventa',
       },
       {
+        path: 'cotizaciones/solicitar',
+        loadComponent: () =>
+          import('./features/quotes/quote-request-page.component').then(
+            (component) => component.QuoteRequestPageComponent,
+          ),
+        title: 'Solicitar cotización | Solventa',
+      },
+      {
         path: 'cotizaciones/ofertas',
         loadComponent: () =>
           import('./features/offers/offer-selection-page.component').then(
