@@ -84,6 +84,10 @@
             "backend": {
               "buildTarget": "solventa-web-pf2:build:backend",
               "proxyConfig": "proxy.conf.json"
+            },
+            "aws": {
+              "buildTarget": "solventa-web-pf2:build:backend",
+              "proxyConfig": "proxy.aws.conf.js"
             }
           },
           "defaultConfiguration": "development"

@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "start:backend": "ng serve --configuration backend",
+    "start:aws": "ng serve --configuration aws",
     "build": "ng build",
     "build:backend": "ng build --configuration backend",
     "build:dev": "ng build --configuration development",
