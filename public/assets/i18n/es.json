@@ -29,6 +29,16 @@
     }
   },
   "navigation": {
+    "skipToContent": "Saltar al contenido principal",
+    "primary": "Navegación principal",
+    "portal": "Portal Solventa",
+    "portalType": "Seguros digitales",
+    "mainSection": "Menú principal",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "changeLanguage": "Cambiar idioma",
+    "currentUser": "Usuario actual",
+    "secureSession": "Sesión segura",
     "menu": "Menú",
     "dashboard": "Inicio",
     "quotes": "Cotizaciones",
@@ -36,6 +46,10 @@
     "claims": "Siniestros",
     "notifications": "Notificaciones",
     "comingSoon": "Las demás operaciones estarán disponibles próximamente."
+  },
+  "theme": {
+    "useLight": "Usar tema claro",
+    "useDark": "Usar tema oscuro"
   },
   "dashboard": {
     "summary": "Resumen de tu cuenta",

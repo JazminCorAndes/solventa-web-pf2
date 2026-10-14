@@ -1,56 +1,115 @@
-<mat-sidenav-container>
+<a class="skip-link" href="#main-content">{{ 'navigation.skipToContent' | transloco }}</a>
+
+<mat-sidenav-container class="app-shell">
   <mat-sidenav
+    #drawer
+    id="app-sidebar"
     [mode]="isHandset() ? 'over' : 'side'"
     [opened]="!isHandset()"
     [fixedInViewport]="isHandset()"
-    aria-label="Navegación principal"
+    [attr.aria-label]="'navigation.primary' | transloco"
   >
-    <div class="sidenav-header">
-      <app-brand [compact]="true" />
+    <div class="sidenav-shell">
+      <div class="sidenav-header">
+        <a routerLink="/app/dashboard" (click)="closeMobileMenu()">
+          <app-brand [compact]="true" />
+        </a>
+        @if (isHandset()) {
+          <button
+            type="button"
+            class="icon-button close-button"
+            [attr.aria-label]="'navigation.closeMenu' | transloco"
+            (click)="toggleMenu()"
+          >
+            <app-icon name="close" />
+          </button>
+        }
+      </div>
+
+      <div class="portal-label">
+        <span>{{ 'navigation.portal' | transloco }}</span>
+        <strong>{{ 'navigation.portalType' | transloco }}</strong>
+      </div>
+
+      <span class="nav-section">{{ 'navigation.mainSection' | transloco }}</span>
+      <mat-nav-list>
+        <a
+          mat-list-item
+          routerLink="/app/dashboard"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="closeMobileMenu()"
+        >
+          <app-icon matListItemIcon name="home" />
+          <span matListItemTitle>{{ 'navigation.dashboard' | transloco }}</span>
+        </a>
+        <a
+          mat-list-item
+          routerLink="/app/cotizaciones"
+          routerLinkActive="active-link"
+          (click)="closeMobileMenu()"
+        >
+          <app-icon matListItemIcon name="policy" />
+          <span matListItemTitle>{{ 'navigation.quotes' | transloco }}</span>
+        </a>
+        <button mat-list-item type="button" disabled>
+          <app-icon matListItemIcon name="claim" />
+          <span matListItemTitle>{{ 'navigation.claims' | transloco }}</span>
+        </button>
+      </mat-nav-list>
+
+      <div class="sidenav-footer">
+        <div class="security-note">
+          <app-icon name="shield" />
+          <span>{{ 'navigation.secureSession' | transloco }}</span>
+        </div>
+        <button type="button" class="logout-button" (click)="logout()">
+          <app-icon name="logout" />
+          <span>{{ 'auth.logout' | transloco }}</span>
+        </button>
+      </div>
     </div>
-
-    <nav>
-      <a
-        mat-button
-        routerLink="/app/dashboard"
-        routerLinkActive="active"
-        (click)="closeMobileMenu()"
-      >
-        {{ 'navigation.dashboard' | transloco }}
-      </a>
-      <a
-        mat-button
-        routerLink="/app/cotizaciones"
-        routerLinkActive="active"
-        (click)="closeMobileMenu()"
-      >
-        {{ 'navigation.quotes' | transloco }}
-      </a>
-      <button mat-button type="button" disabled>{{ 'navigation.policies' | transloco }}</button>
-      <button mat-button type="button" disabled>{{ 'navigation.claims' | transloco }}</button>
-      <button mat-button type="button" disabled>
-        {{ 'navigation.notifications' | transloco }}
-      </button>
-    </nav>
-
-    <p class="coming-soon">{{ 'navigation.comingSoon' | transloco }}</p>
   </mat-sidenav>
 
   <mat-sidenav-content>
-    <mat-toolbar>
+    <mat-toolbar class="topbar">
       @if (isHandset()) {
-        <button mat-button type="button" (click)="toggleMenu()">
-          {{ 'navigation.menu' | transloco }}
+        <button
+          type="button"
+          class="icon-button menu-button"
+          aria-controls="app-sidebar"
+          [attr.aria-expanded]="drawer.opened"
+          [attr.aria-label]="'navigation.openMenu' | transloco"
+          (click)="toggleMenu()"
+        >
+          <app-icon name="menu" />
         </button>
       }
+
+      <span class="topbar-title">{{ 'navigation.portal' | transloco }}</span>
       <span class="toolbar-spacer"></span>
-      <span class="user-name">{{ user()?.name }}</span>
-      <button mat-button type="button" (click)="logout()">
-        {{ 'auth.logout' | transloco }}
+
+      <button
+        type="button"
+        class="language-button"
+        [attr.aria-label]="'navigation.changeLanguage' | transloco"
+        (click)="toggleLanguage()"
+      >
+        <app-icon name="globe" [size]="18" />
+        <span>{{ language() | uppercase }}</span>
       </button>
+      <app-theme-toggle />
+
+      <div class="user-profile" [attr.aria-label]="'navigation.currentUser' | transloco">
+        <span class="avatar" aria-hidden="true">{{ userInitials() }}</span>
+        <span class="user-copy">
+          <strong>{{ user()?.name }}</strong>
+          <small>{{ user()?.email }}</small>
+        </span>
+      </div>
     </mat-toolbar>
 
-    <main class="page-content">
+    <main id="main-content" class="main-content" tabindex="-1">
       <router-outlet />
     </main>
   </mat-sidenav-content>

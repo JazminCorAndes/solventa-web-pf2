@@ -178,7 +178,13 @@
                   <p>{{ 'offers.unavailableMessage' | transloco }}</p>
                 }
 
-                <button mat-button type="button" (click)="offers.toggleDetails(offer.id)">
+                <button
+                  mat-button
+                  type="button"
+                  [attr.aria-expanded]="offers.expandedOfferId() === offer.id"
+                  [attr.aria-controls]="'offer-details-' + offer.id"
+                  (click)="offers.toggleDetails(offer.id)"
+                >
                   {{
                     (offers.expandedOfferId() === offer.id
                       ? 'offers.hideDetails'
@@ -191,7 +197,7 @@
 
             @if (offers.expandedOfferId() === offer.id) {
               <mat-divider />
-              <div class="offer-details">
+              <div class="offer-details" [id]="'offer-details-' + offer.id">
                 <section>
                   <h4>{{ 'offers.coveragesTitle' | transloco }}</h4>
                   <ul>
@@ -221,7 +227,7 @@
       </div>
     }
 
-    <div class="continue-bar">
+    <div class="continue-bar" aria-live="polite">
       <span>
         {{
           offers.selectedOffer()
