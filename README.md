@@ -151,12 +151,33 @@ mismo origen del frontend.
 Para iniciar sesión se usa el correo configurado en
 `AUTH_DEVELOPMENT_USERS_JSON` y la contraseña utilizada para generar el hash.
 
+### Desarrollo contra el backend desplegado en AWS
+
+En producción el frontend y el API comparten origen: CloudFront sirve la aplicación y reenvía
+`/api/*` al API Gateway, por lo que el build usa la ruta relativa `/api` y la cookie de sesión
+viaja sin CORS. Para trabajar en local contra ese backend, en lugar del BFF local, se define el
+dominio de CloudFront (`terraform output web_url` en `backend-solventa`) y se inicia la aplicación:
+
+```bash
+API_TARGET=https://<distribucion>.cloudfront.net pnpm start:aws
+```
+
+El proxy `proxy.aws.conf.js` falla de inmediato si `API_TARGET` no está definido.
+
+### Despliegue en AWS
+
+El workflow `Despliegue AWS` (manual) compila con `pnpm build`, sube el resultado al bucket del
+frontend y la invalida en CloudFront. Requiere definir en GitHub, como variables del repositorio,
+`AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `WEB_BUCKET` y `CLOUDFRONT_DISTRIBUTION_ID`; los valores
+salen de los outputs de Terraform de `backend-solventa`.
+
 ## Comandos disponibles
 
 | Comando              | Descripción                                        |
 | -------------------- | -------------------------------------------------- |
 | `pnpm start`         | Inicia el desarrollo con adaptadores simulados     |
 | `pnpm start:backend` | Inicia el desarrollo conectado al BFF              |
+| `pnpm start:aws`     | Inicia el desarrollo conectado al backend en AWS   |
 | `pnpm build`         | Genera el build de producción conectado al backend |
 | `pnpm build:dev`     | Genera un build de desarrollo con mocks            |
 | `pnpm build:backend` | Genera un build de desarrollo conectado al backend |
