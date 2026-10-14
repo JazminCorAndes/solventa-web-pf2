@@ -139,7 +139,7 @@ mat-form-field {
   align-items: flex-start;
   justify-content: space-between;
   border-color: color-mix(in srgb, var(--solventa-color-success) 25%, transparent);
-  background: #ecfdf3;
+  background: var(--solventa-color-success-soft);
   color: var(--solventa-color-success);
 }
 
@@ -247,7 +247,7 @@ dd small {
   display: grid;
   min-height: 120px;
   color: var(--solventa-color-border);
-  background: #eef0f3;
+  background: var(--solventa-color-surface-muted);
   font-size: 0.7rem;
   place-items: center;
 }
@@ -258,7 +258,7 @@ dd small {
   }
 
   .context-card {
-    order: -1;
+    order: initial;
   }
 }
 

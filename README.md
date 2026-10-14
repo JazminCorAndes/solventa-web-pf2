@@ -2,7 +2,7 @@
 
 Aplicación web de Solventa para Proyecto Final II de la Universidad de los Andes.
 
-Este repositorio contiene únicamente la base técnica del proyecto. El alcance funcional se
+Este repositorio contiene la base técnica de la aplicación web. El alcance funcional se
 gestiona en Jira y las decisiones visuales deben seguir la versión más reciente de Figma.
 
 ## Tecnologías
@@ -18,7 +18,7 @@ gestiona en Jira y las decisiones visuales deben seguir la versión más recient
 - Prettier
 - GitHub Actions
 
-## Requisitos
+## Requisitos previos
 
 - Node.js 22.22.3 o superior
 - pnpm 11.19.0
@@ -27,9 +27,19 @@ gestiona en Jira y las decisiones visuales deben seguir la versión más recient
 La versión esperada de Node.js está declarada en `.nvmrc` y la versión de pnpm en
 `package.json`.
 
+Comprueba las versiones instaladas:
+
+```bash
+node --version
+pnpm --version
+git --version
+```
+
 ## Instalación
 
 ```bash
+git clone https://github.com/JazminCorAndes/solventa-web-pf2.git
+cd solventa-web-pf2
 pnpm install --frozen-lockfile
 ```
 
@@ -152,7 +162,7 @@ https://jazmincorandes.github.io/solventa-web-pf2/
 GitHub Pages no ejecuta el backend Python. La demo permite recorrer la interfaz con los datos
 simulados y las credenciales de desarrollo documentadas más adelante.
 
-## Comandos
+## Comandos disponibles
 
 | Comando              | Descripción                                        |
 | -------------------- | -------------------------------------------------- |
@@ -167,7 +177,18 @@ simulados y las credenciales de desarrollo documentadas más adelante.
 | `pnpm format`        | Formatea el código con Prettier                    |
 | `pnpm format:check`  | Comprueba el formato sin modificar archivos        |
 
-## Estructura
+## Verificación de la instalación
+
+1. Confirma que `pnpm install --frozen-lockfile` termina correctamente.
+2. Ejecuta `pnpm start` y abre <http://localhost:4200>.
+3. Ejecuta `pnpm test:ci`.
+4. Ejecuta `pnpm lint`.
+5. Ejecuta `pnpm build`.
+
+Registra cualquier diferencia de versiones o error y actualiza esta guía si se identifica un
+paso faltante.
+
+## Estructura del repositorio
 
 ```text
 public/
@@ -254,3 +275,26 @@ se pueden seleccionar.
 
 La aceptación formal, siniestros, detalle de pólizas, notificaciones y recuperación de
 contraseña permanecen fuera del alcance actual.
+
+## Referencias
+
+- **Jira:** consultar el backlog y los criterios de aceptación aprobados.
+- **Figma:** consultar el archivo de diseño vigente antes de implementar pantallas.
+- **Backend:** consultar la sección de desarrollo local con backend para ejecutar la integración.
+
+## Solución de problemas
+
+### La instalación falla
+
+- Comprueba `node --version` y `pnpm --version`.
+- Confirma que estás en la carpeta que contiene `package.json`.
+- Vuelve a ejecutar `pnpm install --frozen-lockfile` y revisa el mensaje completo.
+
+### El puerto 4200 está ocupado
+
+Cierra el proceso que utiliza el puerto o consulta con el equipo el puerto alternativo acordado.
+
+### Las pruebas o el build fallan
+
+Ejecuta `pnpm test:ci` y `pnpm build` y revisa el primer error reportado. No des por completada
+la validación hasta resolverlo o documentar el bloqueo.

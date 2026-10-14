@@ -163,7 +163,7 @@ dd {
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--solventa-color-primary);
-  color: #ffffff;
+  color: var(--solventa-color-text-on-primary);
   font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -240,6 +240,7 @@ h3 {
   gap: var(--solventa-space-2);
   padding: var(--solventa-space-5);
   background: var(--solventa-color-surface-muted);
+  border-radius: var(--solventa-radius-md);
   text-align: center;
 }
 
@@ -279,7 +280,8 @@ h3 {
   margin-top: var(--solventa-space-5);
   border: 1px solid var(--solventa-color-border-soft);
   border-radius: var(--solventa-radius-md);
-  background: var(--solventa-color-surface);
+  background: color-mix(in srgb, var(--solventa-color-surface) 94%, transparent);
+  backdrop-filter: blur(12px);
   box-shadow: var(--solventa-shadow-card);
 }
 

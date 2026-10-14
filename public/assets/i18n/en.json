@@ -29,6 +29,16 @@
     }
   },
   "navigation": {
+    "skipToContent": "Skip to main content",
+    "primary": "Primary navigation",
+    "portal": "Solventa Portal",
+    "portalType": "Digital insurance",
+    "mainSection": "Main menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "changeLanguage": "Change language",
+    "currentUser": "Current user",
+    "secureSession": "Secure session",
     "menu": "Menu",
     "dashboard": "Home",
     "quotes": "Quotes",
@@ -36,6 +46,10 @@
     "claims": "Claims",
     "notifications": "Notifications",
     "comingSoon": "Additional operations will be available soon."
+  },
+  "theme": {
+    "useLight": "Use light theme",
+    "useDark": "Use dark theme"
   },
   "dashboard": {
     "summary": "Account summary",
