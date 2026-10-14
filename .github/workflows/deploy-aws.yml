@@ -1,0 +1,67 @@
+name: Despliegue AWS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-aws
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Publicar en S3 y CloudFront
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 11.19.0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Verificar calidad
+        run: |
+          pnpm lint
+          pnpm test:ci
+
+      - name: Compilar conectado al backend
+        run: pnpm build
+
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Subir archivos con caché larga
+        run: |
+          aws s3 sync dist/solventa-web-pf2/browser "s3://${{ vars.WEB_BUCKET }}" \
+            --delete --exclude index.html \
+            --cache-control "public,max-age=31536000,immutable"
+
+      - name: Subir index.html sin caché
+        run: |
+          aws s3 cp dist/solventa-web-pf2/browser/index.html "s3://${{ vars.WEB_BUCKET }}/index.html" \
+            --cache-control "no-cache"
+
+      - name: Invalidar CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/index.html"
