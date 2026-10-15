@@ -41,9 +41,7 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
 
   loadProducts(): Observable<InsuranceProduct[]> {
     return this.http
-      .get<ProductsResponse>(`${this.apiUrl}/productos-seguro`, {
-        withCredentials: true,
-      })
+      .get<ProductsResponse>(`${this.apiUrl}/productos-seguro`)
       .pipe(
         map((response) =>
           response.productos.map((product) => ({
@@ -71,7 +69,6 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
         },
         {
           headers: new HttpHeaders({ 'Idempotency-Key': crypto.randomUUID() }),
-          withCredentials: true,
         },
       )
       .pipe(

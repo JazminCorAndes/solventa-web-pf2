@@ -24,6 +24,7 @@
     },
     "errors": {
       "invalidCredentials": "The username or password is incorrect.",
+      "tooManyAttempts": "Too many attempts. Wait a few minutes before trying again.",
       "unavailable": "Sign in is currently unavailable. Please try again.",
       "unexpected": "An unexpected error occurred. Please try again."
     }

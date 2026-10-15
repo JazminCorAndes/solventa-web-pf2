@@ -18,6 +18,7 @@ import { finalize, take } from 'rxjs';
 import {
   AuthenticationUnavailableError,
   InvalidCredentialsError,
+  TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { AuthService } from '../../core/auth/auth.service';
 import { safePostLoginUrl } from '../../core/auth/auth.guards';
@@ -85,9 +86,11 @@ export class LoginPageComponent {
           this.errorKey.set(
             error instanceof InvalidCredentialsError
               ? 'auth.errors.invalidCredentials'
-              : error instanceof AuthenticationUnavailableError
-                ? 'auth.errors.unavailable'
-                : 'auth.errors.unexpected',
+              : error instanceof TooManyAttemptsError
+                ? 'auth.errors.tooManyAttempts'
+                : error instanceof AuthenticationUnavailableError
+                  ? 'auth.errors.unavailable'
+                  : 'auth.errors.unexpected',
           );
           queueMicrotask(() => this.alert()?.nativeElement.focus());
         },

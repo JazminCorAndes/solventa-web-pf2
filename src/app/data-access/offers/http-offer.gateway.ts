@@ -64,9 +64,7 @@ export class HttpOfferGateway implements OfferGateway {
       return throwError(() => new Error('A quote request is required before loading offers.'));
     }
     return this.http
-      .get<OffersResponse>(`${this.apiUrl}/${quoteId}/ofertas`, {
-        withCredentials: true,
-      })
+      .get<OffersResponse>(`${this.apiUrl}/${quoteId}/ofertas`)
       .pipe(
         map((response) => ({
           quoteId: response.solicitudId,
@@ -80,9 +78,7 @@ export class HttpOfferGateway implements OfferGateway {
 
   loadSelection(quoteId: string): Observable<SelectedOfferRecord | null> {
     return this.http
-      .get<SelectionResponse>(`${this.apiUrl}/${quoteId}/seleccion`, {
-        withCredentials: true,
-      })
+      .get<SelectionResponse>(`${this.apiUrl}/${quoteId}/seleccion`)
       .pipe(
         map(toSelection),
         catchError((error: unknown) => {
@@ -105,7 +101,6 @@ export class HttpOfferGateway implements OfferGateway {
         { ofertaId: offerId, version: offerVersion },
         {
           headers: new HttpHeaders({ 'Idempotency-Key': crypto.randomUUID() }),
-          withCredentials: true,
         },
       )
       .pipe(

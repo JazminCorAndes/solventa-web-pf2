@@ -2,54 +2,22 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
-import { Observable, of, Subject, throwError } from 'rxjs';
-import { InvalidCredentialsError } from '../../core/auth/auth.errors';
-import { AUTH_GATEWAY, AuthGateway } from '../../core/auth/auth.gateway';
-import { AuthSession } from '../../core/auth/auth.models';
-import { AUTH_STORAGE, AuthStorage } from '../../core/auth/auth-storage.service';
+import { Observable, Subject, throwError } from 'rxjs';
+import { InvalidCredentialsError, TooManyAttemptsError } from '../../core/auth/auth.errors';
+import { AUTH_GATEWAY } from '../../core/auth/auth.gateway';
+import { AuthGrant } from '../../core/auth/auth.models';
+import { AUTH_STORAGE } from '../../core/auth/auth-storage.service';
+import { TestAuthGateway, TestAuthStorage } from '../../core/auth/auth.testing';
 import { LoginPageComponent } from './login-page.component';
 
 @Component({ template: '' })
 class EmptyPageComponent {}
 
-class TestAuthStorage implements AuthStorage {
-  read(): null {
-    return null;
-  }
-  write(): void {}
-  clear(): void {}
-}
-
-class TestAuthGateway implements AuthGateway {
-  calls = 0;
-  response: Observable<AuthSession> = of({
-    user: {
-      id: 'client-001',
-      name: 'Cliente Solventa',
-      email: 'cliente@solventa.co',
-      role: 'client',
-    },
-    expiresAt: Date.now() + 60_000,
-  });
-
-  login(): Observable<AuthSession> {
-    this.calls++;
-    return this.response;
-  }
-
-  currentSession(): Observable<AuthSession | null> {
-    return of(null);
-  }
-
-  logout(): Observable<void> {
-    return of(undefined);
-  }
-}
-
 describe('LoginPageComponent', () => {
   let fixture: ComponentFixture<LoginPageComponent>;
   let component: LoginPageComponent;
   let gateway: TestAuthGateway;
+  let loginCalls: number;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -79,6 +47,7 @@ describe('LoginPageComponent', () => {
                 },
                 errors: {
                   invalidCredentials: 'Credenciales inválidas',
+                  tooManyAttempts: 'Demasiados intentos',
                   unavailable: 'Servicio no disponible',
                   unexpected: 'Error inesperado',
                 },
@@ -90,27 +59,33 @@ describe('LoginPageComponent', () => {
       ],
       providers: [
         provideRouter([{ path: 'app/dashboard', component: EmptyPageComponent }]),
-        { provide: AUTH_GATEWAY, useClass: TestAuthGateway },
-        { provide: AUTH_STORAGE, useClass: TestAuthStorage },
+        { provide: AUTH_GATEWAY, useValue: new TestAuthGateway() },
+        { provide: AUTH_STORAGE, useValue: new TestAuthStorage() },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LoginPageComponent);
     component = fixture.componentInstance;
     gateway = TestBed.inject(AUTH_GATEWAY) as TestAuthGateway;
+    loginCalls = 0;
+    const loginResult = gateway.loginResult;
+    gateway.loginResult = () => {
+      loginCalls++;
+      return loginResult();
+    };
     fixture.detectChanges();
   });
 
   it('does not submit an invalid form', () => {
     component.submit();
 
-    expect(gateway.calls).toBe(0);
+    expect(loginCalls).toBe(0);
     expect(component.form.controls.email.touched).toBe(true);
     expect(component.form.controls.password.touched).toBe(true);
   });
 
   it('shows a generic invalid credentials error', () => {
-    gateway.response = throwError(() => new InvalidCredentialsError());
+    gateway.loginResult = () => throwError(() => new InvalidCredentialsError());
     component.form.setValue({
       email: 'cliente@solventa.co',
       password: 'incorrecta',
@@ -121,8 +96,20 @@ describe('LoginPageComponent', () => {
     expect(component.errorKey()).toBe('auth.errors.invalidCredentials');
   });
 
+  it('shows a rate limit error', () => {
+    gateway.loginResult = () => throwError(() => new TooManyAttemptsError(300));
+    component.form.setValue({
+      email: 'cliente@solventa.co',
+      password: 'incorrecta',
+    });
+
+    component.submit();
+
+    expect(component.errorKey()).toBe('auth.errors.tooManyAttempts');
+  });
+
   it('prevents duplicate submissions while authentication is pending', () => {
-    gateway.response = new Subject<AuthSession>();
+    gateway.loginResult = (): Observable<AuthGrant> => new Subject<AuthGrant>();
     component.form.setValue({
       email: 'cliente@solventa.co',
       password: 'Solventa123!',
@@ -131,7 +118,7 @@ describe('LoginPageComponent', () => {
     component.submit();
     component.submit();
 
-    expect(gateway.calls).toBe(1);
+    expect(loginCalls).toBe(1);
     expect(component.loading()).toBe(true);
   });
 

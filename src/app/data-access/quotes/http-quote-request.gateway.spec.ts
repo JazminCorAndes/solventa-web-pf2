@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { HttpQuoteRequestGateway } from './http-quote-request.gateway';
+import { environment } from '../../../environments/environment';
 
 describe('HttpQuoteRequestGateway', () => {
   let gateway: HttpQuoteRequestGateway;
@@ -20,8 +21,8 @@ describe('HttpQuoteRequestGateway', () => {
 
   it('loads and maps the insurance catalog', async () => {
     const result = firstValueFrom(gateway.loadProducts());
-    const request = http.expectOne('/api/v1/productos-seguro');
-    expect(request.request.withCredentials).toBe(true);
+    const request = http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro`);
+    expect(request.request.withCredentials).toBe(false);
     request.flush({
       productos: [
         {
@@ -54,10 +55,10 @@ describe('HttpQuoteRequestGateway', () => {
         phone: '+56912345678',
       }),
     );
-    const request = http.expectOne('/api/v1/solicitudes-cotizacion');
+    const request = http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion`);
 
     expect(request.request.method).toBe('POST');
-    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.withCredentials).toBe(false);
     expect(request.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/i);
     expect(request.request.body.tipoCliente).toBe('persona_natural');
     request.flush({

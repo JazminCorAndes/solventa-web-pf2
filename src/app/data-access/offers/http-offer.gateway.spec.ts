@@ -8,6 +8,7 @@ import {
   QuoteRequestStorage,
 } from '../../core/quotes/quote-request-storage.service';
 import { HttpOfferGateway } from './http-offer.gateway';
+import { environment } from '../../../environments/environment';
 
 const REQUEST: QuoteRequestRecord = {
   id: 'AQT-2026-ABCDEF1234',
@@ -68,8 +69,8 @@ describe('HttpOfferGateway', () => {
 
   it('loads and maps offers from the latest quote request', async () => {
     const result = firstValueFrom(gateway.loadOffers());
-    const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`);
-    expect(request.request.withCredentials).toBe(true);
+    const request = http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`);
+    expect(request.request.withCredentials).toBe(false);
     request.flush({
       solicitudId: REQUEST.id,
       calculadaEn: '2026-10-11T18:00:00Z',
@@ -92,7 +93,7 @@ describe('HttpOfferGateway', () => {
 
   it('confirms an offer with an idempotency key', async () => {
     const result = firstValueFrom(gateway.confirmSelection(REQUEST.id, OFFER.id, OFFER.version));
-    const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`);
+    const request = http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`);
     expect(request.request.method).toBe('PUT');
     expect(request.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/i);
     request.flush({
@@ -113,7 +114,7 @@ describe('HttpOfferGateway', () => {
 
   it('loads the selection persisted by the backend', async () => {
     const result = firstValueFrom(gateway.loadSelection(REQUEST.id));
-    const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`);
+    const request = http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`);
     request.flush({
       solicitudId: REQUEST.id,
       ofertaId: OFFER.id,

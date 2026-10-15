@@ -1,12 +1,20 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, InjectionToken } from '@angular/core';
-import { AuthSession } from './auth.models';
+import { AuthUser } from './auth.models';
 
-const SESSION_KEY = 'solventa.auth.session';
+const STORAGE_KEY = 'solventa.auth.refresh';
+const LEGACY_SESSION_KEY = 'solventa.auth.session';
+
+/** Lo único que sobrevive a una recarga: el refresh token y el usuario. El access token no se guarda. */
+export interface StoredAuth {
+  user: AuthUser;
+  refreshToken: string;
+  refreshExpiresAt: number;
+}
 
 export interface AuthStorage {
-  read(): AuthSession | null;
-  write(session: AuthSession): void;
+  read(): StoredAuth | null;
+  write(auth: StoredAuth): void;
   clear(): void;
 }
 
@@ -16,43 +24,46 @@ export const AUTH_STORAGE = new InjectionToken<AuthStorage>('AUTH_STORAGE');
 export class BrowserAuthStorage implements AuthStorage {
   private readonly storage = inject(DOCUMENT).defaultView?.sessionStorage;
 
-  read(): AuthSession | null {
-    const value = this.storage?.getItem(SESSION_KEY);
+  read(): StoredAuth | null {
+    const value = this.storage?.getItem(STORAGE_KEY);
     if (!value) {
       return null;
     }
 
     try {
       const parsed: unknown = JSON.parse(value);
-      if (isAuthSession(parsed)) {
+      if (isStoredAuth(parsed)) {
         return parsed;
       }
     } catch (error) {
-      console.warn('Stored authentication session could not be parsed.', error);
+      console.warn('Stored authentication data could not be parsed.', error);
     }
 
     this.clear();
     return null;
   }
 
-  write(session: AuthSession): void {
-    this.storage?.setItem(SESSION_KEY, JSON.stringify(session));
+  write(auth: StoredAuth): void {
+    this.storage?.setItem(STORAGE_KEY, JSON.stringify(auth));
   }
 
   clear(): void {
-    this.storage?.removeItem(SESSION_KEY);
+    this.storage?.removeItem(STORAGE_KEY);
+    this.storage?.removeItem(LEGACY_SESSION_KEY);
   }
 }
 
-function isAuthSession(value: unknown): value is AuthSession {
+function isStoredAuth(value: unknown): value is StoredAuth {
   if (!value || typeof value !== 'object') {
     return false;
   }
 
-  const candidate = value as Partial<AuthSession>;
+  const candidate = value as Partial<StoredAuth>;
   const user = candidate.user;
   return (
-    typeof candidate.expiresAt === 'number' &&
+    typeof candidate.refreshToken === 'string' &&
+    candidate.refreshToken.length > 0 &&
+    typeof candidate.refreshExpiresAt === 'number' &&
     !!user &&
     typeof user.id === 'string' &&
     typeof user.name === 'string' &&

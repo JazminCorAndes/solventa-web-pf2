@@ -24,6 +24,7 @@
     },
     "errors": {
       "invalidCredentials": "El usuario o la contraseña son incorrectos.",
+      "tooManyAttempts": "Demasiados intentos. Espera unos minutos antes de intentarlo nuevamente.",
       "unavailable": "No fue posible iniciar sesión en este momento. Inténtalo nuevamente.",
       "unexpected": "Ocurrió un error inesperado. Inténtalo nuevamente."
     }
