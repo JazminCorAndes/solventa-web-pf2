@@ -199,9 +199,6 @@
     "conditionsTitle": "Main conditions",
     "unavailableMessage": "This offer can no longer be selected.",
     "acceptedMessage": "This is the accepted offer for this quote.",
-    "selectToContinue": "Select an available offer to continue.",
-    "readyToContinue": "{{ name }} is ready to continue.",
-    "continue": "Continue to acceptance",
     "confirming": "Confirming",
     "refreshNote": "You can compare this offer with other alternatives in the list.",
     "status": {
