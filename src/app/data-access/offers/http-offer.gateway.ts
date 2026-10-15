@@ -31,7 +31,7 @@ interface OfferResponse {
   condiciones: string[];
   beneficiosAdicionales: string[];
   recomendada: boolean;
-  estado: 'disponible' | 'vencida' | 'retirada';
+  estado: 'disponible' | 'aceptada' | 'vencida' | 'retirada';
   vigenteHasta: string;
 }
 
@@ -148,6 +148,7 @@ function toSelection(response: SelectionResponse): SelectedOfferRecord {
     offerName: response.nombreOferta,
     monthlyPremium: toMoney(response.primaMensual),
     selectedAt: response.seleccionadaEn,
+    confirmed: true,
   };
 }
 
@@ -162,6 +163,7 @@ function toMoney(response: MoneyResponse): { amount: number; currency: string } 
 function toStatus(status: OfferResponse['estado']): OfferStatus {
   const statuses: Record<OfferResponse['estado'], OfferStatus> = {
     disponible: 'available',
+    aceptada: 'accepted',
     vencida: 'expired',
     retirada: 'withdrawn',
   };
