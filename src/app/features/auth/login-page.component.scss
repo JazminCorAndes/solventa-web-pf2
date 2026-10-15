@@ -6,15 +6,45 @@
 }
 
 .login-page {
+  position: relative;
   display: grid;
   min-height: 100dvh;
   padding: var(--solventa-space-6);
   background: var(--solventa-color-background);
   place-items: center;
+  overflow: hidden;
+}
+
+.login-page::before,
+.login-page::after {
+  position: absolute;
+  border-radius: 50%;
+  content: '';
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.login-page::before {
+  width: min(52vw, 44rem);
+  height: min(52vw, 44rem);
+  top: -24rem;
+  right: -10rem;
+  background: rgb(0 210 255 / 13%);
+}
+
+.login-page::after {
+  width: 24rem;
+  height: 24rem;
+  bottom: -17rem;
+  left: -8rem;
+  background: rgb(16 185 129 / 8%);
 }
 
 .login-card {
+  position: relative;
+  z-index: 1;
   width: min(100%, 390px);
+  border: 1px solid var(--solventa-color-border);
   padding: var(--solventa-space-8) var(--solventa-space-8) var(--solventa-space-6);
 
   @include mat.card-overrides(
@@ -36,7 +66,7 @@ mat-card-content {
 
 h1 {
   margin: 0 0 var(--solventa-space-6);
-  color: var(--solventa-color-primary);
+  color: var(--solventa-color-text);
   font-size: 1.35rem;
   text-align: center;
 }
@@ -127,6 +157,10 @@ mat-card-footer {
   border-top: 1px solid var(--solventa-color-border-soft);
   color: var(--solventa-color-text-secondary);
   font-size: 0.76rem;
+}
+
+:host-context([data-theme='dark']) .login-card {
+  box-shadow: 0 24px 70px rgb(0 0 0 / 42%);
 }
 
 mat-card-footer .pending-link {

@@ -14,7 +14,7 @@ import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.s
 
 interface MoneyResponse {
   monto: string;
-  moneda: 'UF' | 'CLP';
+  moneda: string;
 }
 
 interface OfferResponse {
@@ -121,7 +121,7 @@ function toOffer(response: OfferResponse): InsuranceOffer {
     version: response.version,
     name: response.nombre,
     description: response.descripcion,
-    monthlyPremiumUf: Number(response.primaMensual.monto),
+    monthlyPremium: toMoney(response.primaMensual),
     coverageLabel: response.coberturaPrincipal,
     deductibleLabel: response.deducible,
     validityLabel: response.vigencia,
@@ -141,9 +141,17 @@ function toSelection(response: SelectionResponse): SelectedOfferRecord {
     offerId: response.ofertaId,
     offerVersion: response.version,
     offerName: response.nombreOferta,
-    monthlyPremiumUf: Number(response.primaMensual.monto),
+    monthlyPremium: toMoney(response.primaMensual),
     selectedAt: response.seleccionadaEn,
   };
+}
+
+function toMoney(response: MoneyResponse): { amount: number; currency: string } {
+  const amount = Number(response.monto);
+  if (!Number.isFinite(amount) || !/^[A-Z]{3}$/.test(response.moneda)) {
+    throw new Error('The offer contains an invalid monetary amount.');
+  }
+  return { amount, currency: response.moneda };
 }
 
 function toStatus(status: OfferResponse['estado']): OfferStatus {

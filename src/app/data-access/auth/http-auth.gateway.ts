@@ -14,6 +14,7 @@ import {
   AuthGrant,
   AuthSession,
   AuthUser,
+  DocumentType,
   LoginCredentials,
   RegistrationData,
 } from '../../core/auth/auth.models';
@@ -23,6 +24,9 @@ interface UserResponse {
   nombre: string;
   correo: string;
   rol: 'cliente';
+  tipoDocumento?: DocumentType;
+  identificacion?: string;
+  telefono?: string;
 }
 
 interface SessionResponse {
@@ -35,10 +39,6 @@ interface TokenResponse extends SessionResponse {
   accessToken: string;
   refreshToken: string;
   refreshExpiraEn: string;
-}
-
-interface ProblemResponse {
-  code?: string;
 }
 
 @Injectable()
@@ -144,7 +144,11 @@ function parseRetryAfter(error: HttpErrorResponse): number | null {
 }
 
 function toUser(user: UserResponse): AuthUser {
-  return { id: user.id, name: user.nombre, email: user.correo, role: 'client' };
+  return { id: user.id, name: user.nombre, email: user.correo, role: 'client',
+    documentType: user.tipoDocumento ?? 'cc',
+    nationalId: user.identificacion ?? '',
+    phone: user.telefono ?? '',
+  };
 }
 
 function toSession(response: SessionResponse): AuthSession {

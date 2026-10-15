@@ -109,7 +109,10 @@ describe('LoginPageComponent', () => {
   });
 
   it('prevents duplicate submissions while authentication is pending', () => {
-    gateway.loginResult = (): Observable<AuthGrant> => new Subject<AuthGrant>();
+    gateway.loginResult = (): Observable<AuthGrant> => {
+      loginCalls++;
+      return new Subject<AuthGrant>();
+    };
     component.form.setValue({
       email: 'cliente@solventa.co',
       password: 'Solventa123!',

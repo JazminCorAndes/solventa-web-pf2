@@ -1,73 +1,270 @@
-:host,
-mat-sidenav-container {
+:host {
   display: block;
   min-height: 100dvh;
 }
 
+.app-shell {
+  min-height: 100dvh;
+  background: var(--solventa-color-background);
+}
+
 mat-sidenav {
-  width: 240px;
-  border-right: 1px solid var(--solventa-color-border-soft);
-  background: var(--solventa-color-surface);
+  width: var(--solventa-sidebar-width);
+  border-right: 1px solid rgb(255 255 255 / 8%);
+  color: var(--solventa-color-text-on-dark);
+  background: var(--solventa-color-sidebar);
+}
+
+.sidenav-shell {
+  display: flex;
+  min-height: 100%;
+  padding: var(--solventa-space-5) var(--solventa-space-4);
+  flex-direction: column;
 }
 
 .sidenav-header {
   display: flex;
-  height: 72px;
+  min-height: 44px;
   align-items: center;
-  padding: 0 var(--solventa-space-5);
-  border-bottom: 1px solid var(--solventa-color-border-soft);
+  justify-content: space-between;
 }
 
-nav {
+.sidenav-header a {
+  text-decoration: none;
+}
+
+.portal-label {
   display: grid;
-  gap: var(--solventa-space-1);
-  padding: var(--solventa-space-4);
+  margin: var(--solventa-space-6) var(--solventa-space-2) var(--solventa-space-8);
+  padding: var(--solventa-space-3) var(--solventa-space-4);
+  border-left: 2px solid var(--solventa-color-primary);
+  gap: 0.1rem;
 }
 
-nav a,
-nav button {
-  justify-content: flex-start;
+.portal-label span,
+.nav-section {
+  color: #a9bcd0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-nav .active {
-  background: var(--solventa-color-surface-muted);
-  font-weight: 700;
+.portal-label strong {
+  font-family: var(--solventa-font-display);
+  font-size: 0.95rem;
 }
 
-.coming-soon {
-  padding: 0 var(--solventa-space-5);
-  margin: 0;
-  color: var(--solventa-color-text-secondary);
-  font-size: 0.75rem;
+.nav-section {
+  margin: 0 var(--solventa-space-3) var(--solventa-space-2);
 }
 
-mat-toolbar {
-  min-height: 72px;
-  border-bottom: 1px solid var(--solventa-color-border-soft);
-  background: var(--solventa-color-surface);
+mat-nav-list {
+  display: grid;
+  gap: var(--solventa-space-2);
 }
 
-.toolbar-spacer {
-  flex: 1;
-}
-
-.user-name {
-  margin-right: var(--solventa-space-3);
-  font-size: 0.9rem;
+mat-nav-list a,
+mat-nav-list button {
+  height: 46px;
+  border-radius: var(--solventa-radius-sm);
+  color: #cbd8e6;
   font-weight: 600;
 }
 
-.page-content {
-  min-height: calc(100dvh - 72px);
-  padding: var(--solventa-space-8);
+mat-nav-list .mdc-list-item__primary-text,
+mat-nav-list app-icon {
+  color: inherit;
 }
 
-@media (max-width: 600px) {
-  .user-name {
+mat-nav-list .mdc-list-item__primary-text {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  line-height: 1.2;
+}
+
+mat-nav-list a:hover {
+  color: #ffffff;
+  background: rgb(255 255 255 / 7%);
+}
+
+mat-nav-list a.active-link {
+  color: var(--solventa-color-primary);
+  background: rgb(0 210 255 / 12%);
+}
+
+mat-nav-list button:disabled {
+  color: #7890aa;
+}
+
+.sidenav-footer {
+  display: grid;
+  margin-top: auto;
+  padding-top: var(--solventa-space-6);
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  gap: var(--solventa-space-4);
+}
+
+.security-note,
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: var(--solventa-space-3);
+}
+
+.security-note {
+  padding: 0 var(--solventa-space-2);
+  color: #9fb3c8;
+  font-size: 0.8rem;
+}
+
+.logout-button {
+  width: 100%;
+  padding: var(--solventa-space-3);
+  border: 0;
+  border-radius: var(--solventa-radius-sm);
+  color: #dce8f3;
+  background: transparent;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  color: #ffffff;
+  background: rgb(255 255 255 / 7%);
+}
+
+.topbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  height: var(--solventa-header-height);
+  padding: 0 clamp(1rem, 3vw, 2rem);
+  border-bottom: 1px solid var(--solventa-color-border);
+  color: var(--solventa-color-text);
+  background: color-mix(in srgb, var(--solventa-color-surface) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.topbar-title {
+  font-family: var(--solventa-font-display);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.icon-button,
+.language-button {
+  display: inline-grid;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--solventa-color-text);
+  background: transparent;
+  cursor: pointer;
+  place-items: center;
+}
+
+.menu-button {
+  margin-right: var(--solventa-space-2);
+}
+
+.close-button {
+  color: #ffffff;
+}
+
+.language-button {
+  display: inline-flex;
+  width: auto;
+  margin-right: var(--solventa-space-2);
+  padding: 0 var(--solventa-space-3);
+  border-color: var(--solventa-color-border);
+  border-radius: 999px;
+  gap: var(--solventa-space-2);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.language-button:hover,
+.icon-button:hover {
+  border-color: var(--solventa-color-primary);
+  color: var(--solventa-color-primary);
+}
+
+.user-profile {
+  display: flex;
+  min-width: 0;
+  margin-left: var(--solventa-space-4);
+  align-items: center;
+  gap: var(--solventa-space-3);
+}
+
+.avatar {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid color-mix(in srgb, var(--solventa-color-primary) 60%, transparent);
+  border-radius: 50%;
+  color: var(--solventa-color-primary);
+  background: var(--solventa-color-primary-soft);
+  font-size: 0.78rem;
+  font-weight: 800;
+  place-items: center;
+}
+
+.user-copy {
+  display: grid;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.user-copy strong {
+  max-width: 9rem;
+  overflow: hidden;
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+}
+
+.user-copy small {
+  max-width: 11rem;
+  overflow: hidden;
+  color: var(--solventa-color-text-secondary);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+}
+
+.main-content {
+  width: min(100%, calc(var(--solventa-content-width) + 4rem));
+  min-height: calc(100dvh - var(--solventa-header-height));
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+@media (max-width: 760px) {
+  .topbar-title,
+  .user-copy {
     display: none;
   }
 
-  .page-content {
-    padding: var(--solventa-space-4);
+  .user-profile {
+    margin-left: var(--solventa-space-2);
+  }
+
+  .language-button span {
+    display: none;
+  }
+
+  .language-button {
+    width: 2.5rem;
+    padding: 0;
+  }
+
+  .main-content {
+    padding: var(--solventa-space-5) var(--solventa-space-4);
   }
 }

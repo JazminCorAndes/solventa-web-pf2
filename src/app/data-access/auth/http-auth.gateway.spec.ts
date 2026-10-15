@@ -36,6 +36,9 @@ const EXPECTED_USER = {
   name: 'Cliente Solventa',
   email: 'cliente@solventa.co',
   role: 'client',
+  documentType: 'cc',
+  nationalId: '',
+  phone: '',
 };
 
 describe('HttpAuthGateway', () => {

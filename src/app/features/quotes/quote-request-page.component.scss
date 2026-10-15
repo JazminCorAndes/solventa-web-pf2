@@ -25,8 +25,6 @@ header p {
 
 .request-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(290px, 0.8fr);
-  gap: clamp(var(--solventa-space-6), 7vw, 76px);
 }
 
 .request-column {
@@ -78,13 +76,32 @@ header p {
   width: 100%;
 }
 
-.form-card mat-card-content,
-.context-card mat-card-content {
+.form-card mat-card-content {
   padding: var(--solventa-space-5);
 }
 
 form {
   display: grid;
+}
+
+.profile-summary {
+  padding: var(--solventa-space-4);
+  margin-bottom: var(--solventa-space-4);
+  border-radius: var(--solventa-radius-sm);
+  background: var(--solventa-color-surface-muted);
+}
+
+.profile-summary h3 {
+  margin: 0 0 var(--solventa-space-3);
+  font-size: 0.82rem;
+}
+
+.profile-summary dl {
+  gap: var(--solventa-space-2);
+}
+
+.profile-summary dl div {
+  align-items: baseline;
 }
 
 label,
@@ -135,19 +152,6 @@ mat-form-field {
   color: var(--solventa-color-error);
 }
 
-.inline-alert.success {
-  align-items: flex-start;
-  justify-content: space-between;
-  border-color: color-mix(in srgb, var(--solventa-color-success) 25%, transparent);
-  background: #ecfdf3;
-  color: var(--solventa-color-success);
-}
-
-.inline-alert.success div {
-  display: grid;
-  gap: var(--solventa-space-1);
-}
-
 .submit-button {
   display: flex;
   width: 100%;
@@ -162,6 +166,39 @@ mat-form-field {
   text-align: center;
 }
 
+.quote-processing-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  padding: var(--solventa-space-5);
+  background: color-mix(in srgb, var(--solventa-color-background) 92%, transparent);
+  backdrop-filter: blur(10px);
+  place-items: center;
+}
+
+.quote-processing-card {
+  display: grid;
+  width: min(100%, 420px);
+  justify-items: center;
+  gap: var(--solventa-space-3);
+  padding: var(--solventa-space-8);
+  border: 1px solid var(--solventa-color-border-soft);
+  border-radius: var(--solventa-radius-lg);
+  background: var(--solventa-color-surface);
+  box-shadow: var(--solventa-shadow-card);
+  text-align: center;
+}
+
+.quote-processing-card h2,
+.quote-processing-card p {
+  margin: 0;
+}
+
+.quote-processing-card p {
+  color: var(--solventa-color-text-secondary);
+}
+
 .catalog-status {
   display: flex;
   align-items: center;
@@ -169,18 +206,6 @@ mat-form-field {
   margin-bottom: var(--solventa-space-4);
   color: var(--solventa-color-text-secondary);
   font-size: 0.78rem;
-}
-
-.context-card {
-  align-self: start;
-}
-
-.context-card h2 {
-  margin: 0 0 var(--solventa-space-5);
-  color: var(--solventa-color-text-secondary);
-  font-size: 0.82rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 dl {
@@ -207,59 +232,6 @@ dd {
   font-size: 0.78rem;
   font-weight: 600;
   text-align: right;
-}
-
-dd small {
-  color: var(--solventa-color-text-secondary);
-  font-size: 0.6rem;
-  text-transform: uppercase;
-}
-
-.privacy-note {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--solventa-space-3);
-  padding: var(--solventa-space-4);
-  margin: var(--solventa-space-6) 0 var(--solventa-space-3);
-  border-radius: var(--solventa-radius-sm);
-  background: var(--solventa-color-surface-muted);
-}
-
-.privacy-note > span {
-  display: grid;
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-  border-radius: 50%;
-  background: var(--solventa-color-text-secondary);
-  color: #ffffff;
-  font-size: 0.68rem;
-  place-items: center;
-}
-
-.privacy-note p {
-  margin: 0;
-  color: var(--solventa-color-text-secondary);
-  font-size: 0.7rem;
-}
-
-.risk-placeholder {
-  display: grid;
-  min-height: 120px;
-  color: var(--solventa-color-border);
-  background: #eef0f3;
-  font-size: 0.7rem;
-  place-items: center;
-}
-
-@media (max-width: 900px) {
-  .request-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .context-card {
-    order: -1;
-  }
 }
 
 @media (max-width: 600px) {

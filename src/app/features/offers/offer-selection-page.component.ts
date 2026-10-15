@@ -1,9 +1,6 @@
-import { DOCUMENT, DatePipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -11,17 +8,15 @@ import { finalize, take } from 'rxjs';
 import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { InsuranceOffer } from '../../core/offers/offer.models';
 import { OfferSelectionService } from '../../core/offers/offer-selection.service';
+import { ACTIVE_MARKET } from '../../core/market/market.config';
 
 @Component({
   selector: 'app-offer-selection-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
-    DecimalPipe,
+    CurrencyPipe,
     MatButtonModule,
-    MatCardModule,
-    MatChipsModule,
-    MatDividerModule,
     MatProgressSpinnerModule,
     RouterLink,
     TranslocoPipe,
@@ -30,10 +25,10 @@ import { OfferSelectionService } from '../../core/offers/offer-selection.service
   styleUrl: './offer-selection-page.component.scss',
 })
 export class OfferSelectionPageComponent implements OnInit {
-  private readonly document = inject(DOCUMENT);
   private readonly router = inject(Router);
 
   readonly offers = inject(OfferSelectionService);
+  readonly market = ACTIVE_MARKET;
   readonly confirming = signal(false);
   readonly confirmationErrorKey = signal<string | null>(null);
 
@@ -44,17 +39,6 @@ export class OfferSelectionPageComponent implements OnInit {
   selectOffer(offer: InsuranceOffer): void {
     this.confirmationErrorKey.set(null);
     this.offers.selectOffer(offer);
-  }
-
-  showOffer(offerId: string): void {
-    if (this.offers.expandedOfferId() !== offerId) {
-      this.offers.toggleDetails(offerId);
-    }
-    requestAnimationFrame(() => {
-      this.document
-        .getElementById(`offer-${offerId}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
   }
 
   continueToAcceptance(): void {

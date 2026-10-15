@@ -1,6 +1,6 @@
 import { Observable, of } from 'rxjs';
 import { AuthGateway } from './auth.gateway';
-import { AuthGrant, AuthSession, AuthUser, LoginCredentials, RegistrationData } from './auth.models';
+import { AuthGrant, AuthSession, AuthUser, RegistrationData } from './auth.models';
 import { AuthStorage, StoredAuth } from './auth-storage.service';
 
 export const TEST_USER: AuthUser = {
@@ -8,6 +8,9 @@ export const TEST_USER: AuthUser = {
   name: 'Cliente Solventa',
   email: 'cliente@solventa.co',
   role: 'client',
+  documentType: 'cc',
+  nationalId: '1023456789',
+  phone: '+573001234567',
 };
 
 export function grantFor(accessToken: string, refreshToken: string, now = Date.now()): AuthGrant {
@@ -47,7 +50,7 @@ export class TestAuthGateway implements AuthGateway {
     return of({ ...TEST_USER, name: data.name, email: data.email });
   }
 
-  login(_credentials: LoginCredentials): Observable<AuthGrant> {
+  login(): Observable<AuthGrant> {
     return this.loginResult();
   }
 

@@ -45,6 +45,7 @@ h1 {
   display: grid;
   gap: var(--solventa-space-2);
   padding: var(--solventa-space-5);
+  border-top: 2px solid transparent;
 }
 
 .metric-grid span,
@@ -58,12 +59,16 @@ h1 {
 
 .accent-card {
   background: var(--solventa-color-primary);
-  color: #ffffff;
+  color: var(--solventa-color-text-on-primary);
 }
 
 .accent-card span,
 .accent-card small {
-  color: rgb(255 255 255 / 72%);
+  color: color-mix(in srgb, var(--solventa-color-text-on-primary) 72%, transparent);
+}
+
+.metric-grid mat-card:not(.accent-card) mat-card-content {
+  border-top-color: var(--solventa-color-primary);
 }
 
 .dashboard-grid {

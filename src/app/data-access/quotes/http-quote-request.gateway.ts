@@ -8,9 +8,11 @@ import {
 } from '../../core/quotes/quote-request.errors';
 import { QuoteRequestGateway } from '../../core/quotes/quote-request.gateway';
 import {
+  DocumentType,
   InsuranceProduct,
   QuoteRequestDraft,
   QuoteRequestRecord,
+  TravelDestination,
 } from '../../core/quotes/quote-request.models';
 
 interface ProductsResponse {
@@ -26,12 +28,20 @@ interface QuoteRequestResponse {
   id: string;
   productoId: string;
   tipoCliente: 'persona_natural';
+  tipoDocumento: DocumentType;
   identificacion: string;
-  patenteVehiculo: string;
+  datosProducto: Record<string, string>;
   correo: string;
   telefono: string;
   estado: 'recibida';
   creadaEn: string;
+}
+
+interface TravelDestinationsResponse {
+  destinos: Array<{
+    codigo: string;
+    nombre: string;
+  }>;
 }
 
 @Injectable()
@@ -55,17 +65,29 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
       );
   }
 
+  loadTravelDestinations(): Observable<TravelDestination[]> {
+    return this.http
+      .get<TravelDestinationsResponse>(`${this.apiUrl}/destinos-viaje`, {
+        withCredentials: true,
+      })
+      .pipe(
+        map((response) =>
+          response.destinos.map((destination) => ({
+            code: destination.codigo,
+            name: destination.nombre,
+          })),
+        ),
+        catchError((error: unknown) => this.mapUnavailable(error)),
+      );
+  }
+
   submitRequest(request: QuoteRequestDraft): Observable<QuoteRequestRecord> {
     return this.http
       .post<QuoteRequestResponse>(
         `${this.apiUrl}/solicitudes-cotizacion`,
         {
           productoId: request.productId,
-          tipoCliente: 'persona_natural',
-          identificacion: request.nationalId,
-          patenteVehiculo: request.vehiclePlate,
-          correo: request.email,
-          telefono: request.phone,
+          datosProducto: request.productData,
         },
         {
           headers: new HttpHeaders({ 'Idempotency-Key': crypto.randomUUID() }),
@@ -76,8 +98,9 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
           id: response.id,
           productId: response.productoId,
           customerType: 'natural',
+          documentType: response.tipoDocumento,
           nationalId: response.identificacion,
-          vehiclePlate: response.patenteVehiculo,
+          productData: response.datosProducto,
           email: response.correo,
           phone: response.telefono,
           status: 'received',

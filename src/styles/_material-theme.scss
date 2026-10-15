@@ -4,37 +4,88 @@ html {
   @include mat.theme(
     (
       color: (
-        primary: mat.$blue-palette,
-        tertiary: mat.$cyan-palette,
+        primary: mat.$cyan-palette,
+        tertiary: mat.$green-palette,
       ),
-      typography: var(--solventa-font-family),
-      density: 0,
+      typography: 'Afacad Flux Variable',
+      density: -1,
     )
   );
 }
 
-:root {
+body {
   @include mat.button-overrides(
     (
       filled-container-color: var(--solventa-color-primary),
-      filled-label-text-color: #ffffff,
-      filled-container-height: 44px,
+      filled-label-text-color: var(--solventa-color-text-on-primary),
+      outlined-label-text-color: var(--solventa-color-text),
+      outlined-outline-color: var(--solventa-color-border),
+      text-label-text-color: var(--solventa-color-primary),
       filled-container-shape: var(--solventa-radius-sm),
+      outlined-container-shape: var(--solventa-radius-sm),
+      text-container-shape: var(--solventa-radius-sm),
     )
   );
+
   @include mat.card-overrides(
     (
       elevated-container-color: var(--solventa-color-surface),
-      elevated-container-shape: var(--solventa-radius-md),
-      elevated-container-elevation: var(--solventa-shadow-card),
+      elevated-container-shape: var(--solventa-radius-lg),
+      elevated-container-elevation: var(--solventa-shadow-sm),
+      outlined-container-color: var(--solventa-color-surface),
+      outlined-container-shape: var(--solventa-radius-lg),
+      outlined-outline-color: var(--solventa-color-border),
+      subtitle-text-color: var(--solventa-color-text-secondary),
     )
   );
+
   @include mat.form-field-overrides(
     (
-      outlined-container-shape: var(--solventa-radius-sm),
+      outlined-input-text-color: var(--solventa-color-text),
+      outlined-label-text-color: var(--solventa-color-text-secondary),
       outlined-outline-color: var(--solventa-color-border),
-      outlined-hover-outline-color: var(--solventa-color-text-secondary),
-      outlined-focus-outline-color: var(--solventa-color-focus),
+      outlined-hover-outline-color: var(--solventa-color-primary),
+      outlined-focus-outline-color: var(--solventa-color-primary),
+      outlined-caret-color: var(--solventa-color-primary),
+      outlined-error-focus-outline-color: var(--solventa-color-danger),
+      outlined-error-outline-color: var(--solventa-color-danger),
+      error-text-color: var(--solventa-color-danger),
+      container-text-font: var(--solventa-font-body),
+      outlined-container-shape: var(--solventa-radius-sm),
     )
   );
+
+  @include mat.select-overrides(
+    (
+      enabled-trigger-text-color: var(--solventa-color-text),
+      enabled-arrow-color: var(--solventa-color-text-secondary),
+      focused-arrow-color: var(--solventa-color-primary),
+    )
+  );
+
+  @include mat.checkbox-overrides(
+    (
+      selected-icon-color: var(--solventa-color-primary),
+      selected-checkmark-color: var(--solventa-color-text-on-primary),
+      label-text-color: var(--solventa-color-text),
+    )
+  );
+}
+
+.mat-mdc-select-panel,
+.mat-mdc-menu-panel {
+  color: var(--solventa-color-text);
+  background: var(--solventa-color-surface) !important;
+}
+
+.mat-mdc-option {
+  color: var(--solventa-color-text) !important;
+}
+
+.mat-mdc-button-base .mdc-button__label,
+.mat-mdc-chip .mdc-evolution-chip__text-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
 }

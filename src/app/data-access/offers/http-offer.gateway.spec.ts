@@ -14,10 +14,11 @@ const REQUEST: QuoteRequestRecord = {
   id: 'AQT-2026-ABCDEF1234',
   productId: 'automotive',
   customerType: 'natural',
-  nationalId: '12.345.678-9',
-  vehiclePlate: 'ABC123',
+  documentType: 'cc',
+  nationalId: '1.234.567.890',
+  productData: { vehiclePlate: 'ABC123' },
   email: 'cliente@solventa.co',
-  phone: '+56912345678',
+  phone: '+573001234567',
   status: 'received',
   createdAt: '2026-10-11T18:00:00Z',
 };
@@ -27,11 +28,11 @@ const OFFER = {
   version: 1,
   nombre: 'Seguro Automotriz Pro',
   descripcion: 'Cobertura extendida',
-  primaMensual: { monto: '1.8000', moneda: 'UF' as const },
+  primaMensual: { monto: '189900', moneda: 'COP' },
   coberturaPrincipal: 'Daños propios y terceros',
-  deducible: 'UF 3',
+  deducible: '$500.000 COP',
   vigencia: 'Anual',
-  responsabilidadCivil: 'Hasta UF 1.000',
+  responsabilidadCivil: 'Hasta $1.000.000.000 COP',
   coberturas: ['Daños materiales'],
   condiciones: ['Inspección previa'],
   beneficiosAdicionales: ['Auto de reemplazo'],
@@ -84,7 +85,7 @@ describe('HttpOfferGateway', () => {
       offers: [
         {
           id: OFFER.id,
-          monthlyPremiumUf: 1.8,
+          monthlyPremium: { amount: 189_900, currency: 'COP' },
           status: 'available',
         },
       ],
@@ -108,7 +109,7 @@ describe('HttpOfferGateway', () => {
     await expect(result).resolves.toMatchObject({
       quoteId: REQUEST.id,
       offerId: OFFER.id,
-      monthlyPremiumUf: 1.8,
+      monthlyPremium: { amount: 189_900, currency: 'COP' },
     });
   });
 
