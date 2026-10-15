@@ -200,9 +200,6 @@
     "conditionsTitle": "Condiciones principales",
     "unavailableMessage": "Esta oferta ya no puede seleccionarse.",
     "acceptedMessage": "Esta es la oferta aceptada para esta cotización.",
-    "selectToContinue": "Selecciona una oferta vigente para continuar.",
-    "readyToContinue": "{{ name }} está lista para continuar.",
-    "continue": "Continuar a aceptación",
     "confirming": "Confirmando",
     "refreshNote": "Puedes comparar esta oferta con otras alternativas en el listado.",
     "status": {

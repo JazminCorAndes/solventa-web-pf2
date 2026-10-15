@@ -36,12 +36,6 @@ export class OfferSelectionPageComponent implements OnInit {
 
   selectOffer(offer: InsuranceOffer): void {
     this.offers.selectOffer(offer);
-  }
-
-  continueToAcceptance(): void {
-    if (!this.offers.canContinue()) {
-      return;
-    }
     void this.router.navigate(['/app/cotizaciones/aceptacion']);
   }
 }

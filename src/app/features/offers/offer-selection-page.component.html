@@ -180,23 +180,5 @@
         </article>
       }
     </div>
-
-    <div class="continue-bar" aria-live="polite">
-      <span>
-        {{
-          offers.selectedOffer()
-            ? ('offers.readyToContinue' | transloco: { name: offers.selectedOffer()?.name })
-            : ('offers.selectToContinue' | transloco)
-        }}
-      </span>
-      <button
-        mat-flat-button
-        type="button"
-        [disabled]="!offers.canContinue()"
-        (click)="continueToAcceptance()"
-      >
-        {{ 'offers.continue' | transloco }} →
-      </button>
-    </div>
   }
 </section>
