@@ -1,4 +1,4 @@
-export type OfferStatus = 'available' | 'expired' | 'withdrawn';
+export type OfferStatus = 'available' | 'accepted' | 'expired' | 'withdrawn';
 
 export interface Money {
   amount: number;
@@ -38,4 +38,5 @@ export interface SelectedOfferRecord {
   offerName: string;
   monthlyPremium: Money;
   selectedAt: string;
+  confirmed: boolean;
 }

@@ -58,7 +58,8 @@ function isSelectionRecord(value: unknown): value is SelectedOfferRecord {
     typeof candidate.offerVersion === 'number' &&
     typeof candidate.offerName === 'string' &&
     isMoney(candidate.monthlyPremium) &&
-    typeof candidate.selectedAt === 'string'
+    typeof candidate.selectedAt === 'string' &&
+    typeof candidate.confirmed === 'boolean'
   );
 }
 

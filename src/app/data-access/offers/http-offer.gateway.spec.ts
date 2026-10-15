@@ -109,6 +109,7 @@ describe('HttpOfferGateway', () => {
       quoteId: REQUEST.id,
       offerId: OFFER.id,
       monthlyPremium: { amount: 189_900, currency: 'COP' },
+      confirmed: true,
     });
   });
 
@@ -128,6 +129,23 @@ describe('HttpOfferGateway', () => {
       quoteId: REQUEST.id,
       offerId: OFFER.id,
       offerName: OFFER.nombre,
+      confirmed: true,
+    });
+  });
+
+  it('maps an accepted offer returned by the backend', async () => {
+    const result = firstValueFrom(gateway.loadOffers());
+    const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`);
+    request.flush({
+      solicitudId: REQUEST.id,
+      calculadaEn: '2026-10-11T18:00:00Z',
+      vigenteHasta: '2026-10-26T18:00:00Z',
+      tasaAplicada: 'Estándar',
+      ofertas: [{ ...OFFER, estado: 'aceptada' }],
+    });
+
+    await expect(result).resolves.toMatchObject({
+      offers: [{ id: OFFER.id, status: 'accepted' }],
     });
   });
 });
