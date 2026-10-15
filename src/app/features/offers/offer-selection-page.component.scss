@@ -226,6 +226,16 @@ h1 {
   text-transform: uppercase;
 }
 
+.accepted-status {
+  display: flex;
+  align-items: center;
+  gap: var(--solventa-space-2);
+  padding: var(--solventa-space-3);
+  border-radius: var(--solventa-radius-sm);
+  color: var(--solventa-color-success);
+  background: var(--solventa-color-success-soft);
+}
+
 .plan-actions p {
   margin: 0;
   color: var(--solventa-color-text-secondary);

@@ -199,6 +199,7 @@
     "coveragesTitle": "Coberturas",
     "conditionsTitle": "Condiciones principales",
     "unavailableMessage": "Esta oferta ya no puede seleccionarse.",
+    "acceptedMessage": "Esta es la oferta aceptada para esta cotización.",
     "selectToContinue": "Selecciona una oferta vigente para continuar.",
     "readyToContinue": "{{ name }} está lista para continuar.",
     "continue": "Continuar a aceptación",
@@ -206,6 +207,7 @@
     "refreshNote": "Puedes comparar esta oferta con otras alternativas en el listado.",
     "status": {
       "available": "Disponible",
+      "accepted": "Aceptada",
       "expired": "Vencida",
       "withdrawn": "Retirada"
     },
@@ -221,10 +223,24 @@
     }
   },
   "acceptance": {
-    "step": "Siguiente paso",
-    "title": "Aceptación de la oferta",
+    "step": "3 de 4 · Confirma tu protección",
+    "title": "Confirma tu protección",
+    "subtitle": "Revisa el plan y los datos del seguro antes de confirmar tu selección.",
     "selectedOffer": "Oferta seleccionada",
-    "body": "La aceptación formal de condiciones y coberturas se implementará en la historia correspondiente.",
-    "backToOffers": "Volver a las ofertas"
+    "monthlyPremium": "Prima mensual",
+    "includedCoverages": "Coberturas incluidas",
+    "insuranceData": "Datos del seguro",
+    "policyholder": "Tomador",
+    "consent": "Confirmo que revisé los datos y acepto las condiciones y coberturas de la oferta seleccionada.",
+    "confirmAction": "Confirmar selección",
+    "confirming": "Confirmando",
+    "confirmedTitle": "Selección confirmada",
+    "confirmedBody": "La oferta quedó registrada correctamente.",
+    "loading": "Cargando el resumen de tu protección.",
+    "backToOffers": "Volver a las ofertas",
+    "errors": {
+      "unavailable": "La oferta cambió o venció. Vuelve a las ofertas para seleccionar una opción vigente.",
+      "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente."
+    }
   }
 }

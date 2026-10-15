@@ -1,0 +1,138 @@
+<section class="acceptance-page">
+  <header class="page-header">
+    <span class="step">{{ 'acceptance.step' | transloco }}</span>
+    <h1>{{ 'acceptance.title' | transloco }}</h1>
+    <p>{{ 'acceptance.subtitle' | transloco }}</p>
+  </header>
+
+  @if (selectedOffer(); as offer) {
+    <div class="review-grid">
+      <mat-card appearance="outlined" class="plan-card">
+        <mat-card-content>
+          <span class="section-label">{{ 'acceptance.selectedOffer' | transloco }}</span>
+          <div class="plan-heading">
+            <div>
+              <h2>{{ offer.name }}</h2>
+              <p>{{ offer.description }}</p>
+            </div>
+            <div class="premium">
+              <strong>
+                {{
+                  offer.monthlyPremium.amount
+                    | currency
+                      : offer.monthlyPremium.currency
+                      : 'symbol-narrow'
+                      : '1.0-0'
+                      : market.locale
+                }}
+              </strong>
+              <span>{{ 'acceptance.monthlyPremium' | transloco }}</span>
+            </div>
+          </div>
+
+          <dl class="coverage-summary">
+            <div>
+              <dt>{{ 'offers.coverage' | transloco }}</dt>
+              <dd>{{ offer.coverageLabel }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'offers.deductible' | transloco }}</dt>
+              <dd>{{ offer.deductibleLabel }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'offers.term' | transloco }}</dt>
+              <dd>{{ offer.validityLabel }}</dd>
+            </div>
+          </dl>
+
+          <h3>{{ 'acceptance.includedCoverages' | transloco }}</h3>
+          <ul class="coverage-list">
+            @for (coverage of offer.coverages; track coverage) {
+              <li><app-icon name="check" [size]="18" /> {{ coverage }}</li>
+            }
+          </ul>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined" class="details-card">
+        <mat-card-content>
+          <span class="section-label">{{ 'acceptance.insuranceData' | transloco }}</span>
+          <h2>{{ productName() }}</h2>
+          <dl class="product-details">
+            @for (detail of productDetails(); track detail.labelKey) {
+              <div>
+                <dt>{{ detail.labelKey | transloco }}</dt>
+                <dd>
+                  @if (detail.isDate) {
+                    {{ detail.value | date: 'longDate' : 'UTC' : market.locale }}
+                  } @else {
+                    {{ detail.value }}
+                  }
+                </dd>
+              </div>
+            }
+            @if (user(); as customer) {
+              <div>
+                <dt>{{ 'acceptance.policyholder' | transloco }}</dt>
+                <dd>{{ customer.name }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'quoteRequest.documentType' | transloco }}</dt>
+                <dd>
+                  {{ 'quoteRequest.documentTypes.' + customer.documentType | transloco }} ·
+                  {{ customer.nationalId }}
+                </dd>
+              </div>
+            }
+          </dl>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    @if (confirmed()) {
+      <div class="confirmation-banner" role="status">
+        <span><app-icon name="check" [size]="22" /></span>
+        <div>
+          <strong>{{ 'acceptance.confirmedTitle' | transloco }}</strong>
+          <p>{{ 'acceptance.confirmedBody' | transloco }}</p>
+        </div>
+      </div>
+    } @else {
+      <mat-checkbox [checked]="accepted()" (change)="updateConsent($event)">
+        {{ 'acceptance.consent' | transloco }}
+      </mat-checkbox>
+
+      @if (errorKey()) {
+        <div class="confirmation-error" role="alert">{{ errorKey()! | transloco }}</div>
+      }
+    }
+
+    <div class="actions">
+      <a mat-stroked-button routerLink="/app/cotizaciones/ofertas">
+        ← {{ 'acceptance.backToOffers' | transloco }}
+      </a>
+      @if (!confirmed()) {
+        <button
+          mat-flat-button
+          type="button"
+          [disabled]="!accepted() || confirming()"
+          (click)="confirm()"
+        >
+          @if (confirming()) {
+            <mat-spinner diameter="20" />
+            {{ 'acceptance.confirming' | transloco }}
+          } @else {
+            {{ 'acceptance.confirmAction' | transloco }} →
+          }
+        </button>
+      }
+    </div>
+  } @else {
+    <mat-card appearance="outlined" class="loading-card">
+      <mat-card-content>
+        <mat-spinner diameter="36" />
+        <p>{{ 'acceptance.loading' | transloco }}</p>
+      </mat-card-content>
+    </mat-card>
+  }
+</section>

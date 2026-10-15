@@ -329,17 +329,24 @@ export class MockOfferGateway implements OfferGateway {
 
   loadOffers(): Observable<OfferCalculation> {
     const request = this.quoteRequestStorage.read();
+    const selection = this.selectionStorage.read();
+    const offers = offersFor(request?.productId ?? 'automotive').map((offer) =>
+      selection?.confirmed && selection.offerId === offer.id
+        ? { ...offer, status: 'accepted' as const }
+        : offer,
+    );
     return of<OfferCalculation>({
       quoteId: request?.id ?? 'AQT-2026-8921',
       calculatedAt: '2026-10-11T04:30:00.000Z',
       validUntil: '2027-12-31T23:59:59.000Z',
       appliedRate: 'Estándar (Risk A)',
-      offers: offersFor(request?.productId ?? 'automotive'),
+      offers,
     }).pipe(delay(450));
   }
 
   loadSelection(): Observable<SelectedOfferRecord | null> {
-    return of(this.selectionStorage.read());
+    const selection = this.selectionStorage.read();
+    return of(selection?.confirmed ? selection : null);
   }
 
   confirmSelection(
@@ -368,6 +375,7 @@ export class MockOfferGateway implements OfferGateway {
           offerName: offer.name,
           monthlyPremium: offer.monthlyPremium,
           selectedAt: new Date().toISOString(),
+          confirmed: true,
         };
       }),
     );
