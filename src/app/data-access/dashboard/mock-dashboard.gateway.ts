@@ -14,7 +14,7 @@ const DASHBOARD_FIXTURE: DashboardSnapshot = {
     },
     {
       id: 'POL-LIFE-002',
-      product: 'Seguro de vida',
+      product: 'Microseguro de vida',
       premiumCop: 120000,
       status: 'active',
     },

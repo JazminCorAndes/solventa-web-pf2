@@ -5,7 +5,12 @@ import {
   OfferSelectionStorage,
 } from '../offers/offer-selection-storage.service';
 import { QUOTE_REQUEST_GATEWAY, QuoteRequestGateway } from './quote-request.gateway';
-import { InsuranceProduct, QuoteRequestDraft, QuoteRequestRecord } from './quote-request.models';
+import {
+  InsuranceProduct,
+  QuoteRequestDraft,
+  QuoteRequestRecord,
+  TravelDestination,
+} from './quote-request.models';
 import { QuoteRequestService } from './quote-request.service';
 import { QUOTE_REQUEST_STORAGE, QuoteRequestStorage } from './quote-request-storage.service';
 
@@ -26,15 +31,16 @@ const PRODUCTS: InsuranceProduct[] = [
 
 const DRAFT: QuoteRequestDraft = {
   productId: 'automotive',
-  customerType: 'natural',
-  nationalId: '12345678-9',
-  vehiclePlate: 'ABC123',
-  email: 'cliente@solventa.co',
-  phone: '912345678',
+  productData: { vehiclePlate: 'ABC123' },
 };
 
 const RECORD: QuoteRequestRecord = {
   ...DRAFT,
+  customerType: 'natural',
+  documentType: 'cc',
+  nationalId: '1234567890',
+  email: 'cliente@solventa.co',
+  phone: '+573001234567',
   id: 'AQT-2026-123456',
   status: 'received',
   createdAt: '2026-10-11T12:00:00.000Z',
@@ -48,6 +54,10 @@ class TestQuoteRequestGateway implements QuoteRequestGateway {
   loadProducts(): Observable<InsuranceProduct[]> {
     this.loadCalls++;
     return this.productsResponse;
+  }
+
+  loadTravelDestinations(): Observable<TravelDestination[]> {
+    return of([{ code: 'CO', name: 'Colombia' }]);
   }
 
   submitRequest(): Observable<QuoteRequestRecord> {
@@ -123,6 +133,13 @@ describe('QuoteRequestService', () => {
 
     expect(gateway.loadCalls).toBe(1);
     expect(service.catalogStatus()).toBe('loading');
+  });
+
+  it('loads the supported travel destinations', () => {
+    service.loadTravelDestinations();
+
+    expect(service.travelDestinationsStatus()).toBe('ready');
+    expect(service.travelDestinations()).toEqual([{ code: 'CO', name: 'Colombia' }]);
   });
 
   it('registers and persists a successful request', async () => {

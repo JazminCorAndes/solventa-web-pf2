@@ -14,6 +14,7 @@ import {
   InsuranceProduct,
   QuoteRequestDraft,
   QuoteRequestRecord,
+  TravelDestination,
 } from '../../core/quotes/quote-request.models';
 import {
   QUOTE_REQUEST_STORAGE,
@@ -27,10 +28,11 @@ const RECORD: QuoteRequestRecord = {
   createdAt: '2026-10-11T12:00:00.000Z',
   productId: 'automotive',
   customerType: 'natural',
+  documentType: 'cc',
   nationalId: '12345678-9',
-  vehiclePlate: 'ABC123',
+  productData: { vehiclePlate: 'ABC123' },
   email: 'cliente@solventa.co',
-  phone: '+56912345678',
+  phone: '+573001234567',
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
@@ -43,6 +45,10 @@ class TestQuoteRequestGateway implements QuoteRequestGateway {
         available: true,
       },
     ]);
+  }
+
+  loadTravelDestinations(): Observable<TravelDestination[]> {
+    return of([{ code: 'CO', name: 'Colombia' }]);
   }
 
   submitRequest(request: QuoteRequestDraft): Observable<QuoteRequestRecord> {

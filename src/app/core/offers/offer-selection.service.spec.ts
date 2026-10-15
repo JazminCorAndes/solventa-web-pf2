@@ -10,11 +10,11 @@ const AVAILABLE_OFFER: InsuranceOffer = {
   version: 1,
   name: 'Oferta A',
   description: 'Oferta disponible',
-  monthlyPremiumUf: 1.5,
+  monthlyPremium: { amount: 149_900, currency: 'COP' },
   coverageLabel: 'Cobertura A',
-  deductibleLabel: 'UF 3',
+  deductibleLabel: '$500.000 COP',
   validityLabel: 'Anual',
-  liabilityLabel: 'UF 1.000',
+  liabilityLabel: '$1.000.000.000 COP',
   coverages: ['Cobertura principal'],
   conditions: ['Condición principal'],
   additionalBenefits: ['Asistencia'],
@@ -69,7 +69,7 @@ class TestOfferGateway implements OfferGateway {
       offerId,
       offerVersion,
       offerName: offer.name,
-      monthlyPremiumUf: offer.monthlyPremiumUf,
+      monthlyPremium: offer.monthlyPremium,
       selectedAt: '2026-10-11T01:00:00.000Z',
     });
   }

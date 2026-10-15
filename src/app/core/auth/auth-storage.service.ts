@@ -57,6 +57,12 @@ function isAuthSession(value: unknown): value is AuthSession {
     typeof user.id === 'string' &&
     typeof user.name === 'string' &&
     typeof user.email === 'string' &&
-    user.role === 'client'
+    user.role === 'client' &&
+    (user.documentType === 'cc' ||
+      user.documentType === 'ce' ||
+      user.documentType === 'passport' ||
+      user.documentType === 'ppt') &&
+    typeof user.nationalId === 'string' &&
+    typeof user.phone === 'string'
   );
 }

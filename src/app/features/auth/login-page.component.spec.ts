@@ -28,6 +28,9 @@ class TestAuthGateway implements AuthGateway {
       name: 'Cliente Solventa',
       email: 'cliente@solventa.co',
       role: 'client',
+      documentType: 'cc',
+      nationalId: '1023456789',
+      phone: '+573001234567',
     },
     expiresAt: Date.now() + 60_000,
   });

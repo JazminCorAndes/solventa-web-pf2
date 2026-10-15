@@ -203,6 +203,18 @@ adicional. Las traducciones se encuentran en:
 - `public/assets/i18n/es.json`
 - `public/assets/i18n/en.json`
 
+## Mercado activo
+
+La aplicación opera actualmente para Colombia, con precios en COP, formato regional `es-CO`
+y prefijo telefónico `+57`. Estos valores se centralizan en
+`src/app/core/market/market.config.ts` para facilitar la habilitación futura de México, Chile y
+Perú sin mezclar reglas entre mercados.
+
+Los importes usan un contrato neutral compuesto por monto y código de moneda ISO 4217. El
+catálogo permite cotizar seguros automotrices, de viaje, protección de dispositivos,
+microseguros de vida, seguros de vuelos, protección de pagos y vida hipotecaria. Cada producto
+solicita sus datos de riesgo específicos y genera ofertas comparables en COP.
+
 ## Autenticación de desarrollo
 
 En modo mock, los datos no salen del navegador y la sesión se conserva en `sessionStorage`.

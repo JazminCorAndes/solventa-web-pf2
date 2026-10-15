@@ -162,7 +162,7 @@ function createSelectionRecord(quoteId: string, offer: InsuranceOffer): Selected
     offerId: offer.id,
     offerVersion: offer.version,
     offerName: offer.name,
-    monthlyPremiumUf: offer.monthlyPremiumUf,
+    monthlyPremium: offer.monthlyPremium,
     selectedAt: new Date().toISOString(),
   };
 }

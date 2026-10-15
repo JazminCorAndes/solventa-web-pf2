@@ -18,8 +18,9 @@ const REQUEST: QuoteRequestRecord = {
   createdAt: '2026-10-11T12:00:00.000Z',
   productId: 'automotive',
   customerType: 'natural',
+  documentType: 'cc',
   nationalId: '12345678-9',
-  vehiclePlate: 'ABC123',
+  productData: { vehiclePlate: 'ABC123' },
   email: 'cliente@solventa.co',
   phone: '912345678',
 };
@@ -54,5 +55,7 @@ describe('MockOfferGateway', () => {
     const calculation = await firstValueFrom(gateway.loadOffers());
 
     expect(calculation.quoteId).toBe('AQT-2026-654321');
+    expect(calculation.offers).toHaveLength(3);
+    expect(calculation.offers.every((offer) => offer.status === 'available')).toBe(true);
   });
 });
