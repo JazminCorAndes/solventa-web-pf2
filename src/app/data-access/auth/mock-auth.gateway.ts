@@ -23,7 +23,15 @@ export class MockAuthGateway implements AuthGateway {
   private activeSession: AuthSession | null = null;
 
   register(data: RegistrationData): Observable<AuthUser> {
-    return of({ id: 'client-002', name: data.name, email: data.email, role: 'client' as const });
+    return of({
+      id: 'client-002',
+      name: data.name,
+      email: data.email,
+      role: 'client' as const,
+      documentType: 'cc' as const,
+      nationalId: '',
+      phone: '',
+    });
   }
 
   login(credentials: LoginCredentials): Observable<AuthGrant> {
