@@ -1,12 +1,8 @@
 <section class="offers-page">
   <header class="page-header">
-    <div>
-      <a routerLink="/app/cotizaciones" class="back-link"> ← {{ 'offers.back' | transloco }} </a>
-      <h1>{{ 'offers.title' | transloco }}</h1>
-    </div>
-    <button mat-stroked-button type="button" routerLink="/app/cotizaciones">
-      ← {{ 'common.back' | transloco }}
-    </button>
+    <a routerLink="/app/cotizaciones" class="back-link"> ← {{ 'offers.back' | transloco }} </a>
+    <h1>{{ 'offers.title' | transloco }}</h1>
+    <p>{{ 'offers.subtitle' | transloco }}</p>
   </header>
 
   @if (offers.status() === 'loading' || offers.status() === 'idle') {
@@ -28,70 +24,14 @@
       <p>{{ 'offers.empty.body' | transloco }}</p>
     </div>
   } @else if (offers.calculation(); as calculation) {
-    @if (offers.recommendedOffer(); as recommendedOffer) {
-      <div class="quote-summary-grid">
-        <mat-card appearance="outlined" class="recommended-summary">
-          <mat-card-content>
-            <div class="summary-heading">
-              <div>
-                <span class="eyebrow">{{ 'offers.recommendedPlan' | transloco }}</span>
-                <strong>{{ recommendedOffer.name }}</strong>
-              </div>
-              <div class="premium">
-                <span>{{ 'offers.monthlyPremium' | transloco }}</span>
-                <strong>UF {{ recommendedOffer.monthlyPremiumUf | number: '1.2-2' }}</strong>
-              </div>
-            </div>
-
-            <mat-divider />
-
-            <div class="summary-block">
-              <strong>{{ 'offers.mainCoverage' | transloco }}</strong>
-              <p>✓ {{ recommendedOffer.coverages[0] }}</p>
-            </div>
-
-            <div class="summary-block">
-              <strong>{{ 'offers.generalConditions' | transloco }}</strong>
-              <ul>
-                @for (condition of recommendedOffer.conditions; track condition) {
-                  <li>{{ condition }}</li>
-                }
-              </ul>
-            </div>
-
-            <button mat-flat-button type="button" (click)="showOffer(recommendedOffer.id)">
-              {{ 'offers.viewOffer' | transloco }} →
-            </button>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card appearance="outlined" class="calculation-card">
-          <mat-card-content>
-            <span class="eyebrow">{{ 'offers.calculationInfo' | transloco }}</span>
-            <dl>
-              <div>
-                <dt>{{ 'offers.quoteId' | transloco }}</dt>
-                <dd>{{ calculation.quoteId }}</dd>
-              </div>
-              <div>
-                <dt>{{ 'offers.validity' | transloco }}</dt>
-                <dd>{{ calculation.validUntil | date: 'medium' }}</dd>
-              </div>
-              <div>
-                <dt>{{ 'offers.appliedRate' | transloco }}</dt>
-                <dd>{{ calculation.appliedRate }}</dd>
-              </div>
-            </dl>
-            <div class="security-placeholder">{{ 'offers.securityAnalysis' | transloco }}</div>
-          </mat-card-content>
-        </mat-card>
-      </div>
-    }
-
-    <mat-divider class="section-divider" />
-
-    <div class="offers-heading">
-      <h2>{{ 'offers.listTitle' | transloco }}</h2>
+    <div class="calculation-summary">
+      <span
+        >{{ 'offers.quoteId' | transloco }}: <strong>{{ calculation.quoteId }}</strong></span
+      >
+      <span>
+        {{ 'offers.validity' | transloco }}:
+        <strong>{{ calculation.validUntil | date: 'medium' }}</strong>
+      </span>
       <span>
         {{
           'offers.availableCount'
@@ -101,123 +41,137 @@
       </span>
     </div>
 
-    <div class="offers-list">
+    <div class="offers-grid">
       @for (offer of calculation.offers; track offer.id) {
-        <mat-card
+        <article
           [id]="'offer-' + offer.id"
-          appearance="outlined"
-          class="offer-card"
+          class="plan-card"
+          [class.recommended]="offer.recommended"
           [class.selected]="offers.selectedOfferId() === offer.id"
           [class.unavailable]="!offers.isSelectable(offer)"
         >
           @if (offers.selectedOfferId() === offer.id) {
-            <span class="selection-badge">{{ 'offers.selectedBadge' | transloco }}</span>
+            <span class="plan-badge">{{ 'offers.selectedBadge' | transloco }}</span>
           } @else if (offer.recommended) {
-            <span class="selection-badge recommended">
-              {{ 'offers.recommendedBadge' | transloco }}
-            </span>
+            <span class="plan-badge">{{ 'offers.recommendedBadge' | transloco }}</span>
           }
 
-          <mat-card-content>
-            <div class="offer-main">
-              <div class="offer-description">
-                <div class="offer-title">
-                  <span class="offer-symbol" aria-hidden="true">◈</span>
-                  <div>
-                    <h3>{{ offer.name }}</h3>
-                    <p>{{ offer.description }}</p>
-                  </div>
-                </div>
+          <div class="plan-header">
+            <h2>{{ offer.name }}</h2>
+            <p>{{ offer.description }}</p>
+          </div>
 
-                <div class="offer-facts">
-                  <div>
-                    <span>{{ 'offers.coverage' | transloco }}</span>
-                    <strong>{{ offer.coverageLabel }}</strong>
-                  </div>
-                  <div>
-                    <span>{{ 'offers.deductible' | transloco }}</span>
-                    <strong>{{ offer.deductibleLabel }}</strong>
-                  </div>
-                  <div>
-                    <span>{{ 'offers.term' | transloco }}</span>
-                    <strong>{{ offer.validityLabel }}</strong>
-                  </div>
-                  <div>
-                    <span>{{ 'offers.liability' | transloco }}</span>
-                    <strong>{{ offer.liabilityLabel }}</strong>
-                  </div>
-                </div>
+          <div class="plan-price">
+            <strong>
+              {{
+                offer.monthlyPremium.amount
+                  | currency
+                    : offer.monthlyPremium.currency
+                    : 'symbol-narrow'
+                    : '1.0-0'
+                    : market.locale
+              }}
+            </strong>
+            <span>{{ 'offers.monthlyPremium' | transloco }}</span>
+          </div>
 
-                <div class="benefits">
-                  @for (benefit of offer.additionalBenefits; track benefit) {
-                    <mat-chip>{{ benefit }}</mat-chip>
-                  }
-                </div>
-              </div>
-
-              <div class="offer-action">
-                @if (offers.isSelectable(offer)) {
-                  <span>{{ 'offers.finalMonthlyPrice' | transloco }}</span>
-                  <strong>UF {{ offer.monthlyPremiumUf | number: '1.2-2' }}</strong>
-                  <small>{{ 'offers.taxIncluded' | transloco }}</small>
-                  <button
-                    mat-flat-button
-                    type="button"
-                    (click)="selectOffer(offer)"
-                    [disabled]="offers.selectedOfferId() === offer.id"
-                  >
-                    {{
-                      (offers.selectedOfferId() === offer.id ? 'offers.selected' : 'offers.select')
-                        | transloco
-                    }}
-                  </button>
-                } @else {
-                  <mat-chip class="status-chip">
-                    {{ 'offers.status.' + offer.status | transloco }}
-                  </mat-chip>
-                  <p>{{ 'offers.unavailableMessage' | transloco }}</p>
-                }
-
-                <button
-                  mat-button
-                  type="button"
-                  [attr.aria-expanded]="offers.expandedOfferId() === offer.id"
-                  [attr.aria-controls]="'offer-details-' + offer.id"
-                  (click)="offers.toggleDetails(offer.id)"
-                >
-                  {{
-                    (offers.expandedOfferId() === offer.id
-                      ? 'offers.hideDetails'
-                      : 'offers.viewDetails'
-                    ) | transloco
-                  }}
-                </button>
-              </div>
+          <div class="plan-features">
+            <div>
+              <span class="check" aria-hidden="true">✓</span>
+              <span>
+                <small>{{ 'offers.coverage' | transloco }}</small>
+                <strong>{{ offer.coverageLabel }}</strong>
+              </span>
             </div>
+            <div>
+              <span class="check" aria-hidden="true">✓</span>
+              <span>
+                <small>{{ 'offers.deductible' | transloco }}</small>
+                <strong>{{ offer.deductibleLabel }}</strong>
+              </span>
+            </div>
+            <div>
+              <span class="check" aria-hidden="true">✓</span>
+              <span>
+                <small>{{ 'offers.term' | transloco }}</small>
+                <strong>{{ offer.validityLabel }}</strong>
+              </span>
+            </div>
+            <div>
+              <span class="check" aria-hidden="true">✓</span>
+              <span>
+                <small>{{ 'offers.liability' | transloco }}</small>
+                <strong>{{ offer.liabilityLabel }}</strong>
+              </span>
+            </div>
+          </div>
 
-            @if (offers.expandedOfferId() === offer.id) {
-              <mat-divider />
-              <div class="offer-details" [id]="'offer-details-' + offer.id">
-                <section>
-                  <h4>{{ 'offers.coveragesTitle' | transloco }}</h4>
-                  <ul>
-                    @for (coverage of offer.coverages; track coverage) {
-                      <li>{{ coverage }}</li>
-                    }
-                  </ul>
-                </section>
-                <section>
-                  <h4>{{ 'offers.conditionsTitle' | transloco }}</h4>
-                  <ul>
-                    @for (condition of offer.conditions; track condition) {
-                      <li>{{ condition }}</li>
-                    }
-                  </ul>
-                </section>
-              </div>
+          @if (offer.additionalBenefits.length > 0) {
+            <ul class="plan-benefits">
+              @for (benefit of offer.additionalBenefits; track benefit) {
+                <li>{{ benefit }}</li>
+              }
+            </ul>
+          }
+
+          <div class="plan-actions">
+            @if (offers.isSelectable(offer)) {
+              <button
+                mat-flat-button
+                type="button"
+                (click)="selectOffer(offer)"
+                [disabled]="offers.selectedOfferId() === offer.id"
+              >
+                {{
+                  (offers.selectedOfferId() === offer.id ? 'offers.selected' : 'offers.select')
+                    | transloco
+                }}
+                <span aria-hidden="true">→</span>
+              </button>
+            } @else {
+              <span class="unavailable-status">
+                {{ 'offers.status.' + offer.status | transloco }}
+              </span>
+              <p>{{ 'offers.unavailableMessage' | transloco }}</p>
             }
-          </mat-card-content>
-        </mat-card>
+
+            <button
+              mat-button
+              type="button"
+              [attr.aria-expanded]="offers.expandedOfferId() === offer.id"
+              [attr.aria-controls]="'offer-details-' + offer.id"
+              (click)="offers.toggleDetails(offer.id)"
+            >
+              {{
+                (offers.expandedOfferId() === offer.id
+                  ? 'offers.hideDetails'
+                  : 'offers.viewDetails'
+                ) | transloco
+              }}
+            </button>
+          </div>
+
+          @if (offers.expandedOfferId() === offer.id) {
+            <div class="plan-details" [id]="'offer-details-' + offer.id">
+              <section>
+                <h3>{{ 'offers.coveragesTitle' | transloco }}</h3>
+                <ul>
+                  @for (coverage of offer.coverages; track coverage) {
+                    <li>{{ coverage }}</li>
+                  }
+                </ul>
+              </section>
+              <section>
+                <h3>{{ 'offers.conditionsTitle' | transloco }}</h3>
+                <ul>
+                  @for (condition of offer.conditions; track condition) {
+                    <li>{{ condition }}</li>
+                  }
+                </ul>
+              </section>
+            </div>
+          }
+        </article>
       }
     </div>
 
@@ -249,7 +203,5 @@
         }
       </button>
     </div>
-
-    <p class="refresh-note">ⓘ {{ 'offers.refreshNote' | transloco }}</p>
   }
 </section>

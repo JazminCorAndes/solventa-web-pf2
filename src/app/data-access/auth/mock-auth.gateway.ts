@@ -30,6 +30,9 @@ export class MockAuthGateway implements AuthGateway {
             name: 'Natalia Córdoba',
             email: DEMO_EMAIL,
             role: 'client',
+            documentType: 'cc',
+            nationalId: '1023456789',
+            phone: '+573001234567',
           },
           expiresAt: Date.now() + 8 * 60 * 60 * 1000,
         };

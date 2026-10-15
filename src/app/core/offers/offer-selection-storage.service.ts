@@ -57,7 +57,20 @@ function isSelectionRecord(value: unknown): value is SelectedOfferRecord {
     typeof candidate.offerId === 'string' &&
     typeof candidate.offerVersion === 'number' &&
     typeof candidate.offerName === 'string' &&
-    typeof candidate.monthlyPremiumUf === 'number' &&
+    isMoney(candidate.monthlyPremium) &&
     typeof candidate.selectedAt === 'string'
+  );
+}
+
+function isMoney(value: unknown): boolean {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const candidate = value as { amount?: unknown; currency?: unknown };
+  return (
+    typeof candidate.amount === 'number' &&
+    Number.isFinite(candidate.amount) &&
+    typeof candidate.currency === 'string' &&
+    /^[A-Z]{3}$/.test(candidate.currency)
   );
 }

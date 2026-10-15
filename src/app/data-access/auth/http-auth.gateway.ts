@@ -15,6 +15,9 @@ interface SessionResponse {
     nombre: string;
     correo: string;
     rol: 'cliente';
+    tipoDocumento: 'cc' | 'ce' | 'passport' | 'ppt';
+    identificacion: string;
+    telefono: string;
   };
   expiraEn: string;
 }
@@ -84,6 +87,9 @@ function toSession(response: SessionResponse): AuthSession {
       name: response.usuario.nombre,
       email: response.usuario.correo,
       role: 'client',
+      documentType: response.usuario.tipoDocumento,
+      nationalId: response.usuario.identificacion,
+      phone: response.usuario.telefono,
     },
     expiresAt: Date.parse(response.expiraEn),
   };

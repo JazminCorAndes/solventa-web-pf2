@@ -1,17 +1,18 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { OfferSelectionService } from '../../core/offers/offer-selection.service';
+import { ACTIVE_MARKET } from '../../core/market/market.config';
 import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
 
 @Component({
   selector: 'app-offer-acceptance-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DecimalPipe,
+    CurrencyPipe,
     MatButtonModule,
     MatCardModule,
     RouterLink,
@@ -29,7 +30,16 @@ import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
             <div class="selection-summary">
               <span>{{ 'acceptance.selectedOffer' | transloco }}</span>
               <strong>{{ selected.offerName }}</strong>
-              <span>UF {{ selected.monthlyPremiumUf | number: '1.2-2' }}</span>
+              <span>
+                {{
+                  selected.monthlyPremium.amount
+                    | currency
+                      : selected.monthlyPremium.currency
+                      : 'symbol-narrow'
+                      : '1.0-0'
+                      : market.locale
+                }}
+              </span>
             </div>
           }
           <p>{{ 'acceptance.body' | transloco }}</p>
@@ -111,4 +121,5 @@ import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
 })
 export class OfferAcceptancePageComponent {
   readonly selection = inject(OfferSelectionService);
+  readonly market = ACTIVE_MARKET;
 }

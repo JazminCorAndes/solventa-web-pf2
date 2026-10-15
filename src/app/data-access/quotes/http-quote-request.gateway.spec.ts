@@ -43,15 +43,28 @@ describe('HttpQuoteRequestGateway', () => {
     ]);
   });
 
+  it('loads and maps the supported travel destinations', async () => {
+    const result = firstValueFrom(gateway.loadTravelDestinations());
+    const request = http.expectOne('/api/v1/destinos-viaje');
+    expect(request.request.withCredentials).toBe(true);
+    request.flush({
+      destinos: [
+        { codigo: 'CO', nombre: 'Colombia' },
+        { codigo: 'ES', nombre: 'España' },
+      ],
+    });
+
+    await expect(result).resolves.toEqual([
+      { code: 'CO', name: 'Colombia' },
+      { code: 'ES', name: 'España' },
+    ]);
+  });
+
   it('submits a quote request with an idempotency key', async () => {
     const result = firstValueFrom(
       gateway.submitRequest({
         productId: 'automotive',
-        customerType: 'natural',
-        nationalId: '12.345.678-9',
-        vehiclePlate: 'ABC123',
-        email: 'cliente@solventa.co',
-        phone: '+56912345678',
+        productData: { vehiclePlate: 'ABC123' },
       }),
     );
     const request = http.expectOne('/api/v1/solicitudes-cotizacion');
@@ -59,15 +72,19 @@ describe('HttpQuoteRequestGateway', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.withCredentials).toBe(true);
     expect(request.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/i);
-    expect(request.request.body.tipoCliente).toBe('persona_natural');
+    expect(request.request.body).toEqual({
+      productoId: 'automotive',
+      datosProducto: { vehiclePlate: 'ABC123' },
+    });
     request.flush({
       id: 'AQT-2026-ABCDEF1234',
       productoId: 'automotive',
       tipoCliente: 'persona_natural',
+      tipoDocumento: 'cc',
       identificacion: '12.345.678-9',
-      patenteVehiculo: 'ABC123',
+      datosProducto: { vehiclePlate: 'ABC123' },
       correo: 'cliente@solventa.co',
-      telefono: '+56912345678',
+      telefono: '+573001234567',
       estado: 'recibida',
       creadaEn: '2026-10-11T18:00:00Z',
     });

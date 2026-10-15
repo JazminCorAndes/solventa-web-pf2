@@ -55,7 +55,7 @@
     "summary": "Account summary",
     "greeting": "Hello, {{ name }}",
     "subtitle": "Review your insurance status and latest updates.",
-    "newQuote": "New quote",
+    "newQuote": "Quote insurance",
     "reportClaim": "Report a claim",
     "loading": "Loading your information",
     "error": "The dashboard information could not be loaded.",
@@ -80,14 +80,42 @@
     "changeInsurance": "Choose insurance",
     "comingSoon": "Coming soon",
     "loadingProducts": "Loading available insurance",
-    "customerType": "Customer type",
-    "naturalPerson": "Individual",
-    "nationalId": "ID number",
+    "documentType": "Document type",
+    "documentTypes": {
+      "cc": "Citizenship ID",
+      "ce": "Foreigner ID",
+      "passport": "Passport",
+      "ppt": "Temporary Protection Permit (PPT)"
+    },
+    "nationalId": "Document number",
+    "profileData": "Profile details",
+    "profileName": "Customer",
     "vehiclePlate": "Vehicle plate",
     "email": "Email",
     "phone": "Contact phone",
+    "fields": {
+      "vehiclePlate": "Vehicle plate",
+      "destination": "Destination country",
+      "destinationPlaceholder": "Search for and select a country",
+      "destinationCountryCode": "Destination country",
+      "travelDates": "Travel dates",
+      "departureDate": "Departure date",
+      "returnDate": "Return date",
+      "birthDate": "Date of birth",
+      "deviceType": "Device type",
+      "brandModel": "Brand and model",
+      "purchaseValue": "Purchase value (COP)",
+      "airline": "Airline",
+      "flightNumber": "Flight number",
+      "flightDate": "Flight date",
+      "creditType": "Credit type",
+      "monthlyPayment": "Monthly payment (COP)",
+      "mortgageBalance": "Outstanding mortgage balance (COP)"
+    },
     "submit": "Request quote",
     "processing": "Sending request",
+    "processingTitle": "We are preparing your offers",
+    "processingBody": "We are validating the information and checking available plans. This may take a few seconds.",
     "riskProcessing": "Processing risk request...",
     "received": "Request received",
     "validation": {
@@ -95,6 +123,11 @@
       "vehiclePlate": "Enter a valid vehicle plate.",
       "email": "Enter a valid email.",
       "phone": "Enter a valid phone.",
+      "required": "Complete this field.",
+      "destination": "Select a country from the list.",
+      "returnDate": "The return date must be on or after departure.",
+      "positiveAmount": "Enter an amount greater than zero.",
+      "flightNumber": "Enter a valid alphanumeric flight number.",
       "summary": "Complete all required fields correctly to continue."
     },
     "success": {
@@ -104,31 +137,19 @@
     },
     "errors": {
       "products": "Available insurance products could not be loaded.",
+      "destinations": "Available destination countries could not be loaded.",
       "unavailable": "The request could not be sent at this time. Please try again.",
       "productUnavailable": "The selected insurance is no longer available.",
       "unexpected": "An unexpected error occurred while sending the request."
-    },
-    "context": {
-      "title": "Information used for profiling",
-      "financialInfo": "Financial information",
-      "lowRisk": "Risk level: Low",
-      "creditBureau": "Credit bureau",
-      "variables": "Calculation variables",
-      "variablesValue": "Age, history, model",
-      "date": "Consultation date",
-      "source": "Information source",
-      "sourceValue": "Solventa simulated adapter",
-      "privacy": "Your data is handled under security protocols and will only be used to calculate the requested insurance premium.",
-      "riskChart": "Simulated scoring chart"
     }
   },
   "quoteSummary": {
     "eyebrow": "Summary",
     "title": "My quotes",
     "subtitle": "Review your current request or start a new quote.",
-    "newQuote": "New quote",
+    "newQuote": "Quote insurance",
     "requestedAt": "Request date",
-    "vehiclePlate": "Vehicle plate",
+    "productDetails": "Insurance details",
     "email": "Email",
     "phone": "Phone",
     "viewOffers": "View offers",
@@ -137,8 +158,8 @@
     },
     "empty": {
       "title": "You do not have any quotes yet",
-      "body": "Request a quote to compare the available offers for your vehicle.",
-      "action": "Request a quote"
+      "body": "Request a quote to compare the available offers.",
+      "action": "Quote insurance"
     }
   },
   "common": {
@@ -147,7 +168,8 @@
   },
   "offers": {
     "back": "Back to quotes",
-    "title": "Quote result",
+    "title": "Choose your plan",
+    "subtitle": "Compare coverage and select the option that best fits your needs.",
     "loading": "Updating available offers",
     "recommendedPlan": "Recommended plan",
     "monthlyPremium": "Monthly premium",

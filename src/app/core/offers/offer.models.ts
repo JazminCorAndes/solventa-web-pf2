@@ -1,11 +1,16 @@
 export type OfferStatus = 'available' | 'expired' | 'withdrawn';
 
+export interface Money {
+  amount: number;
+  currency: string;
+}
+
 export interface InsuranceOffer {
   id: string;
   version: number;
   name: string;
   description: string;
-  monthlyPremiumUf: number;
+  monthlyPremium: Money;
   coverageLabel: string;
   deductibleLabel: string;
   validityLabel: string;
@@ -31,6 +36,6 @@ export interface SelectedOfferRecord {
   offerId: string;
   offerVersion: number;
   offerName: string;
-  monthlyPremiumUf: number;
+  monthlyPremium: Money;
   selectedAt: string;
 }
