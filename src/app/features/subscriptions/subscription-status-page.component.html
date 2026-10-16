@@ -28,9 +28,15 @@
           </div>
         </dl>
         <p class="next-step">{{ 'subscription.next' | transloco }}</p>
-        <a mat-stroked-button routerLink="/app/cotizaciones/aceptacion">
-          ← {{ 'subscription.back' | transloco }}
-        </a>
+        <div class="actions">
+          <a mat-stroked-button routerLink="/app/cotizaciones/aceptacion">
+            ← {{ 'subscription.back' | transloco }}
+          </a>
+          <a mat-flat-button routerLink="/app/cotizaciones/pago">
+            {{ 'subscription.pay' | transloco }}
+            <app-icon name="arrow-right" [size]="17" />
+          </a>
+        </div>
       </mat-card-content>
     </mat-card>
   }

@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth/auth.guards';
 import { offerSelectionGuard } from './core/offers/offer-selection.guard';
+import { paymentGuard, policyGuard } from './core/payments/payment.guards';
 import { quoteRequestGuard } from './core/quotes/quote-request.guard';
 import { subscriptionGuard } from './core/subscriptions/subscription.guard';
 
@@ -73,6 +74,24 @@ export const routes: Routes = [
             (component) => component.SubscriptionStatusPageComponent,
           ),
         title: 'Suscripción aprobada | Solventa',
+      },
+      {
+        path: 'cotizaciones/pago',
+        canActivate: [quoteRequestGuard, offerSelectionGuard, paymentGuard],
+        loadComponent: () =>
+          import('./features/payments/payment-page.component').then(
+            (component) => component.PaymentPageComponent,
+          ),
+        title: 'Pago | Solventa',
+      },
+      {
+        path: 'cotizaciones/poliza',
+        canActivate: [quoteRequestGuard, offerSelectionGuard, policyGuard],
+        loadComponent: () =>
+          import('./features/payments/policy-issued-page.component').then(
+            (component) => component.PolicyIssuedPageComponent,
+          ),
+        title: 'Póliza emitida | Solventa',
       },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],

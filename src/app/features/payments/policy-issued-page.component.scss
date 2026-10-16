@@ -1,0 +1,96 @@
+.policy-page {
+  display: grid;
+  max-width: 760px;
+  gap: var(--solventa-space-6);
+  margin: 0 auto;
+}
+
+header {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+header h1 {
+  margin: var(--solventa-space-2) 0;
+}
+
+header p {
+  margin: var(--solventa-space-1) 0;
+  color: var(--solventa-color-text-secondary);
+}
+
+.success-icon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  margin-bottom: var(--solventa-space-3);
+  place-items: center;
+  border-radius: 50%;
+  color: var(--solventa-color-success);
+  background: var(--solventa-color-success-soft);
+}
+
+mat-card-content {
+  display: grid;
+  gap: var(--solventa-space-6);
+  padding: var(--solventa-space-6);
+}
+
+.policy-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--solventa-space-4);
+}
+
+.policy-heading div {
+  display: grid;
+  flex: 1;
+}
+
+.document-icon {
+  color: var(--solventa-color-primary);
+}
+
+.status {
+  padding: var(--solventa-space-1) var(--solventa-space-3);
+  border-radius: 999px;
+  color: var(--solventa-color-success);
+  background: var(--solventa-color-success-soft);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+small,
+dt {
+  color: var(--solventa-color-text-secondary);
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--solventa-space-5);
+  margin: 0;
+}
+
+dl div {
+  display: grid;
+  gap: var(--solventa-space-1);
+}
+
+dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  dl {
+    grid-template-columns: 1fr;
+  }
+}

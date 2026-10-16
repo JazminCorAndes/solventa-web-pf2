@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export type IconName =
   | 'arrow-left'
   | 'arrow-right'
+  | 'card'
   | 'check'
   | 'claim'
   | 'close'
@@ -43,6 +44,10 @@ export type IconName =
           <path d="M6.5 3h8l3 3v15h-11z" />
           <path d="M14.5 3v4h4" />
           <path d="M9.5 11h5M9.5 15h5" />
+        }
+        @case ('card') {
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="M3 10h18M7 15h3" />
         }
         @case ('claim') {
           <path d="M12 3 4.5 6v5.4c0 4.6 3.1 7.9 7.5 9.6 4.4-1.7 7.5-5 7.5-9.6V6z" />
