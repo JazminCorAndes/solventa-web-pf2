@@ -1,0 +1,69 @@
+.subscription-page {
+  display: grid;
+  max-width: 760px;
+  gap: var(--solventa-space-6);
+  margin: 0 auto;
+}
+
+header span {
+  color: var(--solventa-color-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+header h1 {
+  margin: var(--solventa-space-2) 0;
+}
+
+header p,
+.next-step {
+  color: var(--solventa-color-text-secondary);
+}
+
+mat-card-content {
+  display: grid;
+  gap: var(--solventa-space-5);
+  padding: var(--solventa-space-6);
+}
+
+.success-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--solventa-color-success);
+  background: var(--solventa-color-success-soft);
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--solventa-space-4);
+  margin: 0;
+}
+
+dl div {
+  display: grid;
+  gap: var(--solventa-space-1);
+}
+
+dt {
+  color: var(--solventa-color-text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  dl {
+    grid-template-columns: 1fr;
+  }
+}

@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth/auth.guards';
 import { offerSelectionGuard } from './core/offers/offer-selection.guard';
 import { quoteRequestGuard } from './core/quotes/quote-request.guard';
+import { subscriptionGuard } from './core/subscriptions/subscription.guard';
 
 export const routes: Routes = [
   {
@@ -63,6 +64,15 @@ export const routes: Routes = [
             (component) => component.OfferAcceptancePageComponent,
           ),
         title: 'Aceptación de oferta | Solventa',
+      },
+      {
+        path: 'cotizaciones/suscripcion',
+        canActivate: [quoteRequestGuard, offerSelectionGuard, subscriptionGuard],
+        loadComponent: () =>
+          import('./features/subscriptions/subscription-status-page.component').then(
+            (component) => component.SubscriptionStatusPageComponent,
+          ),
+        title: 'Suscripción aprobada | Solventa',
       },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],

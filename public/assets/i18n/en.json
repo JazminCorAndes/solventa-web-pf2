@@ -233,11 +233,25 @@
     "confirming": "Confirming",
     "confirmedTitle": "Selection confirmed",
     "confirmedBody": "The offer was registered successfully.",
+    "continueAction": "Process subscription",
     "loading": "Loading your protection summary.",
     "backToOffers": "Back to offers",
     "errors": {
       "unavailable": "The offer changed or expired. Return to the offers to select an available option.",
-      "confirmation": "The selection could not be confirmed. Please try again."
+      "confirmation": "The selection could not be confirmed. Please try again.",
+      "subscription": "The subscription could not be processed. Please try again."
     }
+  },
+  "subscription": {
+    "eyebrow": "Subscription",
+    "title": "Subscription approved",
+    "subtitle": "The offer meets the conditions and payment is enabled.",
+    "operation": "Operation identifier",
+    "offer": "Accepted offer",
+    "decision": "Decision",
+    "approved": "Approved",
+    "rule": "Applied rule",
+    "next": "The next step is to register payment to issue the policy.",
+    "back": "Back to acceptance"
   }
 }

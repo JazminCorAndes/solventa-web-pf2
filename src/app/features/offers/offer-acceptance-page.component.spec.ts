@@ -2,13 +2,15 @@ import { signal } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeEsCo from '@angular/common/locales/es-CO';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { InsuranceOffer, SelectedOfferRecord } from '../../core/offers/offer.models';
 import { OfferSelectionService } from '../../core/offers/offer-selection.service';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
+import { SubscriptionRecord } from '../../core/subscriptions/subscription.models';
+import { SubscriptionService } from '../../core/subscriptions/subscription.service';
 import { OfferAcceptancePageComponent } from './offer-acceptance-page.component';
 
 registerLocaleData(localeEsCo);
@@ -41,9 +43,33 @@ const CONFIRMED_SELECTION: SelectedOfferRecord = {
   confirmed: true,
 };
 
+const SUBSCRIPTION: SubscriptionRecord = {
+  id: '30000000-0000-4000-8000-000000000001',
+  quoteId: CONFIRMED_SELECTION.quoteId,
+  offerId: OFFER.id,
+  offerVersion: 1,
+  status: 'approved',
+  ruleVersion: 'suscripcion-automatica-2026.1',
+  createdAt: '2026-10-15T03:01:00.000Z',
+  updatedAt: '2026-10-15T03:01:00.000Z',
+  decision: {
+    result: 'approved',
+    ruleVersion: 'suscripcion-automatica-2026.1',
+    decisionHash: 'a'.repeat(64),
+    decidedAt: '2026-10-15T03:01:00.000Z',
+  },
+  saga: {
+    status: 'payment_pending',
+    version: 1,
+    updatedAt: '2026-10-15T03:01:00.000Z',
+  },
+};
+
 describe('OfferAcceptancePageComponent', () => {
   let fixture: ComponentFixture<OfferAcceptancePageComponent>;
   const confirmSelected = vi.fn(() => of(CONFIRMED_SELECTION));
+  const startSubscription = vi.fn(() => of(SUBSCRIPTION));
+  let navigate: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -107,10 +133,16 @@ describe('OfferAcceptancePageComponent', () => {
             }),
           },
         },
+        {
+          provide: SubscriptionService,
+          useValue: { start: startSubscription },
+        },
       ],
     }).compileComponents();
 
     confirmSelected.mockClear();
+    startSubscription.mockClear();
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(OfferAcceptancePageComponent);
     fixture.detectChanges();
   });
@@ -132,6 +164,7 @@ describe('OfferAcceptancePageComponent', () => {
     component.accepted.set(true);
     component.confirm();
     expect(confirmSelected).toHaveBeenCalledOnce();
-    expect(confirmSelected).toHaveBeenCalledOnce();
+    expect(startSubscription).toHaveBeenCalledOnce();
+    expect(navigate).toHaveBeenCalledWith(['/app/cotizaciones/suscripcion']);
   });
 });

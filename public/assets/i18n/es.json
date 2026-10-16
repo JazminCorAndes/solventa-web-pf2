@@ -233,11 +233,25 @@
     "confirming": "Confirmando",
     "confirmedTitle": "Selección confirmada",
     "confirmedBody": "La oferta quedó registrada correctamente.",
+    "continueAction": "Procesar suscripción",
     "loading": "Cargando el resumen de tu protección.",
     "backToOffers": "Volver a las ofertas",
     "errors": {
       "unavailable": "La oferta cambió o venció. Vuelve a las ofertas para seleccionar una opción vigente.",
-      "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente."
+      "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente.",
+      "subscription": "No fue posible procesar la suscripción. Inténtalo nuevamente."
     }
+  },
+  "subscription": {
+    "eyebrow": "Suscripción",
+    "title": "Suscripción aprobada",
+    "subtitle": "La oferta cumple las condiciones y el pago está habilitado.",
+    "operation": "Identificador de operación",
+    "offer": "Oferta aceptada",
+    "decision": "Decisión",
+    "approved": "Aprobada",
+    "rule": "Regla aplicada",
+    "next": "El siguiente paso es registrar el pago para emitir la póliza.",
+    "back": "Volver a la aceptación"
   }
 }

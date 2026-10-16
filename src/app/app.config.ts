@@ -28,6 +28,13 @@ import { HttpAuthGateway } from './data-access/auth/http-auth.gateway';
 import { MockDashboardGateway } from './data-access/dashboard/mock-dashboard.gateway';
 import { MockOfferGateway } from './data-access/offers/mock-offer.gateway';
 import { HttpOfferGateway } from './data-access/offers/http-offer.gateway';
+import { SUBSCRIPTION_GATEWAY } from './core/subscriptions/subscription.gateway';
+import {
+  BrowserSubscriptionStorage,
+  SUBSCRIPTION_STORAGE,
+} from './core/subscriptions/subscription-storage.service';
+import { HttpSubscriptionGateway } from './data-access/subscriptions/http-subscription.gateway';
+import { MockSubscriptionGateway } from './data-access/subscriptions/mock-subscription.gateway';
 import { QUOTE_REQUEST_GATEWAY } from './core/quotes/quote-request.gateway';
 import {
   BrowserQuoteRequestStorage,
@@ -53,6 +60,11 @@ export const appConfig: ApplicationConfig = {
     { provide: DASHBOARD_GATEWAY, useClass: MockDashboardGateway },
     { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
+    {
+      provide: SUBSCRIPTION_GATEWAY,
+      useClass: backendMode ? HttpSubscriptionGateway : MockSubscriptionGateway,
+    },
+    { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
     {
       provide: QUOTE_REQUEST_GATEWAY,
       useClass: backendMode ? HttpQuoteRequestGateway : MockQuoteRequestGateway,

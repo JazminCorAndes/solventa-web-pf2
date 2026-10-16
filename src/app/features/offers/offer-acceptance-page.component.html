@@ -125,6 +125,18 @@
             {{ 'acceptance.confirmAction' | transloco }} →
           }
         </button>
+      } @else {
+        <button
+          mat-flat-button
+          type="button"
+          [disabled]="confirming()"
+          (click)="continueWithSubscription()"
+        >
+          @if (confirming()) {
+            <mat-spinner diameter="20" />
+          }
+          {{ 'acceptance.continueAction' | transloco }} →
+        </button>
       }
     </div>
   } @else {

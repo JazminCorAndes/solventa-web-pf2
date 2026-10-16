@@ -11,15 +11,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { finalize, take } from 'rxjs';
+import { finalize, switchMap, take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferSelectionService } from '../../core/offers/offer-selection.service';
 import { ACTIVE_MARKET } from '../../core/market/market.config';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
 import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
+import { SubscriptionService } from '../../core/subscriptions/subscription.service';
 
 @Component({
   selector: 'app-offer-acceptance-page',
@@ -39,7 +40,9 @@ import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
   styleUrl: './offer-acceptance-page.component.scss',
 })
 export class OfferAcceptancePageComponent implements OnInit {
+  private readonly router = inject(Router);
   readonly offers = inject(OfferSelectionService);
+  readonly subscriptions = inject(SubscriptionService);
   readonly quotes = inject(QuoteRequestService);
   readonly user = inject(AuthService).user;
   readonly market = ACTIVE_MARKET;
@@ -94,17 +97,37 @@ export class OfferAcceptancePageComponent implements OnInit {
     this.offers
       .confirmSelected()
       .pipe(
+        switchMap(() => this.subscriptions.start()),
         take(1),
         finalize(() => this.confirming.set(false)),
       )
       .subscribe({
+        next: () => void this.router.navigate(['/app/cotizaciones/suscripcion']),
         error: (error: unknown) => {
           this.errorKey.set(
             error instanceof OfferUnavailableError
               ? 'acceptance.errors.unavailable'
-              : 'acceptance.errors.confirmation',
+              : 'acceptance.errors.subscription',
           );
         },
+      });
+  }
+
+  continueWithSubscription(): void {
+    if (this.confirming()) {
+      return;
+    }
+    this.confirming.set(true);
+    this.errorKey.set(null);
+    this.subscriptions
+      .start()
+      .pipe(
+        take(1),
+        finalize(() => this.confirming.set(false)),
+      )
+      .subscribe({
+        next: () => void this.router.navigate(['/app/cotizaciones/suscripcion']),
+        error: () => this.errorKey.set('acceptance.errors.subscription'),
       });
   }
 }
