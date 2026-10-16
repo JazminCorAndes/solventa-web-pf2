@@ -120,10 +120,14 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
       )
       .subscribe({
         next: (profile) => {
+          if (profile && !consentIsCurrent(this.consent())) {
+            this.fail(new ProfilingError('consentimiento_no_vigente'));
+            return;
+          }
           if (
-            this.authorized() &&
-            this.requestId &&
-            (!profile || !profileIsCurrent(profile, this.consent(), this.requestId))
+            (profile &&
+              (!this.requestId || !profileIsCurrent(profile, this.consent(), this.requestId))) ||
+            (this.authorized() && this.requestId && !profile)
           ) {
             this.fail(new ProfilingError('respuesta_invalida'));
             return;

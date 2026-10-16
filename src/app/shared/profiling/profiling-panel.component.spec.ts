@@ -147,6 +147,23 @@ describe('ProfilingPanelComponent', () => {
     expect(component.errorKey()).toBe('profiling.errors.expired');
   });
 
+  it('no muestra una respuesta tardia si vencio el consentimiento durante la consulta', () => {
+    gateway.loadConsent.mockReturnValue(
+      of({
+        ...createConsent(),
+        vigenteHasta: new Date(Date.now() + 1000).toISOString(),
+      }),
+    );
+    const pending = new Subject<RiskProfile>();
+    gateway.loadProfile.mockReturnValue(pending);
+    openProfile();
+    vi.advanceTimersByTime(1001);
+    pending.next(createProfile());
+    expect(component.profile()).toBeNull();
+    expect(component.authorized()).toBe(false);
+    expect(component.errorKey()).toBe('profiling.errors.consent');
+  });
+
   it('no reemplaza una respuesta nueva por una consulta anterior', () => {
     const pending = new Subject<RiskProfile>();
     gateway.loadProfile.mockReturnValue(pending);
