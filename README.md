@@ -179,6 +179,12 @@ exigir crear una nueva solicitud: no se reemplaza silenciosamente el perfil orig
 Los errores de sesión, consentimiento, concurrencia, vencimiento e indisponibilidad se
 muestran sin resultados parciales ni fallback a datos antiguos.
 
+Para comparar vigencias, el adaptador HTTP usa `Date` del servidor y un reloj monótono.
+Así, un pequeño desfase del computador no rechaza datos recién creados en AWS. Se usa un
+límite superior conservador (precisión de un segundo más el viaje de la petición): el panel
+puede retirar datos ligeramente antes, nunca extender su vigencia. Si falta un `Date`
+válido, la consulta se bloquea con un error en lugar de confiar en un reloj local desconocido.
+
 Contratos consumidos (todos con cookie de sesión):
 
 | Método    | Ruta                                                    | Uso                                                                     |

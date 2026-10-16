@@ -18,6 +18,7 @@ const ERROR_KEYS: Record<string, string> = {
   sesion_invalida: 'profiling.errors.session',
   perfil_no_encontrado: 'profiling.errors.notFound',
   solicitud_no_encontrada: 'profiling.errors.notFound',
+  reloj_no_disponible: 'profiling.errors.unavailable',
 };
 
 export function profilingErrorKey(error: unknown): string | null {

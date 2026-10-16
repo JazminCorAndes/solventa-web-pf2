@@ -25,7 +25,7 @@ describe('HttpProfilingGateway', () => {
     expect(request.request.withCredentials).toBe(true);
     expect(request.request.method).toBe('GET');
     const consent = createConsent();
-    request.flush(consent);
+    request.flush(consent, { headers: { Date: new Date().toUTCString() } });
     await expect(result).resolves.toEqual(consent);
   });
 
@@ -49,7 +49,7 @@ describe('HttpProfilingGateway', () => {
     expect(request.request.method).toBe('PUT');
     expect(request.request.withCredentials).toBe(true);
     expect(request.request.body).toEqual({ autorizado: authorized, version: 2 });
-    request.flush(createConsent());
+    request.flush(createConsent(), { headers: { Date: new Date().toUTCString() } });
     await result;
   });
 
@@ -70,7 +70,14 @@ describe('HttpProfilingGateway', () => {
     const result = firstValueFrom(gateway.loadProfile('AQT-2026-123456'));
     const request = http.expectOne('/api/v1/solicitudes-cotizacion/AQT-2026-123456/perfilamiento');
     expect(request.request.withCredentials).toBe(true);
-    request.flush(createProfile());
+    request.flush(createProfile(), { headers: { Date: new Date().toUTCString() } });
     await expect(result).resolves.toMatchObject({ score: '0.250000', fallbackUsed: false });
+  });
+
+  it('no acepta respuestas sin reloj del servidor', async () => {
+    const result = firstValueFrom(gateway.loadConsent());
+    const assertion = expect(result).rejects.toMatchObject({ code: 'reloj_no_disponible' });
+    http.expectOne(consentUrl).flush(createConsent());
+    await assertion;
   });
 });

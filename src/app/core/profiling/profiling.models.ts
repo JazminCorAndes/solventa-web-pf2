@@ -50,12 +50,12 @@ export function consentIsComplete(consent: ProfilingConsent | null): boolean {
   );
 }
 
-export function consentIsCurrent(consent: ProfilingConsent | null): boolean {
+export function consentIsCurrent(consent: ProfilingConsent | null, now = Date.now()): boolean {
   return (
     consentIsComplete(consent) &&
     consent?.estado === 'autorizado' &&
-    Date.parse(consent.efectivaEn) <= Date.now() &&
-    Date.parse(consent.vigenteHasta) > Date.now()
+    Date.parse(consent.efectivaEn) <= now &&
+    Date.parse(consent.vigenteHasta) > now
   );
 }
 
@@ -63,11 +63,12 @@ export function profileIsCurrent(
   profile: RiskProfile,
   consent: ProfilingConsent | null,
   requestId: string,
+  now = Date.now(),
 ): boolean {
   return (
     !!profile &&
     typeof profile === 'object' &&
-    consentIsCurrent(consent) &&
+    consentIsCurrent(consent, now) &&
     profile.solicitudId === requestId &&
     profile.consentimientoId === consent?.consentimientoId &&
     profile.consentimientoVersion === consent?.version &&
@@ -81,8 +82,8 @@ export function profileIsCurrent(
     !!profile.modeloVersion &&
     Number.isInteger(profile.version) &&
     profile.version > 0 &&
-    Date.parse(profile.calculadoEn) <= Date.now() &&
-    Date.parse(profile.vigenteHasta) > Date.now() &&
+    Date.parse(profile.calculadoEn) <= now &&
+    Date.parse(profile.vigenteHasta) > now &&
     Array.isArray(profile.fuentes) &&
     profile.fuentes.length === 2 &&
     ['open_finance', 'open_data'].every((name) =>
@@ -95,8 +96,8 @@ export function profileIsCurrent(
           !!source.version &&
           typeof source.indicadorRiesgo === 'string' &&
           /^(0|1|0\.\d+|1\.0+)$/.test(source.indicadorRiesgo) &&
-          Date.parse(source.consultadaEn) <= Date.now() &&
-          Date.parse(source.vigenteHasta) > Date.now(),
+          Date.parse(source.consultadaEn) <= now &&
+          Date.parse(source.vigenteHasta) > now,
       ),
     )
   );

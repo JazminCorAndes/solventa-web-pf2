@@ -21,6 +21,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { Observable, of, Subscription, switchMap, take } from 'rxjs';
 import { ProfilingError, profilingErrorKey } from '../../core/profiling/profiling.errors';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
+import { ProfilingClock } from '../../core/profiling/profiling-clock.service';
 import {
   consentIsComplete,
   consentIsCurrent,
@@ -45,6 +46,7 @@ import {
 })
 export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
   private readonly gateway = inject(PROFILING_GATEWAY);
+  private readonly clock = inject(ProfilingClock);
   private subscription?: Subscription;
   private expiration?: ReturnType<typeof setTimeout>;
   @Input() requestId: string | null = null;
@@ -108,7 +110,7 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
           }
           this.consent.set(consent);
           this.consentLoaded.set(true);
-          const authorized = consentIsCurrent(consent);
+          const authorized = consentIsCurrent(consent, this.clock.now());
           this.authorized.set(authorized);
           if (!authorized) {
             this.errorKey.set(consent ? 'profiling.errors.consent' : null);
@@ -120,13 +122,14 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
       )
       .subscribe({
         next: (profile) => {
-          if (profile && !consentIsCurrent(this.consent())) {
+          if (profile && !consentIsCurrent(this.consent(), this.clock.now())) {
             this.fail(new ProfilingError('consentimiento_no_vigente'));
             return;
           }
           if (
             (profile &&
-              (!this.requestId || !profileIsCurrent(profile, this.consent(), this.requestId))) ||
+              (!this.requestId ||
+                !profileIsCurrent(profile, this.consent(), this.requestId, this.clock.now()))) ||
             (this.authorized() && this.requestId && !profile)
           ) {
             this.fail(new ProfilingError('respuesta_invalida'));
@@ -161,7 +164,7 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
 
   private expireAt(dates: string[], errorKey: string): void {
     clearTimeout(this.expiration);
-    const delay = Math.min(...dates.map((date) => Date.parse(date))) - Date.now();
+    const delay = Math.min(...dates.map((date) => Date.parse(date))) - this.clock.now();
     this.expiration = setTimeout(
       () => {
         if (delay > 2147483647) {
