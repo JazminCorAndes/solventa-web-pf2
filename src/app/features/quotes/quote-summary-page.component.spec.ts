@@ -20,6 +20,8 @@ import {
   QuoteRequestStorage,
 } from '../../core/quotes/quote-request-storage.service';
 import { QuoteSummaryPageComponent } from './quote-summary-page.component';
+import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
+import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
 
 const RECORD: QuoteRequestRecord = {
   id: 'AQT-2026-123456',
@@ -92,6 +94,13 @@ describe('QuoteSummaryPageComponent', () => {
         { provide: QUOTE_REQUEST_GATEWAY, useClass: TestQuoteRequestGateway },
         { provide: QUOTE_REQUEST_STORAGE, useClass: TestQuoteRequestStorage },
         { provide: OFFER_SELECTION_STORAGE, useClass: TestOfferSelectionStorage },
+        {
+          provide: PROFILING_GATEWAY,
+          useValue: {
+            loadConsent: () => of(createConsent()),
+            loadProfile: () => of(createProfile(RECORD.id)),
+          },
+        },
       ],
     }).compileComponents();
 

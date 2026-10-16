@@ -1,0 +1,175 @@
+import { DatePipe } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  inject,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  Output,
+  signal,
+  SimpleChanges,
+  HostListener,
+} from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { Observable, of, Subscription, switchMap, take } from 'rxjs';
+import { ProfilingError, profilingErrorKey } from '../../core/profiling/profiling.errors';
+import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
+import {
+  consentIsComplete,
+  consentIsCurrent,
+  ProfilingConsent,
+  profileIsCurrent,
+  RiskProfile,
+} from '../../core/profiling/profiling.models';
+
+@Component({
+  selector: 'app-profiling-panel',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    DatePipe,
+    MatButtonModule,
+    MatCardModule,
+    MatProgressSpinnerModule,
+    RouterLink,
+    TranslocoPipe,
+  ],
+  templateUrl: './profiling-panel.component.html',
+  styleUrl: './profiling-panel.component.scss',
+})
+export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
+  private readonly gateway = inject(PROFILING_GATEWAY);
+  private subscription?: Subscription;
+  private expiration?: ReturnType<typeof setTimeout>;
+  @Input() requestId: string | null = null;
+  @Output() readonly availabilityChange = new EventEmitter<boolean>();
+  readonly consent = signal<ProfilingConsent | null>(null);
+  readonly profile = signal<RiskProfile | null>(null);
+  readonly loading = signal(false);
+  readonly errorKey = signal<string | null>(null);
+  readonly authorized = signal(false);
+  readonly consentLoaded = signal(false);
+
+  ngOnInit(): void {
+    this.reload();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['requestId'] && !changes['requestId'].firstChange) {
+      this.reload();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
+    clearTimeout(this.expiration);
+  }
+
+  reload(): void {
+    this.run(this.gateway.loadConsent());
+  }
+
+  @HostListener('window:focus')
+  onFocus(): void {
+    if (!this.loading()) {
+      this.reload();
+    }
+  }
+
+  save(authorized: boolean): void {
+    if (this.loading() || !this.consentLoaded()) {
+      return;
+    }
+    this.run(this.gateway.saveConsent(authorized, this.consent()?.version ?? 0));
+  }
+
+  private run(operation: Observable<ProfilingConsent | null>): void {
+    this.subscription?.unsubscribe();
+    clearTimeout(this.expiration);
+    this.profile.set(null);
+    this.consent.set(null);
+    this.authorized.set(false);
+    this.availabilityChange.emit(false);
+    this.errorKey.set(null);
+    this.loading.set(true);
+    this.consentLoaded.set(false);
+    this.subscription = operation
+      .pipe(
+        take(1),
+        switchMap((consent) => {
+          if (consent && !consentIsComplete(consent)) {
+            throw new ProfilingError('respuesta_invalida');
+          }
+          this.consent.set(consent);
+          this.consentLoaded.set(true);
+          const authorized = consentIsCurrent(consent);
+          this.authorized.set(authorized);
+          if (!authorized) {
+            this.errorKey.set(consent ? 'profiling.errors.consent' : null);
+            return of(null);
+          }
+          this.expireAt([consent!.vigenteHasta], 'profiling.errors.consent');
+          return this.requestId ? this.gateway.loadProfile(this.requestId) : of(null);
+        }),
+      )
+      .subscribe({
+        next: (profile) => {
+          if (
+            this.authorized() &&
+            this.requestId &&
+            (!profile || !profileIsCurrent(profile, this.consent(), this.requestId))
+          ) {
+            this.fail(new ProfilingError('respuesta_invalida'));
+            return;
+          }
+          this.profile.set(profile);
+          this.loading.set(false);
+          if (profile) {
+            this.expireAt(
+              [
+                this.consent()!.vigenteHasta,
+                profile.vigenteHasta,
+                ...profile.fuentes.map((source) => source.vigenteHasta),
+              ],
+              'profiling.errors.expired',
+            );
+          }
+          this.availabilityChange.emit(this.authorized() && (!this.requestId || !!profile));
+        },
+        error: (error: unknown) => this.fail(error),
+      });
+  }
+
+  private fail(error: unknown): void {
+    clearTimeout(this.expiration);
+    this.loading.set(false);
+    this.profile.set(null);
+    this.authorized.set(false);
+    this.errorKey.set(profilingErrorKey(error) ?? 'profiling.errors.unavailable');
+    this.availabilityChange.emit(false);
+  }
+
+  private expireAt(dates: string[], errorKey: string): void {
+    clearTimeout(this.expiration);
+    const delay = Math.min(...dates.map((date) => Date.parse(date))) - Date.now();
+    this.expiration = setTimeout(
+      () => {
+        if (delay > 2147483647) {
+          this.expireAt(dates, errorKey);
+          return;
+        }
+        this.profile.set(null);
+        this.authorized.set(false);
+        this.errorKey.set(errorKey);
+        this.availabilityChange.emit(false);
+      },
+      Math.min(Math.max(delay, 0), 2147483647),
+    );
+  }
+}

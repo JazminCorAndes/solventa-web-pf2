@@ -1,11 +1,13 @@
 export type OfferStatus = 'available' | 'expired' | 'withdrawn';
+export type PremiumCurrency = 'UF' | 'CLP' | 'COP';
 
 export interface InsuranceOffer {
   id: string;
   version: number;
   name: string;
   description: string;
-  monthlyPremiumUf: number;
+  monthlyPremium: number;
+  currency: PremiumCurrency;
   coverageLabel: string;
   deductibleLabel: string;
   validityLabel: string;
@@ -31,6 +33,7 @@ export interface SelectedOfferRecord {
   offerId: string;
   offerVersion: number;
   offerName: string;
-  monthlyPremiumUf: number;
+  monthlyPremium: number;
+  currency: PremiumCurrency;
   selectedAt: string;
 }

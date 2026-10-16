@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import {
   OFFER_SELECTION_STORAGE,
   OfferSelectionStorage,
@@ -11,6 +11,8 @@ import {
   QuoteRequestStorage,
 } from '../../core/quotes/quote-request-storage.service';
 import { MockOfferGateway } from './mock-offer.gateway';
+import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
+import { createProfile } from '../../core/profiling/profiling.fixtures';
 
 const REQUEST: QuoteRequestRecord = {
   id: 'AQT-2026-654321',
@@ -47,6 +49,10 @@ describe('MockOfferGateway', () => {
         MockOfferGateway,
         { provide: QUOTE_REQUEST_STORAGE, useClass: TestQuoteRequestStorage },
         { provide: OFFER_SELECTION_STORAGE, useClass: TestOfferSelectionStorage },
+        {
+          provide: MockProfilingGateway,
+          useValue: { loadProfile: () => of(createProfile(REQUEST.id)) },
+        },
       ],
     });
     const gateway = TestBed.inject(MockOfferGateway);

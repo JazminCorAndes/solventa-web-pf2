@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { delay, map, Observable, of } from 'rxjs';
 import {
   InsuranceProductUnavailableError,
@@ -10,6 +10,7 @@ import {
   QuoteRequestDraft,
   QuoteRequestRecord,
 } from '../../core/quotes/quote-request.models';
+import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
 
 const PRODUCTS: InsuranceProduct[] = [
   {
@@ -34,6 +35,7 @@ const PRODUCTS: InsuranceProduct[] = [
 
 @Injectable()
 export class MockQuoteRequestGateway implements QuoteRequestGateway {
+  private readonly profiling = inject(MockProfilingGateway);
   loadProducts(): Observable<InsuranceProduct[]> {
     return of(PRODUCTS).pipe(delay(250));
   }
@@ -51,9 +53,11 @@ export class MockQuoteRequestGateway implements QuoteRequestGateway {
           throw new InsuranceProductUnavailableError();
         }
 
+        const id = generateQuoteId();
+        this.profiling.createProfile(id);
         return {
           ...request,
-          id: generateQuoteId(),
+          id,
           status: 'received',
           createdAt: new Date().toISOString(),
         };

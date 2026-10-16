@@ -12,6 +12,7 @@ import {
   QuoteRequestDraft,
   QuoteRequestRecord,
 } from '../../core/quotes/quote-request.models';
+import { profilingErrorKey } from '../../core/profiling/profiling.errors';
 
 interface ProductsResponse {
   productos: Array<{
@@ -27,7 +28,7 @@ interface QuoteRequestResponse {
   productoId: string;
   tipoCliente: 'persona_natural';
   identificacion: string;
-  patenteVehiculo: string;
+  datosProducto: { vehiclePlate: string };
   correo: string;
   telefono: string;
   estado: 'recibida';
@@ -63,11 +64,7 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
         `${this.apiUrl}/solicitudes-cotizacion`,
         {
           productoId: request.productId,
-          tipoCliente: 'persona_natural',
-          identificacion: request.nationalId,
-          patenteVehiculo: request.vehiclePlate,
-          correo: request.email,
-          telefono: request.phone,
+          datosProducto: { vehiclePlate: request.vehiclePlate },
         },
         {
           headers: new HttpHeaders({ 'Idempotency-Key': crypto.randomUUID() }),
@@ -80,13 +77,16 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
           productId: response.productoId,
           customerType: 'natural',
           nationalId: response.identificacion,
-          vehiclePlate: response.patenteVehiculo,
+          vehiclePlate: response.datosProducto.vehiclePlate,
           email: response.correo,
           phone: response.telefono,
           status: 'received',
           createdAt: response.creadaEn,
         })),
         catchError((error: unknown) => {
+          if (profilingErrorKey(error)) {
+            return throwError(() => error);
+          }
           if (error instanceof HttpErrorResponse && error.status === 422) {
             return throwError(() => new InsuranceProductUnavailableError());
           }

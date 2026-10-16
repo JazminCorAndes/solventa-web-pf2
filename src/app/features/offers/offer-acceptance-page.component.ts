@@ -29,7 +29,7 @@ import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
             <div class="selection-summary">
               <span>{{ 'acceptance.selectedOffer' | transloco }}</span>
               <strong>{{ selected.offerName }}</strong>
-              <span>UF {{ selected.monthlyPremiumUf | number: '1.2-2' }}</span>
+              <span>{{ selected.currency }} {{ selected.monthlyPremium | number: '1.2-2' }}</span>
             </div>
           }
           <p>{{ 'acceptance.body' | transloco }}</p>
