@@ -105,6 +105,7 @@ function isMoney(value: unknown): value is Money {
   return (
     typeof candidate.amount === 'number' &&
     Number.isFinite(candidate.amount) &&
+    candidate.amount >= 0 &&
     typeof candidate.currency === 'string' &&
     /^[A-Z]{3}$/.test(candidate.currency)
   );

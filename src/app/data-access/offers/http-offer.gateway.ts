@@ -21,8 +21,8 @@ interface MoneyResponse {
 }
 
 interface PremiumResponse {
-  prima?: MoneyResponse;
-  periodicidad?: PremiumPeriodicity;
+  prima: MoneyResponse;
+  periodicidad: PremiumPeriodicity;
   primaMensual?: MoneyResponse | null;
 }
 
@@ -70,31 +70,27 @@ export class HttpOfferGateway implements OfferGateway {
     if (!quoteId) {
       return throwError(() => new Error('A quote request is required before loading offers.'));
     }
-    return this.http
-      .get<OffersResponse>(`${this.apiUrl}/${quoteId}/ofertas`)
-      .pipe(
-        map((response) => ({
-          quoteId: response.solicitudId,
-          calculatedAt: response.calculadaEn,
-          validUntil: response.vigenteHasta,
-          appliedRate: response.tasaAplicada,
-          offers: response.ofertas.map(toOffer),
-        })),
-      );
+    return this.http.get<OffersResponse>(`${this.apiUrl}/${quoteId}/ofertas`).pipe(
+      map((response) => ({
+        quoteId: response.solicitudId,
+        calculatedAt: response.calculadaEn,
+        validUntil: response.vigenteHasta,
+        appliedRate: response.tasaAplicada,
+        offers: response.ofertas.map(toOffer),
+      })),
+    );
   }
 
   loadSelection(quoteId: string): Observable<SelectedOfferRecord | null> {
-    return this.http
-      .get<SelectionResponse>(`${this.apiUrl}/${quoteId}/seleccion`)
-      .pipe(
-        map(toSelection),
-        catchError((error: unknown) => {
-          if (error instanceof HttpErrorResponse && error.status === 404) {
-            return of(null);
-          }
-          return throwError(() => error);
-        }),
-      );
+    return this.http.get<SelectionResponse>(`${this.apiUrl}/${quoteId}/seleccion`).pipe(
+      map(toSelection),
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 404) {
+          return of(null);
+        }
+        return throwError(() => error);
+      }),
+    );
   }
 
   confirmSelection(
@@ -158,22 +154,22 @@ function toPremium(response: PremiumResponse): {
   premium: Money;
   periodicity: PremiumPeriodicity;
 } {
-  if ('prima' in response || 'periodicidad' in response) {
-    if (!isPremiumPeriodicity(response.periodicidad)) {
-      throw new Error('The offer contains an invalid premium periodicity.');
-    }
-    return { premium: toMoney(response.prima), periodicity: response.periodicidad };
+  if (!isPremiumPeriodicity(response.periodicidad)) {
+    throw new Error('The offer contains an invalid premium periodicity.');
   }
-
-  return { premium: toMoney(response.primaMensual), periodicity: 'mensual' };
+  return { premium: toMoney(response.prima), periodicity: response.periodicidad };
 }
 
 function toMoney(response: MoneyResponse | null | undefined): Money {
-  if (!response) {
+  if (!response || typeof response.monto !== 'string' || !/^\d+(?:\.\d+)?$/.test(response.monto)) {
     throw new Error('The offer contains an invalid monetary amount.');
   }
   const amount = Number(response.monto);
-  if (!Number.isFinite(amount) || !/^[A-Z]{3}$/.test(response.moneda)) {
+  if (
+    !Number.isFinite(amount) ||
+    typeof response.moneda !== 'string' ||
+    !/^[A-Z]{3}$/.test(response.moneda)
+  ) {
     throw new Error('The offer contains an invalid monetary amount.');
   }
   return { amount, currency: response.moneda };
@@ -186,5 +182,8 @@ function toStatus(status: OfferResponse['estado']): OfferStatus {
     vencida: 'expired',
     retirada: 'withdrawn',
   };
+  if (!Object.hasOwn(statuses, status)) {
+    throw new Error('The offer contains an invalid status.');
+  }
   return statuses[status];
 }

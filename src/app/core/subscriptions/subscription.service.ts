@@ -1,5 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { catchError, Observable, of, tap } from 'rxjs';
+import { catchError, finalize, Observable, of, tap } from 'rxjs';
 import { QUOTE_REQUEST_STORAGE } from '../quotes/quote-request-storage.service';
 import { SUBSCRIPTION_GATEWAY } from './subscription.gateway';
 import { SubscriptionRecord } from './subscription.models';
@@ -22,18 +22,20 @@ export class SubscriptionService {
     return this.gateway.start(quoteId).pipe(
       tap((subscription) => this.store(subscription)),
       tap({
-        error: () => {
-          this.loading.set(false);
-          this.error.set(true);
-        },
-        complete: () => this.loading.set(false),
+        error: () => this.error.set(true),
       }),
+      finalize(() => this.loading.set(false)),
     );
   }
 
   load(): void {
     const quoteId = this.quoteStorage.read()?.id;
+    this.error.set(false);
+    this.subscription.set(null);
+    this.storage.clear();
     if (!quoteId) {
+      this.loading.set(false);
+      this.error.set(true);
       return;
     }
     this.loading.set(true);
@@ -49,6 +51,9 @@ export class SubscriptionService {
         this.loading.set(false);
         if (subscription) {
           this.store(subscription);
+        } else {
+          this.subscription.set(null);
+          this.storage.clear();
         }
       });
   }

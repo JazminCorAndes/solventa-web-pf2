@@ -31,8 +31,15 @@ const SUBSCRIPTION: SubscriptionRecord = {
 describe('SubscriptionStatusPageComponent', () => {
   let fixture: ComponentFixture<SubscriptionStatusPageComponent>;
   const load = vi.fn();
+  const subscription = signal<SubscriptionRecord | null>(SUBSCRIPTION);
+  const loading = signal(false);
+  const error = signal(false);
 
   beforeEach(async () => {
+    load.mockClear();
+    subscription.set(SUBSCRIPTION);
+    loading.set(false);
+    error.set(false);
     await TestBed.configureTestingModule({
       imports: [
         SubscriptionStatusPageComponent,
@@ -41,14 +48,24 @@ describe('SubscriptionStatusPageComponent', () => {
             es: {
               subscription: {
                 eyebrow: 'Suscripción',
-                title: 'Suscripción aprobada',
-                subtitle: 'La oferta cumple las condiciones y el pago está habilitado.',
+                title: 'Estado de suscripción',
+                subtitle: 'Estado informado por el servicio.',
                 operation: 'Identificador de operación',
                 offer: 'Oferta aceptada',
                 decision: 'Decisión',
-                approved: 'Aprobada',
+                statuses: { approved: 'Aprobada', review: 'En revisión', rejected: 'Rechazada' },
+                saga: 'Estado de emisión',
+                sagaStatuses: {
+                  payment_pending: 'Pago pendiente',
+                  payment_confirmed: 'Pago confirmado',
+                  issued: 'Póliza emitida',
+                  failed: 'Emisión fallida',
+                },
+                loading: 'Consultando la suscripción',
+                error: 'No fue posible consultar la suscripción.',
+                empty: 'No hay una suscripción registrada.',
                 rule: 'Regla aplicada',
-                next: 'El siguiente paso es registrar el pago para emitir la póliza.',
+                next: 'El registro de pagos aún no está disponible.',
                 back: 'Volver a la aceptación',
               },
             },
@@ -60,7 +77,7 @@ describe('SubscriptionStatusPageComponent', () => {
         provideRouter([]),
         {
           provide: SubscriptionService,
-          useValue: { subscription: signal(SUBSCRIPTION), load },
+          useValue: { subscription, loading, error, load },
         },
       ],
     }).compileComponents();
@@ -73,8 +90,64 @@ describe('SubscriptionStatusPageComponent', () => {
     const text = fixture.nativeElement.textContent;
 
     expect(load).toHaveBeenCalled();
-    expect(text).toContain('Suscripción aprobada');
+    expect(text).toContain('Estado de suscripción');
     expect(text).toContain(SUBSCRIPTION.id);
     expect(text).toContain('Aprobada');
+    expect(text).toContain('El registro de pagos aún no está disponible.');
+    expect(fixture.nativeElement.querySelector('.success-icon')).not.toBeNull();
+  });
+
+  it.each([
+    { status: 'review' as const, label: 'En revisión' },
+    { status: 'rejected' as const, label: 'Rechazada' },
+  ])('shows $status without approval or payment instructions', ({ status, label }) => {
+    subscription.set({
+      ...SUBSCRIPTION,
+      status,
+      decision: { ...SUBSCRIPTION.decision, result: status },
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(label);
+    expect(fixture.nativeElement.textContent).not.toContain('Aprobada');
+    expect(fixture.nativeElement.querySelector('.success-icon')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.next-step')).toBeNull();
+  });
+
+  it.each([
+    { status: 'payment_confirmed' as const, label: 'Pago confirmado' },
+    { status: 'issued' as const, label: 'Póliza emitida' },
+    { status: 'failed' as const, label: 'Emisión fallida' },
+  ])('shows saga $status without requesting payment', ({ status, label }) => {
+    subscription.set({ ...SUBSCRIPTION, saga: { ...SUBSCRIPTION.saga, status } });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(label);
+    expect(fixture.nativeElement.querySelector('.next-step')).toBeNull();
+    if (status === 'failed') {
+      expect(fixture.nativeElement.querySelector('.success-icon')).toBeNull();
+    }
+  });
+
+  it('hides cached success while loading', () => {
+    loading.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Consultando la suscripción');
+    expect(fixture.nativeElement.textContent).not.toContain(SUBSCRIPTION.id);
+  });
+
+  it('shows a retry instead of cached success after failure', () => {
+    error.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain(SUBSCRIPTION.id);
+    fixture.nativeElement.querySelector('button').click();
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows a missing subscription without success', () => {
+    subscription.set(null);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No hay una suscripción registrada.');
+    expect(fixture.nativeElement.querySelector('.success-icon')).toBeNull();
   });
 });

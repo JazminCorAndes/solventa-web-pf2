@@ -22,6 +22,7 @@ const CASES: { periodicity: PremiumPeriodicity; label: string }[] = [
   { periodicity: 'mensual', label: 'Prima mensual' },
   { periodicity: 'por_viaje', label: 'Prima por viaje' },
   { periodicity: 'por_vuelo', label: 'Prima por vuelo' },
+  { periodicity: 'por_periodo', label: 'Prima por periodo' },
 ];
 
 async function configurePage(periodicity: PremiumPeriodicity): Promise<void> {
@@ -103,6 +104,7 @@ async function configurePage(periodicity: PremiumPeriodicity): Promise<void> {
                 mensual: 'Prima mensual',
                 por_viaje: 'Prima por viaje',
                 por_vuelo: 'Prima por vuelo',
+                por_periodo: 'Prima por periodo',
               },
             },
           },

@@ -93,6 +93,8 @@ function toStatus(status: SubscriptionResponse['estado']): SubscriptionStatus {
       return 'review';
     case 'rechazada':
       return 'rejected';
+    default:
+      throw new Error('The subscription contains an invalid decision status.');
   }
 }
 
@@ -106,5 +108,7 @@ function toSagaStatus(status: SubscriptionResponse['saga']['estado']): IssuanceS
       return 'issued';
     case 'fallida':
       return 'failed';
+    default:
+      throw new Error('The subscription contains an invalid saga status.');
   }
 }

@@ -109,14 +109,20 @@
         <h2>{{ 'insuranceCatalog.detail.quoteTitle' | transloco }}</h2>
         <p>{{ 'insuranceCatalog.detail.quoteBody' | transloco }}</p>
       </div>
-      <a
-        mat-flat-button
-        routerLink="/app/cotizaciones/solicitar"
-        [queryParams]="{ producto: product.id }"
-      >
-        {{ 'insuranceCatalog.detail.quoteAction' | transloco }}
-        <app-icon name="arrow-right" [size]="17" />
-      </a>
+      @if (product.available) {
+        <a
+          mat-flat-button
+          routerLink="/app/cotizaciones/solicitar"
+          [queryParams]="{ producto: product.id }"
+        >
+          {{ 'insuranceCatalog.detail.quoteAction' | transloco }}
+          <app-icon name="arrow-right" [size]="17" />
+        </a>
+      } @else {
+        <button mat-flat-button type="button" disabled>
+          {{ 'insuranceCatalog.unavailable' | transloco }}
+        </button>
+      }
     </div>
   }
 </section>

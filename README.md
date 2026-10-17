@@ -264,13 +264,17 @@ El POST a `/api/v1/solicitudes-cotizacion` conserva el cuerpo
 Las fechas se ingresan como `DD/MM/AAAA` en español colombiano y se envían como
 `YYYY-MM-DD`; los importes se expresan en pesos colombianos enteros.
 
-Las ofertas y la selección admiten `prima: { monto, moneda }` con `periodicidad`:
-`mensual`, `por_viaje` o `por_vuelo`. La interfaz muestra el importe y la moneda recibidos
+Las ofertas y la selección requieren `prima: { monto, moneda }` con `periodicidad`:
+`mensual`, `por_viaje`, `por_vuelo` o `por_periodo`. La interfaz muestra el importe y la moneda recibidos
 con el periodo correspondiente, sin convertir primas por viaje o vuelo en mensualidades.
-El alias `primaMensual` puede ser nulo para primas no mensuales. Para respuestas anteriores
-que no incluyan ninguno de los dos campos nuevos, se conserva la lectura de
-`primaMensual` como mensual; una respuesta nueva incompleta no usa ese valor como respaldo.
-Las selecciones antiguas guardadas en la pestaña se leen con ese mismo criterio.
+El alias `primaMensual` puede ser nulo para primas no mensuales; no se usa como respaldo
+ante respuestas HTTP antiguas o incompletas. Solo las selecciones antiguas ya guardadas
+en la pestaña conservan la migración local desde `monthlyPremium`.
+Los valores de compra, cuota y saldo hipotecario admiten enteros positivos de hasta 16 cifras.
+
+El catálogo muestra la disponibilidad real: los productos no disponibles se pueden consultar,
+pero no cotizar. Solo el error `404` con código `seguro_no_encontrado` representa un producto
+inexistente; un `404` de infraestructura se muestra como error recuperable.
 
 En vuelos, `coverageType` admite `delay-cancellation`, `missed-connection` y
 `comprehensive`. El backend mantiene las solicitudes antiguas sin ese campo como
@@ -351,8 +355,14 @@ cotización. `sessionStorage` conserva la referencia necesaria para reanudar el 
 misma pestaña. Las ofertas vencidas o retiradas permanecen visibles para comparación, pero no
 se pueden seleccionar.
 
-La aceptación formal, siniestros, detalle de pólizas, notificaciones y recuperación de
-contraseña permanecen fuera del alcance actual.
+La selección mediante `PUT /v1/solicitudes-cotizacion/{id}/seleccion` es la aceptación definitiva
+y envía `{ ofertaId, version }` con `Idempotency-Key` UUID. La suscripción se inicia con
+`POST /v1/solicitudes-cotizacion/{id}/suscripcion`, cuerpo `{}` y otra clave UUID; se consulta
+con `GET` sobre la misma ruta. La interfaz muestra las decisiones aprobada, en revisión o
+rechazada y los estados reales de la saga, sin presentar datos cacheados como éxito tras un error.
+El backend `develop` aún no expone pagos: una aprobación no habilita un pago desde esta aplicación.
+Siniestros, detalle de pólizas, notificaciones y recuperación de contraseña permanecen
+fuera del alcance actual.
 
 ## Referencias
 

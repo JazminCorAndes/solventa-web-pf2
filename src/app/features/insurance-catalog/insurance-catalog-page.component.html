@@ -40,7 +40,10 @@
           <mat-card-content>
             <span class="product-icon"><app-icon name="shield" [size]="26" /></span>
             <div>
-              <span class="availability">{{ 'insuranceCatalog.available' | transloco }}</span>
+              <span class="availability">{{
+                (product.available ? 'insuranceCatalog.available' : 'insuranceCatalog.unavailable')
+                  | transloco
+              }}</span>
               <h2>{{ product.name }}</h2>
               <p>{{ product.description }}</p>
             </div>

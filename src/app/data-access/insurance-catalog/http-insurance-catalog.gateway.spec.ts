@@ -82,8 +82,47 @@ describe('HttpInsuranceCatalogGateway', () => {
   it('returns null when the product does not exist', async () => {
     const result = firstValueFrom(gateway.loadProduct('unknown'));
     const request = http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro/unknown`);
-    request.flush({}, { status: 404, statusText: 'Not Found' });
+    request.flush({ code: 'seguro_no_encontrado' }, { status: 404, statusText: 'Not Found' });
 
     await expect(result).resolves.toBeNull();
+  });
+
+  it.each(['<html>Not Found</html>', {}, { code: 'otra_causa' }])(
+    'does not hide infrastructure 404 errors: %j',
+    async (body) => {
+      const result = firstValueFrom(gateway.loadProduct('travel'));
+      http
+        .expectOne(`${environment.apiBaseUrl}/v1/productos-seguro/travel`)
+        .flush(body, { status: 404, statusText: 'Not Found' });
+      await expect(result).rejects.toMatchObject({ status: 404 });
+    },
+  );
+
+  it('rejects a summary without main coverages instead of fabricating them', async () => {
+    const result = firstValueFrom(gateway.loadProducts());
+    http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro`).flush({
+      productos: [{ id: 'travel', nombre: 'Viaje', descripcion: 'Viaje', disponible: false }],
+    });
+    await expect(result).rejects.toThrow(/invalid product/);
+  });
+
+  it.each(['', ' ', '-1', 'NaN', '1e3'])('rejects invalid catalog amount %j', async (amount) => {
+    const result = firstValueFrom(gateway.loadProduct('travel'));
+    http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro/travel`).flush({
+      id: 'travel',
+      nombre: 'Viaje',
+      descripcion: 'Viaje',
+      disponible: false,
+      coberturasPrincipales: [],
+      coberturas: [],
+      condiciones: [],
+      informacionRelevante: {
+        sumaAsegurada: amount,
+        deducible: '0',
+        moneda: 'COP',
+        vigencia: 'Por viaje',
+      },
+    });
+    await expect(result).rejects.toThrow(/monetary/);
   });
 });

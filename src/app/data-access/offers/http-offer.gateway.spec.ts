@@ -30,6 +30,8 @@ const OFFER = {
   nombre: 'Seguro Automotriz Pro',
   descripcion: 'Cobertura extendida',
   primaMensual: { monto: '189900', moneda: 'COP' },
+  prima: { monto: '189900', moneda: 'COP' },
+  periodicidad: 'mensual',
   coberturaPrincipal: 'Daños propios y terceros',
   deducible: '$500.000 COP',
   vigencia: 'Anual',
@@ -129,6 +131,8 @@ describe('HttpOfferGateway', () => {
       version: OFFER.version,
       nombreOferta: OFFER.nombre,
       primaMensual: OFFER.primaMensual,
+      prima: OFFER.prima,
+      periodicidad: OFFER.periodicidad,
       seleccionadaEn: '2026-10-11T18:05:00Z',
     });
 
@@ -152,6 +156,8 @@ describe('HttpOfferGateway', () => {
       version: OFFER.version,
       nombreOferta: OFFER.nombre,
       primaMensual: OFFER.primaMensual,
+      prima: OFFER.prima,
+      periodicidad: OFFER.periodicidad,
       seleccionadaEn: '2026-10-11T18:05:00Z',
     });
 
@@ -233,14 +239,17 @@ describe('HttpOfferGateway', () => {
   );
 
   it.each([
-    { name: 'prima nueva sin periodicidad', fields: { prima: OFFER.primaMensual } },
-    { name: 'periodicidad nueva sin prima', fields: { periodicidad: 'por_viaje' } },
+    { name: 'prima nueva sin periodicidad', fields: { periodicidad: undefined } },
+    {
+      name: 'periodicidad nueva sin prima',
+      fields: { prima: undefined, periodicidad: 'por_viaje' },
+    },
     { name: 'prima nueva nula', fields: { prima: null, periodicidad: 'por_vuelo' } },
     {
       name: 'periodicidad desconocida',
       fields: { prima: OFFER.primaMensual, periodicidad: 'diaria' },
     },
-    { name: 'prima mensual legada nula', fields: { primaMensual: null } },
+    { name: 'solo prima mensual legada', fields: { prima: undefined, periodicidad: undefined } },
   ])('rechaza $name sin recurrir a una prima mensual', async ({ fields }) => {
     const result = firstValueFrom(gateway.loadOffers());
     http
@@ -272,5 +281,27 @@ describe('HttpOfferGateway', () => {
     await expect(result).resolves.toMatchObject({
       offers: [{ premium: { amount: 99.5, currency: 'USD' }, periodicity: 'por_viaje' }],
     });
+  });
+
+  it.each(['', ' ', '-1', 'NaN', 'Infinity', '1e3', '0x10'])(
+    'rejects an invalid decimal amount %j',
+    async (amount) => {
+      const result = firstValueFrom(gateway.loadOffers());
+      http
+        .expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`)
+        .flush({
+          ...CALCULATION_RESPONSE,
+          ofertas: [{ ...OFFER, prima: { monto: amount, moneda: 'COP' } }],
+        });
+      await expect(result).rejects.toThrow(/monetary/);
+    },
+  );
+
+  it('rejects an unknown offer status', async () => {
+    const result = firstValueFrom(gateway.loadOffers());
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`)
+      .flush({ ...CALCULATION_RESPONSE, ofertas: [{ ...OFFER, estado: 'desconocido' }] });
+    await expect(result).rejects.toThrow(/status/);
   });
 });

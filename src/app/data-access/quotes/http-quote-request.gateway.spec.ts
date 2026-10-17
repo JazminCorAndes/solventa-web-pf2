@@ -48,7 +48,7 @@ describe('HttpQuoteRequestGateway', () => {
   it('loads and maps the supported travel destinations', async () => {
     const result = firstValueFrom(gateway.loadTravelDestinations());
     const request = http.expectOne('/api/v1/destinos-viaje');
-    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.withCredentials).toBe(false);
     request.flush({
       destinos: [
         { codigo: 'CO', nombre: 'Colombia' },

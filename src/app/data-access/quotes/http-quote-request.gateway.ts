@@ -50,35 +50,29 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
   private readonly apiUrl = `${environment.apiBaseUrl}/v1`;
 
   loadProducts(): Observable<InsuranceProduct[]> {
-    return this.http
-      .get<ProductsResponse>(`${this.apiUrl}/productos-seguro`)
-      .pipe(
-        map((response) =>
-          response.productos.map((product) => ({
-            id: product.id,
-            name: product.nombre,
-            description: product.descripcion,
-            available: product.disponible,
-          })),
-        ),
-        catchError((error: unknown) => this.mapUnavailable(error)),
-      );
+    return this.http.get<ProductsResponse>(`${this.apiUrl}/productos-seguro`).pipe(
+      map((response) =>
+        response.productos.map((product) => ({
+          id: product.id,
+          name: product.nombre,
+          description: product.descripcion,
+          available: product.disponible,
+        })),
+      ),
+      catchError((error: unknown) => this.mapUnavailable(error)),
+    );
   }
 
   loadTravelDestinations(): Observable<TravelDestination[]> {
-    return this.http
-      .get<TravelDestinationsResponse>(`${this.apiUrl}/destinos-viaje`, {
-        withCredentials: true,
-      })
-      .pipe(
-        map((response) =>
-          response.destinos.map((destination) => ({
-            code: destination.codigo,
-            name: destination.nombre,
-          })),
-        ),
-        catchError((error: unknown) => this.mapUnavailable(error)),
-      );
+    return this.http.get<TravelDestinationsResponse>(`${this.apiUrl}/destinos-viaje`).pipe(
+      map((response) =>
+        response.destinos.map((destination) => ({
+          code: destination.codigo,
+          name: destination.nombre,
+        })),
+      ),
+      catchError((error: unknown) => this.mapUnavailable(error)),
+    );
   }
 
   submitRequest(request: QuoteRequestDraft): Observable<QuoteRequestRecord> {

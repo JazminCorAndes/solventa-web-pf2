@@ -1,6 +1,6 @@
 export type OfferStatus = 'available' | 'accepted' | 'expired' | 'withdrawn';
 
-export const PREMIUM_PERIODICITIES = ['mensual', 'por_viaje', 'por_vuelo'] as const;
+export const PREMIUM_PERIODICITIES = ['mensual', 'por_viaje', 'por_vuelo', 'por_periodo'] as const;
 export type PremiumPeriodicity = (typeof PREMIUM_PERIODICITIES)[number];
 
 export interface Money {
