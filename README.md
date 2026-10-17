@@ -155,6 +155,35 @@ los orígenes `https://jazmincorandes.github.io` y `http://localhost:4200`, los 
 `Authorization`, `Content-Type`, `Idempotency-Key` y `X-Correlation-ID`, y no requiere
 credenciales.
 
+### Publicar esta versión en GitHub Pages
+
+El workflow separado `.github/workflows/pages.yml` compila y publica únicamente los
+`push` a `develop`, después de integrar el PR siguiendo las protecciones de esa rama.
+No se ejecuta para ramas feature ni PRs. Antes de publicar repite lint, pruebas y
+verificación del fallback; solo el job de despliegue recibe `pages: write` e
+`id-token: write`, y utiliza el environment `github-pages`. La concurrencia evita
+despliegues simultáneos.
+
+**Requisito administrativo:** Pages debe usar GitHub Actions y el environment
+`github-pages` debe permitir `develop`. En la consulta del 17 de octubre de 2026,
+Pages ya usaba Actions, pero la política del environment permitía solo `master`.
+Un administrador debe autorizar `develop` manteniendo las revisiones y protecciones
+aplicables; este cambio de código no modifica ni elude esa política.
+
+`pnpm build:pages` utiliza producción (backend AWS, no mocks) con base
+`/solventa-web-pf2/` y genera el artefacto `dist/solventa-web-pf2/browser`.
+`scripts/prepare-pages.cjs` copia el `index.html` compilado a `404.html`, rechazando
+un build con base incorrecta. Pages sirve esa entrada al abrir o recargar una ruta
+profunda, conservando la URL para el router Angular. Las traducciones se resuelven
+respecto al `<base>` del documento, tanto en Pages como en `localhost:4200`.
+
+El fallback de Pages sigue devolviendo HTTP `404` para rutas profundas aunque la
+aplicación pueda arrancar: no equivale a un rewrite HTTP `200`, ni garantiza SEO o
+que los clientes sin JavaScript vean el contenido. Los guards de autenticación se
+mantienen. Tras el despliegue debe verificarse en navegador el inicio de sesión y
+la apertura/recarga de una URL profunda; las pruebas de artefacto no sustituyen
+esa validación ni prueban conectividad con AWS.
+
 ## Autenticación con tokens
 
 1. `POST /v1/sesiones` devuelve un **access token** (JWT, de corta duración; el vencimiento lo
@@ -184,11 +213,13 @@ no disponible en vez de inventar datos personales.
 | `pnpm start:backend` | Inicia el desarrollo conectado al BFF local           |
 | `pnpm start:aws`     | Inicia el desarrollo conectado al backend en AWS      |
 | `pnpm build`         | Genera el build de producción conectado al backend    |
+| `pnpm build:pages`   | Compila producción para la subruta Pages y genera `404.html` |
 | `pnpm build:dev`     | Genera un build de desarrollo con mocks               |
 | `pnpm build:backend` | Genera un build de desarrollo conectado al BFF local  |
 | `pnpm build:aws`     | Genera un build de desarrollo conectado al API en AWS |
 | `pnpm test`          | Ejecuta las pruebas en modo interactivo               |
 | `pnpm test:ci`       | Ejecuta las pruebas una sola vez                      |
+| `pnpm test:pages`    | Verifica la generación del fallback SPA de Pages      |
 | `pnpm lint`          | Ejecuta ESLint                                        |
 | `pnpm format`        | Formatea el código con Prettier                       |
 | `pnpm format:check`  | Comprueba el formato sin modificar archivos           |

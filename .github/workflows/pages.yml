@@ -1,0 +1,61 @@
+name: Publicar frontend en Pages
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 11.19.0
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      - name: Ejecutar lint
+        run: pnpm lint
+      - name: Ejecutar pruebas
+        run: pnpm test:ci
+      - name: Verificar fallback Pages
+        run: pnpm test:pages
+      - name: Compilar frontend para Pages con backend AWS
+        run: pnpm build:pages
+      - name: Preparar artefacto
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/solventa-web-pf2/browser
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar artefacto revisado
+        id: deployment
+        uses: actions/deploy-pages@v4
