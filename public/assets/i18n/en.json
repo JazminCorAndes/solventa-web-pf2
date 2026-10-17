@@ -209,7 +209,11 @@
     "subtitle": "Compare coverage and select the option that best fits your needs.",
     "loading": "Updating available offers",
     "recommendedPlan": "Recommended plan",
-    "monthlyPremium": "Monthly premium",
+    "premiumLabels": {
+      "mensual": "Monthly premium",
+      "por_viaje": "Premium per trip",
+      "por_vuelo": "Premium per flight"
+    },
     "mainCoverage": "Main coverage",
     "generalConditions": "General conditions",
     "viewOffer": "View offer",

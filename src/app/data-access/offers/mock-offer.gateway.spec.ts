@@ -98,7 +98,10 @@ describe('MockOfferGateway', () => {
       /demostraci[oó]n|simulad|pendiente de implementar|trabajo en proceso/i,
     );
     expect(calculation.offers.every((offer) => offer.id.startsWith(`${productId}-`))).toBe(true);
-    expect(calculation.offers.every((offer) => offer.monthlyPremium.currency === 'COP')).toBe(true);
+    expect(calculation.offers.every((offer) => offer.premium.currency === 'COP')).toBe(true);
+    const periodicity =
+      productId === 'travel' ? 'por_viaje' : productId === 'parametric' ? 'por_vuelo' : 'mensual';
+    expect(calculation.offers.every((offer) => offer.periodicity === periodicity)).toBe(true);
     if (productId !== 'automotive') {
       expect(calculation.offers.some((offer) => offer.name.includes('Automotriz'))).toBe(false);
     }
@@ -107,7 +110,8 @@ describe('MockOfferGateway', () => {
       gateway.confirmSelection(REQUEST.id, offer.id, offer.version),
     );
     expect(selection.offerId).toBe(offer.id);
-    expect(selection.monthlyPremium).toEqual(offer.monthlyPremium);
+    expect(selection.premium).toEqual(offer.premium);
+    expect(selection.periodicity).toBe(periodicity);
   });
 
   it.each(['missed-connection', 'comprehensive'])(

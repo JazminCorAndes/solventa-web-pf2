@@ -30,11 +30,12 @@ import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
             <div class="selection-summary">
               <span>{{ 'acceptance.selectedOffer' | transloco }}</span>
               <strong>{{ selected.offerName }}</strong>
+              <span>{{ 'offers.premiumLabels.' + selected.periodicity | transloco }}</span>
               <span>
                 {{
-                  selected.monthlyPremium.amount
+                  selected.premium.amount
                     | currency
-                      : selected.monthlyPremium.currency
+                      : selected.premium.currency
                       : 'symbol-narrow'
                       : '1.0-0'
                       : market.locale

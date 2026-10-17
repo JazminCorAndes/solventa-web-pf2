@@ -390,7 +390,9 @@ function offersFor(productId: string, productData: QuoteProductData): InsuranceO
       version: 1,
       name: details.name,
       description: details.description,
-      monthlyPremium: { amount: blueprint.premium, currency: ACTIVE_MARKET.currency },
+      premium: { amount: blueprint.premium, currency: ACTIVE_MARKET.currency },
+      periodicity:
+        productId === 'travel' ? 'por_viaje' : productId === 'parametric' ? 'por_vuelo' : 'mensual',
       coverageLabel: details.coverage,
       deductibleLabel: details.deductible,
       validityLabel: details.validity ?? 'Anual',
@@ -460,7 +462,8 @@ export class MockOfferGateway implements OfferGateway {
           offerId,
           offerVersion,
           offerName: offer.name,
-          monthlyPremium: offer.monthlyPremium,
+          premium: offer.premium,
+          periodicity: offer.periodicity,
           selectedAt: new Date().toISOString(),
         };
       }),

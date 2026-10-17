@@ -212,6 +212,14 @@ El POST a `/api/v1/solicitudes-cotizacion` conserva el cuerpo
 Las fechas se ingresan como `DD/MM/AAAA` en español colombiano y se envían como
 `YYYY-MM-DD`; los importes se expresan en pesos colombianos enteros.
 
+Las ofertas y la selección admiten `prima: { monto, moneda }` con `periodicidad`:
+`mensual`, `por_viaje` o `por_vuelo`. La interfaz muestra el importe y la moneda recibidos
+con el periodo correspondiente, sin convertir primas por viaje o vuelo en mensualidades.
+El alias `primaMensual` puede ser nulo para primas no mensuales. Para respuestas anteriores
+que no incluyan ninguno de los dos campos nuevos, se conserva la lectura de
+`primaMensual` como mensual; una respuesta nueva incompleta no usa ese valor como respaldo.
+Las selecciones antiguas guardadas en la pestaña se leen con ese mismo criterio.
+
 En vuelos, `coverageType` admite `delay-cancellation`, `missed-connection` y
 `comprehensive`. El backend mantiene las solicitudes antiguas sin ese campo como
 retraso o cancelación. La pérdida de conexión está sujeta a las causas y exclusiones
