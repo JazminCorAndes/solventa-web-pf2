@@ -20,6 +20,7 @@ pipeline {
     stages {
         stage('Código') {
             steps {
+                deleteDir()
                 checkout scm
             }
         }
@@ -40,6 +41,8 @@ pipeline {
         }
         stage('Pruebas y cobertura') {
             steps {
+                publishChecks name: 'Cobertura', status: 'IN_PROGRESS', conclusion: 'NONE', title: 'Generando cobertura web', summary: 'Código instrumentado por Angular/Vitest V8.', detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks"
+                sh 'python3 -m unittest discover -s scripts -p test_coverage_summary.py'
                 sh 'mkdir -p reports && pnpm test:coverage'
             }
         }
@@ -53,12 +56,41 @@ pipeline {
     post {
         always {
             script {
-                if (fileExists('reports/unit-tests.xml')) {
-                    junit testResults: 'reports/unit-tests.xml', allowEmptyResults: false
+                try {
+                    if (fileExists('reports/unit-tests.xml')) {
+                        junit testResults: 'reports/unit-tests.xml', allowEmptyResults: false, skipPublishingChecks: true
+                    }
+                    def result = sh(returnStatus: true, script: '''python3 scripts/coverage_summary.py \
+                        --coverage 'Web=coverage/solventa-web-pf2/cobertura-coverage.xml' \
+                        --tests 'reports/unit-tests.xml' \
+                        --scope 'Código instrumentado por Angular/Vitest V8. No incluye pruebas E2E ni servicios externos.'
+                    ''')
+                    def summary = readFile(file: 'reports/coverage-summary.md', encoding: 'UTF-8')
+                    summary += "\nRevisión compilada (puede incluir merge con destino): `${env.GIT_COMMIT}`.\n"
+                    publishChecks name: 'Cobertura', title: summary.readLines()[0], summary: summary,
+                        detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks",
+                        conclusion: result == 0 ? 'SUCCESS' : (currentBuild.currentResult == 'SUCCESS' ? 'FAILURE' : 'NEUTRAL')
+                    if (result != 0 && currentBuild.currentResult == 'SUCCESS') {
+                        error('Faltan reportes válidos de cobertura o pruebas')
+                    }
+                } finally {
+                    archiveArtifacts artifacts: 'reports/unit-tests.xml,reports/coverage-summary.md,coverage/**', allowEmptyArchive: true
                 }
             }
-            archiveArtifacts artifacts: 'reports/*.xml,coverage/**', allowEmptyArchive: true
-            deleteDir()
+        }
+        cleanup {
+            script {
+                try {
+                    // Mantener el check antiguo obligatorio hasta migrar las protecciones.
+                    publishChecks name: 'CI / Validación (Jenkins)',
+                        conclusion: currentBuild.currentResult == 'SUCCESS' ? 'SUCCESS' : 'FAILURE',
+                        title: currentBuild.currentResult == 'SUCCESS' ? 'Lint, pruebas y compilación correctos' : 'Validación incompleta o fallida',
+                        summary: 'Validación solicitada con `/test-jenkins`. Porcentajes y pruebas en **Cobertura**. El check anterior se conserva temporalmente por las protecciones.',
+                        detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks"
+                } finally {
+                    deleteDir()
+                }
+            }
         }
     }
 }

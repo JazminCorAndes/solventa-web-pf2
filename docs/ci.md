@@ -1,5 +1,36 @@
 # Comprobaciones de la web
 
+## Resultados visibles en GitHub
+
+- **Cobertura** muestra líneas/ramas y conteos de `reports/unit-tests.xml`, sin incluir XML
+  antiguos. Su enlace abre Checks en GitHub; los HTML detallados permanecen en Jenkins privado.
+- **CI / Validación (Jenkins)** es el nombre nuevo. **Solventa Web Jenkins** se conserva
+  temporalmente porque sigue vinculado a las protecciones existentes.
+- Actions se presenta como **CI · Actions**; el contexto obligatorio `Calidad` no cambia.
+- JUnit permanece en Jenkins pero deja de publicar `Tests / Declarative: Post Actions`.
+- Cada build limpia su workspace antes del checkout. Un reporte ausente o inválido no se
+  presenta como 0 % ni como cobertura completa; hace fallar un pipeline que iba bien.
+  Un reporte parcial tras otra etapa fallida se publica como neutral, sin ocultar el fallo.
+
+El resumen usa Python 3.10+ del agente compartido, sin paquetes nuevos. Prueba del publicador:
+`python3 -m unittest discover -s scripts -p test_coverage_summary.py`.
+La cobertura informa ejecución del código instrumentado, no suficiencia funcional ni despliegue.
+
+### Migración pendiente con Jazmín
+
+1. Comprobar el check nuevo en el mismo SHA, publicado por la App `5277435`.
+2. Jazmín debe reemplazar el contexto obligatorio antiguo por `CI / Validación (Jenkins)`,
+   conservando las demás protecciones y la vinculación a la App. No deshabilitar la regla.
+3. Solo con esta preparación integrada y la nueva protección verificada, retirar el check
+   automático antiguo del controlador; el Jenkinsfile mantiene el nuevo publicador explícito.
+4. Un administrador puede ejecutar `infra/jenkins/configure-reporting.groovy` en el controlador
+   para quitar el status legado `continuous-integration/jenkins/pr-merge`, tras comprobar
+   que no sea obligatorio. No ejecutar desde el PR ni reiniciar Jenkins.
+5. La propietaria puede cambiar el nombre visible de su App a **Solventa CI Web**, sin cambiar
+   ID, instalación ni credenciales. `CI / Calidad (Actions)` requiere migrar `Calidad` después.
+
+Integrar el PR no cambia automáticamente el controlador, la App ni las protecciones.
+
 | Proceso                         | Cuándo                                             | Qué comprueba                             |
 | ------------------------------- | -------------------------------------------------- | ----------------------------------------- |
 | Actions: `Calidad`              | Cada PR y push a develop/master                    | Lint, pruebas y compilación               |

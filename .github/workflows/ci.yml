@@ -1,4 +1,4 @@
-name: Integración continua
+name: CI · Actions
 
 on:
   push:
