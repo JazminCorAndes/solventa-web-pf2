@@ -41,7 +41,13 @@ const PRODUCTS: InsuranceProduct[] = [
   {
     id: 'parametric',
     name: 'Seguro de Vuelos',
-    description: 'Compensación automática ante retrasos o cancelaciones de vuelos.',
+    description: 'Protección ante retrasos, cancelaciones o pérdida de conexión, según el plan.',
+    available: true,
+  },
+  {
+    id: 'parametric-weather',
+    name: 'Seguro Paramétrico Climático',
+    description: 'Protección ante lluvia intensa o sequía durante el periodo asegurado.',
     available: true,
   },
   {

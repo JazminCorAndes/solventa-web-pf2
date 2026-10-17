@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { finalize, map, Observable, tap } from 'rxjs';
+import { catchError, finalize, map, Observable, tap, throwError } from 'rxjs';
 import { AUTH_GATEWAY } from './auth.gateway';
 import { AuthSession, LoginCredentials } from './auth.models';
 import { AUTH_STORAGE } from './auth-storage.service';
@@ -31,6 +31,10 @@ export class AuthService {
         } else {
           this.clearLocalSession();
         }
+      }),
+      catchError((error: unknown) => {
+        this.clearLocalSession();
+        return throwError(() => error);
       }),
       map(() => undefined),
     );

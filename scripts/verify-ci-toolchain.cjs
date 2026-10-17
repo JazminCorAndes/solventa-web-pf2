@@ -19,7 +19,7 @@ if (
 
 const { packageManager } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const expectedPnpm = packageManager.replace(/^pnpm@/, '');
-// This check runs on the provisioned Linux Jenkins agent, not through a shell.
+// Esta comprobacion se ejecuta en el agente Linux de Jenkins, sin usar un interprete de comandos.
 const pnpm = execFileSync('pnpm', ['--version'], { encoding: 'utf8' }).trim();
 if (pnpm !== expectedPnpm) {
   throw new Error(`Use pnpm ${expectedPnpm}; found ${pnpm}`);

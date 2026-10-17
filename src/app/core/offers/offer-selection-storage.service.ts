@@ -1,6 +1,11 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, InjectionToken } from '@angular/core';
-import { SelectedOfferRecord } from './offer.models';
+import {
+  isPremiumPeriodicity,
+  Money,
+  PremiumPeriodicity,
+  SelectedOfferRecord,
+} from './offer.models';
 
 const SELECTION_KEY = 'solventa.offer.selection';
 
@@ -26,8 +31,9 @@ export class BrowserOfferSelectionStorage implements OfferSelectionStorage {
 
     try {
       const parsed: unknown = JSON.parse(value);
-      if (isSelectionRecord(parsed)) {
-        return parsed;
+      const selection = toSelectionRecord(parsed);
+      if (selection) {
+        return selection;
       }
     } catch (error) {
       console.warn('Stored offer selection could not be parsed.', error);
@@ -46,23 +52,50 @@ export class BrowserOfferSelectionStorage implements OfferSelectionStorage {
   }
 }
 
-function isSelectionRecord(value: unknown): value is SelectedOfferRecord {
+function toSelectionRecord(value: unknown): SelectedOfferRecord | null {
   if (!value || typeof value !== 'object') {
-    return false;
+    return null;
   }
 
-  const candidate = value as Partial<SelectedOfferRecord>;
-  return (
-    typeof candidate.quoteId === 'string' &&
-    typeof candidate.offerId === 'string' &&
-    typeof candidate.offerVersion === 'number' &&
-    typeof candidate.offerName === 'string' &&
-    isMoney(candidate.monthlyPremium) &&
-    typeof candidate.selectedAt === 'string'
-  );
+  const candidate = value as Partial<SelectedOfferRecord> & { monthlyPremium?: unknown };
+  if (
+    typeof candidate.quoteId !== 'string' ||
+    typeof candidate.offerId !== 'string' ||
+    typeof candidate.offerVersion !== 'number' ||
+    typeof candidate.offerName !== 'string' ||
+    typeof candidate.selectedAt !== 'string'
+  ) {
+    return null;
+  }
+
+  let premium: Money;
+  let periodicity: PremiumPeriodicity;
+  if ('premium' in candidate || 'periodicity' in candidate) {
+    if (!isMoney(candidate.premium) || !isPremiumPeriodicity(candidate.periodicity)) {
+      return null;
+    }
+    premium = candidate.premium;
+    periodicity = candidate.periodicity;
+  } else {
+    if (!isMoney(candidate.monthlyPremium)) {
+      return null;
+    }
+    premium = candidate.monthlyPremium;
+    periodicity = 'mensual';
+  }
+
+  return {
+    quoteId: candidate.quoteId,
+    offerId: candidate.offerId,
+    offerVersion: candidate.offerVersion,
+    offerName: candidate.offerName,
+    premium,
+    periodicity,
+    selectedAt: candidate.selectedAt,
+  };
 }
 
-function isMoney(value: unknown): boolean {
+function isMoney(value: unknown): value is Money {
   if (!value || typeof value !== 'object') {
     return false;
   }

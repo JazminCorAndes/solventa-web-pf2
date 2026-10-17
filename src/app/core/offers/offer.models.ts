@@ -1,5 +1,8 @@
 export type OfferStatus = 'available' | 'expired' | 'withdrawn';
 
+export const PREMIUM_PERIODICITIES = ['mensual', 'por_viaje', 'por_vuelo'] as const;
+export type PremiumPeriodicity = (typeof PREMIUM_PERIODICITIES)[number];
+
 export interface Money {
   amount: number;
   currency: string;
@@ -10,7 +13,8 @@ export interface InsuranceOffer {
   version: number;
   name: string;
   description: string;
-  monthlyPremium: Money;
+  premium: Money;
+  periodicity: PremiumPeriodicity;
   coverageLabel: string;
   deductibleLabel: string;
   validityLabel: string;
@@ -36,6 +40,11 @@ export interface SelectedOfferRecord {
   offerId: string;
   offerVersion: number;
   offerName: string;
-  monthlyPremium: Money;
+  premium: Money;
+  periodicity: PremiumPeriodicity;
   selectedAt: string;
+}
+
+export function isPremiumPeriodicity(value: unknown): value is PremiumPeriodicity {
+  return PREMIUM_PERIODICITIES.some((periodicity) => periodicity === value);
 }

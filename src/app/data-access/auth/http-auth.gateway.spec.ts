@@ -1,8 +1,14 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
-import { InvalidCredentialsError } from '../../core/auth/auth.errors';
+import {
+  AuthenticationUnavailableError,
+  InvalidCredentialsError,
+} from '../../core/auth/auth.errors';
+import { AUTH_STORAGE, AuthStorage } from '../../core/auth/auth-storage.service';
+import { AuthSession } from '../../core/auth/auth.models';
+import { sessionBearerInterceptor } from '../../core/auth/session-bearer.interceptor';
 import { HttpAuthGateway } from './http-auth.gateway';
 
 const SESSION_RESPONSE = {
@@ -16,15 +22,39 @@ const SESSION_RESPONSE = {
     telefono: '+573001234567',
   },
   expiraEn: '2026-10-11T22:00:00Z',
+  tokenType: 'Bearer',
+  accessToken: 'access-token-prueba',
+  refreshToken: 'refresh-token-prueba',
 };
 
 describe('HttpAuthGateway', () => {
   let gateway: HttpAuthGateway;
   let http: HttpTestingController;
+  let stored: AuthSession | null;
 
   beforeEach(() => {
+    stored = {
+      user: { id: 'cliente', name: 'Cliente', email: 'cliente@solventa.co', role: 'client' },
+      expiresAt: Date.now() + 60_000,
+      accessToken: SESSION_RESPONSE.accessToken,
+      refreshToken: SESSION_RESPONSE.refreshToken,
+    };
+    const storage: AuthStorage = {
+      read: () => stored,
+      write: (session) => {
+        stored = session;
+      },
+      clear: () => {
+        stored = null;
+      },
+    };
     TestBed.configureTestingModule({
-      providers: [HttpAuthGateway, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        HttpAuthGateway,
+        provideHttpClient(withInterceptors([sessionBearerInterceptor])),
+        provideHttpClientTesting(),
+        { provide: AUTH_STORAGE, useValue: storage },
+      ],
     });
     gateway = TestBed.inject(HttpAuthGateway);
     http = TestBed.inject(HttpTestingController);
@@ -32,7 +62,7 @@ describe('HttpAuthGateway', () => {
 
   afterEach(() => http.verify());
 
-  it('logs in using the BFF session cookie', async () => {
+  it('inicia sesión y obtiene los tokens Bearer del BFF', async () => {
     const result = firstValueFrom(
       gateway.login({
         email: 'cliente@solventa.co',
@@ -43,6 +73,7 @@ describe('HttpAuthGateway', () => {
 
     expect(request.request.method).toBe('POST');
     expect(request.request.withCredentials).toBe(true);
+    expect(request.request.headers.has('Authorization')).toBe(false);
     expect(request.request.body).toEqual({
       correo: 'cliente@solventa.co',
       contrasena: 'Solventa123!',
@@ -60,7 +91,33 @@ describe('HttpAuthGateway', () => {
         phone: '+573001234567',
       },
       expiresAt: Date.parse(SESSION_RESPONSE.expiraEn),
+      accessToken: SESSION_RESPONSE.accessToken,
+      refreshToken: SESSION_RESPONSE.refreshToken,
     });
+  });
+
+  it('conserva los tokens al consultar la sesión actual', async () => {
+    const result = firstValueFrom(gateway.currentSession());
+    const request = http.expectOne('/api/v1/sesiones/actual');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer access-token-prueba');
+    request.flush({
+      usuario: { id: 'cliente', nombre: 'Cliente', correo: 'cliente@solventa.co', rol: 'cliente' },
+      expiraEn: SESSION_RESPONSE.expiraEn,
+    });
+    await expect(result).resolves.toMatchObject({
+      accessToken: SESSION_RESPONSE.accessToken,
+      refreshToken: SESSION_RESPONSE.refreshToken,
+    });
+  });
+
+  it('rechaza una respuesta de inicio sin tokens en vez de simular autenticación', async () => {
+    const result = firstValueFrom(
+      gateway.login({ email: 'cliente@solventa.co', password: 'prueba' }),
+    );
+    http
+      .expectOne('/api/v1/sesiones')
+      .flush({ usuario: SESSION_RESPONSE.usuario, expiraEn: SESSION_RESPONSE.expiraEn });
+    await expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
   });
 
   it('maps rejected credentials', async () => {
@@ -81,12 +138,14 @@ describe('HttpAuthGateway', () => {
     await expect(result).resolves.toBeNull();
   });
 
-  it('closes the remote session using its cookie', async () => {
+  it('cierra la sesión con Bearer y revoca su token de renovación', async () => {
     const result = firstValueFrom(gateway.logout());
     const request = http.expectOne('/api/v1/sesiones/actual');
 
     expect(request.request.method).toBe('DELETE');
     expect(request.request.withCredentials).toBe(true);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer access-token-prueba');
+    expect(request.request.body).toEqual({ refreshToken: 'refresh-token-prueba' });
     request.flush(null, { status: 204, statusText: 'No Content' });
 
     await expect(result).resolves.toBeUndefined();

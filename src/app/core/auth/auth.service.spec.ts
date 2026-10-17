@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, of, throwError } from 'rxjs';
 import { AUTH_GATEWAY, AuthGateway } from './auth.gateway';
 import { AuthSession } from './auth.models';
 import { AuthService } from './auth.service';
@@ -98,6 +98,20 @@ describe('AuthService', () => {
     await firstValueFrom(service.logout());
 
     expect(service.session()).toBeNull();
+    expect(storage.stored).toBeNull();
+  });
+
+  it('descarta la autorización de interfaz cacheada si falla la sincronización', async () => {
+    storage.stored = ACTIVE_SESSION;
+    const service = TestBed.inject(AuthService);
+    const error = new Error('BFF no disponible');
+    vi.spyOn(TestBed.inject(AUTH_GATEWAY), 'currentSession').mockReturnValue(
+      throwError(() => error),
+    );
+
+    await expect(firstValueFrom(service.synchronizeSession())).rejects.toBe(error);
+
+    expect(service.hasActiveSession()).toBe(false);
     expect(storage.stored).toBeNull();
   });
 });

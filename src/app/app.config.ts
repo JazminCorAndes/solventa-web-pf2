@@ -1,6 +1,6 @@
 import { registerLocaleData } from '@angular/common';
 import localeEsCo from '@angular/common/locales/es-CO';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
   inject,
@@ -15,6 +15,7 @@ import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { AUTH_GATEWAY } from './core/auth/auth.gateway';
 import { AUTH_STORAGE, BrowserAuthStorage } from './core/auth/auth-storage.service';
+import { sessionBearerInterceptor } from './core/auth/session-bearer.interceptor';
 import { DASHBOARD_GATEWAY } from './core/dashboard/dashboard.gateway';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
 import { OFFER_GATEWAY } from './core/offers/offer.gateway';
@@ -44,7 +45,7 @@ const backendMode = environment.dataAccessMode === 'backend';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors(backendMode ? [sessionBearerInterceptor] : [])),
     provideRouter(routes),
     { provide: LOCALE_ID, useValue: 'es-CO' },
     { provide: AUTH_GATEWAY, useClass: backendMode ? HttpAuthGateway : MockAuthGateway },

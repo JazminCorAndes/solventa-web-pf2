@@ -62,7 +62,7 @@ export const routes: Routes = [
           import('./features/offers/offer-acceptance-page.component').then(
             (component) => component.OfferAcceptancePageComponent,
           ),
-        title: 'Aceptación de oferta | Solventa',
+        title: 'Resumen de oferta | Solventa',
       },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
