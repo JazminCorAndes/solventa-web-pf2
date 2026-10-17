@@ -42,6 +42,7 @@
     "secureSession": "Secure session",
     "menu": "Menu",
     "dashboard": "Home",
+    "insuranceCatalog": "Insurance",
     "quotes": "Quotes",
     "policies": "My insurance",
     "claims": "Claims",
@@ -69,6 +70,39 @@
     "status": {
       "active": "Active",
       "pending": "Pending"
+    }
+  },
+  "insuranceCatalog": {
+    "eyebrow": "Protection for every moment",
+    "title": "Explore our insurance",
+    "subtitle": "Compare coverage and conditions before requesting a quote.",
+    "loading": "Loading available insurance",
+    "available": "Available",
+    "view": "View insurance",
+    "viewProduct": "View {{ product }}",
+    "empty": {
+      "title": "No insurance is available",
+      "body": "We could not find products to display. Please try again."
+    },
+    "error": {
+      "title": "We could not load the insurance catalog",
+      "body": "The information is currently unavailable. You can try again."
+    },
+    "detail": {
+      "loading": "Loading insurance information",
+      "back": "Back to insurance",
+      "coverages": "What it covers",
+      "conditions": "Main conditions",
+      "keyInformation": "Key information",
+      "insuredAmount": "Reference insured amount",
+      "deductible": "Deductible",
+      "term": "Term",
+      "quoteTitle": "Does this insurance fit your needs?",
+      "quoteBody": "Complete your information to receive a personalized proposal.",
+      "quoteAction": "Quote this insurance",
+      "notFoundTitle": "Insurance not found",
+      "errorTitle": "We could not load this insurance",
+      "errorBody": "Return to the catalog or try loading the information again."
     }
   },
   "quoteRequest": {
