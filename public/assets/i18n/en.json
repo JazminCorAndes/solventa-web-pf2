@@ -199,13 +199,12 @@
     "coveragesTitle": "Coverages",
     "conditionsTitle": "Main conditions",
     "unavailableMessage": "This offer can no longer be selected.",
-    "selectToContinue": "Select an available offer to continue.",
-    "readyToContinue": "{{ name }} is ready to continue.",
-    "continue": "Continue to acceptance",
+    "acceptedMessage": "This is the accepted offer for this quote.",
     "confirming": "Confirming",
     "refreshNote": "You can compare this offer with other alternatives in the list.",
     "status": {
       "available": "Available",
+      "accepted": "Accepted",
       "expired": "Expired",
       "withdrawn": "Withdrawn"
     },
@@ -221,10 +220,38 @@
     }
   },
   "acceptance": {
-    "step": "Next step",
-    "title": "Offer acceptance",
+    "step": "3 of 4 · Confirm your protection",
+    "title": "Confirm your protection",
+    "subtitle": "Review the plan and insurance details before confirming your selection.",
     "selectedOffer": "Selected offer",
-    "body": "Formal acceptance of conditions and coverages will be implemented in its corresponding story.",
-    "backToOffers": "Back to offers"
+    "monthlyPremium": "Monthly premium",
+    "includedCoverages": "Included coverages",
+    "insuranceData": "Insurance details",
+    "policyholder": "Policyholder",
+    "consent": "I confirm that I reviewed the details and accept the conditions and coverages of the selected offer.",
+    "confirmAction": "Confirm selection",
+    "confirming": "Confirming",
+    "confirmedTitle": "Selection confirmed",
+    "confirmedBody": "The offer was registered successfully.",
+    "continueAction": "Process subscription",
+    "loading": "Loading your protection summary.",
+    "backToOffers": "Back to offers",
+    "errors": {
+      "unavailable": "The offer changed or expired. Return to the offers to select an available option.",
+      "confirmation": "The selection could not be confirmed. Please try again.",
+      "subscription": "The subscription could not be processed. Please try again."
+    }
+  },
+  "subscription": {
+    "eyebrow": "Subscription",
+    "title": "Subscription approved",
+    "subtitle": "The offer meets the conditions and payment is enabled.",
+    "operation": "Operation identifier",
+    "offer": "Accepted offer",
+    "decision": "Decision",
+    "approved": "Approved",
+    "rule": "Applied rule",
+    "next": "The next step is to register payment to issue the policy.",
+    "back": "Back to acceptance"
   }
 }
