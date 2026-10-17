@@ -44,8 +44,7 @@
     "quotes": "Quotes",
     "policies": "My insurance",
     "claims": "Claims",
-    "notifications": "Notifications",
-    "comingSoon": "Additional operations will be available soon."
+    "notifications": "Notifications"
   },
   "theme": {
     "useLight": "Use light theme",
@@ -78,7 +77,7 @@
     "selectedInsurance": "Selected insurance",
     "selectInsurancePlaceholder": "Select insurance",
     "changeInsurance": "Choose insurance",
-    "comingSoon": "Coming soon",
+    "unavailableProduct": "Unavailable for quotes",
     "loadingProducts": "Loading available insurance",
     "documentType": "Document type",
     "documentTypes": {
@@ -89,6 +88,7 @@
     },
     "nationalId": "Document number",
     "profileData": "Profile details",
+    "profileUnavailable": "No information",
     "profileName": "Customer",
     "vehiclePlate": "Vehicle plate",
     "email": "Email",
@@ -103,14 +103,32 @@
       "returnDate": "Return date",
       "birthDate": "Date of birth",
       "deviceType": "Device type",
+      "deviceTypePlaceholder": "Cell phone",
       "brandModel": "Brand and model",
       "purchaseValue": "Purchase value (COP)",
       "airline": "Airline",
       "flightNumber": "Flight number",
       "flightDate": "Flight date",
+      "coverageType": "Flight coverage",
+      "location": "Municipality and department",
+      "locationPlaceholder": "Villavicencio, Meta",
+      "weatherEvent": "Weather event",
+      "weatherDates": "Coverage period",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "insuredAmount": "Insured amount (COP)",
       "creditType": "Credit type",
       "monthlyPayment": "Monthly payment (COP)",
       "mortgageBalance": "Outstanding mortgage balance (COP)"
+    },
+    "flightCoverages": {
+      "delay-cancellation": "Delay or cancellation",
+      "missed-connection": "Missed connection",
+      "comprehensive": "Delay, cancellation and missed connection"
+    },
+    "weatherEvents": {
+      "heavy-rain": "Heavy rain",
+      "drought": "Drought"
     },
     "submit": "Request quote",
     "processing": "Sending request",
@@ -128,6 +146,9 @@
       "returnDate": "The return date must be on or after departure.",
       "positiveAmount": "Enter an amount greater than zero.",
       "flightNumber": "Enter a valid alphanumeric flight number.",
+      "futureDate": "Select a valid date after today.",
+      "weatherDates": "The end date must be on or after the start date and the period cannot exceed 366 days, including both dates.",
+      "insuredAmount": "Enter a whole amount between 1 and 1,000,000,000 COP.",
       "summary": "Complete all required fields correctly to continue."
     },
     "success": {
@@ -161,6 +182,22 @@
       "body": "Request a quote to compare the available offers.",
       "action": "Quote insurance"
     }
+  },
+  "calendar": {
+    "calendarLabel": "Calendar",
+    "openCalendarLabel": "Open calendar",
+    "closeCalendarLabel": "Close calendar",
+    "prevMonthLabel": "Previous month",
+    "nextMonthLabel": "Next month",
+    "prevYearLabel": "Previous year",
+    "nextYearLabel": "Next year",
+    "prevMultiYearLabel": "Previous period",
+    "nextMultiYearLabel": "Next period",
+    "switchToMonthViewLabel": "Choose month",
+    "switchToMultiYearViewLabel": "Choose year",
+    "startDateLabel": "Start date",
+    "endDateLabel": "End date",
+    "comparisonDateLabel": "Comparison date"
   },
   "common": {
     "back": "Back",
@@ -200,7 +237,7 @@
     "unavailableMessage": "This offer can no longer be selected.",
     "selectToContinue": "Select an available offer to continue.",
     "readyToContinue": "{{ name }} is ready to continue.",
-    "continue": "Continue to acceptance",
+    "continue": "Review selection",
     "confirming": "Confirming",
     "refreshNote": "You can compare this offer with other alternatives in the list.",
     "status": {
@@ -220,10 +257,10 @@
     }
   },
   "acceptance": {
-    "step": "Next step",
-    "title": "Offer acceptance",
+    "step": "Your quote",
+    "title": "Your offer summary",
     "selectedOffer": "Selected offer",
-    "body": "Formal acceptance of conditions and coverages will be implemented in its corresponding story.",
+    "body": "Your selected offer is linked to your quote. Review its coverages and conditions in the plan details.",
     "backToOffers": "Back to offers"
   }
 }

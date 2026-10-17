@@ -29,7 +29,7 @@
           @for (detail of productDetails(); track detail.labelKey) {
             <div>
               <dt>{{ detail.labelKey | transloco }}</dt>
-              <dd>{{ detail.value }}</dd>
+              <dd>{{ detail.valueKey ? (detail.valueKey | transloco) : detail.value }}</dd>
             </div>
           }
           <div>

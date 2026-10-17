@@ -2,7 +2,7 @@ import jenkins.model.Jenkins
 import jenkins.util.Timer
 import java.util.concurrent.TimeUnit
 
-// Retry connection after idle shutdown/start. No secrets, EC2 mutations or new executors.
+// Reintentar la conexion tras el apagado por inactividad y el arranque. Sin secretos, cambios en EC2 ni ejecutores nuevos.
 Timer.get().scheduleWithFixedDelay({
     def controller = Jenkins.get()
     def computer = controller.getComputer('android-aws')

@@ -10,6 +10,16 @@ export interface TravelDestination {
   name: string;
 }
 
+export const FLIGHT_COVERAGE_TYPES = [
+  'delay-cancellation',
+  'missed-connection',
+  'comprehensive',
+] as const;
+export type FlightCoverageType = (typeof FLIGHT_COVERAGE_TYPES)[number];
+
+export const WEATHER_EVENT_TYPES = ['heavy-rain', 'drought'] as const;
+export type WeatherEventType = (typeof WEATHER_EVENT_TYPES)[number];
+
 export type CustomerType = 'natural';
 export type DocumentType = 'cc' | 'ce' | 'passport' | 'ppt';
 

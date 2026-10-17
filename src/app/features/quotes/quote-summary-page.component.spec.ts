@@ -14,6 +14,7 @@ import {
   InsuranceProduct,
   QuoteRequestDraft,
   QuoteRequestRecord,
+  QuoteProductData,
   TravelDestination,
 } from '../../core/quotes/quote-request.models';
 import {
@@ -125,4 +126,19 @@ describe('QuoteSummaryPageComponent', () => {
       fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
     ).not.toBeNull();
   });
+
+  it.each<QuoteProductData>([{ coverageType: 'missed-connection' }, { weatherEvent: 'drought' }])(
+    'traduce los valores de cobertura sin mostrar códigos al cliente',
+    (productData) => {
+      storage.request = { ...RECORD, productData };
+      fixture = TestBed.createComponent(QuoteSummaryPageComponent);
+      fixture.detectChanges();
+      const detail = fixture.componentInstance.productDetails()[0];
+      expect(detail.valueKey).toBe(
+        'coverageType' in productData
+          ? 'quoteRequest.flightCoverages.missed-connection'
+          : 'quoteRequest.weatherEvents.drought',
+      );
+    },
+  );
 });

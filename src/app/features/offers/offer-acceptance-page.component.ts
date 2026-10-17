@@ -120,6 +120,7 @@ import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
   `,
 })
 export class OfferAcceptancePageComponent {
+  // Trabajo en proceso ... :) Conectar la aceptación formal; esta vista resume la selección.
   readonly selection = inject(OfferSelectionService);
   readonly market = ACTIVE_MARKET;
 }

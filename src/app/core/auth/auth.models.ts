@@ -10,12 +10,14 @@ export interface AuthUser {
   name: string;
   email: string;
   role: 'client';
-  documentType: DocumentType;
-  nationalId: string;
-  phone: string;
+  documentType?: DocumentType;
+  nationalId?: string;
+  phone?: string;
 }
 
 export interface AuthSession {
   user: AuthUser;
   expiresAt: number;
+  accessToken?: string;
+  refreshToken?: string;
 }

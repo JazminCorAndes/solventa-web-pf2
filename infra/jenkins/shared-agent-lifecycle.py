@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extend the verified lifecycle without modifying its Android implementation."""
+"""Amplia el ciclo de vida verificado sin modificar su implementacion de Android."""
 
 import importlib.util
 import os
@@ -25,7 +25,7 @@ def read_shared_demand(queue, node, projects):
     if not isinstance(node.get("offline"), bool) or not isinstance(node.get("idle"), bool):
         raise ValueError("Incomplete node state")
     queued = any(belongs_to_project(item["task"], project) for item in items for project in projects)
-    # Busy protects all work on the shared node, including projects not enabled here.
+    # Un nodo ocupado protege todos sus trabajos, incluidos los proyectos no habilitados aqui.
     return queued, not node["offline"] and not node["idle"]
 
 

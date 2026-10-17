@@ -8,6 +8,7 @@ import {
 } from '../../core/auth/auth.errors';
 import { AuthGateway } from '../../core/auth/auth.gateway';
 import { AuthSession, LoginCredentials } from '../../core/auth/auth.models';
+import { AUTH_STORAGE } from '../../core/auth/auth-storage.service';
 
 interface SessionResponse {
   usuario: {
@@ -15,16 +16,20 @@ interface SessionResponse {
     nombre: string;
     correo: string;
     rol: 'cliente';
-    tipoDocumento: 'cc' | 'ce' | 'passport' | 'ppt';
-    identificacion: string;
-    telefono: string;
+    tipoDocumento?: 'cc' | 'ce' | 'passport' | 'ppt';
+    identificacion?: string;
+    telefono?: string;
   };
   expiraEn: string;
+  tokenType?: string;
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 @Injectable()
 export class HttpAuthGateway implements AuthGateway {
   private readonly http = inject(HttpClient);
+  private readonly storage = inject(AUTH_STORAGE);
   private readonly sessionsUrl = `${environment.apiBaseUrl}/v1/sesiones`;
 
   login(credentials: LoginCredentials): Observable<AuthSession> {
@@ -38,7 +43,12 @@ export class HttpAuthGateway implements AuthGateway {
         { withCredentials: true },
       )
       .pipe(
-        map(toSession),
+        map((response) => {
+          if (response.tokenType !== 'Bearer' || !response.accessToken || !response.refreshToken) {
+            throw new AuthenticationUnavailableError();
+          }
+          return toSession(response);
+        }),
         catchError((error: unknown) => this.mapLoginError(error)),
       );
   }
@@ -47,7 +57,7 @@ export class HttpAuthGateway implements AuthGateway {
     return this.http
       .get<SessionResponse>(`${this.sessionsUrl}/actual`, { withCredentials: true })
       .pipe(
-        map(toSession),
+        map((response) => toSession(response, this.storage.read())),
         catchError((error: unknown) => {
           if (error instanceof HttpErrorResponse && error.status === 401) {
             return of(null);
@@ -58,15 +68,21 @@ export class HttpAuthGateway implements AuthGateway {
   }
 
   logout(): Observable<void> {
-    return this.http.delete<void>(`${this.sessionsUrl}/actual`, { withCredentials: true }).pipe(
-      map(() => undefined),
-      catchError((error: unknown) => {
-        if (error instanceof HttpErrorResponse && error.status === 401) {
-          return of(undefined);
-        }
-        return throwError(() => new AuthenticationUnavailableError());
-      }),
-    );
+    const refreshToken = this.storage.read()?.refreshToken;
+    return this.http
+      .delete<void>(`${this.sessionsUrl}/actual`, {
+        withCredentials: true,
+        body: refreshToken ? { refreshToken } : undefined,
+      })
+      .pipe(
+        map(() => undefined),
+        catchError((error: unknown) => {
+          if (error instanceof HttpErrorResponse && error.status === 401) {
+            return of(undefined);
+          }
+          return throwError(() => new AuthenticationUnavailableError());
+        }),
+      );
   }
 
   private mapLoginError(error: unknown): Observable<never> {
@@ -80,7 +96,14 @@ export class HttpAuthGateway implements AuthGateway {
   }
 }
 
-function toSession(response: SessionResponse): AuthSession {
+function toSession(
+  response: SessionResponse,
+  storedSession: AuthSession | null = null,
+): AuthSession {
+  const expiresAt = Date.parse(response.expiraEn);
+  if (!Number.isFinite(expiresAt)) {
+    throw new AuthenticationUnavailableError();
+  }
   return {
     user: {
       id: response.usuario.id,
@@ -91,6 +114,8 @@ function toSession(response: SessionResponse): AuthSession {
       nationalId: response.usuario.identificacion,
       phone: response.usuario.telefono,
     },
-    expiresAt: Date.parse(response.expiraEn),
+    expiresAt,
+    accessToken: response.accessToken ?? storedSession?.accessToken,
+    refreshToken: response.refreshToken ?? storedSession?.refreshToken,
   };
 }

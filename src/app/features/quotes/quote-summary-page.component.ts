@@ -28,6 +28,12 @@ export class QuoteSummaryPageComponent implements OnInit {
     return request
       ? Object.entries(request.productData).map(([key, value]) => ({
           labelKey: `quoteRequest.fields.${key}`,
+          valueKey:
+            key === 'coverageType'
+              ? `quoteRequest.flightCoverages.${value}`
+              : key === 'weatherEvent'
+                ? `quoteRequest.weatherEvents.${value}`
+                : null,
           value:
             key === 'destinationCountryCode'
               ? (this.quotes.travelDestinations().find((destination) => destination.code === value)

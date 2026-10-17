@@ -44,8 +44,7 @@
     "quotes": "Cotizaciones",
     "policies": "Mis seguros",
     "claims": "Siniestros",
-    "notifications": "Notificaciones",
-    "comingSoon": "Las demás operaciones estarán disponibles próximamente."
+    "notifications": "Notificaciones"
   },
   "theme": {
     "useLight": "Usar tema claro",
@@ -58,7 +57,7 @@
     "newQuote": "Cotizar seguro",
     "reportClaim": "Reportar siniestro",
     "loading": "Cargando tu información",
-    "error": "No fue posible cargar la información del dashboard.",
+    "error": "No fue posible cargar la información del panel de inicio.",
     "activePolicies": "Seguros activos",
     "policiesStatus": "Pólizas vigentes",
     "notifications": "Notificaciones",
@@ -78,7 +77,7 @@
     "selectedInsurance": "Seguro seleccionado",
     "selectInsurancePlaceholder": "Selecciona un seguro",
     "changeInsurance": "Elegir seguro",
-    "comingSoon": "Próximamente",
+    "unavailableProduct": "No disponible para cotizar",
     "loadingProducts": "Cargando seguros disponibles",
     "documentType": "Tipo de documento",
     "documentTypes": {
@@ -89,6 +88,7 @@
     },
     "nationalId": "Número de documento",
     "profileData": "Datos del perfil",
+    "profileUnavailable": "Sin información",
     "profileName": "Cliente",
     "vehiclePlate": "Placa del vehículo",
     "email": "Correo electrónico",
@@ -103,14 +103,32 @@
       "returnDate": "Fecha de regreso",
       "birthDate": "Fecha de nacimiento",
       "deviceType": "Tipo de dispositivo",
+      "deviceTypePlaceholder": "Celular",
       "brandModel": "Marca y modelo",
       "purchaseValue": "Valor de compra (COP)",
       "airline": "Aerolínea",
       "flightNumber": "Número de vuelo",
       "flightDate": "Fecha del vuelo",
+      "coverageType": "Cobertura del vuelo",
+      "location": "Municipio y departamento",
+      "locationPlaceholder": "Villavicencio, Meta",
+      "weatherEvent": "Evento climático",
+      "weatherDates": "Periodo de cobertura",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de finalización",
+      "insuredAmount": "Valor asegurado (COP)",
       "creditType": "Tipo de crédito",
       "monthlyPayment": "Cuota mensual (COP)",
       "mortgageBalance": "Saldo del crédito hipotecario (COP)"
+    },
+    "flightCoverages": {
+      "delay-cancellation": "Retraso o cancelación",
+      "missed-connection": "Pérdida de conexión",
+      "comprehensive": "Retraso, cancelación y pérdida de conexión"
+    },
+    "weatherEvents": {
+      "heavy-rain": "Lluvia intensa",
+      "drought": "Sequía"
     },
     "submit": "Solicitar cotización",
     "processing": "Enviando solicitud",
@@ -128,6 +146,9 @@
       "returnDate": "La fecha de regreso debe ser igual o posterior a la salida.",
       "positiveAmount": "Ingresa un valor mayor que cero.",
       "flightNumber": "Ingresa un número de vuelo alfanumérico válido.",
+      "futureDate": "Selecciona una fecha válida posterior a hoy.",
+      "weatherDates": "La fecha final debe ser igual o posterior al inicio y el periodo no puede superar 366 días, contando ambas fechas.",
+      "insuredAmount": "Ingresa un valor entero entre 1 y 1.000.000.000 COP.",
       "summary": "Completa correctamente todos los campos obligatorios para continuar."
     },
     "success": {
@@ -162,6 +183,22 @@
       "action": "Cotizar seguro"
     }
   },
+  "calendar": {
+    "calendarLabel": "Calendario",
+    "openCalendarLabel": "Abrir calendario",
+    "closeCalendarLabel": "Cerrar calendario",
+    "prevMonthLabel": "Mes anterior",
+    "nextMonthLabel": "Mes siguiente",
+    "prevYearLabel": "Año anterior",
+    "nextYearLabel": "Año siguiente",
+    "prevMultiYearLabel": "Periodo anterior",
+    "nextMultiYearLabel": "Periodo siguiente",
+    "switchToMonthViewLabel": "Elegir mes",
+    "switchToMultiYearViewLabel": "Elegir año",
+    "startDateLabel": "Fecha de inicio",
+    "endDateLabel": "Fecha de finalización",
+    "comparisonDateLabel": "Fecha de comparación"
+  },
   "common": {
     "back": "Volver",
     "retry": "Reintentar"
@@ -177,7 +214,7 @@
     "generalConditions": "Condiciones generales",
     "viewOffer": "Ver oferta",
     "calculationInfo": "Información del cálculo",
-    "quoteId": "ID cotización",
+    "quoteId": "Número de cotización",
     "validity": "Vigencia del cálculo",
     "appliedRate": "Tasa aplicada",
     "securityAnalysis": "Curva de riesgo proyectada",
@@ -200,7 +237,7 @@
     "unavailableMessage": "Esta oferta ya no puede seleccionarse.",
     "selectToContinue": "Selecciona una oferta vigente para continuar.",
     "readyToContinue": "{{ name }} está lista para continuar.",
-    "continue": "Continuar a aceptación",
+    "continue": "Revisar selección",
     "confirming": "Confirmando",
     "refreshNote": "Puedes comparar esta oferta con otras alternativas en el listado.",
     "status": {
@@ -220,10 +257,10 @@
     }
   },
   "acceptance": {
-    "step": "Siguiente paso",
-    "title": "Aceptación de la oferta",
+    "step": "Tu cotización",
+    "title": "Resumen de tu oferta",
     "selectedOffer": "Oferta seleccionada",
-    "body": "La aceptación formal de condiciones y coberturas se implementará en la historia correspondiente.",
+    "body": "La oferta seleccionada está asociada a tu cotización. Consulta sus coberturas y condiciones en el detalle del plan.",
     "backToOffers": "Volver a las ofertas"
   }
 }

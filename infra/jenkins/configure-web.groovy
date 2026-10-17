@@ -17,7 +17,7 @@ import io.jenkins.plugins.checks.github.status.GitHubSCMSourceStatusChecksTrait
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowBranchProjectFactory
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject
 
-// Trusted controller script, not a Pipeline step. Never enable scans/builds here.
+// Script confiable del controlador, no un paso del pipeline. No habilitar exploraciones ni compilaciones aqui.
 def folder = Jenkins.get().getItem('solventa-web')
 if (!(folder instanceof Folder)) throw new IllegalStateException('Expected existing web Folder')
 def store = CredentialsProvider.lookupStores(folder).find { it.context == folder }

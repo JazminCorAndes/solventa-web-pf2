@@ -18,24 +18,30 @@ import {
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { provideNativeDateAdapter } from '@angular/material/core';
-import { MatDatepickerModule } from '@angular/material/datepicker';
+import { DateAdapter, provideNativeDateAdapter } from '@angular/material/core';
+import { MatDatepickerIntl, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { distinctUntilChanged, finalize, startWith, take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   InsuranceProductUnavailableError,
   QuoteRequestUnavailableError,
 } from '../../core/quotes/quote-request.errors';
-import { QuoteRequestRecord, TravelDestination } from '../../core/quotes/quote-request.models';
+import {
+  FLIGHT_COVERAGE_TYPES,
+  QuoteRequestRecord,
+  TravelDestination,
+  WEATHER_EVENT_TYPES,
+} from '../../core/quotes/quote-request.models';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
 import { InputFilterDirective } from '../../shared/input-filter/input-filter.directive';
+import { LocalizedDateAdapter } from '../../shared/dates/localized-date-adapter';
 
 @Component({
   selector: 'app-quote-request-page',
@@ -57,16 +63,30 @@ import { InputFilterDirective } from '../../shared/input-filter/input-filter.dir
   ],
   templateUrl: './quote-request-page.component.html',
   styleUrl: './quote-request-page.component.scss',
-  providers: [provideNativeDateAdapter()],
+  providers: [
+    provideNativeDateAdapter(),
+    { provide: DateAdapter, useClass: LocalizedDateAdapter },
+    MatDatepickerIntl,
+  ],
 })
 export class QuoteRequestPageComponent implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
+  private readonly translations = inject(TranslocoService);
+  private readonly dateAdapter = inject<DateAdapter<Date>>(DateAdapter);
+  private readonly calendarLabels = inject(MatDatepickerIntl);
 
   readonly quotes = inject(QuoteRequestService);
   readonly user = inject(AuthService).user;
   readonly today = startOfToday();
+  readonly tomorrow = new Date(
+    this.today.getFullYear(),
+    this.today.getMonth(),
+    this.today.getDate() + 1,
+  );
+  readonly flightCoverageTypes = FLIGHT_COVERAGE_TYPES;
+  readonly weatherEventTypes = WEATHER_EVENT_TYPES;
   readonly submitting = signal(false);
   readonly attempted = signal(false);
   readonly errorKey = signal<string | null>(null);
@@ -87,6 +107,12 @@ export class QuoteRequestPageComponent implements OnInit {
       airline: [''],
       flightNumber: [''],
       flightDate: this.formBuilder.control<Date | null>(null),
+      coverageType: ['delay-cancellation'],
+      location: [''],
+      weatherEvent: ['heavy-rain'],
+      startDate: this.formBuilder.control<Date | null>(null),
+      endDate: this.formBuilder.control<Date | null>(null),
+      insuredAmount: [''],
       creditType: [''],
       monthlyPayment: [''],
       mortgageBalance: [''],
@@ -102,8 +128,10 @@ export class QuoteRequestPageComponent implements OnInit {
   readonly selectedProduct = computed(
     () => this.quotes.products().find((product) => product.id === this.productId()) ?? null,
   );
-  readonly documentTypeLabelKey = computed(
-    () => `quoteRequest.documentTypes.${this.user()?.documentType ?? 'cc'}`,
+  readonly documentTypeLabelKey = computed(() =>
+    this.user()?.documentType
+      ? `quoteRequest.documentTypes.${this.user()?.documentType}`
+      : 'quoteRequest.profileUnavailable',
   );
   readonly filteredTravelDestinations = computed(() => {
     const value = this.destinationValue();
@@ -116,6 +144,14 @@ export class QuoteRequestPageComponent implements OnInit {
     typeof destination === 'string' ? destination : (destination?.name ?? '');
 
   ngOnInit(): void {
+    this.translations
+      .selectTranslateObject<Record<string, string>>('calendar')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((labels) => {
+        this.dateAdapter.setLocale(this.translations.getActiveLang() === 'es' ? 'es-CO' : 'en-US');
+        Object.assign(this.calendarLabels, labels);
+        this.calendarLabels.changes.next();
+      });
     this.quotes.loadProducts();
     this.quotes.loadTravelDestinations();
     this.form.controls.productId.valueChanges
@@ -134,6 +170,9 @@ export class QuoteRequestPageComponent implements OnInit {
 
     this.attempted.set(true);
     this.errorKey.set(null);
+    if (!this.selectedProduct()?.available || !SUPPORTED_PRODUCTS.includes(this.productId())) {
+      this.form.controls.productId.setErrors({ unavailableProduct: true });
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -185,6 +224,13 @@ export class QuoteRequestPageComponent implements OnInit {
     );
   }
 
+  showWeatherDateError(): boolean {
+    return (
+      this.form.hasError('invalidWeatherDates') &&
+      (this.form.controls.endDate.dirty || this.form.controls.endDate.touched)
+    );
+  }
+
   clearMessages(): void {
     this.errorKey.set(null);
     this.attempted.set(false);
@@ -196,6 +242,7 @@ export class QuoteRequestPageComponent implements OnInit {
     }
 
     const required = Validators.required;
+    const requiredText = Validators.pattern(/\S/);
     const positiveInteger = Validators.pattern(/^[1-9][0-9]*$/);
     switch (productId) {
       case 'automotive':
@@ -213,20 +260,58 @@ export class QuoteRequestPageComponent implements OnInit {
         this.form.controls.birthDate.setValidators(required);
         break;
       case 'device-protection':
-        this.form.controls.deviceType.setValidators([required, Validators.maxLength(40)]);
-        this.form.controls.brandModel.setValidators([required, Validators.maxLength(80)]);
+        this.form.controls.deviceType.setValidators([
+          required,
+          requiredText,
+          Validators.maxLength(40),
+        ]);
+        this.form.controls.brandModel.setValidators([
+          required,
+          requiredText,
+          Validators.maxLength(80),
+        ]);
         this.form.controls.purchaseValue.setValidators([required, positiveInteger]);
         break;
       case 'parametric':
-        this.form.controls.airline.setValidators([required, Validators.maxLength(80)]);
+        this.form.controls.airline.setValidators([
+          required,
+          requiredText,
+          Validators.maxLength(80),
+        ]);
         this.form.controls.flightNumber.setValidators([
           required,
           Validators.pattern(/^[A-Za-z0-9]{2,10}$/),
         ]);
-        this.form.controls.flightDate.setValidators(required);
+        this.form.controls.flightDate.setValidators([required, futureDateValidator]);
+        this.form.controls.coverageType.setValidators([
+          required,
+          Validators.pattern(/^(delay-cancellation|missed-connection|comprehensive)$/),
+        ]);
+        break;
+      case 'parametric-weather':
+        this.form.controls.location.setValidators([
+          required,
+          requiredText,
+          Validators.maxLength(120),
+        ]);
+        this.form.controls.weatherEvent.setValidators([
+          required,
+          Validators.pattern(/^(heavy-rain|drought)$/),
+        ]);
+        this.form.controls.startDate.setValidators([required, futureDateValidator]);
+        this.form.controls.endDate.setValidators([required, futureDateValidator]);
+        this.form.controls.insuredAmount.setValidators([
+          required,
+          positiveInteger,
+          Validators.max(1_000_000_000),
+        ]);
         break;
       case 'payment-protection':
-        this.form.controls.creditType.setValidators([required, Validators.maxLength(60)]);
+        this.form.controls.creditType.setValidators([
+          required,
+          requiredText,
+          Validators.maxLength(60),
+        ]);
         this.form.controls.monthlyPayment.setValidators([required, positiveInteger]);
         break;
       case 'mortgage-life':
@@ -267,6 +352,15 @@ export class QuoteRequestPageComponent implements OnInit {
           airline: value.airline.trim(),
           flightNumber: value.flightNumber.trim().toUpperCase(),
           flightDate: toIsoDate(value.flightDate),
+          coverageType: value.coverageType,
+        };
+      case 'parametric-weather':
+        return {
+          location: value.location.trim(),
+          weatherEvent: value.weatherEvent,
+          startDate: toIsoDate(value.startDate),
+          endDate: toIsoDate(value.endDate),
+          insuredAmount: value.insuredAmount,
         };
       case 'payment-protection':
         return {
@@ -298,22 +392,57 @@ const PRODUCT_CONTROL_NAMES = [
   'airline',
   'flightNumber',
   'flightDate',
+  'coverageType',
+  'location',
+  'weatherEvent',
+  'startDate',
+  'endDate',
+  'insuredAmount',
   'creditType',
   'monthlyPayment',
   'mortgageBalance',
 ] as const;
 
+const SUPPORTED_PRODUCTS: readonly string[] = [
+  'automotive',
+  'travel',
+  'life',
+  'device-protection',
+  'parametric',
+  'parametric-weather',
+  'payment-protection',
+  'mortgage-life',
+];
+
 function productDateRangeValidator(control: AbstractControl): ValidationErrors | null {
-  if (control.get('productId')?.value !== 'travel') {
+  const productId = control.get('productId')?.value;
+  if (productId !== 'travel' && productId !== 'parametric-weather') {
     return null;
   }
-  const departureDate = control.get('departureDate')?.value;
-  const returnDate = control.get('returnDate')?.value;
-  return departureDate instanceof Date &&
-    returnDate instanceof Date &&
-    returnDate.getTime() < departureDate.getTime()
-    ? { invalidTravelDates: true }
+  const weather = productId === 'parametric-weather';
+  const start = control.get(weather ? 'startDate' : 'departureDate')?.value;
+  const end = control.get(weather ? 'endDate' : 'returnDate')?.value;
+  if (!isValidDate(start) || !isValidDate(end)) {
+    return null;
+  }
+  const days = calendarDay(end) - calendarDay(start);
+  return days < 0 || (weather && days > 365)
+    ? { [weather ? 'invalidWeatherDates' : 'invalidTravelDates']: true }
     : null;
+}
+
+function futureDateValidator(control: AbstractControl): ValidationErrors | null {
+  return isValidDate(control.value) && calendarDay(control.value) > calendarDay(startOfToday())
+    ? null
+    : { futureDate: true };
+}
+
+function isValidDate(value: unknown): value is Date {
+  return value instanceof Date && Number.isFinite(value.getTime());
+}
+
+function calendarDay(date: Date): number {
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000;
 }
 
 function startOfToday(): Date {

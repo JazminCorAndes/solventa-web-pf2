@@ -38,7 +38,7 @@ git --version
 ## Instalación
 
 ```bash
-git clone https://github.com/JazminCorAndes/solventa-web-pf2.git
+git clone git@github.com:JazminCorAndes/solventa-web-pf2.git
 cd solventa-web-pf2
 pnpm install --frozen-lockfile
 ```
@@ -61,83 +61,57 @@ Contraseña: Solventa123!
 
 ## Desarrollo local con backend
 
-Este modo conecta el frontend con el BFF Web y el servicio de cotización reales. Se necesitan
-los repositorios `solventa-web-pf2` y `backend-solventa`, Python 3.12 y tres terminales.
+Este modo conecta el frontend con el BFF Web, identidad y cotización. Se necesitan
+los repositorios `solventa-web-pf2` y `backend-solventa`, con versiones compatibles del
+contrato multirramo descrito más adelante. Los cambios de API de esta funcionalidad
+deben estar presentes en el backend antes de cotizar vuelos con pérdida de conexión o clima.
 
 No existe fallback automático a mocks: si el backend no está disponible, la aplicación informa
 el error. Para volver a los mocks, se debe detener el servidor y ejecutar `pnpm start`.
 
-### 1. Preparar el backend
+### 1. Preparar y ejecutar los servicios
 
-Desde la raíz de `backend-solventa`, en PowerShell:
+Sigue la sección **Integración local** de `services\bff-web\README.md` en el checkout
+compatible de [backend-solventa](https://github.com/Migue765/backend-solventa).
+Allí se incluyen instalación, migraciones y configuración de los tres servicios.
+Inicia identidad, cotización y BFF en terminales separadas. La base de datos y las claves
+de firma pertenecen a los servicios backend; no se configuran ni se incluyen en Angular.
 
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements-dev.txt
-
-Get-ChildItem services -Directory |
-  Where-Object { Test-Path "$($_.FullName)\pyproject.toml" } |
-  ForEach-Object { python -m pip install -e "$($_.FullName)[dev]" }
-```
-
-La instalación solo es necesaria la primera vez o cuando cambien las dependencias.
-
-### 2. Preparar y ejecutar cotización
-
-En la primera terminal, desde `backend-solventa`:
+Los ejemplos del backend usan el puerto 15001 para el BFF. Para conservar
+`proxy.conf.json` sin cambios, inicia ese servicio en el puerto 5001, manteniendo las
+variables de entorno indicadas en su guía:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-Set-Location services\cotizacion
-$env:DATABASE_URL = "sqlite:///cotizacion.db"
-python -m alembic upgrade head
-python -m flask --app cotizacion.app run --port 5000 --no-reload
+.\.venv\Scripts\python -m flask --app bff_web.app run --host 127.0.0.1 --port 5001
 ```
 
-El servicio de cotización quedará disponible en `http://localhost:5000`.
+Si prefieres conservar el puerto 15001 del backend, cambia `target` en `proxy.conf.json`
+a `http://127.0.0.1:15001` y utiliza ese mismo origen al registrar la cuenta.
+No se usa la antigua autenticación
+por cookie ni `AUTH_DEVELOPMENT_USERS_JSON`: identidad emite tokens Bearer.
 
-### 3. Configurar y ejecutar el BFF
+### 2. Crear una cuenta local
 
-Primero se genera un hash para la contraseña local. El comando solicita la contraseña sin
-mostrarla en la terminal:
+Si aún no existe un usuario de pruebas, regístralo mediante el BFF. En PowerShell:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-Set-Location services\bff-web
-python -c "from getpass import getpass; from bff_web.infrastructure.passwords import hash_password; print(hash_password(getpass('Contraseña local: ')))"
+$credential = Get-Credential -Message "Correo y contraseña de la nueva cuenta local"
+$body = @{
+  nombre = Read-Host "Nombre del cliente"
+  correo = $credential.UserName
+  contrasena = $credential.GetNetworkCredential().Password
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:5001/v1/usuarios" `
+  -Method Post -ContentType "application/json" -Body $body | Select-Object id
+Remove-Variable body, credential
 ```
 
-En la segunda terminal, desde `backend-solventa`, se reemplaza `<HASH_GENERADO>` por el valor
-obtenido y se inicia el BFF:
+Usa un correo nuevo y una contraseña que cumpla las reglas de identidad. Las credenciales
+del adaptador mock no crean automáticamente una cuenta en el backend.
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-Set-Location services\bff-web
+### 3. Ejecutar el frontend conectado
 
-$env:AUTH_DEVELOPMENT_USERS_JSON = @'
-[
-  {
-    "id": "11111111-1111-4111-8111-111111111111",
-    "nombre": "Cliente Solventa",
-    "correo": "cliente@solventa.co",
-    "rol": "cliente",
-    "passwordHash": "<HASH_GENERADO>"
-  }
-]
-'@
-
-$env:SESSION_COOKIE_SECURE = "false"
-$env:QUOTE_SERVICE_URL = "http://localhost:5000"
-python -m flask --app bff_web.app run --port 5001 --no-reload
-```
-
-`SESSION_COOKIE_SECURE=false` se usa únicamente para desarrollo local por HTTP. En ambientes
-con HTTPS debe permanecer en `true`.
-
-### 4. Ejecutar el frontend conectado
-
-En la tercera terminal, desde `solventa-web-pf2`:
+Desde `solventa-web-pf2`:
 
 ```powershell
 pnpm install --frozen-lockfile
@@ -145,11 +119,12 @@ pnpm start:backend
 ```
 
 La aplicación estará disponible en `http://localhost:4200`. El proxy de desarrollo envía las
-solicitudes `/api` al BFF en `http://localhost:5001`, manteniendo las cookies de sesión en el
-mismo origen del frontend.
+solicitudes `/api` al BFF en `http://localhost:5001`, quitando el prefijo `/api`.
+El interceptor usa el esquema `Bearer` en el encabezado `Authorization` de las
+peticiones protegidas.
 
-Para iniciar sesión se usa el correo configurado en
-`AUTH_DEVELOPMENT_USERS_JSON` y la contraseña utilizada para generar el hash.
+Inicia sesión con el correo y la contraseña registrados. No copies tokens en archivos
+del frontend, parámetros de URL ni registros.
 
 ## Comandos disponibles
 
@@ -212,16 +187,66 @@ Perú sin mezclar reglas entre mercados.
 
 Los importes usan un contrato neutral compuesto por monto y código de moneda ISO 4217. El
 catálogo permite cotizar seguros automotrices, de viaje, protección de dispositivos,
-microseguros de vida, seguros de vuelos, protección de pagos y vida hipotecaria. Cada producto
+microseguros de vida, seguros de vuelos y clima, protección de pagos y vida hipotecaria. Cada producto
 solicita sus datos de riesgo específicos y genera ofertas comparables en COP.
+
+### Variantes de cotización
+
+El catálogo conserva el seguro automotriz y cubre los ramos del caso Solventa
+(secciones 2.2, 2.4 y 5.1 del enunciado). Los datos del cliente provienen de la sesión;
+el formulario solicita únicamente los datos propios del seguro.
+
+| Producto (`productoId`) | Datos enviados en `datosProducto`                                   |
+| ----------------------- | ------------------------------------------------------------------- |
+| `automotive`            | `vehiclePlate`                                                      |
+| `travel`                | `destinationCountryCode`, `departureDate`, `returnDate`             |
+| `life`                  | `birthDate`                                                         |
+| `device-protection`     | `deviceType`, `brandModel`, `purchaseValue`                         |
+| `parametric`            | `airline`, `flightNumber`, `flightDate`, `coverageType`             |
+| `parametric-weather`    | `location`, `weatherEvent`, `startDate`, `endDate`, `insuredAmount` |
+| `payment-protection`    | `creditType`, `monthlyPayment`                                      |
+| `mortgage-life`         | `birthDate`, `mortgageBalance`                                      |
+
+El POST a `/api/v1/solicitudes-cotizacion` conserva el cuerpo
+`{ productoId, datosProducto }`; todos los valores de `datosProducto` son cadenas.
+Las fechas se ingresan como `DD/MM/AAAA` en español colombiano y se envían como
+`YYYY-MM-DD`; los importes se expresan en pesos colombianos enteros.
+
+En vuelos, `coverageType` admite `delay-cancellation`, `missed-connection` y
+`comprehensive`. El backend mantiene las solicitudes antiguas sin ese campo como
+retraso o cancelación. La pérdida de conexión está sujeta a las causas y exclusiones
+del plan, no a cualquier vuelo perdido por el pasajero.
+
+El seguro climático permite lluvia intensa (`heavy-rain`) o sequía (`drought`), con
+municipio y departamento en texto de hasta 120 caracteres y valor asegurado de
+1 a 1.000.000.000 COP. Las fechas de vuelo y clima deben ser posteriores a hoy.
+La fecha final climática no puede preceder al inicio y el periodo admite hasta
+366 días, contando ambas fechas. Estos campos son decisiones del contrato de
+cotización; el enunciado no define un proveedor ni un umbral meteorológico concreto.
+
+En modo mock, el catálogo y las ofertas son ejemplos locales, no una tarifa actuarial
+personalizada. Las ofertas respetan el ramo y la cobertura elegidos; un producto
+desconocido no recibe ofertas automotrices por defecto. En modo backend se consultan
+las ofertas del servicio y se envía la selección con su versión. El cálculo y las
+fuentes externas que ese servicio simule siguen siendo simulados: usar HTTP no los
+convierte en integraciones reales. Cotizar no emite una póliza ni activa monitoreo,
+aceptación formal o pagos de siniestros.
 
 ## Autenticación de desarrollo
 
 En modo mock, los datos no salen del navegador y la sesión se conserva en `sessionStorage`.
 
-En modo backend, el BFF controla la sesión con una cookie `HttpOnly`. El frontend conserva
-únicamente los datos no sensibles necesarios para presentar la sesión y siempre consulta al
-BFF al iniciar la aplicación.
+En modo backend, el BFF vigente devuelve tokens Bearer. El frontend los conserva en
+`sessionStorage` durante la pestaña y envía el token de acceso únicamente a los recursos
+de su API configurada; no lo envía a traducciones, al inicio de sesión ni a terceros.
+Al iniciar la aplicación consulta la sesión en el BFF y, si la comprobación falla,
+descarta la autorización local. Al cerrar sesión también envía el token de renovación
+para revocarlo. No hay renovación automática: al vencer la sesión se debe volver a
+iniciar sesión. Los tokens son credenciales temporales y no deben copiarse a código,
+capturas ni registros. En despliegues se requiere HTTPS.
+
+Si la respuesta del BFF no incluye documento o teléfono, la interfaz lo indica como
+no disponible en vez de inventar datos personales.
 
 ## Sistema visual
 

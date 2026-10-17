@@ -13,7 +13,7 @@ import org.kohsuke.github.GHIssueState
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
-// Install once as a trusted initializer after lifecycle/toolchain approval, not in a workspace.
+// Instalar una vez como inicializador confiable tras aprobar el ciclo de vida y las herramientas, no en un espacio de trabajo.
 def controller = Jenkins.get()
 def configFile = new File(controller.rootDir, 'web-comment-trigger.json')
 if (!configFile.isFile()) return
@@ -71,7 +71,7 @@ Timer.get().scheduleWithFixedDelay({
             }
         }
     } catch (Exception failure) {
-        // No messages, tokens, keys or request bodies in logs.
+        // No registrar mensajes, tokens, claves ni cuerpos de solicitudes.
         logger.warning('Web comment scan failed: ' + failure.class.name)
     } finally {
         if (connection != null) Connector.release(connection)

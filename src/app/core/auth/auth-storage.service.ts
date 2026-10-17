@@ -53,16 +53,20 @@ function isAuthSession(value: unknown): value is AuthSession {
   const user = candidate.user;
   return (
     typeof candidate.expiresAt === 'number' &&
+    Number.isFinite(candidate.expiresAt) &&
+    (candidate.accessToken === undefined || typeof candidate.accessToken === 'string') &&
+    (candidate.refreshToken === undefined || typeof candidate.refreshToken === 'string') &&
     !!user &&
     typeof user.id === 'string' &&
     typeof user.name === 'string' &&
     typeof user.email === 'string' &&
     user.role === 'client' &&
-    (user.documentType === 'cc' ||
+    (user.documentType === undefined ||
+      user.documentType === 'cc' ||
       user.documentType === 'ce' ||
       user.documentType === 'passport' ||
       user.documentType === 'ppt') &&
-    typeof user.nationalId === 'string' &&
-    typeof user.phone === 'string'
+    (user.nationalId === undefined || typeof user.nationalId === 'string') &&
+    (user.phone === undefined || typeof user.phone === 'string')
   );
 }

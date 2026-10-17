@@ -1,5 +1,5 @@
 pipeline {
-    // Provision and verify this label before enabling the multibranch job.
+    // Preparar y verificar esta etiqueta antes de habilitar el trabajo multirrama.
     agent { label 'web-ci' }
 
     options {
