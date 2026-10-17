@@ -252,6 +252,35 @@
     "approved": "Approved",
     "rule": "Applied rule",
     "next": "The next step is to register payment to issue the policy.",
-    "back": "Back to acceptance"
+    "back": "Back to acceptance",
+    "pay": "Continue to payment"
+  },
+  "payment": {
+    "eyebrow": "4 of 4 · Payment",
+    "title": "Complete payment",
+    "subtitle": "Confirm the payment method to activate your protection.",
+    "plan": "Selected plan",
+    "methodTitle": "Payment method",
+    "card": "Debit or credit card",
+    "safe": "The transaction is processed securely.",
+    "selected": "Selected",
+    "action": "Confirm payment",
+    "processing": "Processing payment",
+    "approved": "Payment approved. Reference:",
+    "viewPolicy": "View issued policy",
+    "back": "Back to subscription",
+    "error": "We could not confirm the payment. Please try again."
+  },
+  "policy": {
+    "eyebrow": "Active protection",
+    "title": "Your policy has been issued",
+    "subtitle": "The policy is now active and linked to your account.",
+    "number": "Policy number",
+    "active": "Active",
+    "premium": "Monthly premium",
+    "validFrom": "Coverage starts",
+    "validUntil": "Coverage ends",
+    "paymentReference": "Payment reference",
+    "dashboard": "Back to home"
   }
 }

@@ -19,6 +19,11 @@ import { AUTH_STORAGE, BrowserAuthStorage } from './core/auth/auth-storage.servi
 import { DASHBOARD_GATEWAY } from './core/dashboard/dashboard.gateway';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
 import { OFFER_GATEWAY } from './core/offers/offer.gateway';
+import { PAYMENT_GATEWAY } from './core/payments/payment.gateway';
+import {
+  BrowserPaymentStorage,
+  PAYMENT_STORAGE,
+} from './core/payments/payment-storage.service';
 import {
   BrowserOfferSelectionStorage,
   OFFER_SELECTION_STORAGE,
@@ -28,6 +33,8 @@ import { HttpAuthGateway } from './data-access/auth/http-auth.gateway';
 import { MockDashboardGateway } from './data-access/dashboard/mock-dashboard.gateway';
 import { MockOfferGateway } from './data-access/offers/mock-offer.gateway';
 import { HttpOfferGateway } from './data-access/offers/http-offer.gateway';
+import { HttpPaymentGateway } from './data-access/payments/http-payment.gateway';
+import { MockPaymentGateway } from './data-access/payments/mock-payment.gateway';
 import { SUBSCRIPTION_GATEWAY } from './core/subscriptions/subscription.gateway';
 import {
   BrowserSubscriptionStorage,
@@ -60,6 +67,11 @@ export const appConfig: ApplicationConfig = {
     { provide: DASHBOARD_GATEWAY, useClass: MockDashboardGateway },
     { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
+    {
+      provide: PAYMENT_GATEWAY,
+      useClass: backendMode ? HttpPaymentGateway : MockPaymentGateway,
+    },
+    { provide: PAYMENT_STORAGE, useClass: BrowserPaymentStorage },
     {
       provide: SUBSCRIPTION_GATEWAY,
       useClass: backendMode ? HttpSubscriptionGateway : MockSubscriptionGateway,

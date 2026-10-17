@@ -1,0 +1,64 @@
+<section class="payment-page">
+  <header>
+    <span>{{ 'payment.eyebrow' | transloco }}</span>
+    <h1>{{ 'payment.title' | transloco }}</h1>
+    <p>{{ 'payment.subtitle' | transloco }}</p>
+  </header>
+
+  <div class="payment-grid">
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <h2>{{ 'payment.plan' | transloco }}</h2>
+        @if (offers.confirmedSelection(); as selection) {
+          <div class="plan-summary">
+            <strong>{{ selection.offerName }}</strong>
+            <strong>
+              {{ selection.monthlyPremium.amount | currency: selection.monthlyPremium.currency }}
+            </strong>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <h2>{{ 'payment.methodTitle' | transloco }}</h2>
+        <div class="payment-method">
+          <span class="method-icon"><app-icon name="card" [size]="26" /></span>
+          <span>
+            <strong>{{ 'payment.card' | transloco }}</strong>
+            <small>{{ 'payment.safe' | transloco }}</small>
+          </span>
+          <span class="selected">{{ 'payment.selected' | transloco }}</span>
+        </div>
+
+        @if (payments.error()) {
+          <p class="message error" role="alert">{{ 'payment.error' | transloco }}</p>
+        }
+        @if (payments.result(); as result) {
+          <p class="message success" role="status">
+            <app-icon name="check" [size]="19" />
+            {{ 'payment.approved' | transloco }} {{ result.payment.reference }}
+          </p>
+          <a mat-flat-button routerLink="/app/cotizaciones/poliza">
+            {{ 'payment.viewPolicy' | transloco }}
+            <app-icon name="arrow-right" [size]="17" />
+          </a>
+        } @else {
+          <button mat-flat-button type="button" (click)="pay()" [disabled]="payments.loading()">
+            @if (payments.loading()) {
+              <mat-spinner diameter="20" />
+              {{ 'payment.processing' | transloco }}
+            } @else {
+              {{ 'payment.action' | transloco }}
+            }
+          </button>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <a mat-stroked-button routerLink="/app/cotizaciones/suscripcion">
+    ← {{ 'payment.back' | transloco }}
+  </a>
+</section>

@@ -252,6 +252,35 @@
     "approved": "Aprobada",
     "rule": "Regla aplicada",
     "next": "El siguiente paso es registrar el pago para emitir la póliza.",
-    "back": "Volver a la aceptación"
+    "back": "Volver a la aceptación",
+    "pay": "Continuar al pago"
+  },
+  "payment": {
+    "eyebrow": "4 de 4 · Pago",
+    "title": "Realiza el pago",
+    "subtitle": "Confirma el método de pago para activar tu protección.",
+    "plan": "Plan seleccionado",
+    "methodTitle": "Método de pago",
+    "card": "Tarjeta débito o crédito",
+    "safe": "La transacción se procesa de forma segura.",
+    "selected": "Seleccionado",
+    "action": "Confirmar pago",
+    "processing": "Procesando pago",
+    "approved": "Pago aprobado. Referencia:",
+    "viewPolicy": "Ver póliza emitida",
+    "back": "Volver a la suscripción",
+    "error": "No fue posible confirmar el pago. Inténtalo nuevamente."
+  },
+  "policy": {
+    "eyebrow": "Protección activa",
+    "title": "Tu póliza fue emitida",
+    "subtitle": "La póliza ya está vigente y asociada a tu cuenta.",
+    "number": "Número de póliza",
+    "active": "Vigente",
+    "premium": "Prima mensual",
+    "validFrom": "Inicio de vigencia",
+    "validUntil": "Fin de vigencia",
+    "paymentReference": "Referencia de pago",
+    "dashboard": "Volver al inicio"
   }
 }

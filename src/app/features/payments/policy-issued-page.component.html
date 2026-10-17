@@ -1,0 +1,45 @@
+<section class="policy-page">
+  @if (payments.result(); as result) {
+    <header>
+      <span class="success-icon"><app-icon name="shield" [size]="34" /></span>
+      <p>{{ 'policy.eyebrow' | transloco }}</p>
+      <h1>{{ 'policy.title' | transloco }}</h1>
+      <p>{{ 'policy.subtitle' | transloco }}</p>
+    </header>
+
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <div class="policy-heading">
+          <span class="document-icon"><app-icon name="policy" [size]="28" /></span>
+          <div>
+            <small>{{ 'policy.number' | transloco }}</small>
+            <strong>{{ result.policy.number }}</strong>
+          </div>
+          <span class="status">{{ 'policy.active' | transloco }}</span>
+        </div>
+        <dl>
+          <div>
+            <dt>{{ 'policy.premium' | transloco }}</dt>
+            <dd>
+              {{ result.policy.monthlyPremium | currency: result.policy.currency }}
+            </dd>
+          </div>
+          <div>
+            <dt>{{ 'policy.validFrom' | transloco }}</dt>
+            <dd>{{ result.policy.validFrom | date: 'longDate' }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'policy.validUntil' | transloco }}</dt>
+            <dd>{{ result.policy.validUntil | date: 'longDate' }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'policy.paymentReference' | transloco }}</dt>
+            <dd>{{ result.payment.reference }}</dd>
+          </div>
+        </dl>
+      </mat-card-content>
+    </mat-card>
+
+    <a mat-flat-button routerLink="/app/dashboard">{{ 'policy.dashboard' | transloco }}</a>
+  }
+</section>
