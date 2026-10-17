@@ -80,18 +80,7 @@ pipeline {
             }
         }
         cleanup {
-            script {
-                try {
-                    // Mantener el check antiguo obligatorio hasta migrar las protecciones.
-                    publishChecks name: 'CI / Validación (Jenkins)',
-                        conclusion: currentBuild.currentResult == 'SUCCESS' ? 'SUCCESS' : 'FAILURE',
-                        title: currentBuild.currentResult == 'SUCCESS' ? 'Lint, pruebas y compilación correctos' : 'Validación incompleta o fallida',
-                        summary: 'Validación solicitada con `/test-jenkins`. Porcentajes y pruebas en **Cobertura**. El check anterior se conserva temporalmente por las protecciones.',
-                        detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks"
-                } finally {
-                    deleteDir()
-                }
-            }
+            deleteDir()
         }
     }
 }

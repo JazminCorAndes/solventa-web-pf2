@@ -5,6 +5,17 @@ Aplicación web de Solventa para Proyecto Final II de la Universidad de los Ande
 Este repositorio contiene la base técnica de la aplicación web. El alcance funcional se
 gestiona en Jira y las decisiones visuales deben seguir la versión más reciente de Figma.
 
+## Comprobaciones y cobertura
+
+En cada [pull request](https://github.com/JazminCorAndes/solventa-web-pf2/pulls), abre **Checks → Cobertura**
+para ver líneas, ramas, pruebas y revisión compilada. El reporte corresponde a ese commit;
+no es un porcentaje fijo de la portada. En web mide el código instrumentado por Angular/Vitest V8.
+
+Actions se ejecuta automáticamente. Un colaborador solicita Jenkins con un comentario nuevo
+`/test-jenkins`; después de subir cambios debe solicitarlo para la revisión nueva.
+Los reportes HTML/XML se conservan en Jenkins privado. No se exige un porcentaje mínimo nuevo.
+Consulta [la guía de CI](docs/ci.md) para ver alcance, nombres y lectura de resultados.
+
 ## Tecnologías
 
 - Angular 22

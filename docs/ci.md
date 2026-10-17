@@ -4,9 +4,10 @@
 
 - **Cobertura** muestra líneas/ramas y conteos de `reports/unit-tests.xml`, sin incluir XML
   antiguos. Su enlace abre Checks en GitHub; los HTML detallados permanecen en Jenkins privado.
-- **CI / Validación (Jenkins)** es el nombre nuevo. **Solventa Web Jenkins** se conserva
-  temporalmente porque sigue vinculado a las protecciones existentes.
-- Actions se presenta como **CI · Actions**; el contexto obligatorio `Calidad` no cambia.
+- **CI / Validación (Jenkins)** es el check principal obligatorio, publicado automáticamente
+  por el controlador. No depende de que cada rama incluya un publicador dentro del Jenkinsfile.
+- El workflow del PR define **CI · Actions**; GitHub puede mostrar todavía el nombre de
+  la rama predeterminada hasta integrarlo. El contexto obligatorio `Calidad` no cambia.
 - JUnit permanece en Jenkins pero deja de publicar `Tests / Declarative: Post Actions`.
 - Cada build limpia su workspace antes del checkout. Un reporte ausente o inválido no se
   presenta como 0 % ni como cobertura completa; hace fallar un pipeline que iba bien.
@@ -16,38 +17,45 @@ El resumen usa Python 3.10+ del agente compartido, sin paquetes nuevos. Prueba d
 `python3 -m unittest discover -s scripts -p test_coverage_summary.py`.
 La cobertura informa ejecución del código instrumentado, no suficiencia funcional ni despliegue.
 
-### Migración pendiente con Jazmín
+### Configuración administrativa verificada
 
-**Operación 2026-10-17:** `skipNotifications=true` ya está aplicado en los tres proyectos
-del controlador, sin renombrar sus checks obligatorios y con copias privadas de respaldo.
-El script de configuración web conserva ese valor para instalaciones futuras.
-El scanner corregido se instaló, compiló y recargó mediante reinicio autorizado del servicio,
-esperando a que terminaran los builds y la cola. Falta verificar una ejecución del SHA final;
-los valores históricos no son esa evidencia. No se integró el PR ni se cambiaron protecciones.
+**Operación 2026-10-17:** la App se renombró a **Solventa CI Web** (slug `solventa-ci-web`),
+conservando ID `5277435`, instalación `170369065` y credencial `solventa-web-github-app`.
+En `develop` (regla `84505707`) y `master` (regla `84505704`) se sustituyó el contexto
+`Solventa Web Jenkins` por `CI / Validación (Jenkins)`, vinculado a esa misma App.
+Primero se añadió el nuevo requisito, después se cambió el publicador del controlador
+y por último se retiró el anterior. Actions `Calidad` sigue vinculado a la App `15368`.
+
+Se conservaron una aprobación, descarte de aprobaciones obsoletas, actualización estricta,
+conversaciones resueltas y aplicación a administradores, sin permitir force-push ni borrado.
+El cambio de nombre del publicador se aplica también a ramas con Jenkinsfiles anteriores;
+no es necesario integrar este PR para que Jenkins publique el nuevo contexto principal.
+
+`Cobertura` permanece informativa: no se exige un porcentaje mínimo ni se hace obligatorio
+un reporte que las ramas antiguas todavía no generan. Su incorporación al código sigue
+en este PR, pendiente de revisión e integración normal, sin aprobar ni integrar automáticamente.
 
 El scanner difiere el comentario mientras su PR esté en cola o ejecutándose, sin marcarlo
 procesado. Así Jenkins no agrupa solicitudes de revisiones distintas y pierde la más nueva.
 Los estados ocupado/libre están probados en `infra/jenkins/test-comment-policy.groovy`.
-Desplegar este ajuste requiere recarga administrativa controlada, sin builds activos;
-no lanzar un segundo timer ni asumir que integrar el PR actualiza el controlador.
+La corrección ya está instalada y fue recargada de forma controlada, sin interrumpir builds.
+No lanzar un segundo timer ni asumir que integrar el PR actualiza el controlador.
 
-1. Comprobar el check nuevo en el mismo SHA, publicado por la App `5277435`.
-2. Jazmín debe reemplazar el contexto obligatorio antiguo por `CI / Validación (Jenkins)`,
-   conservando las demás protecciones y la vinculación a la App. No deshabilitar la regla.
-3. Solo con esta preparación integrada y la nueva protección verificada, retirar el check
-   automático antiguo del controlador; el Jenkinsfile mantiene el nuevo publicador explícito.
-4. Un administrador puede ejecutar `infra/jenkins/configure-reporting.groovy` en el controlador
-   para quitar el status legado `continuous-integration/jenkins/pr-merge`, tras comprobar
-   que no sea obligatorio. No ejecutar desde el PR ni reiniciar Jenkins.
-5. La propietaria puede cambiar el nombre visible de su App a **Solventa CI Web**, sin cambiar
-   ID, instalación ni credenciales. `CI / Calidad (Actions)` requiere migrar `Calidad` después.
+`skipNotifications=true` elimina el status legado `continuous-integration/jenkins/pr-merge`.
+JUnit queda en Jenkins sin publicar un check duplicado. El Jenkinsfile publica solo
+**Cobertura**; el controlador publica el resultado global, sin dos emisores para el mismo check.
+Los scripts de configuración conservan estos nombres y flags; no ejecutar el bootstrap
+`configure-web.groovy` sobre la instalación activa, pues prepara el proyecto desactivado.
+
+El contexto de Actions `Calidad` no se renombra todavía: exige migrar su job y las reglas
+en conjunto. No recrear Apps, cambiar credenciales ni desactivar protecciones para renombrarlo.
 
 Integrar el PR no cambia automáticamente el controlador, la App ni las protecciones.
 
-| Proceso                         | Cuándo                                             | Qué comprueba                             |
-| ------------------------------- | -------------------------------------------------- | ----------------------------------------- |
-| Actions: `Calidad`              | Cada PR y push a develop/master                    | Lint, pruebas y compilación               |
-| Jenkins: `Solventa Web Jenkins` | Comentario nuevo `/test-jenkins` de un colaborador | Lint, pruebas con cobertura y compilación |
+| Proceso                              | Cuándo                                             | Qué comprueba                             |
+| ------------------------------------ | -------------------------------------------------- | ----------------------------------------- |
+| Actions: `Calidad`                   | Cada PR y push a develop/master                    | Lint, pruebas y compilación               |
+| Jenkins: `CI / Validación (Jenkins)` | Comentario nuevo `/test-jenkins` de un colaborador | Lint, pruebas con cobertura y compilación |
 
 Después de nuevos commits, solicitar Jenkins otra vez. La aprobación del equipo es
 independiente. No repetir comentarios si ya hay un build en cola para el mismo commit.
@@ -71,4 +79,5 @@ una prueba o compilación.
 
 El build de producción puede usar configuración backend, mientras GitHub Pages puede
 publicar una demo mock según su workflow. Un check verde no prueba que haya un despliegue
-ni que una demo esté consumiendo el backend real. No se cambian los checks obligatorios.
+ni que una demo esté consumiendo el backend real. La cobertura se consulta dentro del PR,
+no como un porcentaje fijo o un servicio adicional en la portada del repositorio.

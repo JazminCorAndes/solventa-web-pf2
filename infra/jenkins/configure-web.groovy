@@ -49,7 +49,7 @@ def source = new GitHubSCMSource('JazminCorAndes', 'solventa-web-pf2', null, fal
 source.setId('solventa-web-github')
 source.setCredentialsId('solventa-web-github-app')
 def checks = new GitHubSCMSourceStatusChecksTrait()
-checks.setName('Solventa Web Jenkins')
+checks.setName('CI / Validación (Jenkins)')
 checks.setSuppressLogs(true)
 checks.setSkipNotifications(true)
 source.setTraits([
@@ -75,7 +75,7 @@ println(JsonOutput.toJson([
     credentialStore: 'solventa-web/folder',
     credentialId: source.credentialsId,
     repository: 'JazminCorAndes/solventa-web-pf2',
-    checksName: 'Solventa Web Jenkins',
+    checksName: 'CI / Validación (Jenkins)',
     childJobs: project.items.size(),
     scheduledScan: false,
 ]))
