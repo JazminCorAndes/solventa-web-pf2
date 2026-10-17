@@ -15,9 +15,9 @@ export interface AuthUser {
   name: string;
   email: string;
   role: 'client';
-  documentType: DocumentType;
-  nationalId: string;
-  phone: string;
+  documentType?: DocumentType;
+  nationalId?: string;
+  phone?: string;
 }
 
 /** `expiresAt` es el vencimiento del access token, tal como lo informa el backend. */

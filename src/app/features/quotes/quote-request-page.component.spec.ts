@@ -1,8 +1,10 @@
+import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { AuthUser } from '../../core/auth/auth.models';
 import {
   OFFER_SELECTION_STORAGE,
   OfferSelectionStorage,
@@ -38,6 +40,15 @@ const TRAVEL_PRODUCT: InsuranceProduct = {
   available: true,
 };
 
+const OTHER_PRODUCTS = [
+  'life',
+  'device-protection',
+  'parametric',
+  'parametric-weather',
+  'payment-protection',
+  'mortgage-life',
+].map((id): InsuranceProduct => ({ id, name: id, description: id, available: true }));
+
 const RECORD: QuoteRequestRecord = {
   id: 'AQT-2026-123456',
   status: 'received',
@@ -57,7 +68,7 @@ class TestQuoteRequestGateway implements QuoteRequestGateway {
   response: Observable<QuoteRequestRecord> = of(RECORD);
 
   loadProducts(): Observable<InsuranceProduct[]> {
-    return of([PRODUCT, TRAVEL_PRODUCT]);
+    return of([PRODUCT, TRAVEL_PRODUCT, ...OTHER_PRODUCTS]);
   }
 
   loadTravelDestinations(): Observable<TravelDestination[]> {
@@ -96,8 +107,19 @@ describe('QuoteRequestPageComponent', () => {
   let gateway: TestQuoteRequestGateway;
   let router: Router;
   let navigate: ReturnType<typeof vi.spyOn>;
+  let user: WritableSignal<AuthUser | null>;
 
   beforeEach(async () => {
+    user = signal<AuthUser | null>({
+      id: 'client-001',
+      name: 'Natalia Córdoba',
+      email: 'cliente@solventa.co',
+      role: 'client',
+      documentType: 'cc',
+      nationalId: '1023456789',
+      phone: '+573001234567',
+    });
+
     await TestBed.configureTestingModule({
       imports: [
         QuoteRequestPageComponent,
@@ -110,17 +132,7 @@ describe('QuoteRequestPageComponent', () => {
         provideRouter([]),
         {
           provide: AuthService,
-          useValue: {
-            user: () => ({
-              id: 'client-001',
-              name: 'Natalia Córdoba',
-              email: 'cliente@solventa.co',
-              role: 'client',
-              documentType: 'cc',
-              nationalId: '1023456789',
-              phone: '+573001234567',
-            }),
-          },
+          useValue: { user },
         },
         { provide: QUOTE_REQUEST_GATEWAY, useClass: TestQuoteRequestGateway },
         { provide: QUOTE_REQUEST_STORAGE, useClass: TestQuoteRequestStorage },
@@ -161,6 +173,21 @@ describe('QuoteRequestPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('1023456789');
     expect(fixture.nativeElement.querySelector('#national-id')).toBeNull();
     expect(fixture.nativeElement.querySelector('#quote-phone')).toBeNull();
+  });
+
+  it('shows a single unavailable label when the backend session has no identity details', () => {
+    user.set({
+      id: 'client-001',
+      name: 'Natalia Córdoba',
+      email: 'cliente@solventa.co',
+      role: 'client',
+    });
+    fixture.detectChanges();
+
+    const profileValues = fixture.nativeElement.querySelectorAll('.profile-summary dd');
+    expect(profileValues[0].textContent.trim()).toBe('quoteRequest.profileUnavailable');
+    expect(profileValues[1].textContent.trim()).toBe('cliente@solventa.co');
+    expect(profileValues[2].textContent.trim()).toBe('quoteRequest.profileUnavailable');
   });
 
   it('removes characters that are not accepted by a Colombian plate', () => {
@@ -243,7 +270,211 @@ describe('QuoteRequestPageComponent', () => {
     expect(navigate).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('.quote-processing-overlay')).toBeNull();
   });
+
+  it.each([
+    {
+      productId: 'life',
+      fields: { birthDate: new Date(1990, 0, 1) },
+      data: { birthDate: '1990-01-01' },
+    },
+    {
+      productId: 'device-protection',
+      fields: { deviceType: 'Celular', brandModel: 'Marca Modelo', purchaseValue: '3000000' },
+      data: { deviceType: 'Celular', brandModel: 'Marca Modelo', purchaseValue: '3000000' },
+    },
+    {
+      productId: 'payment-protection',
+      fields: { creditType: 'Consumo', monthlyPayment: '850000' },
+      data: { creditType: 'Consumo', monthlyPayment: '850000' },
+    },
+    {
+      productId: 'mortgage-life',
+      fields: { birthDate: new Date(1990, 0, 1), mortgageBalance: '180000000' },
+      data: { birthDate: '1990-01-01', mortgageBalance: '180000000' },
+    },
+  ])(
+    'envía exclusivamente los datos de $productId sin exigir placa',
+    ({ productId, fields, data }) => {
+      component.form.patchValue({ productId, ...fields });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('#vehicle-plate')).toBeNull();
+
+      component.submit();
+
+      expect(gateway.lastRequest).toEqual({ productId, productData: data });
+    },
+  );
+
+  it.each(['delay-cancellation', 'missed-connection', 'comprehensive'])(
+    'cotiza vuelos con cobertura %s',
+    (coverageType) => {
+      const flightDate = futureDay(10);
+      component.form.patchValue({
+        productId: 'parametric',
+        airline: '  Avianca  ',
+        flightNumber: 'av123',
+        flightDate,
+        coverageType,
+      });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('#flight-coverage')).not.toBeNull();
+
+      component.submit();
+
+      expect(gateway.lastRequest).toEqual({
+        productId: 'parametric',
+        productData: {
+          airline: 'Avianca',
+          flightNumber: 'AV123',
+          flightDate: isoDate(flightDate),
+          coverageType,
+        },
+      });
+    },
+  );
+
+  it.each(['heavy-rain', 'drought'])(
+    'cotiza clima para %s y muestra sus campos propios',
+    (weatherEvent) => {
+      fillWeatherForm(component);
+      component.form.controls.weatherEvent.setValue(weatherEvent);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('#weather-location')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('#vehicle-plate')).toBeNull();
+      expect(fixture.nativeElement.querySelector('#flight-number')).toBeNull();
+      component.submit();
+
+      expect(gateway.lastRequest).toEqual({
+        productId: 'parametric-weather',
+        productData: {
+          location: 'Villavicencio, Meta',
+          weatherEvent,
+          startDate: isoDate(futureDay(10)),
+          endDate: isoDate(futureDay(20)),
+          insuredAmount: '10000000',
+        },
+      });
+    },
+  );
+
+  it.each(['', '0', '-1', '1.5', '1000000001', 'abc'])(
+    'rechaza un valor climático inválido: %s',
+    (insuredAmount) => {
+      fillWeatherForm(component);
+      component.form.controls.insuredAmount.setValue(insuredAmount);
+      component.submit();
+      expect(gateway.submitCalls).toBe(0);
+      expect(component.form.controls.insuredAmount.invalid).toBe(true);
+    },
+  );
+
+  it.each(['1', '1000000000'])('acepta el límite asegurado %s COP', (insuredAmount) => {
+    fillWeatherForm(component);
+    component.form.controls.insuredAmount.setValue(insuredAmount);
+    component.submit();
+    expect(gateway.lastRequest?.productData['insuredAmount']).toBe(insuredAmount);
+  });
+
+  it.each([
+    { start: 0, end: 10 },
+    { start: -1, end: 10 },
+    { start: 20, end: 10 },
+    { start: 10, end: 376 },
+  ])('rechaza un periodo climático inválido: $start a $end', ({ start, end }) => {
+    fillWeatherForm(component);
+    component.form.patchValue({ startDate: futureDay(start), endDate: futureDay(end) });
+    component.submit();
+    expect(gateway.submitCalls).toBe(0);
+  });
+
+  it('acepta un periodo de exactamente 366 días inclusive', () => {
+    fillWeatherForm(component);
+    component.form.controls.endDate.setValue(futureDay(375));
+    component.submit();
+    expect(gateway.submitCalls).toBe(1);
+  });
+
+  it.each(['', '   ', 'x'.repeat(121)])('rechaza una ubicación climática inválida', (location) => {
+    fillWeatherForm(component);
+    component.form.controls.location.setValue(location);
+    component.submit();
+    expect(gateway.submitCalls).toBe(0);
+  });
+
+  it.each([0, -1])('no cotiza vuelos de hoy o anteriores (%s)', (offset) => {
+    component.form.patchValue({
+      productId: 'parametric',
+      airline: 'Avianca',
+      flightNumber: 'AV123',
+      flightDate: futureDay(offset),
+    });
+    component.submit();
+    expect(gateway.submitCalls).toBe(0);
+  });
+
+  it('no arrastra los datos ni las validaciones de clima al cambiar a vida hipotecaria', () => {
+    fillWeatherForm(component);
+    component.form.patchValue({
+      productId: 'mortgage-life',
+      birthDate: new Date(1980, 4, 15),
+      mortgageBalance: '200000000',
+      location: '',
+      insuredAmount: '',
+    });
+    component.submit();
+    expect(gateway.lastRequest).toEqual({
+      productId: 'mortgage-life',
+      productData: { birthDate: '1980-05-15', mortgageBalance: '200000000' },
+    });
+  });
+
+  it('rechaza un producto desconocido en lugar de enviar datos vacíos', () => {
+    component.form.controls.productId.setValue('desconocido');
+    component.submit();
+    expect(gateway.submitCalls).toBe(0);
+    expect(component.form.controls.productId.invalid).toBe(true);
+  });
+
+  it('permite escribir las fechas climáticas en formato colombiano', () => {
+    fillWeatherForm(component);
+    fixture.detectChanges();
+    const start = fixture.nativeElement.querySelector('#weather-start-date') as HTMLInputElement;
+    const end = fixture.nativeElement.querySelector('#weather-end-date') as HTMLInputElement;
+    const startDate = futureDay(10);
+    const endDate = futureDay(20);
+    enterValue(
+      start,
+      `${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()}`,
+    );
+    enterValue(end, `${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`);
+
+    component.submit();
+
+    expect(gateway.lastRequest?.productData['startDate']).toBe(isoDate(startDate));
+    expect(gateway.lastRequest?.productData['endDate']).toBe(isoDate(endDate));
+  });
 });
+
+function futureDay(offset: number): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+}
+
+function isoDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function fillWeatherForm(component: QuoteRequestPageComponent): void {
+  component.form.patchValue({
+    productId: 'parametric-weather',
+    location: '  Villavicencio, Meta  ',
+    weatherEvent: 'heavy-rain',
+    startDate: futureDay(10),
+    endDate: futureDay(20),
+    insuredAmount: '10000000',
+  });
+}
 
 function fillValidForm(component: QuoteRequestPageComponent): void {
   const draft: QuoteRequestDraft = {

@@ -64,16 +64,18 @@ function isStoredAuth(value: unknown): value is StoredAuth {
     typeof candidate.refreshToken === 'string' &&
     candidate.refreshToken.length > 0 &&
     typeof candidate.refreshExpiresAt === 'number' &&
+    Number.isFinite(candidate.refreshExpiresAt) &&
     !!user &&
     typeof user.id === 'string' &&
     typeof user.name === 'string' &&
     typeof user.email === 'string' &&
     user.role === 'client' &&
-    (user.documentType === 'cc' ||
+    (user.documentType === undefined ||
+      user.documentType === 'cc' ||
       user.documentType === 'ce' ||
       user.documentType === 'passport' ||
       user.documentType === 'ppt') &&
-    typeof user.nationalId === 'string' &&
-    typeof user.phone === 'string'
+    (user.nationalId === undefined || typeof user.nationalId === 'string') &&
+    (user.phone === undefined || typeof user.phone === 'string')
   );
 }

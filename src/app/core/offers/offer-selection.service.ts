@@ -167,7 +167,8 @@ function createSelectionRecord(quoteId: string, offer: InsuranceOffer): Selected
     offerId: offer.id,
     offerVersion: offer.version,
     offerName: offer.name,
-    monthlyPremium: offer.monthlyPremium,
+    premium: offer.premium,
+    periodicity: offer.periodicity,
     selectedAt: new Date().toISOString(),
     confirmed: false,
   };

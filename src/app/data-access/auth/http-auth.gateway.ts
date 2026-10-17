@@ -32,6 +32,9 @@ interface UserResponse {
 interface SessionResponse {
   usuario: UserResponse;
   expiraEn: string;
+  tokenType?: string;
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 interface TokenResponse extends SessionResponse {
@@ -144,24 +147,41 @@ function parseRetryAfter(error: HttpErrorResponse): number | null {
 }
 
 function toUser(user: UserResponse): AuthUser {
-  return { id: user.id, name: user.nombre, email: user.correo, role: 'client',
-    documentType: user.tipoDocumento ?? 'cc',
-    nationalId: user.identificacion ?? '',
-    phone: user.telefono ?? '',
+  return {
+    id: user.id,
+    name: user.nombre,
+    email: user.correo,
+    role: 'client',
+    documentType: user.tipoDocumento,
+    nationalId: user.identificacion,
+    phone: user.telefono,
   };
 }
 
 function toSession(response: SessionResponse): AuthSession {
-  return { user: toUser(response.usuario), expiresAt: Date.parse(response.expiraEn) };
+  const expiresAt = Date.parse(response.expiraEn);
+  if (!Number.isFinite(expiresAt)) {
+    throw new AuthenticationUnavailableError();
+  }
+  return { user: toUser(response.usuario), expiresAt };
 }
 
 function toGrant(response: TokenResponse): AuthGrant {
+  const refreshExpiresAt = Date.parse(response.refreshExpiraEn);
+  if (
+    response.tokenType !== 'Bearer' ||
+    !response.accessToken ||
+    !response.refreshToken ||
+    !Number.isFinite(refreshExpiresAt)
+  ) {
+    throw new AuthenticationUnavailableError();
+  }
   return {
     session: toSession(response),
     tokens: {
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
-      refreshExpiresAt: Date.parse(response.refreshExpiraEn),
+      refreshExpiresAt,
     },
   };
 }

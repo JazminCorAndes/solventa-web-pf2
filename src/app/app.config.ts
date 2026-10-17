@@ -52,7 +52,7 @@ const backendMode = environment.dataAccessMode === 'backend';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors(backendMode ? [authInterceptor] : [])),
     provideRouter(routes),
     { provide: LOCALE_ID, useValue: 'es-CO' },
     { provide: AUTH_GATEWAY, useClass: backendMode ? HttpAuthGateway : MockAuthGateway },

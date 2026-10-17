@@ -6,8 +6,11 @@ import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferGateway } from '../../core/offers/offer.gateway';
 import {
   InsuranceOffer,
+  isPremiumPeriodicity,
+  Money,
   OfferCalculation,
   OfferStatus,
+  PremiumPeriodicity,
   SelectedOfferRecord,
 } from '../../core/offers/offer.models';
 import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
@@ -17,12 +20,17 @@ interface MoneyResponse {
   moneda: string;
 }
 
-interface OfferResponse {
+interface PremiumResponse {
+  prima?: MoneyResponse;
+  periodicidad?: PremiumPeriodicity;
+  primaMensual?: MoneyResponse | null;
+}
+
+interface OfferResponse extends PremiumResponse {
   id: string;
   version: number;
   nombre: string;
   descripcion: string;
-  primaMensual: MoneyResponse;
   coberturaPrincipal: string;
   deducible: string;
   vigencia: string;
@@ -43,12 +51,11 @@ interface OffersResponse {
   ofertas: OfferResponse[];
 }
 
-interface SelectionResponse {
+interface SelectionResponse extends PremiumResponse {
   solicitudId: string;
   ofertaId: string;
   version: number;
   nombreOferta: string;
-  primaMensual: MoneyResponse;
   seleccionadaEn: string;
 }
 
@@ -121,7 +128,7 @@ function toOffer(response: OfferResponse): InsuranceOffer {
     version: response.version,
     name: response.nombre,
     description: response.descripcion,
-    monthlyPremium: toMoney(response.primaMensual),
+    ...toPremium(response),
     coverageLabel: response.coberturaPrincipal,
     deductibleLabel: response.deducible,
     validityLabel: response.vigencia,
@@ -141,13 +148,30 @@ function toSelection(response: SelectionResponse): SelectedOfferRecord {
     offerId: response.ofertaId,
     offerVersion: response.version,
     offerName: response.nombreOferta,
-    monthlyPremium: toMoney(response.primaMensual),
+    ...toPremium(response),
     selectedAt: response.seleccionadaEn,
     confirmed: true,
   };
 }
 
-function toMoney(response: MoneyResponse): { amount: number; currency: string } {
+function toPremium(response: PremiumResponse): {
+  premium: Money;
+  periodicity: PremiumPeriodicity;
+} {
+  if ('prima' in response || 'periodicidad' in response) {
+    if (!isPremiumPeriodicity(response.periodicidad)) {
+      throw new Error('The offer contains an invalid premium periodicity.');
+    }
+    return { premium: toMoney(response.prima), periodicity: response.periodicidad };
+  }
+
+  return { premium: toMoney(response.primaMensual), periodicity: 'mensual' };
+}
+
+function toMoney(response: MoneyResponse | null | undefined): Money {
+  if (!response) {
+    throw new Error('The offer contains an invalid monetary amount.');
+  }
   const amount = Number(response.monto);
   if (!Number.isFinite(amount) || !/^[A-Z]{3}$/.test(response.moneda)) {
     throw new Error('The offer contains an invalid monetary amount.');

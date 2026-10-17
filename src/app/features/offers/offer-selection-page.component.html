@@ -64,15 +64,11 @@
           <div class="plan-price">
             <strong>
               {{
-                offer.monthlyPremium.amount
-                  | currency
-                    : offer.monthlyPremium.currency
-                    : 'symbol-narrow'
-                    : '1.0-0'
-                    : market.locale
+                offer.premium.amount
+                  | currency: offer.premium.currency : 'symbol-narrow' : '1.0-0' : market.locale
               }}
             </strong>
-            <span>{{ 'offers.monthlyPremium' | transloco }}</span>
+            <span>{{ 'offers.premiumLabels.' + offer.periodicity | transloco }}</span>
           </div>
 
           <div class="plan-features">

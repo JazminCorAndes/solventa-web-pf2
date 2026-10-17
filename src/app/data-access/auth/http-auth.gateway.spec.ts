@@ -36,9 +36,9 @@ const EXPECTED_USER = {
   name: 'Cliente Solventa',
   email: 'cliente@solventa.co',
   role: 'client',
-  documentType: 'cc',
-  nationalId: '',
-  phone: '',
+  documentType: undefined,
+  nationalId: undefined,
+  phone: undefined,
 };
 
 describe('HttpAuthGateway', () => {
@@ -56,6 +56,42 @@ describe('HttpAuthGateway', () => {
   afterEach(() => http.verify());
 
   describe('login', () => {
+    it.each([
+      { tokenType: 'Basic' },
+      { accessToken: undefined },
+      { refreshToken: undefined },
+      { expiraEn: 'invalid' },
+      { refreshExpiraEn: 'invalid' },
+    ])('rejects an invalid token response: %j', async (fields) => {
+      const result = firstValueFrom(
+        gateway.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }),
+      );
+      http.expectOne(SESSIONS).flush({ ...TOKEN_RESPONSE, ...fields });
+
+      await expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+    });
+
+    it('preserves identity details supplied by the backend', async () => {
+      const result = firstValueFrom(
+        gateway.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }),
+      );
+      http.expectOne(SESSIONS).flush({
+        ...TOKEN_RESPONSE,
+        usuario: {
+          ...USER_RESPONSE,
+          tipoDocumento: 'ce',
+          identificacion: '1023456789',
+          telefono: '+573001234567',
+        },
+      });
+
+      await expect(result).resolves.toMatchObject({
+        session: {
+          user: { documentType: 'ce', nationalId: '1023456789', phone: '+573001234567' },
+        },
+      });
+    });
+
     it('exchanges credentials for tokens and does not use cookies', async () => {
       const result = firstValueFrom(
         gateway.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }),

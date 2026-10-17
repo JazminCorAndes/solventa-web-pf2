@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, Observable, of } from 'rxjs';
 import { OFFER_GATEWAY, OfferGateway } from './offer.gateway';
-import { InsuranceOffer, OfferCalculation, SelectedOfferRecord } from './offer.models';
+import {
+  InsuranceOffer,
+  OfferCalculation,
+  PREMIUM_PERIODICITIES,
+  SelectedOfferRecord,
+} from './offer.models';
 import { OfferSelectionService } from './offer-selection.service';
 import { OFFER_SELECTION_STORAGE, OfferSelectionStorage } from './offer-selection-storage.service';
 
@@ -10,7 +15,8 @@ const AVAILABLE_OFFER: InsuranceOffer = {
   version: 1,
   name: 'Oferta A',
   description: 'Oferta disponible',
-  monthlyPremium: { amount: 149_900, currency: 'COP' },
+  premium: { amount: 149_900, currency: 'COP' },
+  periodicity: 'mensual',
   coverageLabel: 'Cobertura A',
   deductibleLabel: '$500.000 COP',
   validityLabel: 'Anual',
@@ -69,7 +75,8 @@ class TestOfferGateway implements OfferGateway {
       offerId,
       offerVersion,
       offerName: offer.name,
-      monthlyPremium: offer.monthlyPremium,
+      premium: offer.premium,
+      periodicity: offer.periodicity,
       selectedAt: '2026-10-11T01:00:00.000Z',
       confirmed: true,
     });
@@ -207,4 +214,22 @@ describe('OfferSelectionService', () => {
     expect(service.confirmedSelection()?.offerId).toBe(AVAILABLE_OFFER.id);
     expect(service.canContinue()).toBe(true);
   });
+
+  it.each(PREMIUM_PERIODICITIES)(
+    'conserva el importe %s al seleccionar y confirmar',
+    async (periodicity) => {
+      const offer = { ...AVAILABLE_OFFER, periodicity };
+      gateway.calculation = { ...CALCULATION, offers: [offer] };
+      service.load();
+
+      expect(service.selectOffer(offer)).toBe(true);
+      expect(storage.selection?.periodicity).toBe(periodicity);
+      expect(storage.selection?.premium).toEqual(offer.premium);
+
+      const confirmed = await firstValueFrom(service.confirmSelected());
+      expect(confirmed.periodicity).toBe(periodicity);
+      expect(service.confirmedSelection()?.periodicity).toBe(periodicity);
+      expect(storage.selection).toEqual(confirmed);
+    },
+  );
 });

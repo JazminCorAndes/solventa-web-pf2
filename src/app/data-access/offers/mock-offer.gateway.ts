@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { delay, map, Observable, of } from 'rxjs';
+import { delay, map, Observable, of, throwError } from 'rxjs';
 import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferGateway } from '../../core/offers/offer.gateway';
 import {
@@ -10,6 +10,11 @@ import {
 import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
 import { OFFER_SELECTION_STORAGE } from '../../core/offers/offer-selection-storage.service';
 import { ACTIVE_MARKET } from '../../core/market/market.config';
+import {
+  FLIGHT_COVERAGE_TYPES,
+  QuoteProductData,
+  WEATHER_EVENT_TYPES,
+} from '../../core/quotes/quote-request.models';
 
 interface OfferBlueprint {
   key: string;
@@ -30,7 +35,7 @@ const OFFER_BLUEPRINTS: Record<string, OfferBlueprint[]> = {
     {
       key: 'pro',
       name: 'Seguro Automotriz Pro',
-      description: 'Cobertura extendida con beneficios premium',
+      description: 'Cobertura extendida con beneficios adicionales',
       premium: 189_900,
       coverage: 'Daños propios y terceros',
       deductible: '$500.000 COP',
@@ -222,6 +227,44 @@ const OFFER_BLUEPRINTS: Record<string, OfferBlueprint[]> = {
       validity: 'Fecha del vuelo',
     },
   ],
+  'parametric-weather': [
+    {
+      key: 'integral',
+      name: 'Clima Integral',
+      description: 'Protección paramétrica para el evento y lugar declarados',
+      premium: 59_900,
+      coverage: 'Evento climático declarado',
+      deductible: 'Según condiciones del plan',
+      liability: 'Valor asegurado declarado',
+      coverages: ['Compensación sujeta al evento y umbral definidos en el plan.'],
+      conditions: ['El umbral y la fuente de verificación se especifican antes de la aceptación.'],
+      benefits: ['Consulta digital del plan'],
+    },
+    {
+      key: 'plus',
+      name: 'Clima Plus',
+      description: 'Respaldo ante eventos climáticos durante el periodo declarado',
+      premium: 39_900,
+      coverage: 'Evento climático declarado',
+      deductible: 'Según condiciones del plan',
+      liability: 'Valor asegurado declarado',
+      coverages: ['Compensación sujeta al evento y umbral definidos en el plan.'],
+      conditions: ['El umbral y la fuente de verificación se especifican antes de la aceptación.'],
+      benefits: ['Orientación sobre la cobertura'],
+    },
+    {
+      key: 'esencial',
+      name: 'Clima Esencial',
+      description: 'Cobertura climática básica para el lugar asegurado',
+      premium: 24_900,
+      coverage: 'Evento climático declarado',
+      deductible: 'Según condiciones del plan',
+      liability: 'Valor asegurado declarado',
+      coverages: ['Compensación sujeta al evento y umbral definidos en el plan.'],
+      conditions: ['El umbral y la fuente de verificación se especifican antes de la aceptación.'],
+      benefits: ['Gestión digital'],
+    },
+  ],
   'payment-protection': [
     {
       key: 'integral',
@@ -300,26 +343,68 @@ const OFFER_BLUEPRINTS: Record<string, OfferBlueprint[]> = {
   ],
 };
 
-function offersFor(productId: string): InsuranceOffer[] {
-  return (OFFER_BLUEPRINTS[productId] ?? OFFER_BLUEPRINTS['automotive']).map(
-    (blueprint, index) => ({
+// Trabajo en proceso ... :) Conectar la tarificación; estos planes usan precios locales.
+function offersFor(productId: string, productData: QuoteProductData): InsuranceOffer[] {
+  const blueprints = OFFER_BLUEPRINTS[productId];
+  if (!blueprints) {
+    throw new OfferUnavailableError();
+  }
+  return blueprints.map((blueprint, index) => {
+    const details = { ...blueprint };
+    if (productId === 'parametric') {
+      const coverage = productData['coverageType'] ?? 'delay-cancellation';
+      if (!FLIGHT_COVERAGE_TYPES.some((value) => value === coverage)) {
+        throw new OfferUnavailableError();
+      }
+      if (coverage !== 'delay-cancellation') {
+        const missedConnection = 'Pérdida de conexión por causas cubiertas.';
+        details.coverage =
+          coverage === 'comprehensive'
+            ? 'Retraso, cancelación y pérdida de conexión'
+            : 'Pérdida de conexión';
+        details.coverages =
+          coverage === 'comprehensive'
+            ? ['Retraso del vuelo.', 'Cancelación del vuelo.', missedConnection]
+            : [missedConnection];
+        details.conditions = ['Sujeto a las causas, tiempos de conexión y exclusiones del plan.'];
+        details.description = `Protección para ${details.coverage.toLocaleLowerCase('es-CO')}`;
+        details.benefits = ['Gestión digital de la cobertura'];
+      }
+    }
+    if (productId === 'parametric-weather') {
+      if (!WEATHER_EVENT_TYPES.some((value) => value === productData['weatherEvent'])) {
+        throw new OfferUnavailableError();
+      }
+      const event = productData['weatherEvent'] === 'drought' ? 'Sequía' : 'Lluvia intensa';
+      details.coverage = event;
+      details.coverages = [`${event} en ${productData['location']}.`];
+      details.liability = `Hasta ${new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        maximumFractionDigits: 0,
+      }).format(Number(productData['insuredAmount']))} COP`;
+      details.validity = `${productData['startDate']} a ${productData['endDate']}`;
+    }
+    return {
       id: `${productId}-${blueprint.key}`,
       version: 1,
-      name: blueprint.name,
-      description: blueprint.description,
-      monthlyPremium: { amount: blueprint.premium, currency: ACTIVE_MARKET.currency },
-      coverageLabel: blueprint.coverage,
-      deductibleLabel: blueprint.deductible,
-      validityLabel: blueprint.validity ?? 'Anual',
-      liabilityLabel: blueprint.liability,
-      coverages: blueprint.coverages,
-      conditions: blueprint.conditions,
-      additionalBenefits: blueprint.benefits,
+      name: details.name,
+      description: details.description,
+      premium: { amount: blueprint.premium, currency: ACTIVE_MARKET.currency },
+      periodicity:
+        productId === 'travel' ? 'por_viaje' : productId === 'parametric' ? 'por_vuelo' : 'mensual',
+      coverageLabel: details.coverage,
+      deductibleLabel: details.deductible,
+      validityLabel: details.validity ?? 'Anual',
+      liabilityLabel: details.liability,
+      coverages: details.coverages,
+      conditions: details.conditions,
+      additionalBenefits: details.benefits,
       recommended: index === 0,
       status: 'available',
       validUntil: '2027-12-31T23:59:59.000Z',
-    }),
-  );
+    };
+  });
 }
 
 @Injectable()
@@ -329,19 +414,28 @@ export class MockOfferGateway implements OfferGateway {
 
   loadOffers(): Observable<OfferCalculation> {
     const request = this.quoteRequestStorage.read();
-    const selection = this.selectionStorage.read();
-    const offers = offersFor(request?.productId ?? 'automotive').map((offer) =>
-      selection?.confirmed && selection.offerId === offer.id
-        ? { ...offer, status: 'accepted' as const }
-        : offer,
+    if (!request) {
+      return throwError(() => new OfferUnavailableError());
+    }
+    return of(request).pipe(
+      delay(450),
+      map((record): OfferCalculation => {
+        const selection = this.selectionStorage.read();
+        return {
+          quoteId: record.id,
+          calculatedAt: new Date().toISOString(),
+          validUntil: '2027-12-31T23:59:59.000Z',
+          appliedRate: 'Tarifa del plan',
+          offers: offersFor(record.productId, record.productData).map((offer) =>
+            selection?.confirmed &&
+            selection.quoteId === record.id &&
+            selection.offerId === offer.id
+              ? { ...offer, status: 'accepted' as const }
+              : offer,
+          ),
+        };
+      }),
     );
-    return of<OfferCalculation>({
-      quoteId: request?.id ?? 'AQT-2026-8921',
-      calculatedAt: '2026-10-11T04:30:00.000Z',
-      validUntil: '2027-12-31T23:59:59.000Z',
-      appliedRate: 'Estándar (Risk A)',
-      offers,
-    }).pipe(delay(450));
   }
 
   loadSelection(): Observable<SelectedOfferRecord | null> {
@@ -357,8 +451,13 @@ export class MockOfferGateway implements OfferGateway {
     return of(null).pipe(
       delay(350),
       map(() => {
-        const productId = this.quoteRequestStorage.read()?.productId ?? 'automotive';
-        const offer = offersFor(productId).find((item) => item.id === offerId);
+        const request = this.quoteRequestStorage.read();
+        if (!request || request.id !== quoteId) {
+          throw new OfferUnavailableError();
+        }
+        const offer = offersFor(request.productId, request.productData).find(
+          (item) => item.id === offerId,
+        );
         if (
           !offer ||
           offer.version !== offerVersion ||
@@ -373,7 +472,8 @@ export class MockOfferGateway implements OfferGateway {
           offerId,
           offerVersion,
           offerName: offer.name,
-          monthlyPremium: offer.monthlyPremium,
+          premium: offer.premium,
+          periodicity: offer.periodicity,
           selectedAt: new Date().toISOString(),
           confirmed: true,
         };
