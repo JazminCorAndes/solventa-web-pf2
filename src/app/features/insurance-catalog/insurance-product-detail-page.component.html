@@ -1,0 +1,122 @@
+<section class="detail-page">
+  @if (catalog.detailStatus() === 'loading' || catalog.detailStatus() === 'idle') {
+    <div class="state-panel" role="status">
+      <mat-spinner diameter="36" />
+      <span>{{ 'insuranceCatalog.detail.loading' | transloco }}</span>
+    </div>
+  } @else if (catalog.detailStatus() === 'error' || catalog.detailStatus() === 'not-found') {
+    <div class="state-panel" role="alert">
+      <app-icon name="shield" [size]="34" />
+      <h1>
+        {{
+          (catalog.detailStatus() === 'not-found'
+            ? 'insuranceCatalog.detail.notFoundTitle'
+            : 'insuranceCatalog.detail.errorTitle'
+          ) | transloco
+        }}
+      </h1>
+      <p>{{ 'insuranceCatalog.detail.errorBody' | transloco }}</p>
+      <div class="state-actions">
+        @if (catalog.detailStatus() === 'error') {
+          <button mat-stroked-button type="button" (click)="load()">
+            {{ 'common.retry' | transloco }}
+          </button>
+        }
+        <a mat-flat-button routerLink="/app/seguros">
+          {{ 'insuranceCatalog.detail.back' | transloco }}
+        </a>
+      </div>
+    </div>
+  } @else if (catalog.selectedProduct(); as product) {
+    <a class="back-link" routerLink="/app/seguros" [queryParams]="{ seleccion: product.id }">
+      <app-icon name="arrow-left" [size]="17" />
+      {{ 'insuranceCatalog.detail.back' | transloco }}
+    </a>
+
+    <header>
+      <span class="product-icon"><app-icon name="shield" [size]="30" /></span>
+      <div>
+        <span>{{ 'insuranceCatalog.eyebrow' | transloco }}</span>
+        <h1>{{ product.name }}</h1>
+        <p>{{ product.description }}</p>
+      </div>
+    </header>
+
+    <div class="detail-grid">
+      <mat-card appearance="outlined" class="coverages-card">
+        <mat-card-content>
+          <h2>{{ 'insuranceCatalog.detail.coverages' | transloco }}</h2>
+          <div class="coverage-list">
+            @for (coverage of product.coverages; track coverage.name) {
+              <article>
+                <span><app-icon name="check" [size]="18" /></span>
+                <div>
+                  <h3>{{ coverage.name }}</h3>
+                  <p>{{ coverage.description }}</p>
+                </div>
+              </article>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <div class="side-column">
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <h2>{{ 'insuranceCatalog.detail.keyInformation' | transloco }}</h2>
+            <dl>
+              <div>
+                <dt>{{ 'insuranceCatalog.detail.insuredAmount' | transloco }}</dt>
+                <dd>
+                  {{
+                    product.relevantInformation.insuredAmount
+                      | currency: product.relevantInformation.currency
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ 'insuranceCatalog.detail.deductible' | transloco }}</dt>
+                <dd>
+                  {{
+                    product.relevantInformation.deductible
+                      | currency: product.relevantInformation.currency
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ 'insuranceCatalog.detail.term' | transloco }}</dt>
+                <dd>{{ product.relevantInformation.term }}</dd>
+              </div>
+            </dl>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <h2>{{ 'insuranceCatalog.detail.conditions' | transloco }}</h2>
+            <ul>
+              @for (condition of product.conditions; track condition) {
+                <li>{{ condition }}</li>
+              }
+            </ul>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+    <div class="quote-action">
+      <div>
+        <h2>{{ 'insuranceCatalog.detail.quoteTitle' | transloco }}</h2>
+        <p>{{ 'insuranceCatalog.detail.quoteBody' | transloco }}</p>
+      </div>
+      <a
+        mat-flat-button
+        routerLink="/app/cotizaciones/solicitar"
+        [queryParams]="{ producto: product.id }"
+      >
+        {{ 'insuranceCatalog.detail.quoteAction' | transloco }}
+        <app-icon name="arrow-right" [size]="17" />
+      </a>
+    </div>
+  }
+</section>
