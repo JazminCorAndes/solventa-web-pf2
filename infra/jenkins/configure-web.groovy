@@ -51,6 +51,7 @@ source.setCredentialsId('solventa-web-github-app')
 def checks = new GitHubSCMSourceStatusChecksTrait()
 checks.setName('Solventa Web Jenkins')
 checks.setSuppressLogs(true)
+checks.setSkipNotifications(true)
 source.setTraits([
     new OriginPullRequestDiscoveryTrait(1),
     new WildcardSCMHeadFilterTrait('PR-*', ''),

@@ -55,6 +55,8 @@ Timer.get().scheduleWithFixedDelay({
                 if (!policy.eligible(info, (state.enabledAt as Number).longValue(), processed)) return
                 def job = project.getItem('PR-' + pull.number)
                 if (job == null) { project.scheduleBuild2(0); return }
+                // Jenkins puede agrupar solicitudes en cola y conservar la revisión anterior.
+                if (!policy.canSchedule(job.isInQueue(), job.isBuilding())) return
                 def branch = project.getProjectFactory().getBranch(job)
                 def source = project.getSCMSource(branch.sourceId)
                 def revision = source.fetch(branch.head, null)
