@@ -42,6 +42,7 @@
     "secureSession": "Sesión segura",
     "menu": "Menú",
     "dashboard": "Inicio",
+    "insuranceCatalog": "Seguros",
     "quotes": "Cotizaciones",
     "policies": "Mis seguros",
     "claims": "Siniestros",
@@ -70,6 +71,39 @@
     "status": {
       "active": "Activo",
       "pending": "Pendiente"
+    }
+  },
+  "insuranceCatalog": {
+    "eyebrow": "Protección para cada momento",
+    "title": "Conoce nuestros seguros",
+    "subtitle": "Compara coberturas y condiciones antes de solicitar una cotización.",
+    "loading": "Cargando seguros disponibles",
+    "available": "Disponible",
+    "view": "Conocer seguro",
+    "viewProduct": "Conocer {{ product }}",
+    "empty": {
+      "title": "No hay seguros disponibles",
+      "body": "No encontramos productos para mostrar en este momento. Inténtalo nuevamente."
+    },
+    "error": {
+      "title": "No pudimos cargar los seguros",
+      "body": "La información no está disponible en este momento. Puedes volver a intentarlo."
+    },
+    "detail": {
+      "loading": "Cargando información del seguro",
+      "back": "Volver a seguros",
+      "coverages": "Qué cubre",
+      "conditions": "Condiciones principales",
+      "keyInformation": "Información relevante",
+      "insuredAmount": "Suma asegurada de referencia",
+      "deductible": "Deducible",
+      "term": "Vigencia",
+      "quoteTitle": "¿Este seguro se ajusta a lo que necesitas?",
+      "quoteBody": "Completa tus datos para recibir una propuesta personalizada.",
+      "quoteAction": "Cotizar este seguro",
+      "notFoundTitle": "Seguro no encontrado",
+      "errorTitle": "No pudimos cargar este seguro",
+      "errorBody": "Regresa al catálogo o intenta consultar la información nuevamente."
     }
   },
   "quoteRequest": {
