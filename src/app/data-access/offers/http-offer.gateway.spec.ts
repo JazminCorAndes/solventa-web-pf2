@@ -26,7 +26,7 @@ const OFFER = {
   version: 1,
   nombre: 'Seguro Automotriz Pro',
   descripcion: 'Cobertura extendida',
-  primaMensual: { monto: '1.8000', moneda: 'UF' as const },
+  primaMensual: { monto: '180000.00', moneda: 'COP' as const },
   coberturaPrincipal: 'Daños propios y terceros',
   deducible: 'UF 3',
   vigencia: 'Anual',
@@ -66,6 +66,19 @@ describe('HttpOfferGateway', () => {
 
   afterEach(() => http.verify());
 
+  it.each([
+    [403, 'consentimiento_no_vigente'],
+    [422, 'perfil_vencido'],
+    [503, 'perfilamiento_no_disponible'],
+  ])('conserva el error de perfilamiento al seleccionar %s', async (status, code) => {
+    const result = firstValueFrom(gateway.confirmSelection(REQUEST.id, OFFER.id, OFFER.version));
+    const assertion = expect(result).rejects.toMatchObject({ status, error: { code } });
+    http
+      .expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`)
+      .flush({ code }, { status, statusText: 'Error' });
+    await assertion;
+  });
+
   it('loads and maps offers from the latest quote request', async () => {
     const result = firstValueFrom(gateway.loadOffers());
     const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`);
@@ -83,7 +96,8 @@ describe('HttpOfferGateway', () => {
       offers: [
         {
           id: OFFER.id,
-          monthlyPremiumUf: 1.8,
+          monthlyPremium: 180000,
+          currency: 'COP',
           status: 'available',
         },
       ],
@@ -107,7 +121,8 @@ describe('HttpOfferGateway', () => {
     await expect(result).resolves.toMatchObject({
       quoteId: REQUEST.id,
       offerId: OFFER.id,
-      monthlyPremiumUf: 1.8,
+      monthlyPremium: 180000,
+      currency: 'COP',
     });
   });
 

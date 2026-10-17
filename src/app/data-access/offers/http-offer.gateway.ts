@@ -8,13 +8,15 @@ import {
   InsuranceOffer,
   OfferCalculation,
   OfferStatus,
+  PremiumCurrency,
   SelectedOfferRecord,
 } from '../../core/offers/offer.models';
 import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
+import { profilingErrorKey } from '../../core/profiling/profiling.errors';
 
 interface MoneyResponse {
   monto: string;
-  moneda: 'UF' | 'CLP';
+  moneda: PremiumCurrency;
 }
 
 interface OfferResponse {
@@ -112,6 +114,9 @@ export class HttpOfferGateway implements OfferGateway {
         map(toSelection),
         catchError((error: unknown) => {
           if (error instanceof HttpErrorResponse && error.status === 422) {
+            if (profilingErrorKey(error)) {
+              return throwError(() => error);
+            }
             return throwError(() => new OfferUnavailableError());
           }
           return throwError(() => error);
@@ -126,7 +131,8 @@ function toOffer(response: OfferResponse): InsuranceOffer {
     version: response.version,
     name: response.nombre,
     description: response.descripcion,
-    monthlyPremiumUf: Number(response.primaMensual.monto),
+    monthlyPremium: Number(response.primaMensual.monto),
+    currency: response.primaMensual.moneda,
     coverageLabel: response.coberturaPrincipal,
     deductibleLabel: response.deducible,
     validityLabel: response.vigencia,
@@ -146,7 +152,8 @@ function toSelection(response: SelectionResponse): SelectedOfferRecord {
     offerId: response.ofertaId,
     offerVersion: response.version,
     offerName: response.nombreOferta,
-    monthlyPremiumUf: Number(response.primaMensual.monto),
+    monthlyPremium: Number(response.primaMensual.monto),
+    currency: response.primaMensual.moneda,
     selectedAt: response.seleccionadaEn,
   };
 }

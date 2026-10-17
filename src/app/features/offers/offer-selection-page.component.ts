@@ -1,5 +1,5 @@
 import { DOCUMENT, DatePipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -11,6 +11,9 @@ import { finalize, take } from 'rxjs';
 import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { InsuranceOffer } from '../../core/offers/offer.models';
 import { OfferSelectionService } from '../../core/offers/offer-selection.service';
+import { QuoteRequestService } from '../../core/quotes/quote-request.service';
+import { profilingErrorKey } from '../../core/profiling/profiling.errors';
+import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.component';
 
 @Component({
   selector: 'app-offer-selection-page',
@@ -25,20 +28,26 @@ import { OfferSelectionService } from '../../core/offers/offer-selection.service
     MatProgressSpinnerModule,
     RouterLink,
     TranslocoPipe,
+    ProfilingPanelComponent,
   ],
   templateUrl: './offer-selection-page.component.html',
   styleUrl: './offer-selection-page.component.scss',
 })
-export class OfferSelectionPageComponent implements OnInit {
+export class OfferSelectionPageComponent {
   private readonly document = inject(DOCUMENT);
   private readonly router = inject(Router);
 
   readonly offers = inject(OfferSelectionService);
+  readonly request = inject(QuoteRequestService).latestRequest;
+  readonly profilingReady = signal(false);
   readonly confirming = signal(false);
   readonly confirmationErrorKey = signal<string | null>(null);
 
-  ngOnInit(): void {
-    this.offers.load();
+  profilingChanged(ready: boolean): void {
+    this.profilingReady.set(ready);
+    if (ready) {
+      this.offers.load();
+    }
   }
 
   selectOffer(offer: InsuranceOffer): void {
@@ -58,7 +67,7 @@ export class OfferSelectionPageComponent implements OnInit {
   }
 
   continueToAcceptance(): void {
-    if (this.confirming() || !this.offers.canContinue()) {
+    if (this.confirming() || !this.offers.canContinue() || !this.profilingReady()) {
       return;
     }
 
@@ -74,9 +83,10 @@ export class OfferSelectionPageComponent implements OnInit {
         next: () => void this.router.navigate(['/app/cotizaciones/aceptacion']),
         error: (error: unknown) => {
           this.confirmationErrorKey.set(
-            error instanceof OfferUnavailableError
-              ? 'offers.errors.unavailable'
-              : 'offers.errors.confirmation',
+            profilingErrorKey(error) ??
+              (error instanceof OfferUnavailableError
+                ? 'offers.errors.unavailable'
+                : 'offers.errors.confirmation'),
           );
           this.offers.load();
         },

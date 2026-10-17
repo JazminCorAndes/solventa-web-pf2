@@ -38,7 +38,7 @@ git --version
 ## Instalación
 
 ```bash
-git clone https://github.com/JazminCorAndes/solventa-web-pf2.git
+git clone git@github.com:JazminCorAndes/solventa-web-pf2.git
 cd solventa-web-pf2
 pnpm install --frozen-lockfile
 ```
@@ -150,6 +150,83 @@ mismo origen del frontend.
 
 Para iniciar sesión se usa el correo configurado en
 `AUTH_DEVELOPMENT_USERS_JSON` y la contraseña utilizada para generar el hash.
+
+## Perfilamiento HU11 (SOL-163)
+
+El formulario requiere consultar y autorizar el consentimiento antes de cotizar. La identidad
+se obtiene de la cookie de sesión del BFF: no se envía `clienteId` desde el formulario.
+El formulario conectado no solicita documento ni contacto: el BFF los obtiene de la sesión.
+La creación envía solamente `{ productoId, datosProducto: { vehiclePlate } }`, junto con una
+clave de idempotencia. La placa de la respuesta se lee de `datosProducto.vehiclePlate`.
+Las primas y selecciones conservan la moneda devuelta por el BFF (COP en el backend actual),
+sin convertirla ni presentarla como UF; el modo demo conserva sus valores simulados en UF.
+
+El panel permite autorizar y revocar; envía la versión vigente, o `0` para la primera
+autorización. Ante un conflicto se exige recargar antes de volver a escribir. La autorización
+persiste en el backend, dura 30 días y comprende Open Finance y Open Data para cotización.
+
+Después de crear la solicitud se consulta su perfil. El mismo panel aparece en el resumen y
+en las ofertas y muestra el identificador de solicitud y perfil, score decimal, nivel,
+versiones de perfil/modelo/consentimiento, fechas y fuentes. Las fuentes actuales son
+**simuladas** y no representan una consulta financiera real. No se guardan perfiles en
+`sessionStorage`; cada pantalla los consulta al BFF.
+
+Las ofertas se habilitan solo tras consultar un perfil completo y vigente de esa solicitud.
+Se retiran los datos al vencer el perfil, sus fuentes o el consentimiento; al recuperar el
+foco de la ventana se vuelve a consultar. El backend revalida el perfil al obtener ofertas y
+confirmar la selección. Revocar, renovar el consentimiento o dejar vencer el perfil puede
+exigir crear una nueva solicitud: no se reemplaza silenciosamente el perfil original.
+Los errores de sesión, consentimiento, concurrencia, vencimiento e indisponibilidad se
+muestran sin resultados parciales ni fallback a datos antiguos.
+
+Para comparar vigencias, el adaptador HTTP usa `Date` del servidor y un reloj monótono.
+Así, un pequeño desfase del computador no rechaza datos recién creados en AWS. Se usa un
+límite superior conservador (precisión de un segundo más el viaje de la petición): el panel
+puede retirar datos ligeramente antes, nunca extender su vigencia. Si falta un `Date`
+válido, la consulta se bloquea con un error en lugar de confiar en un reloj local desconocido.
+
+Contratos consumidos (todos con cookie de sesión):
+
+| Método    | Ruta                                                    | Uso                                                                     |
+| --------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| GET       | `/v1/consentimientos/perfilamiento`                     | Leer autorización; solo `404 consentimiento_ausente` significa ausencia |
+| PUT       | `/v1/consentimientos/perfilamiento`                     | `{ autorizado: boolean, version: number }`                              |
+| POST      | `/v1/solicitudes-cotizacion`                            | Crear solicitud y asociar su perfil                                     |
+| GET       | `/v1/solicitudes-cotizacion/{id}/perfilamiento`         | Leer el perfil usado por la solicitud                                   |
+| GET / PUT | `/v1/solicitudes-cotizacion/{id}/ofertas` / `seleccion` | Revalidación del perfil en el backend                                   |
+
+En modo mock el consentimiento y los perfiles se conservan solamente en memoria, separados por
+usuario. Al recargar la aplicación se debe autorizar y crear otra solicitud. No hay llamadas a
+proveedores financieros reales. Los componentes usan los estilos y tokens existentes; no se ha
+verificado fidelidad visual con Figma.
+
+### Prueba local contra AWS
+
+Se requieren un BFF con HU11 desplegado y un usuario de prueba habilitado. Conservar las cookies
+`Secure` del servidor: iniciar Angular con HTTPS y usar un proxy local hacia AWS. Para evitar
+alterar el proxy habitual, crear un archivo fuera del repositorio, por ejemplo
+`C:\Temp\solventa-proxy-aws.json`:
+
+```json
+{
+  "/api": {
+    "target": "https://<HOST_BFF_AWS>",
+    "secure": true,
+    "changeOrigin": true,
+    "cookieDomainRewrite": "",
+    "pathRewrite": { "^/api": "" }
+  }
+}
+```
+
+```powershell
+corepack pnpm start:backend --ssl --port 4300 --proxy-config C:\Temp\solventa-proxy-aws.json
+```
+
+Abrir `https://localhost:4300`, aceptar el certificado local de desarrollo y probar inicio de
+sesión, ausencia de autorización, autorización, solicitud, perfil, ofertas y revocación.
+No usar credenciales de producción ni desactivar la validación TLS del destino AWS. La URL,
+credenciales de prueba y evidencia de esa integración deben confirmarse antes de publicar el PR.
 
 ## Demo en GitHub Pages
 

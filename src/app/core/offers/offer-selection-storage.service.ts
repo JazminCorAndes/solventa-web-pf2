@@ -57,7 +57,8 @@ function isSelectionRecord(value: unknown): value is SelectedOfferRecord {
     typeof candidate.offerId === 'string' &&
     typeof candidate.offerVersion === 'number' &&
     typeof candidate.offerName === 'string' &&
-    typeof candidate.monthlyPremiumUf === 'number' &&
+    typeof candidate.monthlyPremium === 'number' &&
+    (candidate.currency === 'UF' || candidate.currency === 'CLP' || candidate.currency === 'COP') &&
     typeof candidate.selectedAt === 'string'
   );
 }

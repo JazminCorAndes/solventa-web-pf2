@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -6,6 +5,7 @@ import {
   inject,
   OnInit,
   signal,
+  viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -26,12 +26,15 @@ import {
 } from '../../core/quotes/quote-request.errors';
 import { QuoteRequestRecord } from '../../core/quotes/quote-request.models';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
+import { profilingErrorKey } from '../../core/profiling/profiling.errors';
+import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.component';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-quote-request-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    ProfilingPanelComponent,
     MatButtonModule,
     MatButtonToggleModule,
     MatCardModule,
@@ -51,7 +54,9 @@ export class QuoteRequestPageComponent implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
 
   readonly quotes = inject(QuoteRequestService);
-  readonly consultationDate = new Date();
+  readonly sessionIdentity = environment.dataAccessMode === 'backend';
+  readonly profilingReady = signal(false);
+  private readonly profilingPanel = viewChild(ProfilingPanelComponent);
   readonly submitting = signal(false);
   readonly attempted = signal(false);
   readonly errorKey = signal<string | null>(null);
@@ -59,10 +64,18 @@ export class QuoteRequestPageComponent implements OnInit {
   readonly form = this.formBuilder.nonNullable.group({
     productId: ['', Validators.required],
     customerType: ['natural' as const, Validators.required],
-    nationalId: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9.-]{6,20}$/)]],
+    nationalId: [
+      '',
+      this.sessionIdentity
+        ? []
+        : [Validators.required, Validators.pattern(/^[A-Za-z0-9.-]{6,20}$/)],
+    ],
     vehiclePlate: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9-]{5,8}$/)]],
-    email: ['', [Validators.required, Validators.email]],
-    phone: ['', [Validators.required, Validators.pattern(/^[0-9 ]{7,15}$/)]],
+    email: ['', this.sessionIdentity ? [] : [Validators.required, Validators.email]],
+    phone: [
+      '',
+      this.sessionIdentity ? [] : [Validators.required, Validators.pattern(/^[0-9 ]{7,15}$/)],
+    ],
   });
   private readonly productId = toSignal(this.form.controls.productId.valueChanges, {
     initialValue: this.form.controls.productId.value,
@@ -84,6 +97,10 @@ export class QuoteRequestPageComponent implements OnInit {
     this.errorKey.set(null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+    if (!this.profilingReady()) {
+      this.errorKey.set('profiling.errors.consent');
       return;
     }
 
@@ -111,12 +128,16 @@ export class QuoteRequestPageComponent implements OnInit {
         next: (request) => this.submittedRequest.set(request),
         error: (error: unknown) => {
           this.errorKey.set(
-            error instanceof QuoteRequestUnavailableError
-              ? 'quoteRequest.errors.unavailable'
-              : error instanceof InsuranceProductUnavailableError
-                ? 'quoteRequest.errors.productUnavailable'
-                : 'quoteRequest.errors.unexpected',
+            profilingErrorKey(error) ??
+              (error instanceof QuoteRequestUnavailableError
+                ? 'quoteRequest.errors.unavailable'
+                : error instanceof InsuranceProductUnavailableError
+                  ? 'quoteRequest.errors.productUnavailable'
+                  : 'quoteRequest.errors.unexpected'),
           );
+          if (profilingErrorKey(error)) {
+            this.profilingPanel()?.reload();
+          }
         },
       });
   }

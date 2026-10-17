@@ -4,6 +4,7 @@ import { OfferSelectionRequiredError, OfferUnavailableError } from './offer.erro
 import { OFFER_GATEWAY } from './offer.gateway';
 import { InsuranceOffer, OfferCalculation, SelectedOfferRecord } from './offer.models';
 import { OFFER_SELECTION_STORAGE } from './offer-selection-storage.service';
+import { profilingErrorKey } from '../profiling/profiling.errors';
 
 type OffersStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 
@@ -22,6 +23,7 @@ export class OfferSelectionService {
   );
 
   readonly calculation = this.calculationState.asReadonly();
+  readonly errorKey = signal<string | null>(null);
   readonly status = this.statusState.asReadonly();
   readonly selectedOfferId = this.selectedOfferIdState.asReadonly();
   readonly expandedOfferId = this.expandedOfferIdState.asReadonly();
@@ -51,6 +53,7 @@ export class OfferSelectionService {
     }
 
     this.statusState.set('loading');
+    this.errorKey.set(null);
     this.gateway
       .loadOffers()
       .pipe(
@@ -79,6 +82,7 @@ export class OfferSelectionService {
         },
         error: (error: unknown) => {
           console.error('Insurance offers could not be loaded.', error);
+          this.errorKey.set(profilingErrorKey(error));
           this.statusState.set('error');
         },
       });
@@ -162,7 +166,8 @@ function createSelectionRecord(quoteId: string, offer: InsuranceOffer): Selected
     offerId: offer.id,
     offerVersion: offer.version,
     offerName: offer.name,
-    monthlyPremiumUf: offer.monthlyPremiumUf,
+    monthlyPremium: offer.monthlyPremium,
+    currency: offer.currency,
     selectedAt: new Date().toISOString(),
   };
 }

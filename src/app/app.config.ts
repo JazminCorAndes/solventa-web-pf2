@@ -36,6 +36,9 @@ import { MockQuoteRequestGateway } from './data-access/quotes/mock-quote-request
 import { HttpQuoteRequestGateway } from './data-access/quotes/http-quote-request.gateway';
 import { environment } from '../environments/environment';
 import { catchError, firstValueFrom, of } from 'rxjs';
+import { PROFILING_GATEWAY } from './core/profiling/profiling.gateway';
+import { HttpProfilingGateway } from './data-access/profiling/http-profiling.gateway';
+import { MockProfilingGateway } from './data-access/profiling/mock-profiling.gateway';
 
 registerLocaleData(localeEsCo);
 
@@ -57,6 +60,11 @@ export const appConfig: ApplicationConfig = {
       useClass: backendMode ? HttpQuoteRequestGateway : MockQuoteRequestGateway,
     },
     { provide: QUOTE_REQUEST_STORAGE, useClass: BrowserQuoteRequestStorage },
+    MockProfilingGateway,
+    {
+      provide: PROFILING_GATEWAY,
+      ...(backendMode ? { useClass: HttpProfilingGateway } : { useExisting: MockProfilingGateway }),
+    },
     provideTransloco({
       config: {
         availableLangs: ['es', 'en'],

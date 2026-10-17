@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { delay, map, Observable, of } from 'rxjs';
+import { delay, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferGateway } from '../../core/offers/offer.gateway';
 import {
@@ -9,6 +9,8 @@ import {
 } from '../../core/offers/offer.models';
 import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
 import { OFFER_SELECTION_STORAGE } from '../../core/offers/offer-selection-storage.service';
+import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
+import { ProfilingError } from '../../core/profiling/profiling.errors';
 
 const OFFERS: InsuranceOffer[] = [
   {
@@ -16,7 +18,8 @@ const OFFERS: InsuranceOffer[] = [
     version: 3,
     name: 'Seguro Automotriz Pro',
     description: 'Cobertura extendida con beneficios premium',
-    monthlyPremiumUf: 1.8,
+    monthlyPremium: 1.8,
+    currency: 'UF',
     coverageLabel: 'Daños propios y terceros',
     deductibleLabel: 'UF 3 (Bajo)',
     validityLabel: 'Anual (Renovación automática)',
@@ -40,7 +43,8 @@ const OFFERS: InsuranceOffer[] = [
     version: 2,
     name: 'Seguro Automotriz Total',
     description: 'Protección integral para tu vehículo',
-    monthlyPremiumUf: 1.45,
+    monthlyPremium: 1.45,
+    currency: 'UF',
     coverageLabel: 'Daños, robo y pérdida total',
     deductibleLabel: 'UF 5 (Medio)',
     validityLabel: 'Anual',
@@ -64,7 +68,8 @@ const OFFERS: InsuranceOffer[] = [
     version: 1,
     name: 'Seguro Automotriz Base',
     description: 'Cobertura esencial para terceros',
-    monthlyPremiumUf: 0.95,
+    monthlyPremium: 0.95,
+    currency: 'UF',
     coverageLabel: 'Responsabilidad civil',
     deductibleLabel: 'UF 8 (Alto)',
     validityLabel: 'Oferta vencida',
@@ -90,13 +95,24 @@ const CALCULATION: OfferCalculation = {
 export class MockOfferGateway implements OfferGateway {
   private readonly quoteRequestStorage = inject(QUOTE_REQUEST_STORAGE);
   private readonly selectionStorage = inject(OFFER_SELECTION_STORAGE);
+  private readonly profiling = inject(MockProfilingGateway);
 
   loadOffers(): Observable<OfferCalculation> {
     const request = this.quoteRequestStorage.read();
-    return of({
-      ...CALCULATION,
-      quoteId: request?.id ?? CALCULATION.quoteId,
-    }).pipe(delay(450));
+    if (!request) {
+      return throwError(() => new ProfilingError('solicitud_no_encontrada'));
+    }
+    return of(null).pipe(
+      delay(450),
+      switchMap(() => this.profiling.loadProfile(request.id)),
+      map((profile) => ({
+        ...CALCULATION,
+        quoteId: request.id,
+        calculatedAt: profile.calculadoEn,
+        validUntil: profile.vigenteHasta,
+        appliedRate: `Simulada (${profile.nivel})`,
+      })),
+    );
   }
 
   loadSelection(): Observable<SelectedOfferRecord | null> {
@@ -110,6 +126,7 @@ export class MockOfferGateway implements OfferGateway {
   ): Observable<SelectedOfferRecord> {
     return of(null).pipe(
       delay(350),
+      switchMap(() => this.profiling.loadProfile(quoteId)),
       map(() => {
         const offer = OFFERS.find((item) => item.id === offerId);
         if (
@@ -126,7 +143,8 @@ export class MockOfferGateway implements OfferGateway {
           offerId,
           offerVersion,
           offerName: offer.name,
-          monthlyPremiumUf: offer.monthlyPremiumUf,
+          monthlyPremium: offer.monthlyPremium,
+          currency: offer.currency,
           selectedAt: new Date().toISOString(),
         };
       }),
