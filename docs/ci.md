@@ -18,6 +18,12 @@ La cobertura informa ejecución del código instrumentado, no suficiencia funcio
 
 ### Migración pendiente con Jazmín
 
+El scanner difiere el comentario mientras su PR esté en cola o ejecutándose, sin marcarlo
+procesado. Así Jenkins no agrupa solicitudes de revisiones distintas y pierde la más nueva.
+Los estados ocupado/libre están probados en `infra/jenkins/test-comment-policy.groovy`.
+Desplegar este ajuste requiere recarga administrativa controlada, sin builds activos;
+no lanzar un segundo timer ni asumir que integrar el PR actualiza el controlador.
+
 1. Comprobar el check nuevo en el mismo SHA, publicado por la App `5277435`.
 2. Jazmín debe reemplazar el contexto obligatorio antiguo por `CI / Validación (Jenkins)`,
    conservando las demás protecciones y la vinculación a la App. No deshabilitar la regla.
