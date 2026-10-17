@@ -119,7 +119,13 @@ describe('MockOfferGateway', () => {
     expect(calculation.offers.every((offer) => offer.id.startsWith(`${productId}-`))).toBe(true);
     expect(calculation.offers.every((offer) => offer.premium.currency === 'COP')).toBe(true);
     const periodicity =
-      productId === 'travel' ? 'por_viaje' : productId === 'parametric' ? 'por_vuelo' : 'mensual';
+      productId === 'travel'
+        ? 'por_viaje'
+        : productId === 'parametric'
+          ? 'por_vuelo'
+          : productId === 'parametric-weather'
+            ? 'por_periodo'
+            : 'mensual';
     expect(calculation.offers.every((offer) => offer.periodicity === periodicity)).toBe(true);
     if (productId !== 'automotive') {
       expect(calculation.offers.some((offer) => offer.name.includes('Automotriz'))).toBe(false);

@@ -392,7 +392,13 @@ function offersFor(productId: string, productData: QuoteProductData): InsuranceO
       description: details.description,
       premium: { amount: blueprint.premium, currency: ACTIVE_MARKET.currency },
       periodicity:
-        productId === 'travel' ? 'por_viaje' : productId === 'parametric' ? 'por_vuelo' : 'mensual',
+        productId === 'travel'
+          ? 'por_viaje'
+          : productId === 'parametric'
+            ? 'por_vuelo'
+            : productId === 'parametric-weather'
+              ? 'por_periodo'
+              : 'mensual',
       coverageLabel: details.coverage,
       deductibleLabel: details.deductible,
       validityLabel: details.validity ?? 'Anual',

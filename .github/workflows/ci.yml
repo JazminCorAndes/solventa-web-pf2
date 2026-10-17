@@ -44,5 +44,8 @@ jobs:
       - name: Ejecutar pruebas
         run: pnpm test:ci
 
-      - name: Compilar aplicación
-        run: pnpm build
+      - name: Verificar fallback Pages
+        run: pnpm test:pages
+
+      - name: Compilar aplicación para Pages
+        run: pnpm build:pages

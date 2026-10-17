@@ -51,7 +51,29 @@ function isSubscription(value: unknown): value is SubscriptionRecord {
     typeof candidate.id === 'string' &&
     typeof candidate.quoteId === 'string' &&
     typeof candidate.offerId === 'string' &&
-    candidate.status === 'approved' &&
-    candidate.saga?.status === 'payment_pending'
+    typeof candidate.offerVersion === 'number' &&
+    Number.isInteger(candidate.offerVersion) &&
+    candidate.offerVersion > 0 &&
+    isStatus(candidate.status) &&
+    typeof candidate.ruleVersion === 'string' &&
+    typeof candidate.createdAt === 'string' &&
+    typeof candidate.updatedAt === 'string' &&
+    isStatus(candidate.decision?.result) &&
+    candidate.decision?.result === candidate.status &&
+    typeof candidate.decision?.ruleVersion === 'string' &&
+    typeof candidate.decision?.decisionHash === 'string' &&
+    /^[0-9a-f]{64}$/i.test(candidate.decision.decisionHash) &&
+    typeof candidate.decision?.decidedAt === 'string' &&
+    ['payment_pending', 'payment_confirmed', 'issued', 'failed'].some(
+      (status) => status === candidate.saga?.status,
+    ) &&
+    typeof candidate.saga?.version === 'number' &&
+    Number.isInteger(candidate.saga.version) &&
+    candidate.saga.version > 0 &&
+    typeof candidate.saga?.updatedAt === 'string'
   );
+}
+
+function isStatus(value: unknown): boolean {
+  return value === 'approved' || value === 'review' || value === 'rejected';
 }

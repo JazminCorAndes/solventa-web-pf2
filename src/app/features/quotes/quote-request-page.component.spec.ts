@@ -450,6 +450,21 @@ describe('QuoteRequestPageComponent', () => {
     expect(component.form.controls.productId.invalid).toBe(true);
   });
 
+  it.each([
+    { productId: 'device-protection', field: 'purchaseValue' as const },
+    { productId: 'payment-protection', field: 'monthlyPayment' as const },
+    { productId: 'mortgage-life', field: 'mortgageBalance' as const },
+  ])('limits $field to 16 positive integer digits', ({ productId, field }) => {
+    component.form.controls.productId.setValue(productId);
+    const control = component.form.controls[field];
+    control.setValue('9999999999999999');
+    expect(control.valid).toBe(true);
+    for (const value of ['10000000000000000', '0', '-1', '1.5', '1e3']) {
+      control.setValue(value);
+      expect(control.invalid).toBe(true);
+    }
+  });
+
   it('permite escribir las fechas climáticas en formato colombiano', () => {
     fillWeatherForm(component);
     fixture.detectChanges();

@@ -73,6 +73,19 @@ describe('InsuranceCatalogPageComponent', () => {
     expect(fixture.nativeElement.querySelector('.product-card')).toBeNull();
   });
 
+  it('keeps unavailable products inspectable without labeling them available', () => {
+    gateway.response = of([{ ...PRODUCT, available: false }]);
+    fixture = TestBed.createComponent(InsuranceCatalogPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.availability').textContent).toContain(
+      'insuranceCatalog.unavailable',
+    );
+    expect(
+      fixture.nativeElement.querySelector('a[href="/app/seguros/travel?origen=travel"]'),
+    ).not.toBeNull();
+  });
+
   it('offers a retry after an error', () => {
     gateway.response = throwError(() => new Error('unavailable'));
     fixture = TestBed.createComponent(InsuranceCatalogPageComponent);

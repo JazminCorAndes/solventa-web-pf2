@@ -74,6 +74,7 @@ describe('BrowserOfferSelectionStorage', () => {
     { periodicity: 'por_viaje' },
     { premium: null, periodicity: 'por_vuelo' },
     { premium: SELECTION.premium, periodicity: 'diaria' },
+    { premium: { amount: -1, currency: 'COP' }, periodicity: 'por_periodo' },
   ])('no convierte una selección nueva inválida en mensual: %j', (fields) => {
     window.sessionStorage.setItem(
       STORAGE_KEY,

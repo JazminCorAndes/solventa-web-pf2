@@ -78,6 +78,7 @@
     "subtitle": "Compare coverage and conditions before requesting a quote.",
     "loading": "Loading available insurance",
     "available": "Available",
+    "unavailable": "Unavailable for quotes",
     "view": "View insurance",
     "viewProduct": "View {{ product }}",
     "empty": {
@@ -247,7 +248,8 @@
     "premiumLabels": {
       "mensual": "Monthly premium",
       "por_viaje": "Premium per trip",
-      "por_vuelo": "Premium per flight"
+      "por_vuelo": "Premium per flight",
+      "por_periodo": "Premium per period"
     },
     "mainCoverage": "Main coverage",
     "generalConditions": "General conditions",
@@ -322,14 +324,28 @@
   },
   "subscription": {
     "eyebrow": "Subscription",
-    "title": "Subscription approved",
-    "subtitle": "The offer meets the conditions and payment is enabled.",
+    "title": "Subscription status",
+    "subtitle": "View the decision and issuance status reported by the service.",
+    "loading": "Loading subscription",
+    "error": "The subscription could not be loaded. Please try again.",
+    "empty": "No subscription is registered for this request.",
     "operation": "Operation identifier",
     "offer": "Accepted offer",
     "decision": "Decision",
-    "approved": "Approved",
+    "statuses": {
+      "approved": "Approved",
+      "review": "Under review",
+      "rejected": "Rejected"
+    },
+    "saga": "Issuance status",
+    "sagaStatuses": {
+      "payment_pending": "Payment pending",
+      "payment_confirmed": "Payment confirmed",
+      "issued": "Policy issued",
+      "failed": "Issuance failed"
+    },
     "rule": "Applied rule",
-    "next": "The next step is to register payment to issue the policy.",
+    "next": "The service reports a pending payment. Payment registration is not yet available.",
     "back": "Back to acceptance"
   }
 }

@@ -248,7 +248,7 @@ export class QuoteRequestPageComponent implements OnInit {
 
     const required = Validators.required;
     const requiredText = Validators.pattern(/\S/);
-    const positiveInteger = Validators.pattern(/^[1-9][0-9]*$/);
+    const positiveInteger = Validators.pattern(/^[1-9][0-9]{0,15}$/);
     switch (productId) {
       case 'automotive':
         this.form.controls.vehiclePlate.setValidators([

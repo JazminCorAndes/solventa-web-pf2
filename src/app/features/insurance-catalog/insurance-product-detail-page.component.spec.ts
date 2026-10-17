@@ -96,4 +96,14 @@ describe('InsuranceProductDetailPageComponent', () => {
     expect(fixture.componentInstance.catalog.detailStatus()).toBe('not-found');
     expect(fixture.nativeElement.textContent).not.toContain('Seguro de Viaje');
   });
+
+  it('shows unavailable product details but blocks requesting a quote', () => {
+    gateway.response = of({ ...PRODUCT, available: false });
+    fixture = TestBed.createComponent(InsuranceProductDetailPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Asistencia médica');
+    expect(fixture.nativeElement.querySelector('.quote-action a')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.quote-action button').disabled).toBe(true);
+  });
 });

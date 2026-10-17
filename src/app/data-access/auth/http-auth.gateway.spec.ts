@@ -56,6 +56,16 @@ describe('HttpAuthGateway', () => {
   afterEach(() => http.verify());
 
   describe('login', () => {
+    it('rejects unknown roles instead of treating them as clients', async () => {
+      const result = firstValueFrom(
+        gateway.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }),
+      );
+      http.expectOne(SESSIONS).flush({
+        ...TOKEN_RESPONSE,
+        usuario: { ...USER_RESPONSE, rol: 'desconocido' },
+      });
+      await expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+    });
     it.each([
       { tokenType: 'Basic' },
       { accessToken: undefined },

@@ -77,7 +77,14 @@ una prueba o compilación.
 - La cobertura corresponde al código instrumentado por Angular/Vitest y no demuestra
   integración AWS, navegación E2E o cumplimiento completo de las historias.
 
-El build de producción puede usar configuración backend, mientras GitHub Pages puede
-publicar una demo mock según su workflow. Un check verde no prueba que haya un despliegue
-ni que una demo esté consumiendo el backend real. La cobertura se consulta dentro del PR,
-no como un porcentaje fijo o un servicio adicional en la portada del repositorio.
+Actions valida también `pnpm test:pages` y `pnpm build:pages` en los PRs, sin publicar.
+El workflow separado `pages.yml` publica únicamente tras un push a `develop`, usando
+producción con backend AWS y la subruta `/solventa-web-pf2/`. El environment `github-pages`
+debe permitir esa rama: su política consultada el 17 de octubre de 2026 solo admitía
+`master`, por lo que requiere autorización administrativa antes del despliegue.
+No se cambia esa protección desde el workflow. El detalle del fallback `404.html` y sus
+limitaciones está en el README.
+
+Un check verde no prueba que haya un despliegue ni conectividad con el backend real.
+La cobertura se consulta dentro del PR, no como un porcentaje fijo o un servicio
+adicional en la portada del repositorio.

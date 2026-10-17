@@ -89,7 +89,7 @@ export const routes: Routes = [
           import('./features/subscriptions/subscription-status-page.component').then(
             (component) => component.SubscriptionStatusPageComponent,
           ),
-        title: 'Suscripción aprobada | Solventa',
+        title: 'Estado de suscripción | Solventa',
       },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],

@@ -78,6 +78,7 @@
     "subtitle": "Compara coberturas y condiciones antes de solicitar una cotización.",
     "loading": "Cargando seguros disponibles",
     "available": "Disponible",
+    "unavailable": "No disponible para cotizar",
     "view": "Conocer seguro",
     "viewProduct": "Conocer {{ product }}",
     "empty": {
@@ -247,7 +248,8 @@
     "premiumLabels": {
       "mensual": "Prima mensual",
       "por_viaje": "Prima por viaje",
-      "por_vuelo": "Prima por vuelo"
+      "por_vuelo": "Prima por vuelo",
+      "por_periodo": "Prima por periodo"
     },
     "mainCoverage": "Cobertura principal",
     "generalConditions": "Condiciones generales",
@@ -322,14 +324,28 @@
   },
   "subscription": {
     "eyebrow": "Suscripción",
-    "title": "Suscripción aprobada",
-    "subtitle": "La oferta cumple las condiciones y el pago está habilitado.",
+    "title": "Estado de suscripción",
+    "subtitle": "Consulta la decisión y el estado de emisión informados por el servicio.",
+    "loading": "Consultando la suscripción",
+    "error": "No fue posible consultar la suscripción. Inténtalo nuevamente.",
+    "empty": "No hay una suscripción registrada para esta solicitud.",
     "operation": "Identificador de operación",
     "offer": "Oferta aceptada",
     "decision": "Decisión",
-    "approved": "Aprobada",
+    "statuses": {
+      "approved": "Aprobada",
+      "review": "En revisión",
+      "rejected": "Rechazada"
+    },
+    "saga": "Estado de emisión",
+    "sagaStatuses": {
+      "payment_pending": "Pago pendiente",
+      "payment_confirmed": "Pago confirmado",
+      "issued": "Póliza emitida",
+      "failed": "Emisión fallida"
+    },
     "rule": "Regla aplicada",
-    "next": "El siguiente paso es registrar el pago para emitir la póliza.",
+    "next": "El servicio informa un pago pendiente. El registro de pagos aún no está disponible.",
     "back": "Volver a la aceptación"
   }
 }

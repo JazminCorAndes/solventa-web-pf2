@@ -45,7 +45,11 @@ export class HttpInsuranceCatalogGateway implements InsuranceCatalogGateway {
     return this.http.get<ProductDetailResponse>(`${this.apiUrl}/${productId}`).pipe(
       map(toDetail),
       catchError((error: unknown) => {
-        if (error instanceof HttpErrorResponse && error.status === 404) {
+        if (
+          error instanceof HttpErrorResponse &&
+          error.status === 404 &&
+          error.error?.code === 'seguro_no_encontrado'
+        ) {
           return of(null);
         }
         return throwError(() => error);
@@ -55,6 +59,16 @@ export class HttpInsuranceCatalogGateway implements InsuranceCatalogGateway {
 }
 
 function toSummary(response: ProductSummaryResponse): InsuranceProductSummary {
+  if (
+    typeof response.id !== 'string' ||
+    typeof response.nombre !== 'string' ||
+    typeof response.descripcion !== 'string' ||
+    typeof response.disponible !== 'boolean' ||
+    !Array.isArray(response.coberturasPrincipales) ||
+    !response.coberturasPrincipales.every((coverage) => typeof coverage === 'string')
+  ) {
+    throw new Error('The catalog contains an invalid product.');
+  }
   return {
     id: response.id,
     name: response.nombre,
@@ -65,6 +79,22 @@ function toSummary(response: ProductSummaryResponse): InsuranceProductSummary {
 }
 
 function toDetail(response: ProductDetailResponse): InsuranceProductDetail {
+  const information = response.informacionRelevante;
+  if (
+    !information ||
+    typeof information.moneda !== 'string' ||
+    !/^[A-Z]{3}$/.test(information.moneda) ||
+    typeof information.vigencia !== 'string' ||
+    !Array.isArray(response.coberturas) ||
+    !response.coberturas.every(
+      (coverage) =>
+        coverage && typeof coverage.nombre === 'string' && typeof coverage.descripcion === 'string',
+    ) ||
+    !Array.isArray(response.condiciones) ||
+    !response.condiciones.every((condition) => typeof condition === 'string')
+  ) {
+    throw new Error('The catalog contains an invalid product detail.');
+  }
   return {
     ...toSummary(response),
     coverages: response.coberturas.map((coverage) => ({
@@ -73,10 +103,21 @@ function toDetail(response: ProductDetailResponse): InsuranceProductDetail {
     })),
     conditions: response.condiciones,
     relevantInformation: {
-      insuredAmount: Number(response.informacionRelevante.sumaAsegurada),
-      deductible: Number(response.informacionRelevante.deducible),
+      insuredAmount: toAmount(information.sumaAsegurada),
+      deductible: toAmount(information.deducible),
       currency: response.informacionRelevante.moneda,
       term: response.informacionRelevante.vigencia,
     },
   };
+}
+
+function toAmount(value: string): number {
+  if (
+    typeof value !== 'string' ||
+    !/^\d+(?:\.\d+)?$/.test(value) ||
+    !Number.isFinite(Number(value))
+  ) {
+    throw new Error('The catalog contains an invalid monetary amount.');
+  }
+  return Number(value);
 }

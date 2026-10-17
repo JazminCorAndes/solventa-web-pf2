@@ -147,6 +147,15 @@ function parseRetryAfter(error: HttpErrorResponse): number | null {
 }
 
 function toUser(user: UserResponse): AuthUser {
+  if (
+    !user ||
+    user.rol !== 'cliente' ||
+    typeof user.id !== 'string' ||
+    typeof user.nombre !== 'string' ||
+    typeof user.correo !== 'string'
+  ) {
+    throw new AuthenticationUnavailableError();
+  }
   return {
     id: user.id,
     name: user.nombre,
