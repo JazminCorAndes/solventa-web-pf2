@@ -18,6 +18,13 @@ La cobertura informa ejecución del código instrumentado, no suficiencia funcio
 
 ### Migración pendiente con Jazmín
 
+**Operación 2026-10-17:** `skipNotifications=true` ya está aplicado en los tres proyectos
+del controlador, sin renombrar sus checks obligatorios y con copias privadas de respaldo.
+El script de configuración web conserva ese valor para instalaciones futuras.
+El scanner corregido se instaló, compiló y recargó mediante reinicio autorizado del servicio,
+esperando a que terminaran los builds y la cola. Falta verificar una ejecución del SHA final;
+los valores históricos no son esa evidencia. No se integró el PR ni se cambiaron protecciones.
+
 El scanner difiere el comentario mientras su PR esté en cola o ejecutándose, sin marcarlo
 procesado. Así Jenkins no agrupa solicitudes de revisiones distintas y pierde la más nueva.
 Los estados ocupado/libre están probados en `infra/jenkins/test-comment-policy.groovy`.
