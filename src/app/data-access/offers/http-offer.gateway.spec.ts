@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
 import { QuoteRequestRecord } from '../../core/quotes/quote-request.models';
 import {
@@ -76,10 +77,23 @@ describe('HttpOfferGateway', () => {
 
   afterEach(() => http.verify());
 
+  it('maps an accepted offer returned by the backend', async () => {
+    const result = firstValueFrom(gateway.loadOffers());
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`)
+      .flush({ ...CALCULATION_RESPONSE, ofertas: [{ ...OFFER, estado: 'aceptada' }] });
+
+    await expect(result).resolves.toMatchObject({
+      offers: [{ id: OFFER.id, status: 'accepted' }],
+    });
+  });
+
   it('loads and maps offers from the latest quote request', async () => {
     const result = firstValueFrom(gateway.loadOffers());
-    const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`);
-    expect(request.request.withCredentials).toBe(true);
+    const request = http.expectOne(
+      `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`,
+    );
+    expect(request.request.withCredentials).toBe(false);
     request.flush({
       solicitudId: REQUEST.id,
       calculadaEn: '2026-10-11T18:00:00Z',
@@ -103,7 +117,9 @@ describe('HttpOfferGateway', () => {
 
   it('confirms an offer with an idempotency key', async () => {
     const result = firstValueFrom(gateway.confirmSelection(REQUEST.id, OFFER.id, OFFER.version));
-    const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`);
+    const request = http.expectOne(
+      `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`,
+    );
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual({ ofertaId: OFFER.id, version: OFFER.version });
     expect(request.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/i);
@@ -121,12 +137,15 @@ describe('HttpOfferGateway', () => {
       offerId: OFFER.id,
       premium: { amount: 189_900, currency: 'COP' },
       periodicity: 'mensual',
+      confirmed: true,
     });
   });
 
   it('loads the selection persisted by the backend', async () => {
     const result = firstValueFrom(gateway.loadSelection(REQUEST.id));
-    const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`);
+    const request = http.expectOne(
+      `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`,
+    );
     request.flush({
       solicitudId: REQUEST.id,
       ofertaId: OFFER.id,
@@ -142,6 +161,7 @@ describe('HttpOfferGateway', () => {
       offerName: OFFER.nombre,
       premium: { amount: 189_900, currency: 'COP' },
       periodicity: 'mensual',
+      confirmed: true,
     });
   });
 
@@ -149,7 +169,9 @@ describe('HttpOfferGateway', () => {
     'normaliza una prima %s sin fabricar mensualidades',
     async (periodicity) => {
       const result = firstValueFrom(gateway.loadOffers());
-      const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`);
+      const request = http.expectOne(
+        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`,
+      );
       const premium = { monto: '48000', moneda: 'COP' };
       request.flush({
         ...CALCULATION_RESPONSE,
@@ -183,7 +205,9 @@ describe('HttpOfferGateway', () => {
           ? gateway.loadSelection(REQUEST.id)
           : gateway.confirmSelection(REQUEST.id, OFFER.id, OFFER.version),
       );
-      const request = http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`);
+      const request = http.expectOne(
+        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`,
+      );
       expect(request.request.method).toBe(method);
       if (method === 'PUT') {
         expect(request.request.body).toEqual({ ofertaId: OFFER.id, version: OFFER.version });
@@ -219,27 +243,31 @@ describe('HttpOfferGateway', () => {
     { name: 'prima mensual legada nula', fields: { primaMensual: null } },
   ])('rechaza $name sin recurrir a una prima mensual', async ({ fields }) => {
     const result = firstValueFrom(gateway.loadOffers());
-    http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`).flush({
-      ...CALCULATION_RESPONSE,
-      ofertas: [{ ...OFFER, ...fields }],
-    });
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`)
+      .flush({
+        ...CALCULATION_RESPONSE,
+        ofertas: [{ ...OFFER, ...fields }],
+      });
 
     await expect(result).rejects.toThrow(/premium|monetary/);
   });
 
   it('conserva la moneda de la prima nueva en lugar de usar la del alias legado', async () => {
     const result = firstValueFrom(gateway.loadOffers());
-    http.expectOne(`/api/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`).flush({
-      ...CALCULATION_RESPONSE,
-      ofertas: [
-        {
-          ...OFFER,
-          prima: { monto: '99.50', moneda: 'USD' },
-          periodicidad: 'por_viaje',
-          primaMensual: null,
-        },
-      ],
-    });
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/ofertas`)
+      .flush({
+        ...CALCULATION_RESPONSE,
+        ofertas: [
+          {
+            ...OFFER,
+            prima: { monto: '99.50', moneda: 'USD' },
+            periodicidad: 'por_viaje',
+            primaMensual: null,
+          },
+        ],
+      });
 
     await expect(result).resolves.toMatchObject({
       offers: [{ premium: { amount: 99.5, currency: 'USD' }, periodicity: 'por_viaje' }],

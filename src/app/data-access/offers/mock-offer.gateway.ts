@@ -419,18 +419,28 @@ export class MockOfferGateway implements OfferGateway {
     }
     return of(request).pipe(
       delay(450),
-      map((record): OfferCalculation => ({
-        quoteId: record.id,
-        calculatedAt: new Date().toISOString(),
-        validUntil: '2027-12-31T23:59:59.000Z',
-        appliedRate: 'Tarifa del plan',
-        offers: offersFor(record.productId, record.productData),
-      })),
+      map((record): OfferCalculation => {
+        const selection = this.selectionStorage.read();
+        return {
+          quoteId: record.id,
+          calculatedAt: new Date().toISOString(),
+          validUntil: '2027-12-31T23:59:59.000Z',
+          appliedRate: 'Tarifa del plan',
+          offers: offersFor(record.productId, record.productData).map((offer) =>
+            selection?.confirmed &&
+            selection.quoteId === record.id &&
+            selection.offerId === offer.id
+              ? { ...offer, status: 'accepted' as const }
+              : offer,
+          ),
+        };
+      }),
     );
   }
 
   loadSelection(): Observable<SelectedOfferRecord | null> {
-    return of(this.selectionStorage.read());
+    const selection = this.selectionStorage.read();
+    return of(selection?.confirmed ? selection : null);
   }
 
   confirmSelection(
@@ -465,6 +475,7 @@ export class MockOfferGateway implements OfferGateway {
           premium: offer.premium,
           periodicity: offer.periodicity,
           selectedAt: new Date().toISOString(),
+          confirmed: true,
         };
       }),
     );

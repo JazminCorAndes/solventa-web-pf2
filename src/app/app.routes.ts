@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth/auth.guards';
 import { offerSelectionGuard } from './core/offers/offer-selection.guard';
 import { quoteRequestGuard } from './core/quotes/quote-request.guard';
+import { subscriptionGuard } from './core/subscriptions/subscription.guard';
 
 export const routes: Routes = [
   {
@@ -28,6 +29,23 @@ export const routes: Routes = [
             (component) => component.DashboardPageComponent,
           ),
         title: 'Inicio | Solventa',
+      },
+      {
+        path: 'seguros',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./features/insurance-catalog/insurance-catalog-page.component').then(
+            (component) => component.InsuranceCatalogPageComponent,
+          ),
+        title: 'Seguros disponibles | Solventa',
+      },
+      {
+        path: 'seguros/:productoId',
+        loadComponent: () =>
+          import('./features/insurance-catalog/insurance-product-detail-page.component').then(
+            (component) => component.InsuranceProductDetailPageComponent,
+          ),
+        title: 'Detalle del seguro | Solventa',
       },
       {
         path: 'cotizaciones',
@@ -63,6 +81,15 @@ export const routes: Routes = [
             (component) => component.OfferAcceptancePageComponent,
           ),
         title: 'Resumen de oferta | Solventa',
+      },
+      {
+        path: 'cotizaciones/suscripcion',
+        canActivate: [quoteRequestGuard, offerSelectionGuard, subscriptionGuard],
+        loadComponent: () =>
+          import('./features/subscriptions/subscription-status-page.component').then(
+            (component) => component.SubscriptionStatusPageComponent,
+          ),
+        title: 'Suscripción aprobada | Solventa',
       },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],

@@ -36,8 +36,10 @@ class TestQuoteRequestStorage implements QuoteRequestStorage {
 }
 
 class TestOfferSelectionStorage implements OfferSelectionStorage {
+  selection: SelectedOfferRecord | null = null;
+
   read(): SelectedOfferRecord | null {
-    return null;
+    return this.selection;
   }
   write(): void {}
   clear(): void {}
@@ -65,6 +67,23 @@ describe('MockOfferGateway', () => {
     expect(calculation.quoteId).toBe('AQT-2026-654321');
     expect(calculation.offers).toHaveLength(3);
     expect(calculation.offers.every((offer) => offer.status === 'available')).toBe(true);
+  });
+
+  it('restores accepted offers only for the matching quote', async () => {
+    const selectionStorage = TestBed.inject(OFFER_SELECTION_STORAGE) as TestOfferSelectionStorage;
+    const calculation = await firstValueFrom(gateway.loadOffers());
+    const offer = calculation.offers[0];
+    selectionStorage.selection = await firstValueFrom(
+      gateway.confirmSelection(REQUEST.id, offer.id, offer.version),
+    );
+
+    const accepted = await firstValueFrom(gateway.loadOffers());
+    expect(accepted.offers[0].status).toBe('accepted');
+    expect(await firstValueFrom(gateway.loadSelection())).toEqual(selectionStorage.selection);
+
+    storage.request = { ...REQUEST, id: 'another-quote' };
+    const otherQuote = await firstValueFrom(gateway.loadOffers());
+    expect(otherQuote.offers.every((item) => item.status === 'available')).toBe(true);
   });
 
   it.each([

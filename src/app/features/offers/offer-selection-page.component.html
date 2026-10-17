@@ -124,6 +124,12 @@
                 }}
                 <span aria-hidden="true">→</span>
               </button>
+            } @else if (offer.status === 'accepted') {
+              <span class="accepted-status">
+                <app-icon name="check" [size]="18" />
+                {{ 'offers.status.accepted' | transloco }}
+              </span>
+              <p>{{ 'offers.acceptedMessage' | transloco }}</p>
             } @else {
               <span class="unavailable-status">
                 {{ 'offers.status.' + offer.status | transloco }}
@@ -169,35 +175,6 @@
           }
         </article>
       }
-    </div>
-
-    @if (confirmationErrorKey()) {
-      <div class="confirmation-error" role="alert">
-        {{ confirmationErrorKey()! | transloco }}
-      </div>
-    }
-
-    <div class="continue-bar" aria-live="polite">
-      <span>
-        {{
-          offers.selectedOffer()
-            ? ('offers.readyToContinue' | transloco: { name: offers.selectedOffer()?.name })
-            : ('offers.selectToContinue' | transloco)
-        }}
-      </span>
-      <button
-        mat-flat-button
-        type="button"
-        [disabled]="!offers.canContinue() || confirming()"
-        (click)="continueToAcceptance()"
-      >
-        @if (confirming()) {
-          <mat-spinner diameter="20" />
-          {{ 'offers.confirming' | transloco }}
-        } @else {
-          {{ 'offers.continue' | transloco }} →
-        }
-      </button>
     </div>
   }
 </section>

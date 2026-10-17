@@ -118,28 +118,69 @@ pnpm install --frozen-lockfile
 pnpm start:backend
 ```
 
-La aplicación estará disponible en `http://localhost:4200`. El proxy de desarrollo envía las
-solicitudes `/api` al BFF en `http://localhost:5001`, quitando el prefijo `/api`.
-El interceptor usa el esquema `Bearer` en el encabezado `Authorization` de las
-peticiones protegidas.
+La aplicación estará disponible en `http://localhost:4200`. `pnpm start:backend` usa la
+configuración `local` (`apiBaseUrl: '/api'`) y el proxy de desarrollo reenvía `/api` al BFF en
+`http://localhost:5001`, quitando el prefijo `/api`. Las peticiones protegidas usan
+el esquema `Bearer` en el encabezado `Authorization`.
 
 Inicia sesión con el correo y la contraseña registrados. No copies tokens en archivos
 del frontend, parámetros de URL ni registros.
 
+### Backend desplegado en AWS
+
+El build de producción (`pnpm build`) y `pnpm start:aws` usan el API Gateway directamente
+(`src/environments/environment.ts`, `apiBaseUrl: https://65qgzhody9.execute-api.us-east-2.amazonaws.com`).
+No hay proxy ni cookies: la autenticación usa tokens JWT.
+
+| Configuración | `apiBaseUrl`             | Uso                                        |
+| ------------- | ------------------------ | ------------------------------------------ |
+| `production`  | URL del API Gateway      | `pnpm build`                               |
+| `backend`     | URL del API Gateway      | `pnpm start:aws`, `pnpm build:aws`         |
+| `local`       | `/api` (proxy a `:5001`) | `pnpm start:backend`, `pnpm build:backend` |
+| `development` | `/api` (sin uso, mocks)  | `pnpm start`, `pnpm build:dev`             |
+
+El frontend se sigue publicando en GitHub Pages. El CORS lo resuelve el API Gateway, que permite
+los orígenes `https://jazmincorandes.github.io` y `http://localhost:4200`, los encabezados
+`Authorization`, `Content-Type`, `Idempotency-Key` y `X-Correlation-ID`, y no requiere
+credenciales.
+
+## Autenticación con tokens
+
+1. `POST /v1/sesiones` devuelve un **access token** (JWT, de corta duración; el vencimiento lo
+   informa el backend en `expiraEn`) y un **refresh token** (`refreshExpiraEn`).
+2. El access token vive **solo en memoria** (`AuthService`). El refresh token se guarda en
+   `sessionStorage` (`solventa.auth.refresh`) junto con los datos del usuario.
+3. El interceptor `authInterceptor` agrega `Authorization: Bearer <token>` a las llamadas al API,
+   excepto `POST /v1/sesiones`, `POST /v1/sesiones/renovar` y `POST /v1/usuarios`.
+4. Ante un `401`, renueva con `POST /v1/sesiones/renovar` (el refresh token rota en cada uso) y
+   reintenta la petición una sola vez. Varias peticiones concurrentes comparten una única
+   renovación. Si el refresh es inválido, se limpia la sesión y se redirige a `/iniciar-sesion`.
+5. Al recargar la página, `AuthService.synchronizeSession()` obtiene un access token nuevo con el
+   refresh guardado; si falla con `401`, la app queda sin sesión.
+6. El cierre de sesión llama a `DELETE /v1/sesiones/actual` con el refresh token y limpia el
+   almacenamiento aunque la llamada falle.
+
+`AuthService.register()` expone `POST /v1/usuarios`; todavía no hay pantalla de registro.
+
+Si la respuesta del BFF no incluye documento o teléfono, la interfaz lo indica como
+no disponible en vez de inventar datos personales.
+
 ## Comandos disponibles
 
-| Comando              | Descripción                                        |
-| -------------------- | -------------------------------------------------- |
-| `pnpm start`         | Inicia el desarrollo con adaptadores simulados     |
-| `pnpm start:backend` | Inicia el desarrollo conectado al BFF              |
-| `pnpm build`         | Genera el build de producción conectado al backend |
-| `pnpm build:dev`     | Genera un build de desarrollo con mocks            |
-| `pnpm build:backend` | Genera un build de desarrollo conectado al backend |
-| `pnpm test`          | Ejecuta las pruebas en modo interactivo            |
-| `pnpm test:ci`       | Ejecuta las pruebas una sola vez                   |
-| `pnpm lint`          | Ejecuta ESLint                                     |
-| `pnpm format`        | Formatea el código con Prettier                    |
-| `pnpm format:check`  | Comprueba el formato sin modificar archivos        |
+| Comando              | Descripción                                           |
+| -------------------- | ----------------------------------------------------- |
+| `pnpm start`         | Inicia el desarrollo con adaptadores simulados        |
+| `pnpm start:backend` | Inicia el desarrollo conectado al BFF local           |
+| `pnpm start:aws`     | Inicia el desarrollo conectado al backend en AWS      |
+| `pnpm build`         | Genera el build de producción conectado al backend    |
+| `pnpm build:dev`     | Genera un build de desarrollo con mocks               |
+| `pnpm build:backend` | Genera un build de desarrollo conectado al BFF local  |
+| `pnpm build:aws`     | Genera un build de desarrollo conectado al API en AWS |
+| `pnpm test`          | Ejecuta las pruebas en modo interactivo               |
+| `pnpm test:ci`       | Ejecuta las pruebas una sola vez                      |
+| `pnpm lint`          | Ejecuta ESLint                                        |
+| `pnpm format`        | Formatea el código con Prettier                       |
+| `pnpm format:check`  | Comprueba el formato sin modificar archivos           |
 
 ## Verificación de la instalación
 
@@ -244,17 +285,9 @@ aceptación formal o pagos de siniestros.
 
 En modo mock, los datos no salen del navegador y la sesión se conserva en `sessionStorage`.
 
-En modo backend, el BFF vigente devuelve tokens Bearer. El frontend los conserva en
-`sessionStorage` durante la pestaña y envía el token de acceso únicamente a los recursos
-de su API configurada; no lo envía a traducciones, al inicio de sesión ni a terceros.
-Al iniciar la aplicación consulta la sesión en el BFF y, si la comprobación falla,
-descarta la autorización local. Al cerrar sesión también envía el token de renovación
-para revocarlo. No hay renovación automática: al vencer la sesión se debe volver a
-iniciar sesión. Los tokens son credenciales temporales y no deben copiarse a código,
-capturas ni registros. En despliegues se requiere HTTPS.
-
-Si la respuesta del BFF no incluye documento o teléfono, la interfaz lo indica como
-no disponible en vez de inventar datos personales.
+En modo backend la sesión se maneja con tokens JWT (ver «Autenticación con tokens»): el access
+token no se persiste y el refresh token se guarda en `sessionStorage`. Al iniciar la aplicación
+se renueva la sesión con el backend.
 
 ## Sistema visual
 

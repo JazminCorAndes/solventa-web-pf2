@@ -3,6 +3,11 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface RegistrationData {
+  name: string;
+  email: string;
+  password: string;
+}
 export type DocumentType = 'cc' | 'ce' | 'passport' | 'ppt';
 
 export interface AuthUser {
@@ -15,9 +20,19 @@ export interface AuthUser {
   phone?: string;
 }
 
+/** `expiresAt` es el vencimiento del access token, tal como lo informa el backend. */
 export interface AuthSession {
   user: AuthUser;
   expiresAt: number;
-  accessToken?: string;
-  refreshToken?: string;
+}
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  refreshExpiresAt: number;
+}
+
+export interface AuthGrant {
+  session: AuthSession;
+  tokens: AuthTokens;
 }
