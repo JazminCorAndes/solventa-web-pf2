@@ -66,7 +66,8 @@ pipeline {
                         --scope 'Código instrumentado por Angular/Vitest V8. No incluye pruebas E2E ni servicios externos.'
                     ''')
                     def summary = readFile(file: 'reports/coverage-summary.md', encoding: 'UTF-8')
-                    summary += "\nRevisión compilada (puede incluir merge con destino): `${env.GIT_COMMIT}`.\n"
+                    def revision = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    summary += "\nRevisión compilada (puede incluir merge con destino): `${revision}`.\n"
                     publishChecks name: 'Cobertura', title: summary.readLines()[0], summary: summary,
                         detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks",
                         conclusion: result == 0 ? 'SUCCESS' : (currentBuild.currentResult == 'SUCCESS' ? 'FAILURE' : 'NEUTRAL')
