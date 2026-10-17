@@ -24,6 +24,7 @@
     },
     "errors": {
       "invalidCredentials": "The username or password is incorrect.",
+      "tooManyAttempts": "Too many attempts. Wait a few minutes before trying again.",
       "unavailable": "Sign in is currently unavailable. Please try again.",
       "unexpected": "An unexpected error occurred. Please try again."
     }
@@ -41,6 +42,7 @@
     "secureSession": "Secure session",
     "menu": "Menu",
     "dashboard": "Home",
+    "insuranceCatalog": "Insurance",
     "quotes": "Quotes",
     "policies": "My insurance",
     "claims": "Claims",
@@ -68,6 +70,39 @@
     "status": {
       "active": "Active",
       "pending": "Pending"
+    }
+  },
+  "insuranceCatalog": {
+    "eyebrow": "Protection for every moment",
+    "title": "Explore our insurance",
+    "subtitle": "Compare coverage and conditions before requesting a quote.",
+    "loading": "Loading available insurance",
+    "available": "Available",
+    "view": "View insurance",
+    "viewProduct": "View {{ product }}",
+    "empty": {
+      "title": "No insurance is available",
+      "body": "We could not find products to display. Please try again."
+    },
+    "error": {
+      "title": "We could not load the insurance catalog",
+      "body": "The information is currently unavailable. You can try again."
+    },
+    "detail": {
+      "loading": "Loading insurance information",
+      "back": "Back to insurance",
+      "coverages": "What it covers",
+      "conditions": "Main conditions",
+      "keyInformation": "Key information",
+      "insuredAmount": "Reference insured amount",
+      "deductible": "Deductible",
+      "term": "Term",
+      "quoteTitle": "Does this insurance fit your needs?",
+      "quoteBody": "Complete your information to receive a personalized proposal.",
+      "quoteAction": "Quote this insurance",
+      "notFoundTitle": "Insurance not found",
+      "errorTitle": "We could not load this insurance",
+      "errorBody": "Return to the catalog or try loading the information again."
     }
   },
   "quoteRequest": {
@@ -239,6 +274,7 @@
     "coveragesTitle": "Coverages",
     "conditionsTitle": "Main conditions",
     "unavailableMessage": "This offer can no longer be selected.",
+    "acceptedMessage": "This is the accepted offer for this quote.",
     "selectToContinue": "Select an available offer to continue.",
     "readyToContinue": "{{ name }} is ready to continue.",
     "continue": "Review selection",
@@ -246,6 +282,7 @@
     "refreshNote": "You can compare this offer with other alternatives in the list.",
     "status": {
       "available": "Available",
+      "accepted": "Accepted",
       "expired": "Expired",
       "withdrawn": "Withdrawn"
     },
@@ -261,10 +298,38 @@
     }
   },
   "acceptance": {
-    "step": "Your quote",
-    "title": "Your offer summary",
+    "step": "3 of 4 · Confirm your protection",
+    "title": "Confirm your protection",
+    "subtitle": "Review the plan and insurance details before confirming your selection.",
     "selectedOffer": "Selected offer",
-    "body": "Your selected offer is linked to your quote. Review its coverages and conditions in the plan details.",
-    "backToOffers": "Back to offers"
+    "monthlyPremium": "Monthly premium",
+    "includedCoverages": "Included coverages",
+    "insuranceData": "Insurance details",
+    "policyholder": "Policyholder",
+    "consent": "I confirm that I reviewed the details and accept the conditions and coverages of the selected offer.",
+    "confirmAction": "Confirm selection",
+    "confirming": "Confirming",
+    "confirmedTitle": "Selection confirmed",
+    "confirmedBody": "The offer was registered successfully.",
+    "continueAction": "Process subscription",
+    "loading": "Loading your protection summary.",
+    "backToOffers": "Back to offers",
+    "errors": {
+      "unavailable": "The offer changed or expired. Return to the offers to select an available option.",
+      "confirmation": "The selection could not be confirmed. Please try again.",
+      "subscription": "The subscription could not be processed. Please try again."
+    }
+  },
+  "subscription": {
+    "eyebrow": "Subscription",
+    "title": "Subscription approved",
+    "subtitle": "The offer meets the conditions and payment is enabled.",
+    "operation": "Operation identifier",
+    "offer": "Accepted offer",
+    "decision": "Decision",
+    "approved": "Approved",
+    "rule": "Applied rule",
+    "next": "The next step is to register payment to issue the policy.",
+    "back": "Back to acceptance"
   }
 }

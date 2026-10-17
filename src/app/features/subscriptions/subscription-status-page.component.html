@@ -1,0 +1,37 @@
+<section class="subscription-page">
+  @if (subscriptions.subscription(); as subscription) {
+    <header>
+      <span>{{ 'subscription.eyebrow' | transloco }}</span>
+      <h1>{{ 'subscription.title' | transloco }}</h1>
+      <p>{{ 'subscription.subtitle' | transloco }}</p>
+    </header>
+
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <span class="success-icon"><app-icon name="check" [size]="30" /></span>
+        <dl>
+          <div>
+            <dt>{{ 'subscription.operation' | transloco }}</dt>
+            <dd>{{ subscription.id }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'subscription.offer' | transloco }}</dt>
+            <dd>{{ subscription.offerId }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'subscription.decision' | transloco }}</dt>
+            <dd>{{ 'subscription.approved' | transloco }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'subscription.rule' | transloco }}</dt>
+            <dd>{{ subscription.ruleVersion }}</dd>
+          </div>
+        </dl>
+        <p class="next-step">{{ 'subscription.next' | transloco }}</p>
+        <a mat-stroked-button routerLink="/app/cotizaciones/aceptacion">
+          ← {{ 'subscription.back' | transloco }}
+        </a>
+      </mat-card-content>
+    </mat-card>
+  }
+</section>

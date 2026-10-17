@@ -78,6 +78,7 @@ class TestOfferGateway implements OfferGateway {
       premium: offer.premium,
       periodicity: offer.periodicity,
       selectedAt: '2026-10-11T01:00:00.000Z',
+      confirmed: true,
     });
   }
 }
@@ -133,6 +134,7 @@ describe('OfferSelectionService', () => {
     expect(service.selectedOfferId()).toBe('offer-a');
     expect(service.canContinue()).toBe(true);
     expect(storage.selection?.offerName).toBe('Oferta A');
+    expect(storage.selection?.confirmed).toBe(false);
   });
 
   it('keeps only the latest selected offer', () => {
@@ -143,6 +145,17 @@ describe('OfferSelectionService', () => {
 
     expect(service.selectedOfferId()).toBe('offer-b');
     expect(storage.selection?.offerId).toBe('offer-b');
+  });
+
+  it('keeps a local selection pending until the customer confirms it', () => {
+    service.load();
+    service.selectOffer(AVAILABLE_OFFER);
+
+    service.load();
+
+    expect(service.selectedOfferId()).toBe('offer-a');
+    expect(service.confirmedSelection()).toBeNull();
+    expect(storage.selection?.confirmed).toBe(false);
   });
 
   it('reports an empty state without offers', () => {
@@ -183,7 +196,23 @@ describe('OfferSelectionService', () => {
     const confirmed = await firstValueFrom(service.confirmSelected());
 
     expect(confirmed.offerId).toBe('offer-a');
-    expect(service.confirmedSelection()).toEqual(confirmed);
+    expect(service.confirmedSelection()).toEqual({ ...confirmed, confirmed: true });
+  });
+
+  it('restores an accepted offer as the confirmed selection', async () => {
+    service.load();
+    service.selectOffer(AVAILABLE_OFFER);
+    await firstValueFrom(service.confirmSelected());
+    gateway.calculation = {
+      ...CALCULATION,
+      offers: [{ ...AVAILABLE_OFFER, status: 'accepted' }, SECOND_OFFER],
+    };
+
+    service.load();
+
+    expect(service.selectedOffer()?.status).toBe('accepted');
+    expect(service.confirmedSelection()?.offerId).toBe(AVAILABLE_OFFER.id);
+    expect(service.canContinue()).toBe(true);
   });
 
   it.each(PREMIUM_PERIODICITIES)(

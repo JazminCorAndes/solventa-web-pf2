@@ -1,0 +1,229 @@
+.acceptance-page {
+  display: grid;
+  gap: var(--solventa-space-6);
+  width: min(100%, 1120px);
+  margin: 0 auto;
+}
+
+.page-header {
+  display: grid;
+  gap: var(--solventa-space-2);
+}
+
+.step,
+.section-label {
+  color: var(--solventa-color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-header h1,
+.plan-heading h2,
+.details-card h2,
+.plan-card h3,
+.page-header p,
+.plan-heading p,
+.confirmation-banner p,
+.loading-card p {
+  margin: 0;
+}
+
+.page-header p,
+.plan-heading p,
+.premium span,
+.confirmation-banner p,
+.loading-card p {
+  color: var(--solventa-color-text-secondary);
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: var(--solventa-space-5);
+}
+
+mat-card {
+  border-color: var(--solventa-color-border);
+}
+
+mat-card-content {
+  display: grid;
+  gap: var(--solventa-space-5);
+  padding: var(--solventa-space-6);
+}
+
+.plan-card {
+  border-top: 3px solid var(--solventa-color-primary);
+}
+
+.plan-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--solventa-space-5);
+}
+
+.plan-heading > div:first-child {
+  display: grid;
+  gap: var(--solventa-space-2);
+}
+
+.premium {
+  display: grid;
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.premium strong {
+  color: var(--solventa-color-primary);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.coverage-summary,
+.product-details {
+  display: grid;
+  gap: var(--solventa-space-3);
+  margin: 0;
+}
+
+.coverage-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: var(--solventa-space-4);
+  border-radius: var(--solventa-radius-md);
+  background: var(--solventa-color-surface-muted);
+}
+
+.coverage-summary div,
+.product-details div {
+  display: grid;
+  gap: var(--solventa-space-1);
+}
+
+dt {
+  color: var(--solventa-color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.product-details div {
+  padding-bottom: var(--solventa-space-3);
+  border-bottom: 1px solid var(--solventa-color-border);
+}
+
+.product-details div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.coverage-list {
+  display: grid;
+  gap: var(--solventa-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coverage-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--solventa-space-2);
+}
+
+.coverage-list app-icon {
+  color: var(--solventa-color-success);
+}
+
+.confirmation-banner,
+.confirmation-error {
+  border-radius: var(--solventa-radius-md);
+}
+
+.confirmation-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--solventa-space-3);
+  padding: var(--solventa-space-4);
+  color: var(--solventa-color-success);
+  background: var(--solventa-color-success-soft);
+}
+
+.confirmation-banner > span {
+  display: grid;
+  place-items: center;
+}
+
+.confirmation-banner p {
+  margin-top: var(--solventa-space-1);
+}
+
+.confirmation-error {
+  padding: var(--solventa-space-3) var(--solventa-space-4);
+  color: var(--solventa-color-danger);
+  background: var(--solventa-color-danger-soft);
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--solventa-space-3);
+}
+
+.actions button {
+  min-width: 190px;
+}
+
+.actions mat-spinner {
+  display: inline-block;
+  margin-right: var(--solventa-space-2);
+}
+
+.loading-card mat-card-content {
+  justify-items: center;
+  padding: var(--solventa-space-8);
+}
+
+@media (max-width: 820px) {
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .acceptance-page {
+    gap: var(--solventa-space-5);
+  }
+
+  mat-card-content {
+    padding: var(--solventa-space-5);
+  }
+
+  .plan-heading {
+    display: grid;
+  }
+
+  .premium {
+    text-align: left;
+  }
+
+  .coverage-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    display: grid;
+  }
+
+  .actions a,
+  .actions button {
+    width: 100%;
+  }
+}

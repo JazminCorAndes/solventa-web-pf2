@@ -5,6 +5,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of } from 'rxjs';
+import { AuthService } from '../../core/auth/auth.service';
+import { QuoteRequestService } from '../../core/quotes/quote-request.service';
+import { SubscriptionService } from '../../core/subscriptions/subscription.service';
 import {
   InsuranceOffer,
   OfferCalculation,
@@ -48,6 +51,7 @@ async function configurePage(periodicity: PremiumPeriodicity): Promise<void> {
     premium: offer.premium,
     periodicity,
     selectedAt: '2026-10-17T00:00:00Z',
+    confirmed: true,
   };
   const calculation: OfferCalculation = {
     quoteId: selection.quoteId,
@@ -106,7 +110,22 @@ async function configurePage(periodicity: PremiumPeriodicity): Promise<void> {
         translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
       }),
     ],
-    providers: [provideRouter([]), { provide: OfferSelectionService, useValue: service }],
+    providers: [
+      provideRouter([]),
+      { provide: OfferSelectionService, useValue: service },
+      { provide: AuthService, useValue: { user: signal(null) } },
+      {
+        provide: QuoteRequestService,
+        useValue: {
+          latestRequest: signal(null),
+          products: signal([]),
+          travelDestinations: signal([]),
+          loadProducts: vi.fn(),
+          loadTravelDestinations: vi.fn(),
+        },
+      },
+      { provide: SubscriptionService, useValue: { start: vi.fn() } },
+    ],
   }).compileComponents();
 }
 
@@ -136,7 +155,7 @@ describe('Importe y periodicidad visibles', () => {
       const fixture = TestBed.createComponent(OfferAcceptancePageComponent);
       fixture.detectChanges();
 
-      const summary = fixture.nativeElement.querySelector('.selection-summary');
+      const summary = fixture.nativeElement.querySelector('.premium');
       expect(summary.textContent).toContain(label);
       expect(summary.textContent.replace(/\s+/g, '')).toContain('$48.000');
       if (periodicity !== 'mensual') {

@@ -63,7 +63,8 @@ function toSelectionRecord(value: unknown): SelectedOfferRecord | null {
     typeof candidate.offerId !== 'string' ||
     typeof candidate.offerVersion !== 'number' ||
     typeof candidate.offerName !== 'string' ||
-    typeof candidate.selectedAt !== 'string'
+    typeof candidate.selectedAt !== 'string' ||
+    (candidate.confirmed !== undefined && typeof candidate.confirmed !== 'boolean')
   ) {
     return null;
   }
@@ -92,6 +93,7 @@ function toSelectionRecord(value: unknown): SelectedOfferRecord | null {
     premium,
     periodicity,
     selectedAt: candidate.selectedAt,
+    confirmed: candidate.confirmed ?? true,
   };
 }
 

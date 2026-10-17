@@ -1,11 +1,13 @@
 import { InjectionToken } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AuthSession, LoginCredentials } from './auth.models';
+import { AuthGrant, AuthSession, AuthUser, LoginCredentials, RegistrationData } from './auth.models';
 
 export interface AuthGateway {
-  login(credentials: LoginCredentials): Observable<AuthSession>;
+  register(data: RegistrationData): Observable<AuthUser>;
+  login(credentials: LoginCredentials): Observable<AuthGrant>;
+  refresh(refreshToken: string): Observable<AuthGrant>;
   currentSession(): Observable<AuthSession | null>;
-  logout(): Observable<void>;
+  logout(refreshToken: string | null): Observable<void>;
 }
 
 export const AUTH_GATEWAY = new InjectionToken<AuthGateway>('AUTH_GATEWAY');

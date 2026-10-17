@@ -39,7 +39,7 @@ interface OfferResponse extends PremiumResponse {
   condiciones: string[];
   beneficiosAdicionales: string[];
   recomendada: boolean;
-  estado: 'disponible' | 'vencida' | 'retirada';
+  estado: 'disponible' | 'aceptada' | 'vencida' | 'retirada';
   vigenteHasta: string;
 }
 
@@ -71,9 +71,7 @@ export class HttpOfferGateway implements OfferGateway {
       return throwError(() => new Error('A quote request is required before loading offers.'));
     }
     return this.http
-      .get<OffersResponse>(`${this.apiUrl}/${quoteId}/ofertas`, {
-        withCredentials: true,
-      })
+      .get<OffersResponse>(`${this.apiUrl}/${quoteId}/ofertas`)
       .pipe(
         map((response) => ({
           quoteId: response.solicitudId,
@@ -87,9 +85,7 @@ export class HttpOfferGateway implements OfferGateway {
 
   loadSelection(quoteId: string): Observable<SelectedOfferRecord | null> {
     return this.http
-      .get<SelectionResponse>(`${this.apiUrl}/${quoteId}/seleccion`, {
-        withCredentials: true,
-      })
+      .get<SelectionResponse>(`${this.apiUrl}/${quoteId}/seleccion`)
       .pipe(
         map(toSelection),
         catchError((error: unknown) => {
@@ -112,7 +108,6 @@ export class HttpOfferGateway implements OfferGateway {
         { ofertaId: offerId, version: offerVersion },
         {
           headers: new HttpHeaders({ 'Idempotency-Key': crypto.randomUUID() }),
-          withCredentials: true,
         },
       )
       .pipe(
@@ -155,6 +150,7 @@ function toSelection(response: SelectionResponse): SelectedOfferRecord {
     offerName: response.nombreOferta,
     ...toPremium(response),
     selectedAt: response.seleccionadaEn,
+    confirmed: true,
   };
 }
 
@@ -186,6 +182,7 @@ function toMoney(response: MoneyResponse | null | undefined): Money {
 function toStatus(status: OfferResponse['estado']): OfferStatus {
   const statuses: Record<OfferResponse['estado'], OfferStatus> = {
     disponible: 'available',
+    aceptada: 'accepted',
     vencida: 'expired',
     retirada: 'withdrawn',
   };

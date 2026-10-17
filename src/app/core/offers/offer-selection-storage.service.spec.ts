@@ -11,6 +11,7 @@ const SELECTION: SelectedOfferRecord = {
   premium: { amount: 48_000, currency: 'COP' },
   periodicity: 'mensual',
   selectedAt: '2026-10-17T00:00:00Z',
+  confirmed: true,
 };
 
 describe('BrowserOfferSelectionStorage', () => {
@@ -49,6 +50,21 @@ describe('BrowserOfferSelectionStorage', () => {
         selectedAt: SELECTION.selectedAt,
       }),
     );
+
+    expect(storage.read()).toEqual(SELECTION);
+  });
+
+  it('conserva una selección sin confirmar al recargar', () => {
+    const selection = { ...SELECTION, confirmed: false };
+    storage.write(selection);
+
+    expect(storage.read()).toEqual(selection);
+  });
+
+  it('migra las selecciones previas sin el indicador de confirmación', () => {
+    const { confirmed, ...legacy } = SELECTION;
+    expect(confirmed).toBe(true);
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
 
     expect(storage.read()).toEqual(SELECTION);
   });

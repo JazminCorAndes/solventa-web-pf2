@@ -12,12 +12,13 @@ import {
 import { provideRouter } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { routes } from './app.routes';
+import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { AUTH_GATEWAY } from './core/auth/auth.gateway';
 import { AUTH_STORAGE, BrowserAuthStorage } from './core/auth/auth-storage.service';
-import { sessionBearerInterceptor } from './core/auth/session-bearer.interceptor';
 import { DASHBOARD_GATEWAY } from './core/dashboard/dashboard.gateway';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
+import { INSURANCE_CATALOG_GATEWAY } from './core/insurance-catalog/insurance-catalog.gateway';
 import { OFFER_GATEWAY } from './core/offers/offer.gateway';
 import {
   BrowserOfferSelectionStorage,
@@ -26,8 +27,17 @@ import {
 import { MockAuthGateway } from './data-access/auth/mock-auth.gateway';
 import { HttpAuthGateway } from './data-access/auth/http-auth.gateway';
 import { MockDashboardGateway } from './data-access/dashboard/mock-dashboard.gateway';
+import { HttpInsuranceCatalogGateway } from './data-access/insurance-catalog/http-insurance-catalog.gateway';
+import { MockInsuranceCatalogGateway } from './data-access/insurance-catalog/mock-insurance-catalog.gateway';
 import { MockOfferGateway } from './data-access/offers/mock-offer.gateway';
 import { HttpOfferGateway } from './data-access/offers/http-offer.gateway';
+import { SUBSCRIPTION_GATEWAY } from './core/subscriptions/subscription.gateway';
+import {
+  BrowserSubscriptionStorage,
+  SUBSCRIPTION_STORAGE,
+} from './core/subscriptions/subscription-storage.service';
+import { HttpSubscriptionGateway } from './data-access/subscriptions/http-subscription.gateway';
+import { MockSubscriptionGateway } from './data-access/subscriptions/mock-subscription.gateway';
 import { QUOTE_REQUEST_GATEWAY } from './core/quotes/quote-request.gateway';
 import {
   BrowserQuoteRequestStorage,
@@ -45,14 +55,23 @@ const backendMode = environment.dataAccessMode === 'backend';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors(backendMode ? [sessionBearerInterceptor] : [])),
+    provideHttpClient(withInterceptors(backendMode ? [authInterceptor] : [])),
     provideRouter(routes),
     { provide: LOCALE_ID, useValue: 'es-CO' },
     { provide: AUTH_GATEWAY, useClass: backendMode ? HttpAuthGateway : MockAuthGateway },
     { provide: AUTH_STORAGE, useClass: BrowserAuthStorage },
     { provide: DASHBOARD_GATEWAY, useClass: MockDashboardGateway },
+    {
+      provide: INSURANCE_CATALOG_GATEWAY,
+      useClass: backendMode ? HttpInsuranceCatalogGateway : MockInsuranceCatalogGateway,
+    },
     { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
+    {
+      provide: SUBSCRIPTION_GATEWAY,
+      useClass: backendMode ? HttpSubscriptionGateway : MockSubscriptionGateway,
+    },
+    { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
     {
       provide: QUOTE_REQUEST_GATEWAY,
       useClass: backendMode ? HttpQuoteRequestGateway : MockQuoteRequestGateway,

@@ -25,7 +25,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { distinctUntilChanged, finalize, startWith, take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -72,6 +72,7 @@ import { LocalizedDateAdapter } from '../../shared/dates/localized-date-adapter'
 export class QuoteRequestPageComponent implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly translations = inject(TranslocoService);
   private readonly dateAdapter = inject<DateAdapter<Date>>(DateAdapter);
@@ -152,6 +153,10 @@ export class QuoteRequestPageComponent implements OnInit {
         Object.assign(this.calendarLabels, labels);
         this.calendarLabels.changes.next();
       });
+    const requestedProduct = this.route.snapshot.queryParamMap.get('producto');
+    if (requestedProduct) {
+      this.form.controls.productId.setValue(requestedProduct);
+    }
     this.quotes.loadProducts();
     this.quotes.loadTravelDestinations();
     this.form.controls.productId.valueChanges

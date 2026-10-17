@@ -1,6 +1,6 @@
 import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -154,6 +154,20 @@ describe('QuoteRequestPageComponent', () => {
     expect(gateway.submitCalls).toBe(0);
     expect(component.attempted()).toBe(true);
     expect(component.form.controls.productId.touched).toBe(true);
+  });
+
+  it('preselects the catalog product while retaining its risk-field validation', () => {
+    vi.spyOn(TestBed.inject(ActivatedRoute).snapshot.queryParamMap, 'get').mockReturnValue(
+      'parametric-weather',
+    );
+    const catalogFixture = TestBed.createComponent(QuoteRequestPageComponent);
+    catalogFixture.detectChanges();
+    const catalogComponent = catalogFixture.componentInstance;
+
+    expect(catalogComponent.selectedProduct()?.id).toBe('parametric-weather');
+    expect(catalogComponent.form.controls.location.hasError('required')).toBe(true);
+    expect(catalogComponent.form.controls.startDate.hasError('required')).toBe(true);
+    expect(catalogComponent.form.controls.vehiclePlate.valid).toBe(true);
   });
 
   it('rejects invalid product field formats', () => {
