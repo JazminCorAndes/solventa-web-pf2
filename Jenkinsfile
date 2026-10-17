@@ -18,17 +18,17 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Código') {
             steps {
                 checkout scm
             }
         }
-        stage('Verify toolchain') {
+        stage('Herramientas') {
             steps {
                 sh 'node scripts/verify-ci-toolchain.cjs'
             }
         }
-        stage('Install dependencies') {
+        stage('Dependencias') {
             steps {
                 sh 'pnpm install --frozen-lockfile --store-dir "$PNPM_STORE_DIR"'
             }
@@ -38,12 +38,12 @@ pipeline {
                 sh 'pnpm lint'
             }
         }
-        stage('Unit and component tests') {
+        stage('Pruebas y cobertura') {
             steps {
-                sh 'mkdir -p reports && pnpm exec ng test --watch=false --reporters=junit --output-file=reports/unit-tests.xml'
+                sh 'mkdir -p reports && pnpm test:coverage'
             }
         }
-        stage('Production build') {
+        stage('Compilación') {
             steps {
                 sh 'pnpm build'
             }
@@ -57,7 +57,7 @@ pipeline {
                     junit testResults: 'reports/unit-tests.xml', allowEmptyResults: false
                 }
             }
-            archiveArtifacts artifacts: 'reports/*.xml', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'reports/*.xml,coverage/**', allowEmptyArchive: true
             deleteDir()
         }
     }
