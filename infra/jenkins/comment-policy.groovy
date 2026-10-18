@@ -1,4 +1,8 @@
 class SolventaWebCommentPolicy {
+    static boolean canSchedule(boolean queued, boolean building) {
+        !queued && !building
+    }
+
     static boolean eligible(Map comment, long enabledAt, Collection<Long> processed) {
         comment.id instanceof Number &&
             comment.body instanceof String && comment.body.trim() == '/test-jenkins' &&

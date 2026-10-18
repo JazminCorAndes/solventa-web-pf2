@@ -14,6 +14,8 @@ import {
   InsuranceProduct,
   QuoteRequestDraft,
   QuoteRequestRecord,
+  QuoteProductData,
+  TravelDestination,
 } from '../../core/quotes/quote-request.models';
 import {
   QUOTE_REQUEST_STORAGE,
@@ -29,10 +31,11 @@ const RECORD: QuoteRequestRecord = {
   createdAt: '2026-10-11T12:00:00.000Z',
   productId: 'automotive',
   customerType: 'natural',
+  documentType: 'cc',
   nationalId: '12345678-9',
-  vehiclePlate: 'ABC123',
+  productData: { vehiclePlate: 'ABC123' },
   email: 'cliente@solventa.co',
-  phone: '+56912345678',
+  phone: '+573001234567',
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
@@ -45,6 +48,10 @@ class TestQuoteRequestGateway implements QuoteRequestGateway {
         available: true,
       },
     ]);
+  }
+
+  loadTravelDestinations(): Observable<TravelDestination[]> {
+    return of([{ code: 'CO', name: 'Colombia' }]);
   }
 
   submitRequest(request: QuoteRequestDraft): Observable<QuoteRequestRecord> {
@@ -128,4 +135,19 @@ describe('QuoteSummaryPageComponent', () => {
       fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
     ).not.toBeNull();
   });
+
+  it.each<QuoteProductData>([{ coverageType: 'missed-connection' }, { weatherEvent: 'drought' }])(
+    'traduce los valores de cobertura sin mostrar códigos al cliente',
+    (productData) => {
+      storage.request = { ...RECORD, productData };
+      fixture = TestBed.createComponent(QuoteSummaryPageComponent);
+      fixture.detectChanges();
+      const detail = fixture.componentInstance.productDetails()[0];
+      expect(detail.valueKey).toBe(
+        'coverageType' in productData
+          ? 'quoteRequest.flightCoverages.missed-connection'
+          : 'quoteRequest.weatherEvents.drought',
+      );
+    },
+  );
 });

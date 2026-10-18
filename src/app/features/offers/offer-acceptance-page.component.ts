@@ -1,114 +1,133 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { RouterLink } from '@angular/router';
+import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { finalize, switchMap, take } from 'rxjs';
+import { AuthService } from '../../core/auth/auth.service';
+import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferSelectionService } from '../../core/offers/offer-selection.service';
+import { ACTIVE_MARKET } from '../../core/market/market.config';
+import { QuoteRequestService } from '../../core/quotes/quote-request.service';
 import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
+import { SubscriptionService } from '../../core/subscriptions/subscription.service';
 
 @Component({
   selector: 'app-offer-acceptance-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DecimalPipe,
+    CurrencyPipe,
+    DatePipe,
     MatButtonModule,
     MatCardModule,
+    MatCheckboxModule,
+    MatProgressSpinnerModule,
     RouterLink,
     SvgIconComponent,
     TranslocoPipe,
   ],
-  template: `
-    <section class="acceptance-page">
-      <mat-card appearance="raised">
-        <mat-card-content>
-          <span class="success-icon"><app-icon name="check" [size]="30" /></span>
-          <span class="step">{{ 'acceptance.step' | transloco }}</span>
-          <h1>{{ 'acceptance.title' | transloco }}</h1>
-          @if (selection.confirmedSelection(); as selected) {
-            <div class="selection-summary">
-              <span>{{ 'acceptance.selectedOffer' | transloco }}</span>
-              <strong>{{ selected.offerName }}</strong>
-              <span>{{ selected.currency }} {{ selected.monthlyPremium | number: '1.2-2' }}</span>
-            </div>
-          }
-          <p>{{ 'acceptance.body' | transloco }}</p>
-          <a mat-stroked-button routerLink="/app/cotizaciones/ofertas">
-            ← {{ 'acceptance.backToOffers' | transloco }}
-          </a>
-        </mat-card-content>
-      </mat-card>
-    </section>
-  `,
-  styles: `
-    .acceptance-page {
-      display: grid;
-      min-height: calc(100dvh - 136px);
-      place-items: center;
-    }
-
-    mat-card {
-      width: min(100%, 620px);
-      border-top: 2px solid var(--solventa-color-primary);
-    }
-
-    mat-card-content {
-      padding: var(--solventa-space-8);
-      text-align: center;
-    }
-
-    .step {
-      color: var(--solventa-color-text-secondary);
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .success-icon {
-      display: grid;
-      width: 4rem;
-      height: 4rem;
-      margin: 0 auto var(--solventa-space-5);
-      border-radius: 50%;
-      color: var(--solventa-color-success);
-      background: var(--solventa-color-success-soft);
-      place-items: center;
-    }
-
-    h1 {
-      margin: var(--solventa-space-3) 0 var(--solventa-space-6);
-    }
-
-    .selection-summary {
-      display: grid;
-      gap: var(--solventa-space-2);
-      padding: var(--solventa-space-5);
-      border-radius: var(--solventa-radius-md);
-      background: var(--solventa-color-surface-muted);
-    }
-
-    .selection-summary span {
-      color: var(--solventa-color-text-secondary);
-    }
-
-    p {
-      margin: var(--solventa-space-6) 0;
-      color: var(--solventa-color-text-secondary);
-    }
-
-    @media (max-width: 600px) {
-      .acceptance-page {
-        min-height: auto;
-        padding: var(--solventa-space-4) 0;
-      }
-
-      mat-card-content {
-        padding: var(--solventa-space-6) var(--solventa-space-5);
-      }
-    }
-  `,
+  templateUrl: './offer-acceptance-page.component.html',
+  styleUrl: './offer-acceptance-page.component.scss',
 })
-export class OfferAcceptancePageComponent {
-  readonly selection = inject(OfferSelectionService);
+export class OfferAcceptancePageComponent implements OnInit {
+  private readonly router = inject(Router);
+  readonly offers = inject(OfferSelectionService);
+  readonly subscriptions = inject(SubscriptionService);
+  readonly quotes = inject(QuoteRequestService);
+  readonly user = inject(AuthService).user;
+  readonly market = ACTIVE_MARKET;
+  readonly accepted = signal(false);
+  readonly confirming = signal(false);
+  readonly errorKey = signal<string | null>(null);
+  readonly request = this.quotes.latestRequest;
+  readonly selectedOffer = this.offers.selectedOffer;
+  readonly confirmed = computed(
+    () => this.offers.confirmedSelection()?.offerId === this.selectedOffer()?.id,
+  );
+  readonly productName = computed(() => {
+    const request = this.request();
+    return (
+      this.quotes.products().find((product) => product.id === request?.productId)?.name ??
+      request?.productId
+    );
+  });
+  readonly productDetails = computed(() => {
+    const request = this.request();
+    return request
+      ? Object.entries(request.productData).map(([key, value]) => ({
+          labelKey: `quoteRequest.fields.${key}`,
+          value:
+            key === 'destinationCountryCode'
+              ? (this.quotes.travelDestinations().find((destination) => destination.code === value)
+                  ?.name ?? value)
+              : value,
+          isDate: key.toLowerCase().endsWith('date'),
+        }))
+      : [];
+  });
+
+  ngOnInit(): void {
+    this.quotes.loadProducts();
+    this.quotes.loadTravelDestinations();
+    this.offers.load();
+  }
+
+  updateConsent(event: MatCheckboxChange): void {
+    this.accepted.set(event.checked);
+    this.errorKey.set(null);
+  }
+
+  confirm(): void {
+    if (!this.accepted() || this.confirming() || this.confirmed()) {
+      return;
+    }
+
+    this.confirming.set(true);
+    this.errorKey.set(null);
+    this.offers
+      .confirmSelected()
+      .pipe(
+        switchMap(() => this.subscriptions.start()),
+        take(1),
+        finalize(() => this.confirming.set(false)),
+      )
+      .subscribe({
+        next: () => void this.router.navigate(['/app/cotizaciones/suscripcion']),
+        error: (error: unknown) => {
+          this.errorKey.set(
+            error instanceof OfferUnavailableError
+              ? 'acceptance.errors.unavailable'
+              : 'acceptance.errors.subscription',
+          );
+        },
+      });
+  }
+
+  continueWithSubscription(): void {
+    if (this.confirming()) {
+      return;
+    }
+    this.confirming.set(true);
+    this.errorKey.set(null);
+    this.subscriptions
+      .start()
+      .pipe(
+        take(1),
+        finalize(() => this.confirming.set(false)),
+      )
+      .subscribe({
+        next: () => void this.router.navigate(['/app/cotizaciones/suscripcion']),
+        error: () => this.errorKey.set('acceptance.errors.subscription'),
+      });
+  }
 }

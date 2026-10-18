@@ -29,7 +29,9 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": [
+              "src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {
@@ -68,6 +70,17 @@
                   "with": "src/environments/environment.backend.ts"
                 }
               ]
+            },
+            "local": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.local.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -82,14 +95,20 @@
               "buildTarget": "solventa-web-pf2:build:development"
             },
             "backend": {
-              "buildTarget": "solventa-web-pf2:build:backend",
+              "buildTarget": "solventa-web-pf2:build:backend"
+            },
+            "local": {
+              "buildTarget": "solventa-web-pf2:build:local",
               "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverageReporters": ["text-summary", "html", "cobertura"]
+          }
         }
       }
     }

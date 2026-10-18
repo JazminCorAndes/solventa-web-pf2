@@ -18,7 +18,6 @@ export class HttpProfilingGateway implements ProfilingGateway {
     const startedAt = performance.now();
     return this.http
       .get<ProfilingConsent>(this.consentUrl, {
-        withCredentials: true,
         observe: 'response',
       })
       .pipe(
@@ -46,7 +45,7 @@ export class HttpProfilingGateway implements ProfilingGateway {
       .put<ProfilingConsent>(
         this.consentUrl,
         { autorizado: authorized, version },
-        { withCredentials: true, observe: 'response' },
+        { observe: 'response' },
       )
       .pipe(this.receive<ProfilingConsent>(startedAt));
   }
@@ -56,7 +55,7 @@ export class HttpProfilingGateway implements ProfilingGateway {
     return this.http
       .get<RiskProfile>(
         `${this.baseUrl}/solicitudes-cotizacion/${encodeURIComponent(requestId)}/perfilamiento`,
-        { withCredentials: true, observe: 'response' },
+        { observe: 'response' },
       )
       .pipe(this.receive<RiskProfile>(startedAt));
   }

@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, Observable, of } from 'rxjs';
 import { OFFER_GATEWAY, OfferGateway } from './offer.gateway';
-import { InsuranceOffer, OfferCalculation, SelectedOfferRecord } from './offer.models';
+import {
+  InsuranceOffer,
+  OfferCalculation,
+  PREMIUM_PERIODICITIES,
+  SelectedOfferRecord,
+} from './offer.models';
 import { OfferSelectionService } from './offer-selection.service';
 import { OFFER_SELECTION_STORAGE, OfferSelectionStorage } from './offer-selection-storage.service';
 
@@ -10,12 +15,12 @@ const AVAILABLE_OFFER: InsuranceOffer = {
   version: 1,
   name: 'Oferta A',
   description: 'Oferta disponible',
-  monthlyPremium: 1.5,
-  currency: 'UF',
+  premium: { amount: 149_900, currency: 'COP' },
+  periodicity: 'mensual',
   coverageLabel: 'Cobertura A',
-  deductibleLabel: 'UF 3',
+  deductibleLabel: '$500.000 COP',
   validityLabel: 'Anual',
-  liabilityLabel: 'UF 1.000',
+  liabilityLabel: '$1.000.000.000 COP',
   coverages: ['Cobertura principal'],
   conditions: ['Condición principal'],
   additionalBenefits: ['Asistencia'],
@@ -70,9 +75,10 @@ class TestOfferGateway implements OfferGateway {
       offerId,
       offerVersion,
       offerName: offer.name,
-      monthlyPremium: offer.monthlyPremium,
-      currency: offer.currency,
+      premium: offer.premium,
+      periodicity: offer.periodicity,
       selectedAt: '2026-10-11T01:00:00.000Z',
+      confirmed: true,
     });
   }
 }
@@ -128,6 +134,7 @@ describe('OfferSelectionService', () => {
     expect(service.selectedOfferId()).toBe('offer-a');
     expect(service.canContinue()).toBe(true);
     expect(storage.selection?.offerName).toBe('Oferta A');
+    expect(storage.selection?.confirmed).toBe(false);
   });
 
   it('keeps only the latest selected offer', () => {
@@ -138,6 +145,17 @@ describe('OfferSelectionService', () => {
 
     expect(service.selectedOfferId()).toBe('offer-b');
     expect(storage.selection?.offerId).toBe('offer-b');
+  });
+
+  it('keeps a local selection pending until the customer confirms it', () => {
+    service.load();
+    service.selectOffer(AVAILABLE_OFFER);
+
+    service.load();
+
+    expect(service.selectedOfferId()).toBe('offer-a');
+    expect(service.confirmedSelection()).toBeNull();
+    expect(storage.selection?.confirmed).toBe(false);
   });
 
   it('reports an empty state without offers', () => {
@@ -178,6 +196,40 @@ describe('OfferSelectionService', () => {
     const confirmed = await firstValueFrom(service.confirmSelected());
 
     expect(confirmed.offerId).toBe('offer-a');
-    expect(service.confirmedSelection()).toEqual(confirmed);
+    expect(service.confirmedSelection()).toEqual({ ...confirmed, confirmed: true });
   });
+
+  it('restores an accepted offer as the confirmed selection', async () => {
+    service.load();
+    service.selectOffer(AVAILABLE_OFFER);
+    await firstValueFrom(service.confirmSelected());
+    gateway.calculation = {
+      ...CALCULATION,
+      offers: [{ ...AVAILABLE_OFFER, status: 'accepted' }, SECOND_OFFER],
+    };
+
+    service.load();
+
+    expect(service.selectedOffer()?.status).toBe('accepted');
+    expect(service.confirmedSelection()?.offerId).toBe(AVAILABLE_OFFER.id);
+    expect(service.canContinue()).toBe(true);
+  });
+
+  it.each(PREMIUM_PERIODICITIES)(
+    'conserva el importe %s al seleccionar y confirmar',
+    async (periodicity) => {
+      const offer = { ...AVAILABLE_OFFER, periodicity };
+      gateway.calculation = { ...CALCULATION, offers: [offer] };
+      service.load();
+
+      expect(service.selectOffer(offer)).toBe(true);
+      expect(storage.selection?.periodicity).toBe(periodicity);
+      expect(storage.selection?.premium).toEqual(offer.premium);
+
+      const confirmed = await firstValueFrom(service.confirmSelected());
+      expect(confirmed.periodicity).toBe(periodicity);
+      expect(service.confirmedSelection()?.periodicity).toBe(periodicity);
+      expect(storage.selection).toEqual(confirmed);
+    },
+  );
 });

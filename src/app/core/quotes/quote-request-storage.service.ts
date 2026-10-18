@@ -57,10 +57,23 @@ function isQuoteRequestRecord(value: unknown): value is QuoteRequestRecord {
     candidate.status === 'received' &&
     typeof candidate.productId === 'string' &&
     candidate.customerType === 'natural' &&
+    isDocumentType(candidate.documentType) &&
     typeof candidate.nationalId === 'string' &&
-    typeof candidate.vehiclePlate === 'string' &&
+    isProductData(candidate.productData) &&
     typeof candidate.email === 'string' &&
     typeof candidate.phone === 'string' &&
     typeof candidate.createdAt === 'string'
+  );
+}
+
+function isDocumentType(value: unknown): boolean {
+  return value === 'cc' || value === 'ce' || value === 'passport' || value === 'ppt';
+}
+
+function isProductData(value: unknown): value is Record<string, string> {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    Object.values(value).every((item) => typeof item === 'string')
   );
 }

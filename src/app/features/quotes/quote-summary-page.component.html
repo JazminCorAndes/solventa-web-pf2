@@ -26,10 +26,12 @@
             <dt>{{ 'quoteSummary.requestedAt' | transloco }}</dt>
             <dd>{{ quote.createdAt | date: 'medium' }}</dd>
           </div>
-          <div>
-            <dt>{{ 'quoteSummary.vehiclePlate' | transloco }}</dt>
-            <dd>{{ quote.vehiclePlate }}</dd>
-          </div>
+          @for (detail of productDetails(); track detail.labelKey) {
+            <div>
+              <dt>{{ detail.labelKey | transloco }}</dt>
+              <dd>{{ detail.valueKey ? (detail.valueKey | transloco) : detail.value }}</dd>
+            </div>
+          }
           <div>
             <dt>{{ 'quoteSummary.email' | transloco }}</dt>
             <dd>{{ quote.email }}</dd>

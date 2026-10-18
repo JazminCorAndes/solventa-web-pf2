@@ -24,6 +24,7 @@
     },
     "errors": {
       "invalidCredentials": "El usuario o la contraseña son incorrectos.",
+      "tooManyAttempts": "Demasiados intentos. Espera unos minutos antes de intentarlo nuevamente.",
       "unavailable": "No fue posible iniciar sesión en este momento. Inténtalo nuevamente.",
       "unexpected": "Ocurrió un error inesperado. Inténtalo nuevamente."
     }
@@ -41,11 +42,11 @@
     "secureSession": "Sesión segura",
     "menu": "Menú",
     "dashboard": "Inicio",
+    "insuranceCatalog": "Seguros",
     "quotes": "Cotizaciones",
     "policies": "Mis seguros",
     "claims": "Siniestros",
-    "notifications": "Notificaciones",
-    "comingSoon": "Las demás operaciones estarán disponibles próximamente."
+    "notifications": "Notificaciones"
   },
   "theme": {
     "useLight": "Usar tema claro",
@@ -55,10 +56,10 @@
     "summary": "Resumen de tu cuenta",
     "greeting": "Hola, {{ name }}",
     "subtitle": "Consulta el estado de tus seguros y las novedades más recientes.",
-    "newQuote": "Nueva cotización",
+    "newQuote": "Cotizar seguro",
     "reportClaim": "Reportar siniestro",
     "loading": "Cargando tu información",
-    "error": "No fue posible cargar la información del dashboard.",
+    "error": "No fue posible cargar la información del panel de inicio.",
     "activePolicies": "Seguros activos",
     "policiesStatus": "Pólizas vigentes",
     "notifications": "Notificaciones",
@@ -71,6 +72,40 @@
       "pending": "Pendiente"
     }
   },
+  "insuranceCatalog": {
+    "eyebrow": "Protección para cada momento",
+    "title": "Conoce nuestros seguros",
+    "subtitle": "Compara coberturas y condiciones antes de solicitar una cotización.",
+    "loading": "Cargando seguros disponibles",
+    "available": "Disponible",
+    "unavailable": "No disponible para cotizar",
+    "view": "Conocer seguro",
+    "viewProduct": "Conocer {{ product }}",
+    "empty": {
+      "title": "No hay seguros disponibles",
+      "body": "No encontramos productos para mostrar en este momento. Inténtalo nuevamente."
+    },
+    "error": {
+      "title": "No pudimos cargar los seguros",
+      "body": "La información no está disponible en este momento. Puedes volver a intentarlo."
+    },
+    "detail": {
+      "loading": "Cargando información del seguro",
+      "back": "Volver a seguros",
+      "coverages": "Qué cubre",
+      "conditions": "Condiciones principales",
+      "keyInformation": "Información relevante",
+      "insuredAmount": "Suma asegurada de referencia",
+      "deductible": "Deducible",
+      "term": "Vigencia",
+      "quoteTitle": "¿Este seguro se ajusta a lo que necesitas?",
+      "quoteBody": "Completa tus datos para recibir una propuesta personalizada.",
+      "quoteAction": "Cotizar este seguro",
+      "notFoundTitle": "Seguro no encontrado",
+      "errorTitle": "No pudimos cargar este seguro",
+      "errorBody": "Regresa al catálogo o intenta consultar la información nuevamente."
+    }
+  },
   "quoteRequest": {
     "back": "Volver a cotizaciones",
     "title": "Solicitar cotización",
@@ -78,23 +113,78 @@
     "selectedInsurance": "Seguro seleccionado",
     "selectInsurancePlaceholder": "Selecciona un seguro",
     "changeInsurance": "Elegir seguro",
-    "comingSoon": "Próximamente",
+    "unavailableProduct": "No disponible para cotizar",
     "loadingProducts": "Cargando seguros disponibles",
-    "customerType": "Tipo de cliente",
-    "naturalPerson": "Persona natural",
-    "nationalId": "RUT / Identificación",
-    "vehiclePlate": "Patente del vehículo",
+    "documentType": "Tipo de documento",
+    "documentTypes": {
+      "cc": "Cédula de ciudadanía",
+      "ce": "Cédula de extranjería",
+      "passport": "Pasaporte",
+      "ppt": "Permiso por Protección Temporal (PPT)"
+    },
+    "nationalId": "Número de documento",
+    "profileData": "Datos del perfil",
+    "profileUnavailable": "Sin información",
+    "profileName": "Cliente",
+    "vehiclePlate": "Placa del vehículo",
     "email": "Correo electrónico",
     "phone": "Teléfono de contacto",
+    "fields": {
+      "vehiclePlate": "Placa del vehículo",
+      "destination": "País de destino",
+      "destinationPlaceholder": "Busca y selecciona un país",
+      "destinationCountryCode": "País de destino",
+      "travelDates": "Fechas del viaje",
+      "departureDate": "Fecha de salida",
+      "returnDate": "Fecha de regreso",
+      "birthDate": "Fecha de nacimiento",
+      "deviceType": "Tipo de dispositivo",
+      "deviceTypePlaceholder": "Celular",
+      "brandModel": "Marca y modelo",
+      "purchaseValue": "Valor de compra (COP)",
+      "airline": "Aerolínea",
+      "flightNumber": "Número de vuelo",
+      "flightDate": "Fecha del vuelo",
+      "coverageType": "Cobertura del vuelo",
+      "location": "Municipio y departamento",
+      "locationPlaceholder": "Villavicencio, Meta",
+      "weatherEvent": "Evento climático",
+      "weatherDates": "Periodo de cobertura",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de finalización",
+      "insuredAmount": "Valor asegurado (COP)",
+      "creditType": "Tipo de crédito",
+      "monthlyPayment": "Cuota mensual (COP)",
+      "mortgageBalance": "Saldo del crédito hipotecario (COP)"
+    },
+    "flightCoverages": {
+      "delay-cancellation": "Retraso o cancelación",
+      "missed-connection": "Pérdida de conexión",
+      "comprehensive": "Retraso, cancelación y pérdida de conexión"
+    },
+    "weatherEvents": {
+      "heavy-rain": "Lluvia intensa",
+      "drought": "Sequía"
+    },
     "submit": "Solicitar cotización",
     "processing": "Enviando solicitud",
+    "processingTitle": "Estamos preparando tus ofertas",
+    "processingBody": "Validamos la información y consultamos los planes disponibles. Esto puede tardar unos segundos.",
     "riskProcessing": "Procesando solicitud de riesgo...",
     "received": "Solicitud recibida",
     "validation": {
       "nationalId": "Ingresa una identificación válida.",
-      "vehiclePlate": "Ingresa una patente válida.",
+      "vehiclePlate": "Ingresa una placa colombiana válida.",
       "email": "Ingresa un correo válido.",
       "phone": "Ingresa un teléfono válido.",
+      "required": "Completa este campo.",
+      "destination": "Selecciona un país de la lista.",
+      "returnDate": "La fecha de regreso debe ser igual o posterior a la salida.",
+      "positiveAmount": "Ingresa un valor mayor que cero.",
+      "flightNumber": "Ingresa un número de vuelo alfanumérico válido.",
+      "futureDate": "Selecciona una fecha válida posterior a hoy.",
+      "weatherDates": "La fecha final debe ser igual o posterior al inicio y el periodo no puede superar 366 días, contando ambas fechas.",
+      "insuredAmount": "Ingresa un valor entero entre 1 y 1.000.000.000 COP.",
       "summary": "Completa correctamente todos los campos obligatorios para continuar."
     },
     "success": {
@@ -104,22 +194,10 @@
     },
     "errors": {
       "products": "No fue posible cargar los seguros disponibles.",
+      "destinations": "No fue posible cargar los países disponibles.",
       "unavailable": "No fue posible enviar la solicitud en este momento. Inténtalo nuevamente.",
       "productUnavailable": "El seguro seleccionado ya no está disponible.",
       "unexpected": "Ocurrió un error inesperado al enviar la solicitud."
-    },
-    "context": {
-      "title": "Información utilizada para el perfilamiento",
-      "financialInfo": "Información financiera",
-      "lowRisk": "Nivel de riesgo: Bajo",
-      "creditBureau": "Buró de crédito",
-      "variables": "Variables de cálculo",
-      "variablesValue": "Edad, historial, modelo",
-      "date": "Fecha de consulta",
-      "source": "Fuente de información",
-      "sourceValue": "Adaptador simulado Solventa",
-      "privacy": "Tus datos son tratados bajo protocolos de seguridad y solo se utilizarán para calcular la prima del seguro solicitado.",
-      "riskChart": "Gráfico de scoring simulado"
     }
   },
   "profiling": {
@@ -169,9 +247,9 @@
     "eyebrow": "Resumen",
     "title": "Mis cotizaciones",
     "subtitle": "Consulta tu solicitud actual o inicia una nueva cotización.",
-    "newQuote": "Nueva cotización",
+    "newQuote": "Cotizar seguro",
     "requestedAt": "Fecha de solicitud",
-    "vehiclePlate": "Patente del vehículo",
+    "productDetails": "Datos del seguro",
     "email": "Correo electrónico",
     "phone": "Teléfono",
     "viewOffers": "Ver ofertas",
@@ -180,9 +258,25 @@
     },
     "empty": {
       "title": "Aún no tienes cotizaciones",
-      "body": "Solicita una cotización para comparar las ofertas disponibles para tu vehículo.",
-      "action": "Solicitar cotización"
+      "body": "Solicita una cotización para comparar las ofertas disponibles.",
+      "action": "Cotizar seguro"
     }
+  },
+  "calendar": {
+    "calendarLabel": "Calendario",
+    "openCalendarLabel": "Abrir calendario",
+    "closeCalendarLabel": "Cerrar calendario",
+    "prevMonthLabel": "Mes anterior",
+    "nextMonthLabel": "Mes siguiente",
+    "prevYearLabel": "Año anterior",
+    "nextYearLabel": "Año siguiente",
+    "prevMultiYearLabel": "Periodo anterior",
+    "nextMultiYearLabel": "Periodo siguiente",
+    "switchToMonthViewLabel": "Elegir mes",
+    "switchToMultiYearViewLabel": "Elegir año",
+    "startDateLabel": "Fecha de inicio",
+    "endDateLabel": "Fecha de finalización",
+    "comparisonDateLabel": "Fecha de comparación"
   },
   "common": {
     "back": "Volver",
@@ -190,15 +284,21 @@
   },
   "offers": {
     "back": "Volver a cotizaciones",
-    "title": "Resultado de cotización",
+    "title": "Elige tu plan",
+    "subtitle": "Compara coberturas y selecciona la opción que mejor se ajusta a tus necesidades.",
     "loading": "Actualizando ofertas disponibles",
     "recommendedPlan": "Plan recomendado",
-    "monthlyPremium": "Prima mensual",
+    "premiumLabels": {
+      "mensual": "Prima mensual",
+      "por_viaje": "Prima por viaje",
+      "por_vuelo": "Prima por vuelo",
+      "por_periodo": "Prima por periodo"
+    },
     "mainCoverage": "Cobertura principal",
     "generalConditions": "Condiciones generales",
     "viewOffer": "Ver oferta",
     "calculationInfo": "Información del cálculo",
-    "quoteId": "ID cotización",
+    "quoteId": "Número de cotización",
     "validity": "Vigencia del cálculo",
     "appliedRate": "Tasa aplicada",
     "securityAnalysis": "Curva de riesgo proyectada",
@@ -219,13 +319,15 @@
     "coveragesTitle": "Coberturas",
     "conditionsTitle": "Condiciones principales",
     "unavailableMessage": "Esta oferta ya no puede seleccionarse.",
+    "acceptedMessage": "Esta es la oferta aceptada para esta cotización.",
     "selectToContinue": "Selecciona una oferta vigente para continuar.",
     "readyToContinue": "{{ name }} está lista para continuar.",
-    "continue": "Continuar a aceptación",
+    "continue": "Revisar selección",
     "confirming": "Confirmando",
     "refreshNote": "Puedes comparar esta oferta con otras alternativas en el listado.",
     "status": {
       "available": "Disponible",
+      "accepted": "Aceptada",
       "expired": "Vencida",
       "withdrawn": "Retirada"
     },
@@ -241,10 +343,52 @@
     }
   },
   "acceptance": {
-    "step": "Siguiente paso",
-    "title": "Aceptación de la oferta",
+    "step": "3 de 4 · Confirma tu protección",
+    "title": "Confirma tu protección",
+    "subtitle": "Revisa el plan y los datos del seguro antes de confirmar tu selección.",
     "selectedOffer": "Oferta seleccionada",
-    "body": "La aceptación formal de condiciones y coberturas se implementará en la historia correspondiente.",
-    "backToOffers": "Volver a las ofertas"
+    "monthlyPremium": "Prima mensual",
+    "includedCoverages": "Coberturas incluidas",
+    "insuranceData": "Datos del seguro",
+    "policyholder": "Tomador",
+    "consent": "Confirmo que revisé los datos y acepto las condiciones y coberturas de la oferta seleccionada.",
+    "confirmAction": "Confirmar selección",
+    "confirming": "Confirmando",
+    "confirmedTitle": "Selección confirmada",
+    "confirmedBody": "La oferta quedó registrada correctamente.",
+    "continueAction": "Procesar suscripción",
+    "loading": "Cargando el resumen de tu protección.",
+    "backToOffers": "Volver a las ofertas",
+    "errors": {
+      "unavailable": "La oferta cambió o venció. Vuelve a las ofertas para seleccionar una opción vigente.",
+      "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente.",
+      "subscription": "No fue posible procesar la suscripción. Inténtalo nuevamente."
+    }
+  },
+  "subscription": {
+    "eyebrow": "Suscripción",
+    "title": "Estado de suscripción",
+    "subtitle": "Consulta la decisión y el estado de emisión informados por el servicio.",
+    "loading": "Consultando la suscripción",
+    "error": "No fue posible consultar la suscripción. Inténtalo nuevamente.",
+    "empty": "No hay una suscripción registrada para esta solicitud.",
+    "operation": "Identificador de operación",
+    "offer": "Oferta aceptada",
+    "decision": "Decisión",
+    "statuses": {
+      "approved": "Aprobada",
+      "review": "En revisión",
+      "rejected": "Rechazada"
+    },
+    "saga": "Estado de emisión",
+    "sagaStatuses": {
+      "payment_pending": "Pago pendiente",
+      "payment_confirmed": "Pago confirmado",
+      "issued": "Póliza emitida",
+      "failed": "Emisión fallida"
+    },
+    "rule": "Regla aplicada",
+    "next": "El servicio informa un pago pendiente. El registro de pagos aún no está disponible.",
+    "back": "Volver a la aceptación"
   }
 }

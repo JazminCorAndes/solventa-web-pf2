@@ -81,3 +81,11 @@ body {
 .mat-mdc-option {
   color: var(--solventa-color-text) !important;
 }
+
+.mat-mdc-button-base .mdc-button__label,
+.mat-mdc-chip .mdc-evolution-chip__text-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+}

@@ -12,14 +12,15 @@ type OffersStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 export class OfferSelectionService {
   private readonly gateway = inject(OFFER_GATEWAY);
   private readonly storage = inject(OFFER_SELECTION_STORAGE);
+  private readonly restoredSelection = this.storage.read();
   private readonly calculationState = signal<OfferCalculation | null>(null);
   private readonly statusState = signal<OffersStatus>('idle');
   private readonly selectedOfferIdState = signal<string | null>(
-    this.storage.read()?.offerId ?? null,
+    this.restoredSelection?.offerId ?? null,
   );
   private readonly expandedOfferIdState = signal<string | null>(null);
   private readonly confirmedSelectionState = signal<SelectedOfferRecord | null>(
-    this.storage.read(),
+    this.restoredSelection?.confirmed ? this.restoredSelection : null,
   );
 
   readonly calculation = this.calculationState.asReadonly();
@@ -44,7 +45,11 @@ export class OfferSelectionService {
   );
   readonly canContinue = computed(() => {
     const selected = this.selectedOffer();
-    return !!selected && this.isSelectable(selected);
+    return (
+      !!selected &&
+      (this.isSelectable(selected) ||
+        (selected.status === 'accepted' && this.confirmedSelectionState()?.offerId === selected.id))
+    );
   });
 
   load(): void {
@@ -73,9 +78,7 @@ export class OfferSelectionService {
         next: ({ calculation, selection }) => {
           this.calculationState.set(calculation);
           if (selection) {
-            this.storage.write(selection);
-          } else {
-            this.storage.clear();
+            this.storage.write({ ...selection, confirmed: true });
           }
           this.reconcileStoredSelection(calculation);
           this.statusState.set(calculation.offers.length ? 'ready' : 'empty');
@@ -100,7 +103,7 @@ export class OfferSelectionService {
 
     const selection = createSelectionRecord(calculation.quoteId, offer);
     this.selectedOfferIdState.set(offer.id);
-    this.confirmedSelectionState.set(selection);
+    this.confirmedSelectionState.set(null);
     this.storage.write(selection);
     return true;
   }
@@ -122,8 +125,9 @@ export class OfferSelectionService {
 
     return this.gateway.confirmSelection(calculation.quoteId, selected.id, selected.version).pipe(
       tap((selection) => {
-        this.confirmedSelectionState.set(selection);
-        this.storage.write(selection);
+        const confirmed = { ...selection, confirmed: true };
+        this.confirmedSelectionState.set(confirmed);
+        this.storage.write(confirmed);
       }),
     );
   }
@@ -143,14 +147,15 @@ export class OfferSelectionService {
     if (
       !currentOffer ||
       currentOffer.version !== stored.offerVersion ||
-      !this.isSelectable(currentOffer)
+      (!this.isSelectable(currentOffer) &&
+        !(stored.confirmed && currentOffer.status === 'accepted'))
     ) {
       this.clearSelection();
       return;
     }
 
     this.selectedOfferIdState.set(currentOffer.id);
-    this.confirmedSelectionState.set(stored);
+    this.confirmedSelectionState.set(stored.confirmed ? stored : null);
   }
 
   private clearSelection(): void {
@@ -166,8 +171,9 @@ function createSelectionRecord(quoteId: string, offer: InsuranceOffer): Selected
     offerId: offer.id,
     offerVersion: offer.version,
     offerName: offer.name,
-    monthlyPremium: offer.monthlyPremium,
-    currency: offer.currency,
+    premium: offer.premium,
+    periodicity: offer.periodicity,
     selectedAt: new Date().toISOString(),
+    confirmed: false,
   };
 }

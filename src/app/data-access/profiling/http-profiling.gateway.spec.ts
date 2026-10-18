@@ -1,28 +1,39 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { firstValueFrom, of } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { authInterceptor } from '../../core/auth/auth.interceptor';
+import { AuthService } from '../../core/auth/auth.service';
 import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
 import { HttpProfilingGateway } from './http-profiling.gateway';
 
 describe('HttpProfilingGateway', () => {
   let gateway: HttpProfilingGateway;
   let http: HttpTestingController;
-  const consentUrl = '/api/v1/consentimientos/perfilamiento';
+  const consentUrl = `${environment.apiBaseUrl}/v1/consentimientos/perfilamiento`;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [HttpProfilingGateway, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        HttpProfilingGateway,
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AuthService, useValue: { getAccessToken: () => of('profile-test-token') } },
+      ],
     });
     gateway = TestBed.inject(HttpProfilingGateway);
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
 
-  it('consulta el consentimiento usando la cookie de sesion', async () => {
+  it('consulta el consentimiento sin enviar cookies', async () => {
     const result = firstValueFrom(gateway.loadConsent());
     const request = http.expectOne(consentUrl);
-    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.withCredentials).toBe(false);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer profile-test-token');
     expect(request.request.method).toBe('GET');
     const consent = createConsent();
     request.flush(consent, { headers: { Date: new Date().toUTCString() } });
@@ -47,7 +58,8 @@ describe('HttpProfilingGateway', () => {
     const result = firstValueFrom(gateway.saveConsent(authorized, 2));
     const request = http.expectOne(consentUrl);
     expect(request.request.method).toBe('PUT');
-    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.withCredentials).toBe(false);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer profile-test-token');
     expect(request.request.body).toEqual({ autorizado: authorized, version: 2 });
     request.flush(createConsent(), { headers: { Date: new Date().toUTCString() } });
     await result;
@@ -68,8 +80,11 @@ describe('HttpProfilingGateway', () => {
 
   it('consulta el perfil asociado sin convertir los decimales', async () => {
     const result = firstValueFrom(gateway.loadProfile('AQT-2026-123456'));
-    const request = http.expectOne('/api/v1/solicitudes-cotizacion/AQT-2026-123456/perfilamiento');
-    expect(request.request.withCredentials).toBe(true);
+    const request = http.expectOne(
+      `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/AQT-2026-123456/perfilamiento`,
+    );
+    expect(request.request.withCredentials).toBe(false);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer profile-test-token');
     request.flush(createProfile(), { headers: { Date: new Date().toUTCString() } });
     await expect(result).resolves.toMatchObject({ score: '0.250000', fallbackUsed: false });
   });

@@ -72,6 +72,18 @@ mat-nav-list button {
   font-weight: 600;
 }
 
+mat-nav-list .mdc-list-item__primary-text,
+mat-nav-list app-icon {
+  color: inherit;
+}
+
+mat-nav-list .mdc-list-item__primary-text {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  line-height: 1.2;
+}
+
 mat-nav-list a:hover {
   color: #ffffff;
   background: rgb(255 255 255 / 7%);

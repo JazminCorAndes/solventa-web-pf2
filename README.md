@@ -5,6 +5,17 @@ Aplicación web de Solventa para Proyecto Final II de la Universidad de los Ande
 Este repositorio contiene la base técnica de la aplicación web. El alcance funcional se
 gestiona en Jira y las decisiones visuales deben seguir la versión más reciente de Figma.
 
+## Comprobaciones y cobertura
+
+En cada [pull request](https://github.com/JazminCorAndes/solventa-web-pf2/pulls), abre **Checks → Cobertura**
+para ver líneas, ramas, pruebas y revisión compilada. El reporte corresponde a ese commit;
+no es un porcentaje fijo de la portada. En web mide el código instrumentado por Angular/Vitest V8.
+
+Actions se ejecuta automáticamente. Un colaborador solicita Jenkins con un comentario nuevo
+`/test-jenkins`; después de subir cambios debe solicitarlo para la revisión nueva.
+Los reportes HTML/XML se conservan en Jenkins privado. No se exige un porcentaje mínimo nuevo.
+Consulta [la guía de CI](docs/ci.md) para ver alcance, nombres y lectura de resultados.
+
 ## Tecnologías
 
 - Angular 22
@@ -61,105 +72,149 @@ Contraseña: Solventa123!
 
 ## Desarrollo local con backend
 
-Este modo conecta el frontend con el BFF Web y el servicio de cotización reales. Se necesitan
-los repositorios `solventa-web-pf2` y `backend-solventa`, Python 3.12 y tres terminales.
+Este modo conecta el frontend con el BFF Web, identidad y cotización. Se necesitan
+los repositorios `solventa-web-pf2` y `backend-solventa`, con versiones compatibles del
+contrato multirramo descrito más adelante. Los cambios de API de esta funcionalidad
+deben estar presentes en el backend antes de cotizar vuelos con pérdida de conexión o clima.
 
 No existe fallback automático a mocks: si el backend no está disponible, la aplicación informa
 el error. Para volver a los mocks, se debe detener el servidor y ejecutar `pnpm start`.
 
-### 1. Preparar el backend
+### 1. Preparar y ejecutar los servicios
 
-Desde la raíz de `backend-solventa`, en PowerShell:
+Sigue la sección **Integración local** de `services\bff-web\README.md` en el checkout
+compatible de [backend-solventa](https://github.com/Migue765/backend-solventa).
+Allí se incluyen instalación, migraciones y configuración de los tres servicios.
+Inicia identidad, cotización y BFF en terminales separadas. La base de datos y las claves
+de firma pertenecen a los servicios backend; no se configuran ni se incluyen en Angular.
 
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements-dev.txt
-
-Get-ChildItem services -Directory |
-  Where-Object { Test-Path "$($_.FullName)\pyproject.toml" } |
-  ForEach-Object { python -m pip install -e "$($_.FullName)[dev]" }
-```
-
-La instalación solo es necesaria la primera vez o cuando cambien las dependencias.
-
-### 2. Preparar y ejecutar cotización
-
-En la primera terminal, desde `backend-solventa`:
+Los ejemplos del backend usan el puerto 15001 para el BFF. Para conservar
+`proxy.conf.json` sin cambios, inicia ese servicio en el puerto 5001, manteniendo las
+variables de entorno indicadas en su guía:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-Set-Location services\cotizacion
-$env:DATABASE_URL = "sqlite:///cotizacion.db"
-python -m alembic upgrade head
-python -m flask --app cotizacion.app run --port 5000 --no-reload
+.\.venv\Scripts\python -m flask --app bff_web.app run --host 127.0.0.1 --port 5001
 ```
 
-El servicio de cotización quedará disponible en `http://localhost:5000`.
+Si prefieres conservar el puerto 15001 del backend, cambia `target` en `proxy.conf.json`
+a `http://127.0.0.1:15001` y utiliza ese mismo origen al registrar la cuenta.
+No se usa la antigua autenticación
+por cookie ni `AUTH_DEVELOPMENT_USERS_JSON`: identidad emite tokens Bearer.
 
-### 3. Configurar y ejecutar el BFF
+### 2. Crear una cuenta local
 
-Primero se genera un hash para la contraseña local. El comando solicita la contraseña sin
-mostrarla en la terminal:
+Si aún no existe un usuario de pruebas, regístralo mediante el BFF. En PowerShell:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-Set-Location services\bff-web
-python -c "from getpass import getpass; from bff_web.infrastructure.passwords import hash_password; print(hash_password(getpass('Contraseña local: ')))"
+$credential = Get-Credential -Message "Correo y contraseña de la nueva cuenta local"
+$body = @{
+  nombre = Read-Host "Nombre del cliente"
+  correo = $credential.UserName
+  contrasena = $credential.GetNetworkCredential().Password
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:5001/v1/usuarios" `
+  -Method Post -ContentType "application/json" -Body $body | Select-Object id
+Remove-Variable body, credential
 ```
 
-En la segunda terminal, desde `backend-solventa`, se reemplaza `<HASH_GENERADO>` por el valor
-obtenido y se inicia el BFF:
+Usa un correo nuevo y una contraseña que cumpla las reglas de identidad. Las credenciales
+del adaptador mock no crean automáticamente una cuenta en el backend.
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-Set-Location services\bff-web
+### 3. Ejecutar el frontend conectado
 
-$env:AUTH_DEVELOPMENT_USERS_JSON = @'
-[
-  {
-    "id": "11111111-1111-4111-8111-111111111111",
-    "nombre": "Cliente Solventa",
-    "correo": "cliente@solventa.co",
-    "rol": "cliente",
-    "passwordHash": "<HASH_GENERADO>"
-  }
-]
-'@
-
-$env:SESSION_COOKIE_SECURE = "false"
-$env:QUOTE_SERVICE_URL = "http://localhost:5000"
-python -m flask --app bff_web.app run --port 5001 --no-reload
-```
-
-`SESSION_COOKIE_SECURE=false` se usa únicamente para desarrollo local por HTTP. En ambientes
-con HTTPS debe permanecer en `true`.
-
-### 4. Ejecutar el frontend conectado
-
-En la tercera terminal, desde `solventa-web-pf2`:
+Desde `solventa-web-pf2`:
 
 ```powershell
 pnpm install --frozen-lockfile
 pnpm start:backend
 ```
 
-La aplicación estará disponible en `http://localhost:4200`. El proxy de desarrollo envía las
-solicitudes `/api` al BFF en `http://localhost:5001`, manteniendo las cookies de sesión en el
-mismo origen del frontend.
+La aplicación estará disponible en `http://localhost:4200`. `pnpm start:backend` usa la
+configuración `local` (`apiBaseUrl: '/api'`) y el proxy de desarrollo reenvía `/api` al BFF en
+`http://localhost:5001`, quitando el prefijo `/api`. Las peticiones protegidas usan
+el esquema `Bearer` en el encabezado `Authorization`.
 
-Para iniciar sesión se usa el correo configurado en
-`AUTH_DEVELOPMENT_USERS_JSON` y la contraseña utilizada para generar el hash.
+Inicia sesión con el correo y la contraseña registrados. No copies tokens en archivos
+del frontend, parámetros de URL ni registros.
+
+### Backend desplegado en AWS
+
+El build de producción (`pnpm build`) y `pnpm start:aws` usan el API Gateway directamente
+(`src/environments/environment.ts`, `apiBaseUrl: https://65qgzhody9.execute-api.us-east-2.amazonaws.com`).
+No hay proxy ni cookies: la autenticación usa tokens JWT.
+
+| Configuración | `apiBaseUrl`             | Uso                                        |
+| ------------- | ------------------------ | ------------------------------------------ |
+| `production`  | URL del API Gateway      | `pnpm build`                               |
+| `backend`     | URL del API Gateway      | `pnpm start:aws`, `pnpm build:aws`         |
+| `local`       | `/api` (proxy a `:5001`) | `pnpm start:backend`, `pnpm build:backend` |
+| `development` | `/api` (sin uso, mocks)  | `pnpm start`, `pnpm build:dev`             |
+
+El frontend se sigue publicando en GitHub Pages. El CORS lo resuelve el API Gateway, que permite
+los orígenes `https://jazmincorandes.github.io` y `http://localhost:4200`, los encabezados
+`Authorization`, `Content-Type`, `Idempotency-Key` y `X-Correlation-ID`, y no requiere
+credenciales.
+
+### Publicar esta versión en GitHub Pages
+
+El workflow separado `.github/workflows/pages.yml` compila y publica únicamente los
+`push` a `master`, después de integrar la release siguiendo las protecciones de esa rama.
+No se ejecuta para ramas feature ni PRs. Antes de publicar repite lint, pruebas y
+verificación del fallback; solo el job de despliegue recibe `pages: write` e
+`id-token: write`, y utiliza el environment `github-pages`. La concurrencia evita
+despliegues simultáneos.
+
+**Requisito administrativo:** Pages debe usar GitHub Actions y el environment
+`github-pages` debe permitir `master`, como en la política consultada el 17 de octubre de 2026.
+Este cambio de código se ajusta a esa rama y no modifica ni elude las revisiones y
+protecciones del environment.
+
+`pnpm build:pages` utiliza producción (backend AWS, no mocks) con base
+`/solventa-web-pf2/` y genera el artefacto `dist/solventa-web-pf2/browser`.
+`scripts/prepare-pages.cjs` copia el `index.html` compilado a `404.html`, rechazando
+un build con base incorrecta. Pages sirve esa entrada al abrir o recargar una ruta
+profunda, conservando la URL para el router Angular. Las traducciones se resuelven
+respecto al `<base>` del documento, tanto en Pages como en `localhost:4200`.
+
+El fallback de Pages sigue devolviendo HTTP `404` para rutas profundas aunque la
+aplicación pueda arrancar: no equivale a un rewrite HTTP `200`, ni garantiza SEO o
+que los clientes sin JavaScript vean el contenido. Los guards de autenticación se
+mantienen. Tras el despliegue debe verificarse en navegador el inicio de sesión y
+la apertura/recarga de una URL profunda; las pruebas de artefacto no sustituyen
+esa validación ni prueban conectividad con AWS.
+
+## Autenticación con tokens
+
+1. `POST /v1/sesiones` devuelve un **access token** (JWT, de corta duración; el vencimiento lo
+   informa el backend en `expiraEn`) y un **refresh token** (`refreshExpiraEn`).
+2. El access token vive **solo en memoria** (`AuthService`). El refresh token se guarda en
+   `sessionStorage` (`solventa.auth.refresh`) junto con los datos del usuario.
+3. El interceptor `authInterceptor` agrega `Authorization: Bearer <token>` a las llamadas al API,
+   excepto `POST /v1/sesiones`, `POST /v1/sesiones/renovar` y `POST /v1/usuarios`.
+4. Ante un `401`, renueva con `POST /v1/sesiones/renovar` (el refresh token rota en cada uso) y
+   reintenta la petición una sola vez. Varias peticiones concurrentes comparten una única
+   renovación. Si el refresh es inválido, se limpia la sesión y se redirige a `/iniciar-sesion`.
+5. Al recargar la página, `AuthService.synchronizeSession()` obtiene un access token nuevo con el
+   refresh guardado; si falla con `401`, la app queda sin sesión.
+6. El cierre de sesión llama a `DELETE /v1/sesiones/actual` con el refresh token y limpia el
+   almacenamiento aunque la llamada falle.
+
+`AuthService.register()` expone `POST /v1/usuarios`; todavía no hay pantalla de registro.
+
+Si la respuesta del BFF no incluye documento o teléfono, la interfaz lo indica como
+no disponible en vez de inventar datos personales.
 
 ## Perfilamiento HU11 (SOL-163)
 
 El formulario requiere consultar y autorizar el consentimiento antes de cotizar. La identidad
-se obtiene de la cookie de sesión del BFF: no se envía `clienteId` desde el formulario.
+se obtiene del token Bearer de la sesión: no se envía `clienteId` desde el formulario
+ni se usan cookies en las peticiones.
 El formulario conectado no solicita documento ni contacto: el BFF los obtiene de la sesión.
-La creación envía solamente `{ productoId, datosProducto: { vehiclePlate } }`, junto con una
-clave de idempotencia. La placa de la respuesta se lee de `datosProducto.vehiclePlate`.
+La creación envía solamente `{ productoId, datosProducto }`, junto con una clave de
+idempotencia. Los datos de riesgo dependen del ramo; para automotriz incluyen `vehiclePlate`.
 Las primas y selecciones conservan la moneda devuelta por el BFF (COP en el backend actual),
-sin convertirla ni presentarla como UF; el modo demo conserva sus valores simulados en UF.
+sin convertirla ni presentarla como UF. Se conservan prima y periodicidad propias del ramo;
+los adaptadores mock usan COP y no fabrican mensualidades.
 
 El panel permite autorizar y revocar; envía la versión vigente, o `0` para la primera
 autorización. Ante un conflicto se exige recargar antes de volver a escribir. La autorización
@@ -185,7 +240,7 @@ límite superior conservador (precisión de un segundo más el viaje de la petic
 puede retirar datos ligeramente antes, nunca extender su vigencia. Si falta un `Date`
 válido, la consulta se bloquea con un error en lugar de confiar en un reloj local desconocido.
 
-Contratos consumidos (todos con cookie de sesión):
+Contratos consumidos (todos con token Bearer):
 
 | Método    | Ruta                                                    | Uso                                                                     |
 | --------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
@@ -202,57 +257,47 @@ verificado fidelidad visual con Figma.
 
 ### Prueba local contra AWS
 
-Se requieren un BFF con HU11 desplegado y un usuario de prueba habilitado. Conservar las cookies
-`Secure` del servidor: iniciar Angular con HTTPS y usar un proxy local hacia AWS. Para evitar
-alterar el proxy habitual, crear un archivo fuera del repositorio, por ejemplo
-`C:\Temp\solventa-proxy-aws.json`:
-
-```json
-{
-  "/api": {
-    "target": "https://<HOST_BFF_AWS>",
-    "secure": true,
-    "changeOrigin": true,
-    "cookieDomainRewrite": "",
-    "pathRewrite": { "^/api": "" }
-  }
-}
-```
+Se requieren un BFF con HU11 desplegado y un usuario de prueba habilitado. El modo AWS usa
+el API Gateway directamente con tokens Bearer, sin proxy ni cookies:
 
 ```powershell
-corepack pnpm start:backend --ssl --port 4300 --proxy-config C:\Temp\solventa-proxy-aws.json
+pnpm start:aws
 ```
 
-Abrir `https://localhost:4300`, aceptar el certificado local de desarrollo y probar inicio de
-sesión, ausencia de autorización, autorización, solicitud, perfil, ofertas y revocación.
-No usar credenciales de producción ni desactivar la validación TLS del destino AWS. La URL,
-credenciales de prueba y evidencia de esa integración deben confirmarse antes de publicar el PR.
+Abrir `http://localhost:4200` y probar inicio de sesión, ausencia de autorización, autorización,
+solicitud, perfil, ofertas y revocación. CORS debe permitir el origen local y exponer el
+encabezado `Date` para comparar vigencias. No usar credenciales de producción ni desactivar
+la validación TLS del destino AWS. Las pruebas unitarias no demuestran esta integración real.
 
-## Demo en GitHub Pages
+## Aplicación en GitHub Pages
 
-La rama `master` se publica automáticamente como una demo con adaptadores simulados:
+La rama `master` se publica automáticamente con el backend AWS, sin adaptadores simulados:
 
 ```text
 https://jazmincorandes.github.io/solventa-web-pf2/
 ```
 
-GitHub Pages no ejecuta el backend Python. La demo permite recorrer la interfaz con los datos
-simulados y las credenciales de desarrollo documentadas más adelante.
+GitHub Pages solo sirve el frontend estático; el backend se ejecuta en AWS. Para iniciar
+sesión se necesita una cuenta registrada en ese backend, no las credenciales del modo mock.
 
 ## Comandos disponibles
 
-| Comando              | Descripción                                        |
-| -------------------- | -------------------------------------------------- |
-| `pnpm start`         | Inicia el desarrollo con adaptadores simulados     |
-| `pnpm start:backend` | Inicia el desarrollo conectado al BFF              |
-| `pnpm build`         | Genera el build de producción conectado al backend |
-| `pnpm build:dev`     | Genera un build de desarrollo con mocks            |
-| `pnpm build:backend` | Genera un build de desarrollo conectado al backend |
-| `pnpm test`          | Ejecuta las pruebas en modo interactivo            |
-| `pnpm test:ci`       | Ejecuta las pruebas una sola vez                   |
-| `pnpm lint`          | Ejecuta ESLint                                     |
-| `pnpm format`        | Formatea el código con Prettier                    |
-| `pnpm format:check`  | Comprueba el formato sin modificar archivos        |
+| Comando              | Descripción                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| `pnpm start`         | Inicia el desarrollo con adaptadores simulados               |
+| `pnpm start:backend` | Inicia el desarrollo conectado al BFF local                  |
+| `pnpm start:aws`     | Inicia el desarrollo conectado al backend en AWS             |
+| `pnpm build`         | Genera el build de producción conectado al backend           |
+| `pnpm build:pages`   | Compila producción para la subruta Pages y genera `404.html` |
+| `pnpm build:dev`     | Genera un build de desarrollo con mocks                      |
+| `pnpm build:backend` | Genera un build de desarrollo conectado al BFF local         |
+| `pnpm build:aws`     | Genera un build de desarrollo conectado al API en AWS        |
+| `pnpm test`          | Ejecuta las pruebas en modo interactivo                      |
+| `pnpm test:ci`       | Ejecuta las pruebas una sola vez                             |
+| `pnpm test:pages`    | Verifica la generación del fallback SPA de Pages             |
+| `pnpm lint`          | Ejecuta ESLint                                               |
+| `pnpm format`        | Formatea el código con Prettier                              |
+| `pnpm format:check`  | Comprueba el formato sin modificar archivos                  |
 
 ## Verificación de la instalación
 
@@ -291,13 +336,79 @@ adicional. Las traducciones se encuentran en:
 - `public/assets/i18n/es.json`
 - `public/assets/i18n/en.json`
 
+## Mercado activo
+
+La aplicación opera actualmente para Colombia, con precios en COP, formato regional `es-CO`
+y prefijo telefónico `+57`. Estos valores se centralizan en
+`src/app/core/market/market.config.ts` para facilitar la habilitación futura de México, Chile y
+Perú sin mezclar reglas entre mercados.
+
+Los importes usan un contrato neutral compuesto por monto y código de moneda ISO 4217. El
+catálogo permite cotizar seguros automotrices, de viaje, protección de dispositivos,
+microseguros de vida, seguros de vuelos y clima, protección de pagos y vida hipotecaria. Cada producto
+solicita sus datos de riesgo específicos y genera ofertas comparables en COP.
+
+### Variantes de cotización
+
+El catálogo conserva el seguro automotriz y cubre los ramos del caso Solventa
+(secciones 2.2, 2.4 y 5.1 del enunciado). Los datos del cliente provienen de la sesión;
+el formulario solicita únicamente los datos propios del seguro.
+
+| Producto (`productoId`) | Datos enviados en `datosProducto`                                   |
+| ----------------------- | ------------------------------------------------------------------- |
+| `automotive`            | `vehiclePlate`                                                      |
+| `travel`                | `destinationCountryCode`, `departureDate`, `returnDate`             |
+| `life`                  | `birthDate`                                                         |
+| `device-protection`     | `deviceType`, `brandModel`, `purchaseValue`                         |
+| `parametric`            | `airline`, `flightNumber`, `flightDate`, `coverageType`             |
+| `parametric-weather`    | `location`, `weatherEvent`, `startDate`, `endDate`, `insuredAmount` |
+| `payment-protection`    | `creditType`, `monthlyPayment`                                      |
+| `mortgage-life`         | `birthDate`, `mortgageBalance`                                      |
+
+El POST a `/api/v1/solicitudes-cotizacion` conserva el cuerpo
+`{ productoId, datosProducto }`; todos los valores de `datosProducto` son cadenas.
+Las fechas se ingresan como `DD/MM/AAAA` en español colombiano y se envían como
+`YYYY-MM-DD`; los importes se expresan en pesos colombianos enteros.
+
+Las ofertas y la selección requieren `prima: { monto, moneda }` con `periodicidad`:
+`mensual`, `por_viaje`, `por_vuelo` o `por_periodo`. La interfaz muestra el importe y la moneda recibidos
+con el periodo correspondiente, sin convertir primas por viaje o vuelo en mensualidades.
+El alias `primaMensual` puede ser nulo para primas no mensuales; no se usa como respaldo
+ante respuestas HTTP antiguas o incompletas. Solo las selecciones antiguas ya guardadas
+en la pestaña conservan la migración local desde `monthlyPremium`.
+Los valores de compra, cuota y saldo hipotecario admiten enteros positivos de hasta 16 cifras.
+
+El catálogo muestra la disponibilidad real: los productos no disponibles se pueden consultar,
+pero no cotizar. Solo el error `404` con código `seguro_no_encontrado` representa un producto
+inexistente; un `404` de infraestructura se muestra como error recuperable.
+
+En vuelos, `coverageType` admite `delay-cancellation`, `missed-connection` y
+`comprehensive`. El backend mantiene las solicitudes antiguas sin ese campo como
+retraso o cancelación. La pérdida de conexión está sujeta a las causas y exclusiones
+del plan, no a cualquier vuelo perdido por el pasajero.
+
+El seguro climático permite lluvia intensa (`heavy-rain`) o sequía (`drought`), con
+municipio y departamento en texto de hasta 120 caracteres y valor asegurado de
+1 a 1.000.000.000 COP. Las fechas de vuelo y clima deben ser posteriores a hoy.
+La fecha final climática no puede preceder al inicio y el periodo admite hasta
+366 días, contando ambas fechas. Estos campos son decisiones del contrato de
+cotización; el enunciado no define un proveedor ni un umbral meteorológico concreto.
+
+En modo mock, el catálogo y las ofertas son ejemplos locales, no una tarifa actuarial
+personalizada. Las ofertas respetan el ramo y la cobertura elegidos; un producto
+desconocido no recibe ofertas automotrices por defecto. En modo backend se consultan
+las ofertas del servicio y se envía la selección con su versión. El cálculo y las
+fuentes externas que ese servicio simule siguen siendo simulados: usar HTTP no los
+convierte en integraciones reales. Cotizar no emite una póliza ni activa monitoreo,
+aceptación formal o pagos de siniestros.
+
 ## Autenticación de desarrollo
 
 En modo mock, los datos no salen del navegador y la sesión se conserva en `sessionStorage`.
 
-En modo backend, el BFF controla la sesión con una cookie `HttpOnly`. El frontend conserva
-únicamente los datos no sensibles necesarios para presentar la sesión y siempre consulta al
-BFF al iniciar la aplicación.
+En modo backend la sesión se maneja con tokens JWT (ver «Autenticación con tokens»): el access
+token no se persiste y el refresh token se guarda en `sessionStorage`. Al iniciar la aplicación
+se renueva la sesión con el backend.
 
 ## Sistema visual
 
@@ -350,8 +461,14 @@ cotización. `sessionStorage` conserva la referencia necesaria para reanudar el 
 misma pestaña. Las ofertas vencidas o retiradas permanecen visibles para comparación, pero no
 se pueden seleccionar.
 
-La aceptación formal, siniestros, detalle de pólizas, notificaciones y recuperación de
-contraseña permanecen fuera del alcance actual.
+La selección mediante `PUT /v1/solicitudes-cotizacion/{id}/seleccion` es la aceptación definitiva
+y envía `{ ofertaId, version }` con `Idempotency-Key` UUID. La suscripción se inicia con
+`POST /v1/solicitudes-cotizacion/{id}/suscripcion`, cuerpo `{}` y otra clave UUID; se consulta
+con `GET` sobre la misma ruta. La interfaz muestra las decisiones aprobada, en revisión o
+rechazada y los estados reales de la saga, sin presentar datos cacheados como éxito tras un error.
+El backend `develop` aún no expone pagos: una aprobación no habilita un pago desde esta aplicación.
+Siniestros, detalle de pólizas, notificaciones y recuperación de contraseña permanecen
+fuera del alcance actual.
 
 ## Referencias
 

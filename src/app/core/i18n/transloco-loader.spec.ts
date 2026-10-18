@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -5,20 +6,31 @@ import { firstValueFrom } from 'rxjs';
 import { TranslocoHttpLoader } from './transloco-loader';
 
 describe('TranslocoHttpLoader', () => {
-  it('loads translations relative to the application base path', async () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it.each([
+    {
+      baseURI: 'http://localhost:4200/',
+      expected: 'http://localhost:4200/assets/i18n/es.json',
+      lang: 'es',
+    },
+    {
+      baseURI: 'https://jazmincorandes.github.io/solventa-web-pf2/',
+      expected: 'https://jazmincorandes.github.io/solventa-web-pf2/assets/i18n/en.json',
+      lang: 'en',
+    },
+  ])('loads $lang relative to $baseURI', async ({ baseURI, expected, lang }) => {
     TestBed.configureTestingModule({
-      providers: [TranslocoHttpLoader, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: DOCUMENT, useValue: { baseURI } },
+      ],
     });
-    const loader = TestBed.inject(TranslocoHttpLoader);
-    const http = TestBed.inject(HttpTestingController);
-    const translation = firstValueFrom(loader.getTranslation('es'));
-    const request = http.expectOne('assets/i18n/es.json');
-
-    request.flush({ application: { title: 'Solventa' } });
-
-    await expect(translation).resolves.toEqual({
-      application: { title: 'Solventa' },
-    });
-    http.verify();
+    const result = firstValueFrom(TestBed.inject(TranslocoHttpLoader).getTranslation(lang));
+    const request = TestBed.inject(HttpTestingController).expectOne(expected);
+    expect(request.request.withCredentials).toBe(false);
+    request.flush({ common: { retry: 'Retry' } });
+    await expect(result).resolves.toEqual({ common: { retry: 'Retry' } });
   });
 });

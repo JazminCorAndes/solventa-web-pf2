@@ -1,0 +1,61 @@
+<section class="subscription-page">
+  @if (subscriptions.loading()) {
+    <p role="status">{{ 'subscription.loading' | transloco }}</p>
+  } @else if (subscriptions.error()) {
+    <div role="alert">
+      <p>{{ 'subscription.error' | transloco }}</p>
+      <button mat-stroked-button type="button" (click)="subscriptions.load()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  } @else if (subscriptions.subscription(); as subscription) {
+    <header>
+      <span>{{ 'subscription.eyebrow' | transloco }}</span>
+      <h1>{{ 'subscription.title' | transloco }}</h1>
+      <p>{{ 'subscription.subtitle' | transloco }}</p>
+    </header>
+
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        @if (subscription.status === 'approved' && subscription.saga.status !== 'failed') {
+          <span class="success-icon"><app-icon name="check" [size]="30" /></span>
+        } @else {
+          <app-icon name="shield" [size]="30" />
+        }
+        <dl>
+          <div>
+            <dt>{{ 'subscription.operation' | transloco }}</dt>
+            <dd>{{ subscription.id }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'subscription.offer' | transloco }}</dt>
+            <dd>{{ subscription.offerId }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'subscription.decision' | transloco }}</dt>
+            <dd>{{ 'subscription.statuses.' + subscription.status | transloco }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'subscription.saga' | transloco }}</dt>
+            <dd>{{ 'subscription.sagaStatuses.' + subscription.saga.status | transloco }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'subscription.rule' | transloco }}</dt>
+            <dd>{{ subscription.ruleVersion }}</dd>
+          </div>
+        </dl>
+        @if (subscription.status === 'approved' && subscription.saga.status === 'payment_pending') {
+          <p class="next-step">{{ 'subscription.next' | transloco }}</p>
+        }
+        <a mat-stroked-button routerLink="/app/cotizaciones/aceptacion">
+          ← {{ 'subscription.back' | transloco }}
+        </a>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <p role="status">{{ 'subscription.empty' | transloco }}</p>
+    <a mat-stroked-button routerLink="/app/cotizaciones/aceptacion">
+      {{ 'subscription.back' | transloco }}
+    </a>
+  }
+</section>

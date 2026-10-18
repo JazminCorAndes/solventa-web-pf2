@@ -1,4 +1,14 @@
 <section class="quote-request-page">
+  @if (submitting()) {
+    <div class="quote-processing-overlay" role="status" aria-live="polite">
+      <div class="quote-processing-card">
+        <mat-spinner diameter="48" />
+        <h2>{{ 'quoteRequest.processingTitle' | transloco }}</h2>
+        <p>{{ 'quoteRequest.processingBody' | transloco }}</p>
+      </div>
+    </div>
+  }
+
   <header>
     <a routerLink="/app/cotizaciones">← {{ 'quoteRequest.back' | transloco }}</a>
     <h1>{{ 'quoteRequest.title' | transloco }}</h1>
@@ -25,11 +35,14 @@
                 <mat-option [value]="product.id" [disabled]="!product.available">
                   {{ product.name }}
                   @if (!product.available) {
-                    — {{ 'quoteRequest.comingSoon' | transloco }}
+                    — {{ 'quoteRequest.unavailableProduct' | transloco }}
                   }
                 </mat-option>
               }
             </mat-select>
+            @if (showError('productId')) {
+              <mat-error>{{ 'quoteRequest.errors.productUnavailable' | transloco }}</mat-error>
+            }
           </mat-form-field>
         </mat-card-content>
       </mat-card>
@@ -51,88 +64,440 @@
           }
 
           <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-            <span id="customer-type-label" class="field-label">
-              {{ 'quoteRequest.customerType' | transloco }}
-            </span>
-            <mat-button-toggle-group
-              formControlName="customerType"
-              hideSingleSelectionIndicator
-              aria-labelledby="customer-type-label"
-            >
-              <mat-button-toggle value="natural">
-                {{ 'quoteRequest.naturalPerson' | transloco }}
-              </mat-button-toggle>
-            </mat-button-toggle-group>
+            @if (user(); as currentUser) {
+              <section class="profile-summary" aria-labelledby="profile-summary-title">
+                <h3 id="profile-summary-title">{{ 'quoteRequest.profileData' | transloco }}</h3>
+                <dl>
+                  <div>
+                    <dt>{{ 'quoteRequest.documentType' | transloco }}</dt>
+                    <dd>
+                      @if (currentUser.documentType) {
+                        {{ documentTypeLabelKey() | transloco }}
+                        @if (currentUser.nationalId) {
+                          · {{ currentUser.nationalId }}
+                        }
+                      } @else {
+                        {{
+                          currentUser.nationalId ?? ('quoteRequest.profileUnavailable' | transloco)
+                        }}
+                      }
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{{ 'quoteRequest.email' | transloco }}</dt>
+                    <dd>{{ currentUser.email }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ 'quoteRequest.phone' | transloco }}</dt>
+                    <dd>
+                      {{ currentUser.phone ?? ('quoteRequest.profileUnavailable' | transloco) }}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+            }
 
-            <div class="field-grid">
-              @if (!sessionIdentity) {
-                <div>
-                  <label for="national-id">{{ 'quoteRequest.nationalId' | transloco }}</label>
-                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                    <input
-                      matInput
-                      id="national-id"
-                      autocomplete="off"
-                      formControlName="nationalId"
-                      placeholder="12.345.678-9"
-                    />
-                    @if (showError('nationalId')) {
-                      <mat-error>{{ 'quoteRequest.validation.nationalId' | transloco }}</mat-error>
-                    }
-                  </mat-form-field>
-                </div>
-              }
-
-              <div>
-                <label for="vehicle-plate">{{ 'quoteRequest.vehiclePlate' | transloco }}</label>
+            @switch (selectedProduct()?.id) {
+              @case ('automotive') {
+                <label for="vehicle-plate">{{
+                  'quoteRequest.fields.vehiclePlate' | transloco
+                }}</label>
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
                   <input
                     matInput
                     id="vehicle-plate"
                     autocomplete="off"
+                    autocapitalize="characters"
+                    maxlength="6"
                     formControlName="vehiclePlate"
-                    placeholder="ABCD-12"
+                    appInputFilter="vehicle-plate"
+                    placeholder="ABC123"
                   />
                   @if (showError('vehiclePlate')) {
                     <mat-error>{{ 'quoteRequest.validation.vehiclePlate' | transloco }}</mat-error>
                   }
                 </mat-form-field>
-              </div>
-            </div>
-
-            @if (sessionIdentity) {
-              <p class="privacy-note">{{ 'profiling.sessionIdentity' | transloco }}</p>
-            } @else {
-              <label for="quote-email">{{ 'quoteRequest.email' | transloco }}</label>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <input
-                  matInput
-                  id="quote-email"
-                  type="email"
-                  autocomplete="email"
-                  formControlName="email"
-                  placeholder="ejemplo@correo.com"
-                />
-                @if (showError('email')) {
-                  <mat-error>{{ 'quoteRequest.validation.email' | transloco }}</mat-error>
+              }
+              @case ('travel') {
+                <label for="destination">{{ 'quoteRequest.fields.destination' | transloco }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <input
+                    matInput
+                    id="destination"
+                    autocomplete="off"
+                    formControlName="destination"
+                    [matAutocomplete]="destinationAutocomplete"
+                    [placeholder]="'quoteRequest.fields.destinationPlaceholder' | transloco"
+                  />
+                  <mat-autocomplete
+                    #destinationAutocomplete="matAutocomplete"
+                    [displayWith]="displayDestination"
+                    autoActiveFirstOption
+                  >
+                    @for (destination of filteredTravelDestinations(); track destination.code) {
+                      <mat-option [value]="destination">{{ destination.name }}</mat-option>
+                    }
+                  </mat-autocomplete>
+                  @if (quotes.travelDestinationsStatus() === 'loading') {
+                    <mat-spinner matSuffix diameter="18" />
+                  }
+                  @if (showError('destination')) {
+                    <mat-error>{{ 'quoteRequest.validation.destination' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+                @if (quotes.travelDestinationsStatus() === 'error') {
+                  <div class="inline-alert error" role="alert">
+                    {{ 'quoteRequest.errors.destinations' | transloco }}
+                    <button mat-button type="button" (click)="quotes.loadTravelDestinations()">
+                      {{ 'common.retry' | transloco }}
+                    </button>
+                  </div>
                 }
-              </mat-form-field>
-
-              <label for="quote-phone">{{ 'quoteRequest.phone' | transloco }}</label>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <span matTextPrefix class="phone-prefix">+56</span>
-                <input
-                  matInput
-                  id="quote-phone"
-                  type="tel"
-                  autocomplete="tel"
-                  formControlName="phone"
-                  placeholder="9 1234 5678"
-                />
-                @if (showError('phone')) {
-                  <mat-error>{{ 'quoteRequest.validation.phone' | transloco }}</mat-error>
+                <span class="field-label" id="travel-dates-label">{{
+                  'quoteRequest.fields.travelDates' | transloco
+                }}</span>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-date-range-input
+                    [rangePicker]="travelDatesPicker"
+                    [min]="today"
+                    aria-labelledby="travel-dates-label"
+                  >
+                    <input
+                      matStartDate
+                      id="departure-date"
+                      formControlName="departureDate"
+                      [placeholder]="'quoteRequest.fields.departureDate' | transloco"
+                    />
+                    <input
+                      matEndDate
+                      id="return-date"
+                      formControlName="returnDate"
+                      [placeholder]="'quoteRequest.fields.returnDate' | transloco"
+                    />
+                  </mat-date-range-input>
+                  <mat-datepicker-toggle matIconSuffix [for]="travelDatesPicker" />
+                  <mat-date-range-picker #travelDatesPicker />
+                  @if (showError('departureDate')) {
+                    <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                  } @else if (showError('returnDate') || showTravelDateError()) {
+                    <mat-error>{{ 'quoteRequest.validation.returnDate' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+              }
+              @case ('life') {
+                <label for="birth-date">{{ 'quoteRequest.fields.birthDate' | transloco }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <input
+                    matInput
+                    id="birth-date"
+                    formControlName="birthDate"
+                    [matDatepicker]="lifeBirthDatePicker"
+                    [max]="today"
+                  />
+                  <mat-datepicker-toggle matIconSuffix [for]="lifeBirthDatePicker" />
+                  <mat-datepicker #lifeBirthDatePicker startView="multi-year" />
+                  @if (showError('birthDate')) {
+                    <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+              }
+              @case ('device-protection') {
+                <div class="field-grid">
+                  <div>
+                    <label for="device-type">{{
+                      'quoteRequest.fields.deviceType' | transloco
+                    }}</label>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <input
+                        matInput
+                        id="device-type"
+                        maxlength="40"
+                        formControlName="deviceType"
+                        [placeholder]="'quoteRequest.fields.deviceTypePlaceholder' | transloco"
+                      />
+                      @if (showError('deviceType')) {
+                        <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                      }
+                    </mat-form-field>
+                  </div>
+                  <div>
+                    <label for="brand-model">{{
+                      'quoteRequest.fields.brandModel' | transloco
+                    }}</label>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <input
+                        matInput
+                        id="brand-model"
+                        maxlength="80"
+                        formControlName="brandModel"
+                        placeholder="Marca y modelo"
+                      />
+                      @if (showError('brandModel')) {
+                        <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                      }
+                    </mat-form-field>
+                  </div>
+                </div>
+                <label for="purchase-value">{{
+                  'quoteRequest.fields.purchaseValue' | transloco
+                }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <span matTextPrefix class="phone-prefix">$</span>
+                  <input
+                    matInput
+                    id="purchase-value"
+                    inputmode="numeric"
+                    maxlength="12"
+                    formControlName="purchaseValue"
+                    appInputFilter="digits"
+                    placeholder="3000000"
+                  />
+                  @if (showError('purchaseValue')) {
+                    <mat-error>{{
+                      'quoteRequest.validation.positiveAmount' | transloco
+                    }}</mat-error>
+                  }
+                </mat-form-field>
+              }
+              @case ('parametric') {
+                <label for="flight-coverage">{{
+                  'quoteRequest.fields.coverageType' | transloco
+                }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-select id="flight-coverage" formControlName="coverageType">
+                    @for (coverage of flightCoverageTypes; track coverage) {
+                      <mat-option [value]="coverage">
+                        {{ 'quoteRequest.flightCoverages.' + coverage | transloco }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                  @if (showError('coverageType')) {
+                    <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+                <div class="field-grid">
+                  <div>
+                    <label for="airline">{{ 'quoteRequest.fields.airline' | transloco }}</label>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <input
+                        matInput
+                        id="airline"
+                        maxlength="80"
+                        formControlName="airline"
+                        placeholder="Aerolínea"
+                      />
+                      @if (showError('airline')) {
+                        <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                      }
+                    </mat-form-field>
+                  </div>
+                  <div>
+                    <label for="flight-number">{{
+                      'quoteRequest.fields.flightNumber' | transloco
+                    }}</label>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <input
+                        matInput
+                        id="flight-number"
+                        maxlength="10"
+                        formControlName="flightNumber"
+                        placeholder="AV123"
+                      />
+                      @if (showError('flightNumber')) {
+                        <mat-error>{{
+                          'quoteRequest.validation.flightNumber' | transloco
+                        }}</mat-error>
+                      }
+                    </mat-form-field>
+                  </div>
+                </div>
+                <label for="flight-date">{{ 'quoteRequest.fields.flightDate' | transloco }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <input
+                    matInput
+                    id="flight-date"
+                    formControlName="flightDate"
+                    [matDatepicker]="flightDatePicker"
+                    [min]="tomorrow"
+                  />
+                  <mat-datepicker-toggle matIconSuffix [for]="flightDatePicker" />
+                  <mat-datepicker #flightDatePicker />
+                  @if (showError('flightDate')) {
+                    <mat-error>{{ 'quoteRequest.validation.futureDate' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+              }
+              @case ('parametric-weather') {
+                <label for="weather-location">{{
+                  'quoteRequest.fields.location' | transloco
+                }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <input
+                    matInput
+                    id="weather-location"
+                    maxlength="120"
+                    formControlName="location"
+                    [placeholder]="'quoteRequest.fields.locationPlaceholder' | transloco"
+                  />
+                  @if (showError('location')) {
+                    <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+                <label for="weather-event">{{
+                  'quoteRequest.fields.weatherEvent' | transloco
+                }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-select id="weather-event" formControlName="weatherEvent">
+                    @for (event of weatherEventTypes; track event) {
+                      <mat-option [value]="event">{{
+                        'quoteRequest.weatherEvents.' + event | transloco
+                      }}</mat-option>
+                    }
+                  </mat-select>
+                  @if (showError('weatherEvent')) {
+                    <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+                <span class="field-label" id="weather-dates-label">{{
+                  'quoteRequest.fields.weatherDates' | transloco
+                }}</span>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-date-range-input
+                    [rangePicker]="weatherDatesPicker"
+                    [min]="tomorrow"
+                    aria-labelledby="weather-dates-label"
+                  >
+                    <input
+                      matStartDate
+                      id="weather-start-date"
+                      formControlName="startDate"
+                      [placeholder]="'quoteRequest.fields.startDate' | transloco"
+                    />
+                    <input
+                      matEndDate
+                      id="weather-end-date"
+                      formControlName="endDate"
+                      [placeholder]="'quoteRequest.fields.endDate' | transloco"
+                    />
+                  </mat-date-range-input>
+                  <mat-datepicker-toggle matIconSuffix [for]="weatherDatesPicker" />
+                  <mat-date-range-picker #weatherDatesPicker />
+                  @if (showError('startDate') || showError('endDate')) {
+                    <mat-error>{{ 'quoteRequest.validation.futureDate' | transloco }}</mat-error>
+                  } @else if (showWeatherDateError()) {
+                    <mat-error>{{ 'quoteRequest.validation.weatherDates' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+                @if (showWeatherDateError()) {
+                  <p role="alert">{{ 'quoteRequest.validation.weatherDates' | transloco }}</p>
                 }
-              </mat-form-field>
+                <label for="insured-amount">{{
+                  'quoteRequest.fields.insuredAmount' | transloco
+                }}</label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <span matTextPrefix class="phone-prefix">$</span>
+                  <input
+                    matInput
+                    id="insured-amount"
+                    inputmode="numeric"
+                    maxlength="10"
+                    formControlName="insuredAmount"
+                    appInputFilter="digits"
+                    placeholder="10000000"
+                  />
+                  @if (showError('insuredAmount')) {
+                    <mat-error>{{ 'quoteRequest.validation.insuredAmount' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+              }
+              @case ('payment-protection') {
+                <div class="field-grid">
+                  <div>
+                    <label for="credit-type">{{
+                      'quoteRequest.fields.creditType' | transloco
+                    }}</label>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <input
+                        matInput
+                        id="credit-type"
+                        maxlength="60"
+                        formControlName="creditType"
+                        placeholder="Crédito de consumo"
+                      />
+                      @if (showError('creditType')) {
+                        <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                      }
+                    </mat-form-field>
+                  </div>
+                  <div>
+                    <label for="monthly-payment">{{
+                      'quoteRequest.fields.monthlyPayment' | transloco
+                    }}</label>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <span matTextPrefix class="phone-prefix">$</span>
+                      <input
+                        matInput
+                        id="monthly-payment"
+                        inputmode="numeric"
+                        maxlength="12"
+                        formControlName="monthlyPayment"
+                        appInputFilter="digits"
+                        placeholder="850000"
+                      />
+                      @if (showError('monthlyPayment')) {
+                        <mat-error>{{
+                          'quoteRequest.validation.positiveAmount' | transloco
+                        }}</mat-error>
+                      }
+                    </mat-form-field>
+                  </div>
+                </div>
+              }
+              @case ('mortgage-life') {
+                <div class="field-grid">
+                  <div>
+                    <label for="mortgage-birth-date">{{
+                      'quoteRequest.fields.birthDate' | transloco
+                    }}</label>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <input
+                        matInput
+                        id="mortgage-birth-date"
+                        formControlName="birthDate"
+                        [matDatepicker]="mortgageBirthDatePicker"
+                        [max]="today"
+                      />
+                      <mat-datepicker-toggle matIconSuffix [for]="mortgageBirthDatePicker" />
+                      <mat-datepicker #mortgageBirthDatePicker startView="multi-year" />
+                      @if (showError('birthDate')) {
+                        <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                      }
+                    </mat-form-field>
+                  </div>
+                  <div>
+                    <label for="mortgage-balance">{{
+                      'quoteRequest.fields.mortgageBalance' | transloco
+                    }}</label>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <span matTextPrefix class="phone-prefix">$</span>
+                      <input
+                        matInput
+                        id="mortgage-balance"
+                        inputmode="numeric"
+                        maxlength="15"
+                        formControlName="mortgageBalance"
+                        appInputFilter="digits"
+                        placeholder="180000000"
+                      />
+                      @if (showError('mortgageBalance')) {
+                        <mat-error>{{
+                          'quoteRequest.validation.positiveAmount' | transloco
+                        }}</mat-error>
+                      }
+                    </mat-form-field>
+                  </div>
+                </div>
+              }
             }
 
             @if (attempted() && form.invalid) {
@@ -146,22 +511,6 @@
               <div class="inline-alert error" role="alert">
                 <span aria-hidden="true">!</span>
                 {{ errorKey()! | transloco }}
-              </div>
-            }
-
-            @if (submittedRequest(); as request) {
-              <div class="inline-alert success" role="status">
-                <div>
-                  <strong>{{ 'quoteRequest.success.title' | transloco }}</strong>
-                  <span>
-                    {{ 'quoteRequest.success.id' | transloco: { id: request.id } }}
-                  </span>
-                </div>
-                @if (profilingReady()) {
-                  <a mat-stroked-button routerLink="/app/cotizaciones/ofertas">
-                    {{ 'quoteRequest.success.viewOffers' | transloco }}
-                  </a>
-                }
               </div>
             }
 

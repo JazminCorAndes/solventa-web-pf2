@@ -1,0 +1,71 @@
+<section class="catalog-page">
+  <header>
+    <span>{{ 'insuranceCatalog.eyebrow' | transloco }}</span>
+    <h1>{{ 'insuranceCatalog.title' | transloco }}</h1>
+    <p>{{ 'insuranceCatalog.subtitle' | transloco }}</p>
+  </header>
+
+  @if (catalog.catalogStatus() === 'loading' || catalog.catalogStatus() === 'idle') {
+    <div class="state-panel" role="status">
+      <mat-spinner diameter="36" />
+      <span>{{ 'insuranceCatalog.loading' | transloco }}</span>
+    </div>
+  } @else if (catalog.catalogStatus() === 'error') {
+    <div class="state-panel" role="alert">
+      <app-icon name="shield" [size]="34" />
+      <h2>{{ 'insuranceCatalog.error.title' | transloco }}</h2>
+      <p>{{ 'insuranceCatalog.error.body' | transloco }}</p>
+      <button mat-stroked-button type="button" (click)="catalog.loadProducts()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  } @else if (catalog.catalogStatus() === 'empty') {
+    <div class="state-panel">
+      <app-icon name="shield" [size]="34" />
+      <h2>{{ 'insuranceCatalog.empty.title' | transloco }}</h2>
+      <p>{{ 'insuranceCatalog.empty.body' | transloco }}</p>
+      <button mat-stroked-button type="button" (click)="catalog.loadProducts()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  } @else {
+    <div class="catalog-grid">
+      @for (product of catalog.products(); track product.id) {
+        <mat-card
+          appearance="outlined"
+          class="product-card"
+          [class.selected]="selectedProductId === product.id"
+          [attr.id]="'seguro-' + product.id"
+        >
+          <mat-card-content>
+            <span class="product-icon"><app-icon name="shield" [size]="26" /></span>
+            <div>
+              <span class="availability">{{
+                (product.available ? 'insuranceCatalog.available' : 'insuranceCatalog.unavailable')
+                  | transloco
+              }}</span>
+              <h2>{{ product.name }}</h2>
+              <p>{{ product.description }}</p>
+            </div>
+            <ul>
+              @for (coverage of product.mainCoverages; track coverage) {
+                <li><app-icon name="check" [size]="17" />{{ coverage }}</li>
+              }
+            </ul>
+            <a
+              mat-stroked-button
+              [routerLink]="['/app/seguros', product.id]"
+              [queryParams]="{ origen: product.id }"
+              [attr.aria-label]="
+                'insuranceCatalog.viewProduct' | transloco: { product: product.name }
+              "
+            >
+              {{ 'insuranceCatalog.view' | transloco }}
+              <app-icon name="arrow-right" [size]="17" />
+            </a>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</section>

@@ -1,72 +1,61 @@
-name: GitHub Pages
+name: Publicar frontend en Pages
 
 on:
   push:
     branches:
       - master
-  workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: github-pages
   cancel-in-progress: false
 
 jobs:
   build:
-    name: Compilar demo
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v6
-
       - name: Instalar pnpm
         uses: pnpm/action-setup@v5
         with:
           version: 11.19.0
-
       - name: Configurar Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
-
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
-
-      - name: Compilar demo con mocks
-        run: pnpm build:dev --base-href /solventa-web-pf2/
-
-      - name: Preparar rutas de Angular
-        run: |
-          cp dist/solventa-web-pf2/browser/index.html dist/solventa-web-pf2/browser/404.html
-          touch dist/solventa-web-pf2/browser/.nojekyll
-
-      - name: Configurar GitHub Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Publicar artefacto
+      - name: Ejecutar lint
+        run: pnpm lint
+      - name: Ejecutar pruebas
+        run: pnpm test:ci
+      - name: Verificar fallback Pages
+        run: pnpm test:pages
+      - name: Compilar frontend para Pages con backend AWS
+        run: pnpm build:pages
+      - name: Preparar artefacto
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist/solventa-web-pf2/browser
 
   deploy:
-    name: Desplegar demo
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
-      - name: Desplegar en GitHub Pages
+      - name: Publicar artefacto revisado
         id: deployment
         uses: actions/deploy-pages@v4

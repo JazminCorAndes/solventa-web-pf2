@@ -17,7 +17,7 @@ import io.jenkins.plugins.checks.github.status.GitHubSCMSourceStatusChecksTrait
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowBranchProjectFactory
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject
 
-// Trusted controller script, not a Pipeline step. Never enable scans/builds here.
+// Script confiable del controlador, no un paso del pipeline. No habilitar exploraciones ni compilaciones aqui.
 def folder = Jenkins.get().getItem('solventa-web')
 if (!(folder instanceof Folder)) throw new IllegalStateException('Expected existing web Folder')
 def store = CredentialsProvider.lookupStores(folder).find { it.context == folder }
@@ -49,8 +49,9 @@ def source = new GitHubSCMSource('JazminCorAndes', 'solventa-web-pf2', null, fal
 source.setId('solventa-web-github')
 source.setCredentialsId('solventa-web-github-app')
 def checks = new GitHubSCMSourceStatusChecksTrait()
-checks.setName('Solventa Web Jenkins')
+checks.setName('CI / Validación (Jenkins)')
 checks.setSuppressLogs(true)
+checks.setSkipNotifications(true)
 source.setTraits([
     new OriginPullRequestDiscoveryTrait(1),
     new WildcardSCMHeadFilterTrait('PR-*', ''),
@@ -74,7 +75,7 @@ println(JsonOutput.toJson([
     credentialStore: 'solventa-web/folder',
     credentialId: source.credentialsId,
     repository: 'JazminCorAndes/solventa-web-pf2',
-    checksName: 'Solventa Web Jenkins',
+    checksName: 'CI / Validación (Jenkins)',
     childJobs: project.items.size(),
     scheduledScan: false,
 ]))

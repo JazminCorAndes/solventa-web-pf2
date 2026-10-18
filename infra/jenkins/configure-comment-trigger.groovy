@@ -13,7 +13,7 @@ import org.kohsuke.github.GHIssueState
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
-// Install once as a trusted initializer after lifecycle/toolchain approval, not in a workspace.
+// Instalar una vez como inicializador confiable tras aprobar el ciclo de vida y las herramientas, no en un espacio de trabajo.
 def controller = Jenkins.get()
 def configFile = new File(controller.rootDir, 'web-comment-trigger.json')
 if (!configFile.isFile()) return
@@ -55,6 +55,8 @@ Timer.get().scheduleWithFixedDelay({
                 if (!policy.eligible(info, (state.enabledAt as Number).longValue(), processed)) return
                 def job = project.getItem('PR-' + pull.number)
                 if (job == null) { project.scheduleBuild2(0); return }
+                // Jenkins puede agrupar solicitudes en cola y conservar la revisión anterior.
+                if (!policy.canSchedule(job.isInQueue(), job.isBuilding())) return
                 def branch = project.getProjectFactory().getBranch(job)
                 def source = project.getSCMSource(branch.sourceId)
                 def revision = source.fetch(branch.head, null)
@@ -71,7 +73,7 @@ Timer.get().scheduleWithFixedDelay({
             }
         }
     } catch (Exception failure) {
-        // No messages, tokens, keys or request bodies in logs.
+        // No registrar mensajes, tokens, claves ni cuerpos de solicitudes.
         logger.warning('Web comment scan failed: ' + failure.class.name)
     } finally {
         if (connection != null) Connector.release(connection)

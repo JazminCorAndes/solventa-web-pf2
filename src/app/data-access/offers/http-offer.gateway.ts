@@ -6,9 +6,11 @@ import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferGateway } from '../../core/offers/offer.gateway';
 import {
   InsuranceOffer,
+  isPremiumPeriodicity,
+  Money,
   OfferCalculation,
   OfferStatus,
-  PremiumCurrency,
+  PremiumPeriodicity,
   SelectedOfferRecord,
 } from '../../core/offers/offer.models';
 import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
@@ -16,15 +18,20 @@ import { profilingErrorKey } from '../../core/profiling/profiling.errors';
 
 interface MoneyResponse {
   monto: string;
-  moneda: PremiumCurrency;
+  moneda: string;
 }
 
-interface OfferResponse {
+interface PremiumResponse {
+  prima: MoneyResponse;
+  periodicidad: PremiumPeriodicity;
+  primaMensual?: MoneyResponse | null;
+}
+
+interface OfferResponse extends PremiumResponse {
   id: string;
   version: number;
   nombre: string;
   descripcion: string;
-  primaMensual: MoneyResponse;
   coberturaPrincipal: string;
   deducible: string;
   vigencia: string;
@@ -33,7 +40,7 @@ interface OfferResponse {
   condiciones: string[];
   beneficiosAdicionales: string[];
   recomendada: boolean;
-  estado: 'disponible' | 'vencida' | 'retirada';
+  estado: 'disponible' | 'aceptada' | 'vencida' | 'retirada';
   vigenteHasta: string;
 }
 
@@ -45,12 +52,11 @@ interface OffersResponse {
   ofertas: OfferResponse[];
 }
 
-interface SelectionResponse {
+interface SelectionResponse extends PremiumResponse {
   solicitudId: string;
   ofertaId: string;
   version: number;
   nombreOferta: string;
-  primaMensual: MoneyResponse;
   seleccionadaEn: string;
 }
 
@@ -65,35 +71,27 @@ export class HttpOfferGateway implements OfferGateway {
     if (!quoteId) {
       return throwError(() => new Error('A quote request is required before loading offers.'));
     }
-    return this.http
-      .get<OffersResponse>(`${this.apiUrl}/${quoteId}/ofertas`, {
-        withCredentials: true,
-      })
-      .pipe(
-        map((response) => ({
-          quoteId: response.solicitudId,
-          calculatedAt: response.calculadaEn,
-          validUntil: response.vigenteHasta,
-          appliedRate: response.tasaAplicada,
-          offers: response.ofertas.map(toOffer),
-        })),
-      );
+    return this.http.get<OffersResponse>(`${this.apiUrl}/${quoteId}/ofertas`).pipe(
+      map((response) => ({
+        quoteId: response.solicitudId,
+        calculatedAt: response.calculadaEn,
+        validUntil: response.vigenteHasta,
+        appliedRate: response.tasaAplicada,
+        offers: response.ofertas.map(toOffer),
+      })),
+    );
   }
 
   loadSelection(quoteId: string): Observable<SelectedOfferRecord | null> {
-    return this.http
-      .get<SelectionResponse>(`${this.apiUrl}/${quoteId}/seleccion`, {
-        withCredentials: true,
-      })
-      .pipe(
-        map(toSelection),
-        catchError((error: unknown) => {
-          if (error instanceof HttpErrorResponse && error.status === 404) {
-            return of(null);
-          }
-          return throwError(() => error);
-        }),
-      );
+    return this.http.get<SelectionResponse>(`${this.apiUrl}/${quoteId}/seleccion`).pipe(
+      map(toSelection),
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 404) {
+          return of(null);
+        }
+        return throwError(() => error);
+      }),
+    );
   }
 
   confirmSelection(
@@ -107,7 +105,6 @@ export class HttpOfferGateway implements OfferGateway {
         { ofertaId: offerId, version: offerVersion },
         {
           headers: new HttpHeaders({ 'Idempotency-Key': crypto.randomUUID() }),
-          withCredentials: true,
         },
       )
       .pipe(
@@ -131,8 +128,7 @@ function toOffer(response: OfferResponse): InsuranceOffer {
     version: response.version,
     name: response.nombre,
     description: response.descripcion,
-    monthlyPremium: Number(response.primaMensual.monto),
-    currency: response.primaMensual.moneda,
+    ...toPremium(response),
     coverageLabel: response.coberturaPrincipal,
     deductibleLabel: response.deducible,
     validityLabel: response.vigencia,
@@ -152,17 +148,46 @@ function toSelection(response: SelectionResponse): SelectedOfferRecord {
     offerId: response.ofertaId,
     offerVersion: response.version,
     offerName: response.nombreOferta,
-    monthlyPremium: Number(response.primaMensual.monto),
-    currency: response.primaMensual.moneda,
+    ...toPremium(response),
     selectedAt: response.seleccionadaEn,
+    confirmed: true,
   };
+}
+
+function toPremium(response: PremiumResponse): {
+  premium: Money;
+  periodicity: PremiumPeriodicity;
+} {
+  if (!isPremiumPeriodicity(response.periodicidad)) {
+    throw new Error('The offer contains an invalid premium periodicity.');
+  }
+  return { premium: toMoney(response.prima), periodicity: response.periodicidad };
+}
+
+function toMoney(response: MoneyResponse | null | undefined): Money {
+  if (!response || typeof response.monto !== 'string' || !/^\d+(?:\.\d+)?$/.test(response.monto)) {
+    throw new Error('The offer contains an invalid monetary amount.');
+  }
+  const amount = Number(response.monto);
+  if (
+    !Number.isFinite(amount) ||
+    typeof response.moneda !== 'string' ||
+    !/^[A-Z]{3}$/.test(response.moneda)
+  ) {
+    throw new Error('The offer contains an invalid monetary amount.');
+  }
+  return { amount, currency: response.moneda };
 }
 
 function toStatus(status: OfferResponse['estado']): OfferStatus {
   const statuses: Record<OfferResponse['estado'], OfferStatus> = {
     disponible: 'available',
+    aceptada: 'accepted',
     vencida: 'expired',
     retirada: 'withdrawn',
   };
+  if (!Object.hasOwn(statuses, status)) {
+    throw new Error('The offer contains an invalid status.');
+  }
   return statuses[status];
 }

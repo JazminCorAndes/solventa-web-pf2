@@ -1,5 +1,5 @@
 pipeline {
-    // Provision and verify this label before enabling the multibranch job.
+    // Preparar y verificar esta etiqueta antes de habilitar el trabajo multirrama.
     agent { label 'web-ci' }
 
     options {
@@ -18,17 +18,18 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Código') {
             steps {
+                deleteDir()
                 checkout scm
             }
         }
-        stage('Verify toolchain') {
+        stage('Herramientas') {
             steps {
                 sh 'node scripts/verify-ci-toolchain.cjs'
             }
         }
-        stage('Install dependencies') {
+        stage('Dependencias') {
             steps {
                 sh 'pnpm install --frozen-lockfile --store-dir "$PNPM_STORE_DIR"'
             }
@@ -38,12 +39,14 @@ pipeline {
                 sh 'pnpm lint'
             }
         }
-        stage('Unit and component tests') {
+        stage('Pruebas y cobertura') {
             steps {
-                sh 'mkdir -p reports && pnpm exec ng test --watch=false --reporters=junit --output-file=reports/unit-tests.xml'
+                publishChecks name: 'Cobertura', status: 'IN_PROGRESS', conclusion: 'NONE', title: 'Generando cobertura web', summary: 'Código instrumentado por Angular/Vitest V8.', detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks"
+                sh 'python3 -m unittest discover -s scripts -p test_coverage_summary.py'
+                sh 'mkdir -p reports && pnpm test:coverage'
             }
         }
-        stage('Production build') {
+        stage('Compilación') {
             steps {
                 sh 'pnpm build'
             }
@@ -53,11 +56,30 @@ pipeline {
     post {
         always {
             script {
-                if (fileExists('reports/unit-tests.xml')) {
-                    junit testResults: 'reports/unit-tests.xml', allowEmptyResults: false
+                try {
+                    if (fileExists('reports/unit-tests.xml')) {
+                        junit testResults: 'reports/unit-tests.xml', allowEmptyResults: false, skipPublishingChecks: true
+                    }
+                    def result = sh(returnStatus: true, script: '''python3 scripts/coverage_summary.py \
+                        --coverage 'Web=coverage/solventa-web-pf2/cobertura-coverage.xml' \
+                        --tests 'reports/unit-tests.xml' \
+                        --scope 'Código instrumentado por Angular/Vitest V8. No incluye pruebas E2E ni servicios externos.'
+                    ''')
+                    def summary = readFile(file: 'reports/coverage-summary.md', encoding: 'UTF-8')
+                    def revision = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    summary += "\nRevisión compilada (puede incluir merge con destino): `${revision}`.\n"
+                    publishChecks name: 'Cobertura', title: summary.readLines()[0], summary: summary,
+                        detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks",
+                        conclusion: result == 0 ? 'SUCCESS' : (currentBuild.currentResult == 'SUCCESS' ? 'FAILURE' : 'NEUTRAL')
+                    if (result != 0 && currentBuild.currentResult == 'SUCCESS') {
+                        error('Faltan reportes válidos de cobertura o pruebas')
+                    }
+                } finally {
+                    archiveArtifacts artifacts: 'reports/unit-tests.xml,reports/coverage-summary.md,coverage/**', allowEmptyArchive: true
                 }
             }
-            archiveArtifacts artifacts: 'reports/*.xml', allowEmptyArchive: true
+        }
+        cleanup {
             deleteDir()
         }
     }

@@ -1,100 +1,206 @@
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom, of } from 'rxjs';
-import { AUTH_GATEWAY, AuthGateway } from './auth.gateway';
-import { AuthSession } from './auth.models';
+import { firstValueFrom, of, Subject, throwError } from 'rxjs';
+import { AuthenticationUnavailableError, InvalidRefreshTokenError } from './auth.errors';
+import { AUTH_GATEWAY } from './auth.gateway';
+import { AuthGrant } from './auth.models';
 import { AuthService } from './auth.service';
-import { AUTH_STORAGE, AuthStorage } from './auth-storage.service';
+import { AUTH_STORAGE, StoredAuth } from './auth-storage.service';
+import { grantFor, TEST_USER, TestAuthGateway, TestAuthStorage } from './auth.testing';
 
-const ACTIVE_SESSION: AuthSession = {
-  user: {
-    id: 'client-001',
-    name: 'Cliente Solventa',
-    email: 'cliente@solventa.co',
-    role: 'client',
-  },
-  expiresAt: Date.now() + 60_000,
-};
-
-class TestAuthGateway implements AuthGateway {
-  login() {
-    return of(ACTIVE_SESSION);
-  }
-
-  currentSession() {
-    return of(ACTIVE_SESSION);
-  }
-
-  logout() {
-    return of(undefined);
-  }
-}
-
-class TestAuthStorage implements AuthStorage {
-  stored: AuthSession | null = null;
-  clearCalls = 0;
-
-  read(): AuthSession | null {
-    return this.stored;
-  }
-
-  write(session: AuthSession): void {
-    this.stored = session;
-  }
-
-  clear(): void {
-    this.clearCalls++;
-    this.stored = null;
-  }
-}
+const CREDENTIALS = { email: 'cliente@solventa.co', password: 'Solventa123!' };
 
 describe('AuthService', () => {
   let storage: TestAuthStorage;
+  let gateway: TestAuthGateway;
+
+  function createService(): AuthService {
+    return TestBed.inject(AuthService);
+  }
+
+  function storedAuth(overrides: Partial<StoredAuth> = {}): StoredAuth {
+    return {
+      user: TEST_USER,
+      refreshToken: 'refresh-stored',
+      refreshExpiresAt: Date.now() + 60_000,
+      ...overrides,
+    };
+  }
 
   beforeEach(() => {
     storage = new TestAuthStorage();
+    gateway = new TestAuthGateway();
     TestBed.configureTestingModule({
       providers: [
         AuthService,
-        { provide: AUTH_GATEWAY, useClass: TestAuthGateway },
+        { provide: AUTH_GATEWAY, useValue: gateway },
         { provide: AUTH_STORAGE, useValue: storage },
       ],
     });
   });
 
-  it('stores the session after a successful login', async () => {
-    const service = TestBed.inject(AuthService);
+  it('keeps the access token in memory and stores only the refresh token after login', async () => {
+    const service = createService();
 
-    await firstValueFrom(service.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }));
+    await firstValueFrom(service.login(CREDENTIALS));
 
-    expect(storage.stored).toEqual(ACTIVE_SESSION);
+    expect(storage.stored).toEqual({
+      user: TEST_USER,
+      refreshToken: 'refresh-1',
+      refreshExpiresAt: expect.any(Number),
+    });
+    expect(JSON.stringify(storage.stored)).not.toContain('access-1');
     expect(service.user()?.email).toBe('cliente@solventa.co');
+    await expect(firstValueFrom(service.getAccessToken())).resolves.toBe('access-1');
   });
 
-  it('restores a valid stored session', () => {
-    storage.stored = ACTIVE_SESSION;
+  it('restores the session from a stored refresh token without an access token', async () => {
+    storage.stored = storedAuth();
 
-    const service = TestBed.inject(AuthService);
+    const service = createService();
 
     expect(service.hasActiveSession()).toBe(true);
     expect(service.user()?.id).toBe('client-001');
+
+    await firstValueFrom(service.synchronizeSession());
+
+    expect(gateway.refreshCalls).toEqual(['refresh-stored']);
+    expect(storage.stored?.refreshToken).toBe('refresh-2');
+    await expect(firstValueFrom(service.getAccessToken())).resolves.toBe('access-2');
   });
 
-  it('discards an expired stored session', () => {
-    storage.stored = { ...ACTIVE_SESSION, expiresAt: Date.now() - 1 };
+  it('discards an expired stored refresh token', () => {
+    storage.stored = storedAuth({ refreshExpiresAt: Date.now() - 1 });
 
-    const service = TestBed.inject(AuthService);
+    const service = createService();
 
     expect(service.hasActiveSession()).toBe(false);
     expect(storage.stored).toBeNull();
   });
 
-  it('clears session state on logout', async () => {
-    const service = TestBed.inject(AuthService);
-    await firstValueFrom(service.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }));
+  it('silently becomes unauthenticated when the stored refresh token is rejected', async () => {
+    storage.stored = storedAuth();
+    gateway.refreshResult = () => throwError(() => new InvalidRefreshTokenError());
+    const service = createService();
 
-    await firstValueFrom(service.logout());
+    await expect(firstValueFrom(service.synchronizeSession())).resolves.toBeUndefined();
 
     expect(service.session()).toBeNull();
     expect(storage.stored).toBeNull();
+  });
+
+  it('keeps the stored session when the backend is temporarily unavailable', async () => {
+    storage.stored = storedAuth();
+    gateway.refreshResult = () => throwError(() => new AuthenticationUnavailableError());
+    const service = createService();
+
+    await expect(firstValueFrom(service.synchronizeSession())).rejects.toBeInstanceOf(
+      AuthenticationUnavailableError,
+    );
+
+    expect(service.hasActiveSession()).toBe(true);
+    expect(storage.stored).not.toBeNull();
+  });
+
+  it('does nothing when there is no stored session', async () => {
+    const service = createService();
+
+    await firstValueFrom(service.synchronizeSession());
+
+    expect(gateway.refreshCalls).toEqual([]);
+    expect(service.session()).toBeNull();
+  });
+
+  it('shares one refresh request between concurrent callers', async () => {
+    storage.stored = storedAuth();
+    const pending = new Subject<AuthGrant>();
+    gateway.refreshResult = () => pending;
+    const service = createService();
+
+    const results = Promise.all([
+      firstValueFrom(service.renewAccessToken()),
+      firstValueFrom(service.renewAccessToken()),
+      firstValueFrom(service.getAccessToken()),
+    ]);
+    pending.next(grantFor('access-2', 'refresh-2'));
+    pending.complete();
+
+    await expect(results).resolves.toEqual(['access-2', 'access-2', 'access-2']);
+    expect(gateway.refreshCalls).toEqual(['refresh-stored']);
+  });
+
+  it('reuses a token renewed after the rejected one was issued', async () => {
+    const service = createService();
+    await firstValueFrom(service.login(CREDENTIALS));
+
+    await firstValueFrom(service.renewAccessToken('access-1'));
+    const reused = await firstValueFrom(service.renewAccessToken('access-1'));
+
+    expect(reused).toBe('access-2');
+    expect(gateway.refreshCalls).toEqual(['refresh-1']);
+  });
+
+  it('renews an access token that is about to expire', async () => {
+    gateway.loginResult = () => {
+      const grant = grantFor('access-1', 'refresh-1');
+      return of({ ...grant, session: { ...grant.session, expiresAt: Date.now() + 1_000 } });
+    };
+    const service = createService();
+    await firstValueFrom(service.login(CREDENTIALS));
+
+    await expect(firstValueFrom(service.getAccessToken())).resolves.toBe('access-2');
+  });
+
+  it('has no access token without a session', async () => {
+    const service = createService();
+
+    await expect(firstValueFrom(service.getAccessToken())).resolves.toBeNull();
+  });
+
+  it('clears local state when the refresh token is invalid', async () => {
+    const service = createService();
+    await firstValueFrom(service.login(CREDENTIALS));
+    gateway.refreshResult = () => throwError(() => new InvalidRefreshTokenError());
+
+    await expect(firstValueFrom(service.renewAccessToken())).rejects.toBeInstanceOf(
+      InvalidRefreshTokenError,
+    );
+
+    expect(service.session()).toBeNull();
+    expect(storage.stored).toBeNull();
+  });
+
+  it('sends the refresh token on logout and clears the session', async () => {
+    const service = createService();
+    await firstValueFrom(service.login(CREDENTIALS));
+
+    await firstValueFrom(service.logout());
+
+    expect(gateway.logoutCalls).toEqual(['refresh-1']);
+    expect(service.session()).toBeNull();
+    expect(storage.stored).toBeNull();
+  });
+
+  it('clears local state even if the remote logout fails', async () => {
+    const service = createService();
+    await firstValueFrom(service.login(CREDENTIALS));
+    gateway.logoutResult = () => throwError(() => new AuthenticationUnavailableError());
+
+    await expect(firstValueFrom(service.logout())).rejects.toBeInstanceOf(
+      AuthenticationUnavailableError,
+    );
+
+    expect(service.session()).toBeNull();
+    expect(storage.stored).toBeNull();
+  });
+
+  it('registers a user without opening a session', async () => {
+    const service = createService();
+
+    const user = await firstValueFrom(
+      service.register({ name: 'Ana', email: 'ana@solventa.co', password: 'Solventa123!' }),
+    );
+
+    expect(user.email).toBe('ana@solventa.co');
+    expect(service.session()).toBeNull();
   });
 });
