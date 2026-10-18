@@ -18,7 +18,6 @@ import { AUTH_GATEWAY } from './core/auth/auth.gateway';
 import { AUTH_STORAGE, BrowserAuthStorage } from './core/auth/auth-storage.service';
 import { DASHBOARD_GATEWAY } from './core/dashboard/dashboard.gateway';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
-import { INSURANCE_CATALOG_GATEWAY } from './core/insurance-catalog/insurance-catalog.gateway';
 import { OFFER_GATEWAY } from './core/offers/offer.gateway';
 import {
   BrowserOfferSelectionStorage,
@@ -27,8 +26,6 @@ import {
 import { MockAuthGateway } from './data-access/auth/mock-auth.gateway';
 import { HttpAuthGateway } from './data-access/auth/http-auth.gateway';
 import { MockDashboardGateway } from './data-access/dashboard/mock-dashboard.gateway';
-import { HttpInsuranceCatalogGateway } from './data-access/insurance-catalog/http-insurance-catalog.gateway';
-import { MockInsuranceCatalogGateway } from './data-access/insurance-catalog/mock-insurance-catalog.gateway';
 import { MockOfferGateway } from './data-access/offers/mock-offer.gateway';
 import { HttpOfferGateway } from './data-access/offers/http-offer.gateway';
 import { SUBSCRIPTION_GATEWAY } from './core/subscriptions/subscription.gateway';
@@ -50,6 +47,8 @@ import { catchError, firstValueFrom, of } from 'rxjs';
 import { PROFILING_GATEWAY } from './core/profiling/profiling.gateway';
 import { HttpProfilingGateway } from './data-access/profiling/http-profiling.gateway';
 import { MockProfilingGateway } from './data-access/profiling/mock-profiling.gateway';
+import { SIMULATED_PAYMENT_GATEWAY } from './core/payments/simulated-payment.gateway';
+import { HttpSimulatedPaymentGateway } from './data-access/payments/http-simulated-payment.gateway';
 
 registerLocaleData(localeEsCo);
 
@@ -64,10 +63,6 @@ export const appConfig: ApplicationConfig = {
     { provide: AUTH_GATEWAY, useClass: backendMode ? HttpAuthGateway : MockAuthGateway },
     { provide: AUTH_STORAGE, useClass: BrowserAuthStorage },
     { provide: DASHBOARD_GATEWAY, useClass: MockDashboardGateway },
-    {
-      provide: INSURANCE_CATALOG_GATEWAY,
-      useClass: backendMode ? HttpInsuranceCatalogGateway : MockInsuranceCatalogGateway,
-    },
     { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
     {
@@ -75,6 +70,7 @@ export const appConfig: ApplicationConfig = {
       useClass: backendMode ? HttpSubscriptionGateway : MockSubscriptionGateway,
     },
     { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
+    { provide: SIMULATED_PAYMENT_GATEWAY, useClass: HttpSimulatedPaymentGateway },
     {
       provide: QUOTE_REQUEST_GATEWAY,
       useClass: backendMode ? HttpQuoteRequestGateway : MockQuoteRequestGateway,

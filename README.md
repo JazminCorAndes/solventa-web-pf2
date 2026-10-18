@@ -221,19 +221,25 @@ El panel permite autorizar y revocar; envía la versión vigente, o `0` para la 
 autorización. Ante un conflicto se exige recargar antes de volver a escribir. La autorización
 persiste en el backend, dura 30 días y comprende Open Finance y Open Data para cotización.
 
-Después de crear la solicitud se consulta su perfil. El mismo panel aparece en el resumen y
-en las ofertas y muestra el identificador de solicitud y perfil, score decimal, nivel,
+El panel se conserva en «Solicitar cotización» para gestionar la autorización y en el
+resumen para consultar el perfil de la solicitud. En el resumen muestra el identificador
+de solicitud y perfil, score decimal, nivel,
 versiones de perfil/modelo/consentimiento, fechas y fuentes. Las fuentes actuales son
 **simuladas** y no representan una consulta financiera real. No se guardan perfiles en
-`sessionStorage`; cada pantalla los consulta al BFF.
+`sessionStorage`; el panel los consulta al BFF.
 
-Las ofertas se habilitan solo tras consultar un perfil completo y vigente de esa solicitud.
-Se retiran los datos al vencer el perfil, sus fuentes o el consentimiento; al recuperar el
-foco de la ventana se vuelve a consultar. El backend revalida el perfil al obtener ofertas y
-confirmar la selección. Revocar, renovar el consentimiento o dejar vencer el perfil puede
-exigir crear una nueva solicitud: no se reemplaza silenciosamente el perfil original.
-Los errores de sesión, consentimiento, concurrencia, vencimiento e indisponibilidad se
-muestran sin resultados parciales ni fallback a datos antiguos.
+«Elige tu plan» (`/app/cotizaciones/ofertas`) no muestra el panel ni consulta consentimiento
+o perfilamiento. Al entrar carga directamente las ofertas de la solicitud vigente desde
+`GET /v1/solicitudes-cotizacion/{id}/ofertas` y recupera la selección existente. Una consulta
+de perfilamiento no disponible no bloquea esta pantalla. Se conservan JWT, autorización
+por usuario y validaciones del backend, selección, primas y periodicidades. Los errores
+reales de ofertas se muestran con opción de reintentar, sin fallback a mocks ni perfiles
+inventados; si el backend devuelve un error de consentimiento o perfil, también se informa.
+
+En las pantallas que conservan el panel, se retiran sus datos al vencer el perfil, sus
+fuentes o el consentimiento; al recuperar el foco de la ventana se vuelve a consultar.
+Revocar, renovar el consentimiento o dejar vencer el perfil puede exigir crear una nueva
+solicitud: no se reemplaza silenciosamente el perfil original.
 
 Para comparar vigencias, el adaptador HTTP usa `Date` del servidor y un reloj monótono.
 Así, un pequeño desfase del computador no rechaza datos recién creados en AWS. Se usa un
@@ -467,7 +473,24 @@ y envía `{ ofertaId, version }` con `Idempotency-Key` UUID. La suscripción se 
 `POST /v1/solicitudes-cotizacion/{id}/suscripcion`, cuerpo `{}` y otra clave UUID; se consulta
 con `GET` sobre la misma ruta. La interfaz muestra las decisiones aprobada, en revisión o
 rechazada y los estados reales de la saga, sin presentar datos cacheados como éxito tras un error.
-El backend `develop` aún no expone pagos: una aprobación no habilita un pago desde esta aplicación.
+La continuación «Proceder al pago» inicia o recupera la suscripción y muestra su estado real.
+Si falla después de aceptar la oferta, el error permanece visible y se puede reintentar sin
+repetir la aceptación. Durante la solicitud se bloquean los clics repetidos.
+
+Para una suscripción aprobada, la pantalla consulta el importe y la periodicidad de la selección
+aceptada en el backend y recupera el pago con
+`GET /v1/solicitudes-cotizacion/{id}/pago-simulado`. Solo un `404` con código
+`pago_no_encontrado` significa que aún no hay pago; una solicitud ajena o inexistente sigue
+siendo un error. El usuario debe pulsar «Confirmar pago simulado» de forma explícita.
+El `POST` sobre la misma ruta envía `{}`, Bearer JWT y `Idempotency-Key` UUID, sin importe
+ni datos de tarjetas. La clave se conserva en `sessionStorage` por suscripción para reintentar
+incluso tras una recarga; el resultado siempre se recupera del servidor, no de un éxito local.
+La confirmación muestra la referencia `SIM-…`, el importe y el estado persistidos; después
+se vuelve a consultar la suscripción para mostrar la saga `pago_confirmado`.
+Las periodicidades `mensual`, `por_viaje`, `por_vuelo` y `por_periodo` se conservan sin convertirlas
+en mensualidades. Los estados en revisión, rechazada, fallida o emitida no habilitan nuevos pagos.
+Esta simulación requiere el modo backend: no cobra dinero, no abre un checkout real y no
+emite pólizas. No se implementa un éxito ficticio en el modo mock.
 Siniestros, detalle de pólizas, notificaciones y recuperación de contraseña permanecen
 fuera del alcance actual.
 

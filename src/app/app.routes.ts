@@ -31,23 +31,6 @@ export const routes: Routes = [
         title: 'Inicio | Solventa',
       },
       {
-        path: 'seguros',
-        pathMatch: 'full',
-        loadComponent: () =>
-          import('./features/insurance-catalog/insurance-catalog-page.component').then(
-            (component) => component.InsuranceCatalogPageComponent,
-          ),
-        title: 'Seguros disponibles | Solventa',
-      },
-      {
-        path: 'seguros/:productoId',
-        loadComponent: () =>
-          import('./features/insurance-catalog/insurance-product-detail-page.component').then(
-            (component) => component.InsuranceProductDetailPageComponent,
-          ),
-        title: 'Detalle del seguro | Solventa',
-      },
-      {
         path: 'cotizaciones',
         pathMatch: 'full',
         loadComponent: () =>
