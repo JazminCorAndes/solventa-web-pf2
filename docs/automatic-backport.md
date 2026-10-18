@@ -29,7 +29,7 @@ humana vigente y checks exitosos de su head: Calidad (App 15368) y
 CI / Validación (Jenkins) (App 5277435).
 
 La App crea `backport/release-pr-<número>` en el SHA integrado exacto. Se comprueban autor,
-App ID mediante Issues API, repositorio, base, head, rama y ancestry antes de integrar.
+identidad numérica real del bot mediante Users API, repositorio, base, head, rama y ancestry antes de integrar.
 Develop debe ser ancestro de la entrega. Conflictos, divergencia, autores distintos,
 evidencia obsoleta o cambios adicionales detienen el flujo; nunca se fuerza una rama.
 PRs antiguos de otros bots no se adoptan. No se duplican ni reabren PRs cerrados.
@@ -72,6 +72,9 @@ publicación Pages, con un único build validado. Los hotfixes no se incluyen en
 
 GitHub concede la excepción a la App, no al nombre de una rama. La restricción a backports
 exactos está en el workflow confiable de master; proteger su clave y revisar sus cambios.
+El token se crea para el App ID y su clave; el slug autenticado por esa acción debe coincidir
+con el configurado. Users API confirma login, tipo Bot e ID del autor. No se depende de
+`performed_via_github_app`: no viene en el payload de PR y puede ser nulo en Issues API.
 
 ## Recuperación
 

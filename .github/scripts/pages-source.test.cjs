@@ -156,3 +156,12 @@ test('la excepción de backport no ejecuta código del PR y el resto conserva CI
     assert.ok(step.includes("steps.policy.outputs.skip_tests != 'true'"), step.split('\n')[0]);
   assert.ok(ci.includes('node --test .github/scripts/*.test.cjs'));
 });
+
+test('el backport usa el slug autenticado por la creación del token, no solo una variable', () => {
+  const automation = fs.readFileSync(
+    path.join(__dirname, '../workflows/automatic-backport.yml'),
+    'utf8',
+  );
+  assert.ok(automation.includes('APP_SLUG: ${{ steps.app.outputs.app-slug }}'));
+  assert.ok(automation.includes('process.env.APP_SLUG !== process.env.EXPECTED_APP_SLUG'));
+});

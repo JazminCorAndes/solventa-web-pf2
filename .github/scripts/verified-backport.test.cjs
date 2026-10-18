@@ -33,7 +33,7 @@ function fixture(t) {
     base: { ref: 'develop', sha: BASE, repo: { full_name: full } },
     user: { id: 3, type: 'Bot', login: 'backport-app[bot]' },
   };
-  const issue = { user: { id: 3 }, performed_via_github_app: { id: 99 } };
+  const bot = { id: 3, type: 'Bot', login: 'backport-app[bot]' };
   const checks = [
     ['Calidad', 15368],
     ['CI / Validación (Jenkins)', 5277435],
@@ -75,8 +75,8 @@ function fixture(t) {
           return { data: { merged: true, sha: 'd'.repeat(40) } };
         },
       },
+      users: { getByUsername: async () => ({ data: bot }) },
       issues: {
-        get: async () => ({ data: issue }),
         addAssignees: async (input) => {
           state.calls.push(['assign', input]);
         },
@@ -117,7 +117,7 @@ function fixture(t) {
     github,
     repo,
     pull,
-    issue,
+    bot,
     source,
     checks,
     reviews,
@@ -130,7 +130,7 @@ function fixture(t) {
   };
 }
 
-test('la App se verifica mediante Issues API; el payload de PR no incluye performed_via_github_app', async (t) => {
+test('la App se verifica mediante la identidad real del bot, sin campos opcionales del PR', async (t) => {
   const f = fixture(t);
   assert.equal('performed_via_github_app' in f.pull, false);
   await verifyPull(f);
@@ -146,19 +146,19 @@ for (const [name, mutate] of [
   [
     'otra App',
     (f) => {
-      f.issue.performed_via_github_app.id = 100;
+      f.bot.id = 100;
     },
   ],
   [
     'App sin confirmar',
     (f) => {
-      delete f.issue.performed_via_github_app;
+      f.bot.type = 'User';
     },
   ],
   [
-    'autor de issue distinto',
+    'slug de bot distinto',
     (f) => {
-      f.issue.user.id = 4;
+      f.bot.login = 'other-app[bot]';
     },
   ],
   [

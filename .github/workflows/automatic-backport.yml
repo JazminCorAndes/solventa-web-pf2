@@ -52,10 +52,12 @@ jobs:
         env:
           SOURCE_PR: ${{ inputs.source_pr || github.event.pull_request.number }}
           APP_ID: ${{ vars.BACKPORT_APP_ID }}
-          APP_SLUG: ${{ vars.BACKPORT_APP_SLUG }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+          EXPECTED_APP_SLUG: ${{ vars.BACKPORT_APP_SLUG }}
         with:
           github-token: ${{ steps.app.outputs.token }}
           script: |
+            if (process.env.APP_SLUG !== process.env.EXPECTED_APP_SLUG) throw new Error('La App autenticada no coincide con la configurada');
             const { automaticBackport } = require('./.github/scripts/verified-backport.cjs');
             await automaticBackport({ github, context, core, sourceId: Number(process.env.SOURCE_PR),
               appId: Number(process.env.APP_ID), appSlug: process.env.APP_SLUG });
