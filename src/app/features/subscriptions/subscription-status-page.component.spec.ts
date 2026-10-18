@@ -1,10 +1,25 @@
 import { signal } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeEsCo from '@angular/common/locales/es-CO';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
+import { of, Subject, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import es from '../../../../public/assets/i18n/es.json';
+import { OFFER_GATEWAY } from '../../core/offers/offer.gateway';
+import { SIMULATED_PAYMENT_GATEWAY } from '../../core/payments/simulated-payment.gateway';
+import { SimulatedPaymentRecord } from '../../core/payments/simulated-payment.models';
+import {
+  CONFIRMED_PAYMENT,
+  PAYMENT_SELECTION,
+} from '../../core/payments/simulated-payment.testing';
 import { SubscriptionRecord } from '../../core/subscriptions/subscription.models';
 import { SubscriptionService } from '../../core/subscriptions/subscription.service';
 import { SubscriptionStatusPageComponent } from './subscription-status-page.component';
+
+registerLocaleData(localeEsCo);
 
 const SUBSCRIPTION: SubscriptionRecord = {
   id: '30000000-0000-4000-8000-000000000001',
@@ -29,14 +44,21 @@ const SUBSCRIPTION: SubscriptionRecord = {
 };
 
 describe('SubscriptionStatusPageComponent', () => {
+  const originalMode = environment.dataAccessMode;
   let fixture: ComponentFixture<SubscriptionStatusPageComponent>;
   const load = vi.fn();
   const subscription = signal<SubscriptionRecord | null>(SUBSCRIPTION);
   const loading = signal(false);
   const error = signal(false);
+  const paymentGateway = { load: vi.fn(), confirm: vi.fn() };
+  const offers = { loadSelection: vi.fn() };
 
   beforeEach(async () => {
+    environment.dataAccessMode = 'backend';
     load.mockClear();
+    paymentGateway.load.mockReset().mockReturnValue(of(null));
+    paymentGateway.confirm.mockReset().mockReturnValue(of(CONFIRMED_PAYMENT));
+    offers.loadSelection.mockReset().mockReturnValue(of(PAYMENT_SELECTION));
     subscription.set(SUBSCRIPTION);
     loading.set(false);
     error.set(false);
@@ -44,37 +66,14 @@ describe('SubscriptionStatusPageComponent', () => {
       imports: [
         SubscriptionStatusPageComponent,
         TranslocoTestingModule.forRoot({
-          langs: {
-            es: {
-              subscription: {
-                eyebrow: 'Suscripción',
-                title: 'Estado de suscripción',
-                subtitle: 'Estado informado por el servicio.',
-                operation: 'Identificador de operación',
-                offer: 'Oferta aceptada',
-                decision: 'Decisión',
-                statuses: { approved: 'Aprobada', review: 'En revisión', rejected: 'Rechazada' },
-                saga: 'Estado de emisión',
-                sagaStatuses: {
-                  payment_pending: 'Pago pendiente',
-                  payment_confirmed: 'Pago confirmado',
-                  issued: 'Póliza emitida',
-                  failed: 'Emisión fallida',
-                },
-                loading: 'Consultando la suscripción',
-                error: 'No fue posible consultar la suscripción.',
-                empty: 'No hay una suscripción registrada.',
-                rule: 'Regla aplicada',
-                next: 'El registro de pagos aún no está disponible.',
-                back: 'Volver a la aceptación',
-              },
-            },
-          },
+          langs: { es },
           translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
         }),
       ],
       providers: [
         provideRouter([]),
+        { provide: SIMULATED_PAYMENT_GATEWAY, useValue: paymentGateway },
+        { provide: OFFER_GATEWAY, useValue: offers },
         {
           provide: SubscriptionService,
           useValue: { subscription, loading, error, load },
@@ -86,6 +85,11 @@ describe('SubscriptionStatusPageComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    environment.dataAccessMode = originalMode;
+    window.sessionStorage.removeItem(`solventa.payment.attempt.${SUBSCRIPTION.id}`);
+  });
+
   it('shows the approved decision and operation identifier', () => {
     const text = fixture.nativeElement.textContent;
 
@@ -93,7 +97,9 @@ describe('SubscriptionStatusPageComponent', () => {
     expect(text).toContain('Estado de suscripción');
     expect(text).toContain(SUBSCRIPTION.id);
     expect(text).toContain('Aprobada');
-    expect(text).toContain('El registro de pagos aún no está disponible.');
+    expect(text).toContain(es.payment.disclaimer);
+    expect(text).toContain(es.payment.pending);
+    expect(paymentGateway.confirm).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('.success-icon')).not.toBeNull();
   });
 
@@ -111,7 +117,8 @@ describe('SubscriptionStatusPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain(label);
     expect(fixture.nativeElement.textContent).not.toContain('Aprobada');
     expect(fixture.nativeElement.querySelector('.success-icon')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.next-step')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.payment-section')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
   });
 
   it.each([
@@ -122,7 +129,7 @@ describe('SubscriptionStatusPageComponent', () => {
     subscription.set({ ...SUBSCRIPTION, saga: { ...SUBSCRIPTION.saga, status } });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(label);
-    expect(fixture.nativeElement.querySelector('.next-step')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
     if (status === 'failed') {
       expect(fixture.nativeElement.querySelector('.success-icon')).toBeNull();
     }
@@ -147,7 +154,122 @@ describe('SubscriptionStatusPageComponent', () => {
   it('shows a missing subscription without success', () => {
     subscription.set(null);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('No hay una suscripción registrada.');
+    expect(fixture.nativeElement.textContent).toContain(es.subscription.empty);
     expect(fixture.nativeElement.querySelector('.success-icon')).toBeNull();
+  });
+
+  it('shows the backend amount and periodicity and requires an explicit simulated confirmation', () => {
+    const amount = fixture.nativeElement.querySelector('.payment-amount')?.textContent;
+    expect(amount).toContain('12.345,67');
+    expect(amount).toContain(es.offers.premiumLabels.por_vuelo);
+    expect(fixture.nativeElement.textContent).toContain(es.payment.disclaimer);
+    expect(fixture.nativeElement.querySelector('input')).toBeNull();
+    expect(paymentGateway.confirm).not.toHaveBeenCalled();
+
+    fixture.nativeElement.querySelector('.confirm-payment').click();
+
+    expect(paymentGateway.confirm).toHaveBeenCalledWith(SUBSCRIPTION.quoteId, expect.any(String));
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it('blocks double clicks, shows a failed attempt and allows a safe retry', () => {
+    const pending = new Subject<SimulatedPaymentRecord>();
+    paymentGateway.confirm.mockReturnValueOnce(pending);
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('.confirm-payment');
+    button.click();
+    fixture.detectChanges();
+    button.click();
+    fixture.componentInstance.confirmPayment();
+
+    expect(button.disabled).toBe(true);
+    expect(button.textContent).toContain(es.payment.confirming);
+    expect(paymentGateway.confirm).toHaveBeenCalledOnce();
+
+    pending.error(new HttpErrorResponse({ status: 503 }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      es.payment.errors.unavailable,
+    );
+    expect(button.disabled).toBe(false);
+    expect(fixture.nativeElement.querySelector('.payment-confirmation')).toBeNull();
+    expect(load).toHaveBeenCalledOnce();
+
+    button.click();
+    fixture.detectChanges();
+
+    expect(paymentGateway.confirm).toHaveBeenCalledTimes(2);
+    expect(paymentGateway.confirm.mock.calls[0][1]).toBe(paymentGateway.confirm.mock.calls[1][1]);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.payment-confirmation')?.textContent).toContain(
+      CONFIRMED_PAYMENT.reference,
+    );
+    expect(fixture.nativeElement.textContent).not.toContain('Póliza emitida');
+  });
+
+  it('recovers a confirmed payment on reload without another POST or a policy-success message', () => {
+    paymentGateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    subscription.set({ ...SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.payment-confirmation')?.textContent).toContain(
+      CONFIRMED_PAYMENT.reference,
+    );
+    expect(fixture.nativeElement.textContent).toContain(es.payment.disclaimer);
+    expect(fixture.nativeElement.textContent).toContain('Pago confirmado');
+    expect(fixture.nativeElement.textContent).not.toContain('Póliza emitida');
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
+    expect(paymentGateway.confirm).not.toHaveBeenCalled();
+  });
+
+  it('does not enable confirmation after a failed status request', () => {
+    paymentGateway.load.mockReturnValueOnce(
+      throwError(
+        () => new HttpErrorResponse({ status: 404, error: { code: 'solicitud_no_encontrada' } }),
+      ),
+    );
+    subscription.set({ ...SUBSCRIPTION });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      es.payment.errors.notFound,
+    );
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.payment-confirmation')).toBeNull();
+  });
+
+  it('never exposes confirmation before the backend amount and payment status arrive', () => {
+    const pending = new Subject<SimulatedPaymentRecord | null>();
+    paymentGateway.load.mockReturnValueOnce(pending);
+    subscription.set({ ...SUBSCRIPTION });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(es.payment.loading);
+    expect(fixture.nativeElement.querySelector('.payment-amount')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
+    pending.next(null);
+    pending.complete();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).not.toBeNull();
+  });
+
+  it('discards an in-flight payment lookup when the subscription changes to review', () => {
+    const pending = new Subject<SimulatedPaymentRecord | null>();
+    paymentGateway.load.mockReturnValueOnce(pending);
+    subscription.set({ ...SUBSCRIPTION });
+    fixture.detectChanges();
+    subscription.set({
+      ...SUBSCRIPTION,
+      status: 'review',
+      decision: { ...SUBSCRIPTION.decision, result: 'review' },
+    });
+    fixture.detectChanges();
+    pending.next(CONFIRMED_PAYMENT);
+    pending.complete();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.payment-section')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(es.subscription.statuses.review);
+    expect(fixture.nativeElement.textContent).not.toContain(CONFIRMED_PAYMENT.reference);
+    expect(paymentGateway.confirm).not.toHaveBeenCalled();
   });
 });

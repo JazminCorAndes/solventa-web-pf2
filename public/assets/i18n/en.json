@@ -321,7 +321,7 @@
     "confirming": "Confirming",
     "confirmedTitle": "Selection confirmed",
     "confirmedBody": "The offer was registered successfully.",
-    "continueAction": "Process subscription",
+    "continueAction": "Proceed to payment",
     "loading": "Loading your protection summary.",
     "backToOffers": "Back to offers",
     "errors": {
@@ -353,7 +353,27 @@
       "failed": "Issuance failed"
     },
     "rule": "Applied rule",
-    "next": "The service reports a pending payment. Payment registration is not yet available.",
     "back": "Back to acceptance"
+  },
+  "payment": {
+    "title": "Simulated payment",
+    "disclaimer": "This operation is a simulation: it does not charge money, request card details or issue a policy.",
+    "backendRequired": "Simulated payment requires a connection to the service.",
+    "loading": "Loading the simulated payment amount and status.",
+    "pending": "Simulated payment awaiting confirmation.",
+    "amount": "Amount",
+    "confirmAction": "Confirm simulated payment",
+    "confirming": "Confirming simulated payment…",
+    "confirmed": "Simulated payment confirmed",
+    "reference": "Simulation reference",
+    "confirmedAt": "Confirmation date",
+    "refresh": "Refresh status",
+    "errors": {
+      "session": "Your session could not be validated. Sign in again to continue.",
+      "notFound": "This request could not be found for your session. Return to your quotes.",
+      "conflict": "This simulated payment attempt could not be reconciled. Refresh the status before continuing.",
+      "notAllowed": "Simulated payment is not allowed for the current request status. Refresh the status.",
+      "unavailable": "The simulated payment could not be loaded or confirmed. Refresh the status or retry confirmation."
+    }
   }
 }

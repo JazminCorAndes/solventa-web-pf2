@@ -38,6 +38,23 @@ mat-card-content {
   background: var(--solventa-color-success-soft);
 }
 
+.payment-section {
+  display: grid;
+  gap: var(--solventa-space-4);
+  border-top: 1px solid var(--solventa-color-border);
+  padding-top: var(--solventa-space-5);
+}
+
+.payment-section h2,
+.payment-section h3,
+.payment-section p {
+  margin: 0;
+}
+
+.payment-section button {
+  justify-self: start;
+}
+
 dl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

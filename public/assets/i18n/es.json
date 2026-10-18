@@ -321,7 +321,7 @@
     "confirming": "Confirmando",
     "confirmedTitle": "Selección confirmada",
     "confirmedBody": "La oferta quedó registrada correctamente.",
-    "continueAction": "Procesar suscripción",
+    "continueAction": "Proceder al pago",
     "loading": "Cargando el resumen de tu protección.",
     "backToOffers": "Volver a las ofertas",
     "errors": {
@@ -353,7 +353,27 @@
       "failed": "Emisión fallida"
     },
     "rule": "Regla aplicada",
-    "next": "El servicio informa un pago pendiente. El registro de pagos aún no está disponible.",
     "back": "Volver a la aceptación"
+  },
+  "payment": {
+    "title": "Pago simulado",
+    "disclaimer": "Esta operación es una simulación: no cobra dinero, no solicita tarjetas ni emite una póliza.",
+    "backendRequired": "El pago simulado requiere una conexión con el servicio.",
+    "loading": "Consultando el importe y el estado del pago simulado.",
+    "pending": "Pago simulado pendiente de confirmación.",
+    "amount": "Importe",
+    "confirmAction": "Confirmar pago simulado",
+    "confirming": "Confirmando pago simulado…",
+    "confirmed": "Pago simulado confirmado",
+    "reference": "Referencia de simulación",
+    "confirmedAt": "Fecha de confirmación",
+    "refresh": "Actualizar estado",
+    "errors": {
+      "session": "No fue posible validar tu sesión. Inicia sesión nuevamente para continuar.",
+      "notFound": "No fue posible encontrar esta solicitud para tu sesión. Vuelve a consultar tus cotizaciones.",
+      "conflict": "No fue posible conciliar este intento de pago simulado. Actualiza el estado antes de continuar.",
+      "notAllowed": "El pago simulado no está permitido para el estado actual de esta solicitud. Actualiza el estado.",
+      "unavailable": "No fue posible consultar o confirmar el pago simulado. Actualiza el estado o reintenta la confirmación."
+    }
   }
 }

@@ -472,7 +472,24 @@ y envía `{ ofertaId, version }` con `Idempotency-Key` UUID. La suscripción se 
 `POST /v1/solicitudes-cotizacion/{id}/suscripcion`, cuerpo `{}` y otra clave UUID; se consulta
 con `GET` sobre la misma ruta. La interfaz muestra las decisiones aprobada, en revisión o
 rechazada y los estados reales de la saga, sin presentar datos cacheados como éxito tras un error.
-El backend `develop` aún no expone pagos: una aprobación no habilita un pago desde esta aplicación.
+La continuación «Proceder al pago» inicia o recupera la suscripción y muestra su estado real.
+Si falla después de aceptar la oferta, el error permanece visible y se puede reintentar sin
+repetir la aceptación. Durante la solicitud se bloquean los clics repetidos.
+
+Para una suscripción aprobada, la pantalla consulta el importe y la periodicidad de la selección
+aceptada en el backend y recupera el pago con
+`GET /v1/solicitudes-cotizacion/{id}/pago-simulado`. Solo un `404` con código
+`pago_no_encontrado` significa que aún no hay pago; una solicitud ajena o inexistente sigue
+siendo un error. El usuario debe pulsar «Confirmar pago simulado» de forma explícita.
+El `POST` sobre la misma ruta envía `{}`, Bearer JWT y `Idempotency-Key` UUID, sin importe
+ni datos de tarjetas. La clave se conserva en `sessionStorage` por suscripción para reintentar
+incluso tras una recarga; el resultado siempre se recupera del servidor, no de un éxito local.
+La confirmación muestra la referencia `SIM-…`, el importe y el estado persistidos; después
+se vuelve a consultar la suscripción para mostrar la saga `pago_confirmado`.
+Las periodicidades `mensual`, `por_viaje`, `por_vuelo` y `por_periodo` se conservan sin convertirlas
+en mensualidades. Los estados en revisión, rechazada, fallida o emitida no habilitan nuevos pagos.
+Esta simulación requiere el modo backend: no cobra dinero, no abre un checkout real y no
+emite pólizas. No se implementa un éxito ficticio en el modo mock.
 Siniestros, detalle de pólizas, notificaciones y recuperación de contraseña permanecen
 fuera del alcance actual.
 

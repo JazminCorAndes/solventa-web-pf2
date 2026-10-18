@@ -47,6 +47,8 @@ import { catchError, firstValueFrom, of } from 'rxjs';
 import { PROFILING_GATEWAY } from './core/profiling/profiling.gateway';
 import { HttpProfilingGateway } from './data-access/profiling/http-profiling.gateway';
 import { MockProfilingGateway } from './data-access/profiling/mock-profiling.gateway';
+import { SIMULATED_PAYMENT_GATEWAY } from './core/payments/simulated-payment.gateway';
+import { HttpSimulatedPaymentGateway } from './data-access/payments/http-simulated-payment.gateway';
 
 registerLocaleData(localeEsCo);
 
@@ -68,6 +70,7 @@ export const appConfig: ApplicationConfig = {
       useClass: backendMode ? HttpSubscriptionGateway : MockSubscriptionGateway,
     },
     { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
+    { provide: SIMULATED_PAYMENT_GATEWAY, useClass: HttpSimulatedPaymentGateway },
     {
       provide: QUOTE_REQUEST_GATEWAY,
       useClass: backendMode ? HttpQuoteRequestGateway : MockQuoteRequestGateway,

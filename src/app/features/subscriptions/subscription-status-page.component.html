@@ -44,8 +44,88 @@
             <dd>{{ subscription.ruleVersion }}</dd>
           </div>
         </dl>
-        @if (subscription.status === 'approved' && subscription.saga.status === 'payment_pending') {
-          <p class="next-step">{{ 'subscription.next' | transloco }}</p>
+        @if (
+          subscription.status === 'approved' &&
+          (subscription.saga.status === 'payment_pending' ||
+            subscription.saga.status === 'payment_confirmed')
+        ) {
+          <section class="payment-section" aria-labelledby="payment-title">
+            <h2 id="payment-title">{{ 'payment.title' | transloco }}</h2>
+            <p class="next-step">{{ 'payment.disclaimer' | transloco }}</p>
+            @if (!payments.available) {
+              <p role="status">{{ 'payment.backendRequired' | transloco }}</p>
+            } @else if (payments.loading()) {
+              <p role="status">{{ 'payment.loading' | transloco }}</p>
+            } @else {
+              @if (payments.errorKey(); as error) {
+                <p role="alert">{{ error | transloco }}</p>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [disabled]="payments.confirming()"
+                  (click)="subscriptions.load()"
+                >
+                  {{ 'payment.refresh' | transloco }}
+                </button>
+              }
+              @if (payments.payment(); as payment) {
+                <div class="payment-confirmation" role="status">
+                  <h3>{{ 'payment.confirmed' | transloco }}</h3>
+                  <dl>
+                    <div>
+                      <dt>{{ 'payment.amount' | transloco }}</dt>
+                      <dd>
+                        {{
+                          payment.premium.amount
+                            | currency
+                              : payment.premium.currency
+                              : 'symbol'
+                              : '1.2-2'
+                              : market.locale
+                        }}
+                        · {{ 'offers.premiumLabels.' + payment.periodicity | transloco }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{{ 'payment.reference' | transloco }}</dt>
+                      <dd>{{ payment.reference }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ 'payment.confirmedAt' | transloco }}</dt>
+                      <dd>
+                        {{ payment.confirmedAt | date: 'medium' : undefined : market.locale }}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              } @else if (payments.selection(); as selection) {
+                <p role="status">{{ 'payment.pending' | transloco }}</p>
+                <p class="payment-amount">
+                  {{ 'payment.amount' | transloco }}:
+                  <strong>
+                    {{
+                      selection.premium.amount
+                        | currency: selection.premium.currency : 'symbol' : '1.2-2' : market.locale
+                    }}
+                  </strong>
+                  · {{ 'offers.premiumLabels.' + selection.periodicity | transloco }}
+                </p>
+                <button
+                  mat-flat-button
+                  type="button"
+                  class="confirm-payment"
+                  [disabled]="!payments.canConfirm()"
+                  [attr.aria-busy]="payments.confirming()"
+                  (click)="confirmPayment()"
+                >
+                  {{
+                    (payments.confirming() ? 'payment.confirming' : 'payment.confirmAction')
+                      | transloco
+                  }}
+                </button>
+              }
+            }
+          </section>
         }
         <a mat-stroked-button routerLink="/app/cotizaciones/aceptacion">
           ← {{ 'subscription.back' | transloco }}

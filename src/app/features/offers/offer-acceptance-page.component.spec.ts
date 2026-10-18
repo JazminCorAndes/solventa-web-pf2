@@ -4,8 +4,11 @@ import localeEsCo from '@angular/common/locales/es-CO';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
-import { of } from 'rxjs';
+import { of, Subject, tap, throwError } from 'rxjs';
+import es from '../../../../public/assets/i18n/es.json';
+import en from '../../../../public/assets/i18n/en.json';
 import { AuthService } from '../../core/auth/auth.service';
+import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { InsuranceOffer, SelectedOfferRecord } from '../../core/offers/offer.models';
 import { OfferSelectionService } from '../../core/offers/offer-selection.service';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
@@ -69,17 +72,25 @@ const SUBSCRIPTION: SubscriptionRecord = {
 
 describe('OfferAcceptancePageComponent', () => {
   let fixture: ComponentFixture<OfferAcceptancePageComponent>;
+  const confirmedSelection = signal<SelectedOfferRecord | null>(null);
   const confirmSelected = vi.fn(() => of(CONFIRMED_SELECTION));
   const startSubscription = vi.fn(() => of(SUBSCRIPTION));
   let navigate: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
+    confirmedSelection.set(null);
+    confirmSelected
+      .mockReset()
+      .mockImplementation(() =>
+        of(CONFIRMED_SELECTION).pipe(tap((selection) => confirmedSelection.set(selection))),
+      );
+    startSubscription.mockReset().mockReturnValue(of(SUBSCRIPTION));
     await TestBed.configureTestingModule({
       imports: [
         OfferAcceptancePageComponent,
         TranslocoTestingModule.forRoot({
-          langs: { es: {} },
-          translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
+          langs: { es, en },
+          translocoConfig: { availableLangs: ['es', 'en'], defaultLang: 'es' },
         }),
       ],
       providers: [
@@ -88,7 +99,7 @@ describe('OfferAcceptancePageComponent', () => {
           provide: OfferSelectionService,
           useValue: {
             selectedOffer: signal(OFFER),
-            confirmedSelection: signal<SelectedOfferRecord | null>(null),
+            confirmedSelection,
             load: vi.fn(),
             confirmSelected,
           },
@@ -142,8 +153,6 @@ describe('OfferAcceptancePageComponent', () => {
       ],
     }).compileComponents();
 
-    confirmSelected.mockClear();
-    startSubscription.mockClear();
     navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(OfferAcceptancePageComponent);
     fixture.detectChanges();
@@ -168,5 +177,150 @@ describe('OfferAcceptancePageComponent', () => {
     expect(confirmSelected).toHaveBeenCalledOnce();
     expect(startSubscription).toHaveBeenCalledOnce();
     expect(navigate).toHaveBeenCalledWith(['/app/cotizaciones/suscripcion']);
+  });
+
+  function actionButton(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('.actions button');
+  }
+
+  function acceptAndConfirm(): void {
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('mat-checkbox input');
+    checkbox.click();
+    fixture.detectChanges();
+    actionButton().click();
+    fixture.detectChanges();
+  }
+
+  it('shows a subscription error after acceptance and retries without accepting again', () => {
+    startSubscription.mockReturnValueOnce(throwError(() => new Error('Service unavailable')));
+
+    acceptAndConfirm();
+
+    expect(confirmedSelection()).toEqual(CONFIRMED_SELECTION);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      es.acceptance.errors.subscription,
+    );
+    expect(actionButton().textContent).toContain('Proceder al pago');
+    expect(actionButton().disabled).toBe(false);
+    expect(navigate).not.toHaveBeenCalled();
+
+    actionButton().click();
+    fixture.detectChanges();
+
+    expect(confirmSelected).toHaveBeenCalledOnce();
+    expect(startSubscription).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/cotizaciones/suscripcion']);
+  });
+
+  it('shows errors and blocks duplicate requests while retrying a restored acceptance', () => {
+    confirmedSelection.set(CONFIRMED_SELECTION);
+    const pending = new Subject<SubscriptionRecord>();
+    startSubscription.mockReturnValueOnce(pending);
+    fixture.detectChanges();
+
+    actionButton().click();
+    fixture.detectChanges();
+    actionButton().click();
+    fixture.componentInstance.continueWithSubscription();
+
+    expect(actionButton().disabled).toBe(true);
+    expect(actionButton().querySelector('mat-spinner')).not.toBeNull();
+    expect(startSubscription).toHaveBeenCalledOnce();
+
+    pending.error(new Error('Service unavailable'));
+    fixture.detectChanges();
+
+    expect(actionButton().disabled).toBe(false);
+    expect(actionButton().querySelector('mat-spinner')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      es.acceptance.errors.subscription,
+    );
+    expect(navigate).not.toHaveBeenCalled();
+    actionButton().click();
+
+    expect(confirmSelected).not.toHaveBeenCalled();
+    expect(startSubscription).toHaveBeenCalledTimes(2);
+    expect(navigate).toHaveBeenCalledOnce();
+  });
+
+  it('does not start a subscription through continuation without an accepted offer', () => {
+    fixture.componentInstance.continueWithSubscription();
+
+    expect(startSubscription).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('blocks duplicate acceptance and subscription requests while confirmation is pending', () => {
+    const pending = new Subject<SubscriptionRecord>();
+    startSubscription.mockReturnValueOnce(pending);
+
+    acceptAndConfirm();
+    actionButton().click();
+    fixture.componentInstance.confirm();
+    fixture.componentInstance.continueWithSubscription();
+
+    expect(actionButton().disabled).toBe(true);
+    expect(confirmSelected).toHaveBeenCalledOnce();
+    expect(startSubscription).toHaveBeenCalledOnce();
+    expect(navigate).not.toHaveBeenCalled();
+    pending.next(SUBSCRIPTION);
+    fixture.detectChanges();
+
+    expect(actionButton().disabled).toBe(false);
+    expect(navigate).toHaveBeenCalledOnce();
+  });
+
+  it('recovers the button and shows an error if starting the subscription throws synchronously', () => {
+    confirmedSelection.set(CONFIRMED_SELECTION);
+    startSubscription.mockImplementationOnce(() => {
+      throw new Error('A quote request is required before starting a subscription.');
+    });
+    fixture.detectChanges();
+
+    expect(() => fixture.componentInstance.continueWithSubscription()).not.toThrow();
+    fixture.detectChanges();
+
+    expect(actionButton().disabled).toBe(false);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      es.acceptance.errors.subscription,
+    );
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('keeps an unavailable offer unconfirmed and never starts a subscription', () => {
+    confirmSelected.mockReturnValueOnce(throwError(() => new OfferUnavailableError()));
+
+    acceptAndConfirm();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      es.acceptance.errors.unavailable,
+    );
+    expect(confirmedSelection()).toBeNull();
+    expect(startSubscription).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it.each(['approved', 'review', 'rejected'] as const)(
+    'continues to the real subscription status for a %s decision without changing it',
+    (status) => {
+      const subscription = {
+        ...SUBSCRIPTION,
+        status,
+        decision: { ...SUBSCRIPTION.decision, result: status },
+      };
+      startSubscription.mockReturnValueOnce(of(subscription));
+
+      acceptAndConfirm();
+
+      expect(subscription.status).toBe(status);
+      expect(subscription.saga.status).toBe('payment_pending');
+      expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/cotizaciones/suscripcion']);
+    },
+  );
+
+  it('uses consistent customer-facing continuation labels in Spanish and English', () => {
+    expect(es.acceptance.continueAction).toBe('Proceder al pago');
+    expect(en.acceptance.continueAction).toBe('Proceed to payment');
   });
 });
