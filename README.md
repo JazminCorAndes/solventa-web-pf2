@@ -169,6 +169,15 @@ usa el flujo existente, con consentimiento y perfilamiento, sin cambiar la solic
 activa al consultar el historial. Al salir o cambiar de usuario se descarta el resumen
 y se cancela su petición pendiente.
 
+Las pruebas HTTP y de componentes cotejan además las capturas literales
+`src/app/data-access/dashboard/testing/dashboard-{populated,empty}-real.json`.
+Provienen de respuestas 200 del BFF con SQLite y claves foráneas activas, después
+del flujo crear solicitud → ofertas → selección → suscripción → pago simulado
+para las cuatro periodicidades, y de una cuenta sin registros. No contienen
+credenciales ni datos personales y solo se importan en pruebas. Se conservan
+sin reformatear para preservar los bytes originales; no son fixtures de producción.
+Este cotejo local no acredita el despliegue de la nueva API ni del consumidor en AWS/Pages.
+
 | Configuración | `apiBaseUrl`             | Uso                                        |
 | ------------- | ------------------------ | ------------------------------------------ |
 | `production`  | URL del API Gateway      | `pnpm build`                               |

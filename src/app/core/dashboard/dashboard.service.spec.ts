@@ -104,6 +104,20 @@ describe('DashboardService', () => {
     expect(service.snapshot()).toEqual(EMPTY_DASHBOARD);
   });
 
+  it('never exposes a cached account to a different logged-in user', () => {
+    service.load();
+    expect(service.snapshot()).toEqual(DASHBOARD_SNAPSHOT);
+    user.set({ ...TEST_USER, id: 'client-002' });
+    expect(service.snapshot()).toBeNull();
+    expect(service.status()).toBe('idle');
+    gateway.response = of(EMPTY_DASHBOARD);
+    service.load();
+    expect(service.snapshot()).toEqual(EMPTY_DASHBOARD);
+    TestBed.tick();
+    expect(service.snapshot()).toEqual(EMPTY_DASHBOARD);
+    expect(gateway.calls).toBe(2);
+  });
+
   it('rejects a late response even before the user-change effect runs', () => {
     const pending = new Subject<DashboardSnapshot>();
     gateway.response = pending;

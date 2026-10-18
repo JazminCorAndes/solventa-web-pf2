@@ -14,7 +14,10 @@ import { AuthService } from '../../core/auth/auth.service';
 import { TEST_USER } from '../../core/auth/auth.testing';
 import { DASHBOARD_GATEWAY } from '../../core/dashboard/dashboard.gateway';
 import { DASHBOARD_RESPONSE } from '../../core/dashboard/dashboard.testing';
+import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
 import { HttpDashboardGateway } from '../../data-access/dashboard/http-dashboard.gateway';
+import populatedReal from '../../data-access/dashboard/testing/dashboard-populated-real.json';
+import emptyReal from '../../data-access/dashboard/testing/dashboard-empty-real.json';
 import { DashboardPageComponent } from './dashboard-page.component';
 
 registerLocaleData(localeEsCo);
@@ -82,6 +85,40 @@ describe('DashboardPageComponent with HTTP consumer', () => {
       suscripciones: [],
       pagos: [],
     });
+    fixture.detectChanges();
+    expect(text()).toContain(es.dashboard.emptyQuotes);
+    expect(text()).toContain(es.dashboard.emptySubscriptions);
+    expect(text()).toContain(es.dashboard.emptyPayments);
+    expect(text()).toContain(es.dashboard.policiesUnavailable);
+    expect(elements('[role="alert"]')).toHaveLength(0);
+  });
+
+  it('renders the unmodified SQL-backed BFF export through the real consumer', () => {
+    http.expectOne(URL).flush(populatedReal);
+    fixture.detectChanges();
+    expect(elements('[data-testid="dashboard-quote"]')).toHaveLength(4);
+    expect(elements('[data-testid="dashboard-subscription"]')).toHaveLength(4);
+    expect(elements('[data-testid="dashboard-payment"]')).toHaveLength(4);
+    for (const quote of populatedReal.cotizaciones) {
+      expect(text()).toContain(quote.id);
+      expect(text()).toContain(quote.solicitudId);
+      expect(text()).toContain(quote.seleccion.nombreOferta);
+      expect(text()).toContain(`${quote.primaEstimada.monto} ${quote.primaEstimada.moneda}`);
+    }
+    for (const payment of populatedReal.pagos) {
+      expect(text()).toContain(payment.id);
+      expect(text()).toContain(`${payment.importe.monto} ${payment.importe.moneda}`);
+    }
+    for (const periodicity of PREMIUM_PERIODICITIES) {
+      expect(text()).toContain(es.offers.premiumLabels[periodicity]);
+    }
+    expect(text()).toContain(es.dashboard.policiesUnavailable);
+    expect(text()).toContain(es.dashboard.notificationsUnavailable);
+    expect(text()).toContain(es.dashboard.simulationNotice);
+  });
+
+  it('renders the unmodified empty-account BFF export without implying implemented policies', () => {
+    http.expectOne(URL).flush(emptyReal);
     fixture.detectChanges();
     expect(text()).toContain(es.dashboard.emptyQuotes);
     expect(text()).toContain(es.dashboard.emptySubscriptions);
