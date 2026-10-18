@@ -63,6 +63,10 @@ pnpm start
 La aplicación estará disponible en `http://localhost:4200`. Este modo usa los adaptadores
 simulados y no requiere ejecutar el backend.
 
+El tablero de inicio es una excepción: no tiene adaptador simulado y requiere una sesión
+del backend. En este modo informa el error de conexión en lugar de mostrar datos ficticios.
+Para consultar el resumen real, usa el modo con backend.
+
 Credenciales del adaptador simulado:
 
 ```text
@@ -142,6 +146,37 @@ del frontend, parámetros de URL ni registros.
 El build de producción (`pnpm build`) y `pnpm start:aws` usan el API Gateway directamente
 (`src/environments/environment.ts`, `apiBaseUrl: https://65qgzhody9.execute-api.us-east-2.amazonaws.com`).
 No hay proxy ni cookies: la autenticación usa tokens JWT.
+
+### Tablero integrado
+
+El inicio consume `GET /v1/clientes/me/dashboard` del BFF principal con el interceptor
+Bearer de la sesión. Requiere la versión de backend que implementa ese contrato; un
+404, 503 o una respuesta inválida se muestran como error con reintento, nunca como
+una cuenta vacía. No se envía un identificador de cliente ni se usa un fallback a fixtures.
+
+La respuesta contiene `cotizaciones`, `suscripciones`, `pagos` y la disponibilidad
+`no_implementado` de `polizas` y `notificaciones`. Los tres primeros son registros
+persistidos del usuario autenticado; listas vacías válidas se presentan como ausencia
+de registros. Se conservan los estados, fechas e importes decimales del contrato,
+sin sumar monedas ni periodicidades distintas. La prima estimada no tiene periodicidad;
+solo la selección y el pago muestran su periodicidad registrada.
+
+Los pagos continúan siendo **simulados**, sin tarjeta, cobro real ni emisión de póliza.
+Incluso el estado de saga `emitida` es solo un estado registrado del proceso y no
+habilita pólizas. Pólizas y notificaciones aparecen explícitamente como no implementadas.
+El resumen no reconstruye ni reactiva solicitudes históricas: el enlace para cotizar
+usa el flujo existente, con consentimiento y perfilamiento, sin cambiar la solicitud
+activa al consultar el historial. Al salir o cambiar de usuario se descarta el resumen
+y se cancela su petición pendiente.
+
+Las pruebas HTTP y de componentes cotejan además las capturas literales
+`src/app/data-access/dashboard/testing/dashboard-{populated,empty}-real.json`.
+Provienen de respuestas 200 del BFF con SQLite y claves foráneas activas, después
+del flujo crear solicitud → ofertas → selección → suscripción → pago simulado
+para las cuatro periodicidades, y de una cuenta sin registros. No contienen
+credenciales ni datos personales y solo se importan en pruebas. Se conservan
+sin reformatear para preservar los bytes originales; no son fixtures de producción.
+Este cotejo local no acredita el despliegue de la nueva API ni del consumidor en AWS/Pages.
 
 | Configuración | `apiBaseUrl`             | Uso                                        |
 | ------------- | ------------------------ | ------------------------------------------ |

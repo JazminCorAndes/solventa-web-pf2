@@ -157,7 +157,9 @@ test('CI y CD permanecen separados y no se recompila el sitio al publicar', () =
 });
 
 test('la excepción de backport no ejecuta código del PR y el resto conserva CI normal', () => {
-  const ci = fs.readFileSync(path.join(__dirname, '../workflows/ci.yml'), 'utf8');
+  const ci = fs
+    .readFileSync(path.join(__dirname, '../workflows/ci.yml'), 'utf8')
+    .replace(/\r\n/g, '\n');
   const steps = ci.split('\n      - name: ').slice(1);
   for (const step of steps.slice(0, 2)) {
     assert.ok(step.includes("vars.BACKPORT_AUTOMATION_ENABLED == 'true'"));
