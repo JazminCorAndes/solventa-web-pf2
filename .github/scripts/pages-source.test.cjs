@@ -152,8 +152,11 @@ test('la excepción de backport no ejecuta código del PR y el resto conserva CI
     assert.ok(step.includes("startsWith(github.head_ref, 'backport/release-pr-')"));
   }
   assert.ok(steps[0].includes('ref: ${{ github.event.pull_request.base.sha }}'));
-  for (const step of steps.slice(2))
-    assert.ok(step.includes("steps.policy.outputs.skip_tests != 'true'"), step.split('\n')[0]);
+  for (const step of steps.slice(2)) {
+    if (step.startsWith('Publicar resumen de validación\n'))
+      assert.ok(step.includes('if: always()'));
+    else assert.ok(step.includes("steps.policy.outputs.skip_tests != 'true'"), step.split('\n')[0]);
+  }
   assert.ok(ci.includes('node --test .github/scripts/*.test.cjs'));
 });
 

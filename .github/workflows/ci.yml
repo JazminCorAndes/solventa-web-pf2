@@ -70,26 +70,36 @@ jobs:
           cache: pnpm
 
       - name: Probar automatización
+        id: automation
         if: steps.policy.outputs.skip_tests != 'true'
-        run: node --test .github/scripts/*.test.cjs
+        run: |
+          node --test .github/scripts/*.test.cjs
+          python3 -m unittest discover -s scripts -p 'test_*summary.py'
 
       - name: Instalar dependencias
+        id: dependencies
         if: steps.policy.outputs.skip_tests != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Ejecutar lint
+        id: lint
         if: steps.policy.outputs.skip_tests != 'true'
         run: pnpm lint
 
       - name: Ejecutar pruebas
+        id: tests
         if: steps.policy.outputs.skip_tests != 'true'
-        run: pnpm test:ci
+        run: |
+          mkdir -p reports
+          pnpm test:ci --reporters=junit --output-file=reports/unit-tests.xml
 
       - name: Verificar fallback Pages
+        id: pages
         if: steps.policy.outputs.skip_tests != 'true'
         run: pnpm test:pages
 
       - name: Compilar aplicación para Pages
+        id: build
         if: steps.policy.outputs.skip_tests != 'true'
         run: pnpm build:pages
 
@@ -98,3 +108,19 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist/solventa-web-pf2/browser
+
+      - name: Conservar informes de pruebas
+        id: reports
+        if: always() && steps.policy.outputs.skip_tests != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-test-reports
+          path: reports/unit-tests.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publicar resumen de validación
+        if: always()
+        env:
+          CI_STEPS: ${{ toJSON(steps) }}
+        run: python3 scripts/ci_summary.py
