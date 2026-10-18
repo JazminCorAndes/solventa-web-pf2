@@ -1,5 +1,6 @@
 import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { Observable, of, Subject, throwError } from 'rxjs';
@@ -28,6 +29,7 @@ import { QuoteRequestPageComponent } from './quote-request-page.component';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
 import { environment } from '../../../environments/environment';
+import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.component';
 
 const PRODUCT: InsuranceProduct = {
   id: 'automotive',
@@ -259,7 +261,11 @@ describe('QuoteRequestPageComponent', () => {
 
   it('no envia una solicitud sin consentimiento vigente', () => {
     fillValidForm(component);
-    component.profilingReady.set(false);
+    const panel = fixture.debugElement.query(By.directive(ProfilingPanelComponent))
+      .componentInstance as ProfilingPanelComponent;
+    expect(panel.requestId).toBeNull();
+    expect(component.profilingReady()).toBe(true);
+    panel.availabilityChange.emit(false);
     component.submit();
     expect(gateway.submitCalls).toBe(0);
     expect(component.errorKey()).toBe('profiling.errors.consent');
