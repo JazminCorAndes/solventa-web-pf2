@@ -6,7 +6,7 @@
   antiguos. Su enlace abre Checks en GitHub; los HTML detallados permanecen en Jenkins privado.
 - **CI / Validación (Jenkins)** es el check principal obligatorio, publicado automáticamente
   por el controlador. No depende de que cada rama incluya un publicador dentro del Jenkinsfile.
-- El workflow del PR define **CI · Actions**; GitHub puede mostrar todavía el nombre de
+- El workflow del PR define **CI · Validación**; GitHub puede mostrar todavía el nombre de
   la rama predeterminada hasta integrarlo. El contexto obligatorio `Calidad` no cambia.
 - JUnit permanece en Jenkins pero deja de publicar `Tests / Declarative: Post Actions`.
 - Cada build limpia su workspace antes del checkout. Un reporte ausente o inválido no se
@@ -78,7 +78,7 @@ una prueba o compilación.
   integración AWS, navegación E2E o cumplimiento completo de las historias.
 
 Actions valida también `pnpm test:pages` y `pnpm build:pages` en los PRs, sin publicar.
-El workflow separado `pages.yml` publica únicamente tras un push a `develop`, usando
+El workflow separado `pages.yml` publica después del CI exitoso de un push a `develop`, usando
 producción con backend AWS y la subruta `/solventa-web-pf2/`. El environment `github-pages`
 debe permitir esa rama: su política consultada el 17 de octubre de 2026 solo admitía
 `master`, por lo que requiere autorización administrativa antes del despliegue.
@@ -88,3 +88,15 @@ limitaciones está en el README.
 Un check verde no prueba que haya un despliegue ni conectividad con el backend real.
 La cobertura se consulta dentro del PR, no como un porcentaje fijo o un servicio
 adicional en la portada del repositorio.
+
+## Preparación de CI/CD y backport verificado
+
+`ci.yml` pasa a **CI · Validación** sin cambiar el check obligatorio Calidad. Para un push
+a develop conserva el sitio compilado; **CD · Solventa Web** lo publica después de verificar
+por API la ejecución de CI, sin repetir lint, pruebas o compilación. No cambia el destino
+Pages, la subruta ni la configuración del backend. Los PRs no incluyen jobs de publicación.
+
+La automatización de backport se prepara desactivada y sus pruebas se ejecutan dentro
+de Calidad. Solo un candidato verificado consulta la excepción desde la base confiable.
+El [procedimiento de activación](automatic-backport.md) requiere App y configuración de
+protecciones por Jazmín; no se aplican cambios administrativos al integrar este PR.
