@@ -82,35 +82,32 @@ mat-card-header {
   padding: var(--solventa-space-5) var(--solventa-space-5) var(--solventa-space-2);
 }
 
-.card-spacer {
-  flex: 1;
-}
-
-.disabled-action {
+.scope-notice,
+.empty-state {
   color: var(--solventa-color-text-secondary);
-  font-size: 0.76rem;
 }
 
-.notification-dot {
-  width: 8px;
-  height: 8px;
-  margin: 0 var(--solventa-space-3) 0 0;
-  border-radius: 50%;
-  background: var(--solventa-color-primary);
+.records {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.notification-dot.read {
-  background: var(--solventa-color-border);
+.records li {
+  padding: var(--solventa-space-4) 0;
+  overflow-wrap: anywhere;
 }
 
-mat-chip {
-  --mdc-chip-elevated-container-color: #ecfdf3;
-  --mdc-chip-label-text-color: var(--solventa-color-success);
+.records li + li {
+  border-top: 1px solid var(--solventa-color-border);
 }
 
-mat-chip.pending {
-  --mdc-chip-elevated-container-color: var(--solventa-color-surface-muted);
-  --mdc-chip-label-text-color: var(--solventa-color-text-secondary);
+h2 {
+  font-size: 1rem;
+}
+
+.records p {
+  margin: var(--solventa-space-2) 0;
 }
 
 .state-panel {

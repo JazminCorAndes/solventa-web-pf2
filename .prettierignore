@@ -3,3 +3,4 @@ coverage
 dist
 node_modules
 pnpm-lock.yaml
+src/app/data-access/dashboard/testing/dashboard-*-real.json

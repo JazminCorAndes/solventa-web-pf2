@@ -1,24 +1,17 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { of, Subject } from 'rxjs';
+import { EMPTY, Observable, of, Subject, throwError } from 'rxjs';
+import { AuthUser } from '../auth/auth.models';
+import { AuthService } from '../auth/auth.service';
+import { TEST_USER } from '../auth/auth.testing';
 import { DASHBOARD_GATEWAY, DashboardGateway } from './dashboard.gateway';
 import { DashboardSnapshot } from './dashboard.models';
 import { DashboardService } from './dashboard.service';
-
-const SNAPSHOT: DashboardSnapshot = {
-  upcomingTrip: 'Madrid',
-  policies: [
-    { id: '1', product: 'Viaje', premiumCop: 100000, status: 'active' },
-    { id: '2', product: 'Vida', premiumCop: 120000, status: 'pending' },
-  ],
-  notifications: [
-    { id: '1', title: 'Nueva', createdAt: '2026-10-10T00:00:00Z', read: false },
-    { id: '2', title: 'Leída', createdAt: '2026-10-09T00:00:00Z', read: true },
-  ],
-};
+import { DASHBOARD_SNAPSHOT, EMPTY_DASHBOARD } from './dashboard.testing';
 
 class TestDashboardGateway implements DashboardGateway {
   calls = 0;
-  response = of(SNAPSHOT);
+  response: Observable<DashboardSnapshot> = of(DASHBOARD_SNAPSHOT);
 
   load() {
     this.calls++;
@@ -27,30 +20,114 @@ class TestDashboardGateway implements DashboardGateway {
 }
 
 describe('DashboardService', () => {
+  const user = signal<AuthUser | null>(TEST_USER);
+  let service: DashboardService;
+  let gateway: TestDashboardGateway;
+
   beforeEach(() => {
+    user.set(TEST_USER);
     TestBed.configureTestingModule({
-      providers: [DashboardService, { provide: DASHBOARD_GATEWAY, useClass: TestDashboardGateway }],
+      providers: [
+        DashboardService,
+        { provide: AuthService, useValue: { user } },
+        { provide: DASHBOARD_GATEWAY, useClass: TestDashboardGateway },
+      ],
     });
+    service = TestBed.inject(DashboardService);
+    gateway = TestBed.inject(DASHBOARD_GATEWAY) as TestDashboardGateway;
   });
 
-  it('loads dashboard metrics', () => {
-    const service = TestBed.inject(DashboardService);
-
+  it('loads persisted records without deriving policy metrics', () => {
     service.load();
-
     expect(service.status()).toBe('ready');
-    expect(service.activePolicies()).toBe(1);
-    expect(service.unreadNotifications()).toBe(1);
+    expect(service.snapshot()).toEqual(DASHBOARD_SNAPSHOT);
+  });
+
+  it('distinguishes a valid empty response from unavailable domains', () => {
+    gateway.response = of(EMPTY_DASHBOARD);
+    service.load();
+    expect(service.status()).toBe('ready');
+    expect(service.snapshot()?.quotes).toEqual([]);
+    expect(service.snapshot()?.policies.availability).toBe('no_implementado');
   });
 
   it('prevents duplicate loads while a request is pending', () => {
-    const gateway = TestBed.inject(DASHBOARD_GATEWAY) as TestDashboardGateway;
     gateway.response = new Subject<DashboardSnapshot>();
-    const service = TestBed.inject(DashboardService);
-
     service.load();
     service.load();
+    expect(gateway.calls).toBe(1);
+    expect(service.status()).toBe('loading');
+    expect(service.snapshot()).toBeNull();
+  });
 
+  it('clears stale data on failure and allows retry', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    service.load();
+    gateway.response = throwError(() => new Error('unavailable'));
+    service.load();
+    expect(service.status()).toBe('error');
+    expect(service.snapshot()).toBeNull();
+    gateway.response = of(EMPTY_DASHBOARD);
+    service.load();
+    expect(service.status()).toBe('ready');
+  });
+
+  it('does not turn an empty observable into a successful empty account', () => {
+    gateway.response = EMPTY;
+    service.load();
+    expect(service.status()).toBe('error');
+    expect(service.snapshot()).toBeNull();
+  });
+
+  it('hides account data immediately on logout and does not load anonymously', () => {
+    service.load();
+    user.set(null);
+    expect(service.snapshot()).toBeNull();
+    expect(service.status()).toBe('idle');
+    TestBed.tick();
+    service.load();
     expect(gateway.calls).toBe(1);
   });
+
+  it('cancels pending requests on user changes and ignores late responses', () => {
+    const pending = new Subject<DashboardSnapshot>();
+    gateway.response = pending;
+    service.load();
+    user.set({ ...TEST_USER, id: 'client-002' });
+    expect(service.snapshot()).toBeNull();
+    TestBed.tick();
+    expect(pending.observed).toBe(false);
+    pending.next(DASHBOARD_SNAPSHOT);
+    expect(service.snapshot()).toBeNull();
+    gateway.response = of(EMPTY_DASHBOARD);
+    service.load();
+    expect(service.snapshot()).toEqual(EMPTY_DASHBOARD);
+  });
+
+  it('never exposes a cached account to a different logged-in user', () => {
+    service.load();
+    expect(service.snapshot()).toEqual(DASHBOARD_SNAPSHOT);
+    user.set({ ...TEST_USER, id: 'client-002' });
+    expect(service.snapshot()).toBeNull();
+    expect(service.status()).toBe('idle');
+    gateway.response = of(EMPTY_DASHBOARD);
+    service.load();
+    expect(service.snapshot()).toEqual(EMPTY_DASHBOARD);
+    TestBed.tick();
+    expect(service.snapshot()).toEqual(EMPTY_DASHBOARD);
+    expect(gateway.calls).toBe(2);
+  });
+
+  it('rejects a late response even before the user-change effect runs', () => {
+    const pending = new Subject<DashboardSnapshot>();
+    gateway.response = pending;
+    service.load();
+    user.set({ ...TEST_USER, id: 'client-002' });
+    pending.next(DASHBOARD_SNAPSHOT);
+    expect(service.snapshot()).toBeNull();
+    service.load();
+    expect(gateway.calls).toBe(2);
+  });
+
+  afterEach(() => vi.restoreAllMocks());
 });
