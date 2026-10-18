@@ -5,16 +5,12 @@
     <p>{{ 'offers.subtitle' | transloco }}</p>
   </header>
 
-  <app-profiling-panel
-    [requestId]="request()?.id ?? null"
-    (availabilityChange)="profilingChanged($event)"
-  />
-  @if (profilingReady() && (offers.status() === 'loading' || offers.status() === 'idle')) {
+  @if (offers.status() === 'loading' || offers.status() === 'idle') {
     <div class="state-panel" role="status">
       <mat-spinner diameter="36" />
       <span>{{ 'offers.loading' | transloco }}</span>
     </div>
-  } @else if (profilingReady() && offers.status() === 'error') {
+  } @else if (offers.status() === 'error') {
     <div class="state-panel" role="alert">
       <h2>{{ 'offers.errors.loadTitle' | transloco }}</h2>
       <p>{{ offers.errorKey() ?? 'offers.errors.loadBody' | transloco }}</p>
@@ -22,12 +18,12 @@
         {{ 'common.retry' | transloco }}
       </button>
     </div>
-  } @else if (profilingReady() && offers.status() === 'empty') {
+  } @else if (offers.status() === 'empty') {
     <div class="state-panel empty-state" role="status">
       <h2>{{ 'offers.empty.title' | transloco }}</h2>
       <p>{{ 'offers.empty.body' | transloco }}</p>
     </div>
-  } @else if (profilingReady() ? offers.calculation() : null; as calculation) {
+  } @else if (offers.calculation(); as calculation) {
     <div class="calculation-summary">
       <span
         >{{ 'offers.quoteId' | transloco }}: <strong>{{ calculation.quoteId }}</strong></span
