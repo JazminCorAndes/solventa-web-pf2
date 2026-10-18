@@ -158,17 +158,16 @@ credenciales.
 ### Publicar esta versión en GitHub Pages
 
 El workflow separado `.github/workflows/pages.yml` compila y publica únicamente los
-`push` a `develop`, después de integrar el PR siguiendo las protecciones de esa rama.
+`push` a `master`, después de integrar la release siguiendo las protecciones de esa rama.
 No se ejecuta para ramas feature ni PRs. Antes de publicar repite lint, pruebas y
 verificación del fallback; solo el job de despliegue recibe `pages: write` e
 `id-token: write`, y utiliza el environment `github-pages`. La concurrencia evita
 despliegues simultáneos.
 
 **Requisito administrativo:** Pages debe usar GitHub Actions y el environment
-`github-pages` debe permitir `develop`. En la consulta del 17 de octubre de 2026,
-Pages ya usaba Actions, pero la política del environment permitía solo `master`.
-Un administrador debe autorizar `develop` manteniendo las revisiones y protecciones
-aplicables; este cambio de código no modifica ni elude esa política.
+`github-pages` debe permitir `master`, como en la política consultada el 17 de octubre de 2026.
+Este cambio de código se ajusta a esa rama y no modifica ni elude las revisiones y
+protecciones del environment.
 
 `pnpm build:pages` utiliza producción (backend AWS, no mocks) con base
 `/solventa-web-pf2/` y genera el artefacto `dist/solventa-web-pf2/browser`.
@@ -205,24 +204,100 @@ esa validación ni prueban conectividad con AWS.
 Si la respuesta del BFF no incluye documento o teléfono, la interfaz lo indica como
 no disponible en vez de inventar datos personales.
 
+## Perfilamiento HU11 (SOL-163)
+
+El formulario requiere consultar y autorizar el consentimiento antes de cotizar. La identidad
+se obtiene del token Bearer de la sesión: no se envía `clienteId` desde el formulario
+ni se usan cookies en las peticiones.
+El formulario conectado no solicita documento ni contacto: el BFF los obtiene de la sesión.
+La creación envía solamente `{ productoId, datosProducto }`, junto con una clave de
+idempotencia. Los datos de riesgo dependen del ramo; para automotriz incluyen `vehiclePlate`.
+Las primas y selecciones conservan la moneda devuelta por el BFF (COP en el backend actual),
+sin convertirla ni presentarla como UF. Se conservan prima y periodicidad propias del ramo;
+los adaptadores mock usan COP y no fabrican mensualidades.
+
+El panel permite autorizar y revocar; envía la versión vigente, o `0` para la primera
+autorización. Ante un conflicto se exige recargar antes de volver a escribir. La autorización
+persiste en el backend, dura 30 días y comprende Open Finance y Open Data para cotización.
+
+Después de crear la solicitud se consulta su perfil. El mismo panel aparece en el resumen y
+en las ofertas y muestra el identificador de solicitud y perfil, score decimal, nivel,
+versiones de perfil/modelo/consentimiento, fechas y fuentes. Las fuentes actuales son
+**simuladas** y no representan una consulta financiera real. No se guardan perfiles en
+`sessionStorage`; cada pantalla los consulta al BFF.
+
+Las ofertas se habilitan solo tras consultar un perfil completo y vigente de esa solicitud.
+Se retiran los datos al vencer el perfil, sus fuentes o el consentimiento; al recuperar el
+foco de la ventana se vuelve a consultar. El backend revalida el perfil al obtener ofertas y
+confirmar la selección. Revocar, renovar el consentimiento o dejar vencer el perfil puede
+exigir crear una nueva solicitud: no se reemplaza silenciosamente el perfil original.
+Los errores de sesión, consentimiento, concurrencia, vencimiento e indisponibilidad se
+muestran sin resultados parciales ni fallback a datos antiguos.
+
+Para comparar vigencias, el adaptador HTTP usa `Date` del servidor y un reloj monótono.
+Así, un pequeño desfase del computador no rechaza datos recién creados en AWS. Se usa un
+límite superior conservador (precisión de un segundo más el viaje de la petición): el panel
+puede retirar datos ligeramente antes, nunca extender su vigencia. Si falta un `Date`
+válido, la consulta se bloquea con un error en lugar de confiar en un reloj local desconocido.
+
+Contratos consumidos (todos con token Bearer):
+
+| Método    | Ruta                                                    | Uso                                                                     |
+| --------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| GET       | `/v1/consentimientos/perfilamiento`                     | Leer autorización; solo `404 consentimiento_ausente` significa ausencia |
+| PUT       | `/v1/consentimientos/perfilamiento`                     | `{ autorizado: boolean, version: number }`                              |
+| POST      | `/v1/solicitudes-cotizacion`                            | Crear solicitud y asociar su perfil                                     |
+| GET       | `/v1/solicitudes-cotizacion/{id}/perfilamiento`         | Leer el perfil usado por la solicitud                                   |
+| GET / PUT | `/v1/solicitudes-cotizacion/{id}/ofertas` / `seleccion` | Revalidación del perfil en el backend                                   |
+
+En modo mock el consentimiento y los perfiles se conservan solamente en memoria, separados por
+usuario. Al recargar la aplicación se debe autorizar y crear otra solicitud. No hay llamadas a
+proveedores financieros reales. Los componentes usan los estilos y tokens existentes; no se ha
+verificado fidelidad visual con Figma.
+
+### Prueba local contra AWS
+
+Se requieren un BFF con HU11 desplegado y un usuario de prueba habilitado. El modo AWS usa
+el API Gateway directamente con tokens Bearer, sin proxy ni cookies:
+
+```powershell
+pnpm start:aws
+```
+
+Abrir `http://localhost:4200` y probar inicio de sesión, ausencia de autorización, autorización,
+solicitud, perfil, ofertas y revocación. CORS debe permitir el origen local y exponer el
+encabezado `Date` para comparar vigencias. No usar credenciales de producción ni desactivar
+la validación TLS del destino AWS. Las pruebas unitarias no demuestran esta integración real.
+
+## Aplicación en GitHub Pages
+
+La rama `master` se publica automáticamente con el backend AWS, sin adaptadores simulados:
+
+```text
+https://jazmincorandes.github.io/solventa-web-pf2/
+```
+
+GitHub Pages solo sirve el frontend estático; el backend se ejecuta en AWS. Para iniciar
+sesión se necesita una cuenta registrada en ese backend, no las credenciales del modo mock.
+
 ## Comandos disponibles
 
-| Comando              | Descripción                                           |
-| -------------------- | ----------------------------------------------------- |
-| `pnpm start`         | Inicia el desarrollo con adaptadores simulados        |
-| `pnpm start:backend` | Inicia el desarrollo conectado al BFF local           |
-| `pnpm start:aws`     | Inicia el desarrollo conectado al backend en AWS      |
-| `pnpm build`         | Genera el build de producción conectado al backend    |
+| Comando              | Descripción                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| `pnpm start`         | Inicia el desarrollo con adaptadores simulados               |
+| `pnpm start:backend` | Inicia el desarrollo conectado al BFF local                  |
+| `pnpm start:aws`     | Inicia el desarrollo conectado al backend en AWS             |
+| `pnpm build`         | Genera el build de producción conectado al backend           |
 | `pnpm build:pages`   | Compila producción para la subruta Pages y genera `404.html` |
-| `pnpm build:dev`     | Genera un build de desarrollo con mocks               |
-| `pnpm build:backend` | Genera un build de desarrollo conectado al BFF local  |
-| `pnpm build:aws`     | Genera un build de desarrollo conectado al API en AWS |
-| `pnpm test`          | Ejecuta las pruebas en modo interactivo               |
-| `pnpm test:ci`       | Ejecuta las pruebas una sola vez                      |
-| `pnpm test:pages`    | Verifica la generación del fallback SPA de Pages      |
-| `pnpm lint`          | Ejecuta ESLint                                        |
-| `pnpm format`        | Formatea el código con Prettier                       |
-| `pnpm format:check`  | Comprueba el formato sin modificar archivos           |
+| `pnpm build:dev`     | Genera un build de desarrollo con mocks                      |
+| `pnpm build:backend` | Genera un build de desarrollo conectado al BFF local         |
+| `pnpm build:aws`     | Genera un build de desarrollo conectado al API en AWS        |
+| `pnpm test`          | Ejecuta las pruebas en modo interactivo                      |
+| `pnpm test:ci`       | Ejecuta las pruebas una sola vez                             |
+| `pnpm test:pages`    | Verifica la generación del fallback SPA de Pages             |
+| `pnpm lint`          | Ejecuta ESLint                                               |
+| `pnpm format`        | Formatea el código con Prettier                              |
+| `pnpm format:check`  | Comprueba el formato sin modificar archivos                  |
 
 ## Verificación de la instalación
 

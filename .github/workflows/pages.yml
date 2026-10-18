@@ -3,7 +3,7 @@ name: Publicar frontend en Pages
 on:
   push:
     branches:
-      - develop
+      - master
 
 permissions:
   contents: read
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -45,7 +45,7 @@ jobs:
           path: dist/solventa-web-pf2/browser
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

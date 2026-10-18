@@ -1,0 +1,132 @@
+<mat-card appearance="outlined">
+  <mat-card-content>
+    <h2>{{ 'profiling.title' | transloco }}</h2>
+    <p class="simulation-note">{{ 'profiling.simulated' | transloco }}</p>
+    <p>{{ 'profiling.purpose' | transloco }}</p>
+
+    @if (loading()) {
+      <div class="loading" role="status">
+        <mat-spinner diameter="22" />
+        {{ 'profiling.loading' | transloco }}
+      </div>
+    } @else {
+      @if (errorKey(); as key) {
+        <p class="error" role="alert">{{ key | transloco }}</p>
+        <button mat-stroked-button type="button" (click)="reload()">
+          {{ 'common.retry' | transloco }}
+        </button>
+        @if (key === 'profiling.errors.session') {
+          <a mat-button href="iniciar-sesion">{{ 'auth.submit' | transloco }}</a>
+        }
+        @if (requestId) {
+          <a mat-button routerLink="/app/cotizaciones/solicitar">
+            {{ 'quoteSummary.newQuote' | transloco }}
+          </a>
+        }
+      }
+      @if (consentLoaded()) {
+        @if (consent(); as current) {
+          <p>
+            {{ 'profiling.consentStatus.' + current.estado | transloco }}
+            · {{ 'profiling.version' | transloco }} {{ current.version }} ·
+            {{ current.vigenteHasta | date: 'medium' }}
+          </p>
+        } @else {
+          <p>{{ 'profiling.noConsent' | transloco }}</p>
+        }
+        @if (consent()?.estado === 'autorizado') {
+          <button mat-button type="button" (click)="save(false)">
+            {{ 'profiling.revoke' | transloco }}
+          </button>
+        }
+        @if (
+          !authorized() &&
+          (!consent() ||
+            consent()?.estado === 'revocado' ||
+            errorKey() === 'profiling.errors.consent')
+        ) {
+          <button mat-flat-button type="button" (click)="save(true)">
+            {{ 'profiling.authorize' | transloco }}
+          </button>
+        }
+      }
+      @if (profile(); as profile) {
+        <dl class="metrics">
+          <div>
+            <dt>{{ 'profiling.score' | transloco }}</dt>
+            <dd>{{ profile.score }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'profiling.level' | transloco }}</dt>
+            <dd>{{ profile.nivel }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'profiling.validUntil' | transloco }}</dt>
+            <dd>{{ profile.vigenteHasta | date: 'medium' }}</dd>
+          </div>
+        </dl>
+        <p>
+          {{ 'profiling.sources' | transloco }}:
+          @for (source of profile.fuentes; track source.nombre) {
+            <span
+              >{{ 'profiling.source.' + source.nombre | transloco }} ·
+              {{ 'profiling.simulatedSource' | transloco }}
+              @if (!$last) {
+                ;
+              }
+            </span>
+          }
+        </p>
+        <details>
+          <summary>{{ 'profiling.detail' | transloco }}</summary>
+          <dl>
+            <div>
+              <dt>{{ 'profiling.request' | transloco }}</dt>
+              <dd>{{ profile.solicitudId }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'profiling.profile' | transloco }}</dt>
+              <dd>{{ profile.perfilId }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'profiling.version' | transloco }}</dt>
+              <dd>{{ profile.version }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'profiling.model' | transloco }}</dt>
+              <dd>{{ profile.modeloVersion }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'profiling.calculatedAt' | transloco }}</dt>
+              <dd>{{ profile.calculadoEn | date: 'medium' }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'profiling.consent' | transloco }}</dt>
+              <dd>{{ profile.consentimientoId }} · {{ profile.consentimientoVersion }}</dd>
+            </div>
+          </dl>
+          <h3>{{ 'profiling.sources' | transloco }}</h3>
+          <div class="sources">
+            @for (source of profile.fuentes; track source.nombre) {
+              <section class="source">
+                <strong>{{ 'profiling.source.' + source.nombre | transloco }}</strong>
+                <span>{{ 'profiling.simulatedSource' | transloco }} · {{ source.version }}</span>
+                <span>{{ 'profiling.indicator' | transloco }}: {{ source.indicadorRiesgo }}</span>
+                <span
+                  >{{ 'profiling.consultedAt' | transloco }}:
+                  {{ source.consultadaEn | date: 'medium' }}</span
+                >
+                <span
+                  >{{ 'profiling.validUntil' | transloco }}:
+                  {{ source.vigenteHasta | date: 'medium' }}</span
+                >
+              </section>
+            }
+          </div>
+        </details>
+      } @else if (authorized() && !requestId) {
+        <p>{{ 'profiling.beforeRequest' | transloco }}</p>
+      }
+    }
+  </mat-card-content>
+</mat-card>

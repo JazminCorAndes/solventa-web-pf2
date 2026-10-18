@@ -518,7 +518,7 @@
               mat-flat-button
               type="submit"
               class="submit-button"
-              [disabled]="submitting() || !!submittedRequest()"
+              [disabled]="submitting() || !!submittedRequest() || !profilingReady()"
             >
               @if (submitting()) {
                 <mat-spinner diameter="20" />
@@ -539,5 +539,10 @@
         </mat-card-content>
       </mat-card>
     </div>
+
+    <app-profiling-panel
+      [requestId]="submittedRequest()?.id ?? null"
+      (availabilityChange)="profilingReady.set($event)"
+    />
   </div>
 </section>

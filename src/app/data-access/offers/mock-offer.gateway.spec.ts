@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of, throwError } from 'rxjs';
 import {
   OFFER_SELECTION_STORAGE,
   OfferSelectionStorage,
@@ -12,6 +12,9 @@ import {
 } from '../../core/quotes/quote-request-storage.service';
 import { MockOfferGateway } from './mock-offer.gateway';
 import { OfferUnavailableError } from '../../core/offers/offer.errors';
+import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
+import { createProfile } from '../../core/profiling/profiling.fixtures';
+import { ProfilingError } from '../../core/profiling/profiling.errors';
 
 const REQUEST: QuoteRequestRecord = {
   id: 'AQT-2026-654321',
@@ -55,6 +58,10 @@ describe('MockOfferGateway', () => {
         MockOfferGateway,
         { provide: QUOTE_REQUEST_STORAGE, useClass: TestQuoteRequestStorage },
         { provide: OFFER_SELECTION_STORAGE, useClass: TestOfferSelectionStorage },
+        {
+          provide: MockProfilingGateway,
+          useValue: { loadProfile: () => of(createProfile(REQUEST.id)) },
+        },
       ],
     });
     gateway = TestBed.inject(MockOfferGateway);
@@ -67,6 +74,19 @@ describe('MockOfferGateway', () => {
     expect(calculation.quoteId).toBe('AQT-2026-654321');
     expect(calculation.offers).toHaveLength(3);
     expect(calculation.offers.every((offer) => offer.status === 'available')).toBe(true);
+  });
+
+  it.each(['load', 'confirm'])('rechaza %s sin un perfil vigente', async (operation) => {
+    vi.spyOn(TestBed.inject(MockProfilingGateway), 'loadProfile').mockReturnValue(
+      throwError(() => new ProfilingError('perfil_vencido')),
+    );
+
+    const result =
+      operation === 'load'
+        ? firstValueFrom(gateway.loadOffers())
+        : firstValueFrom(gateway.confirmSelection(REQUEST.id, 'automotive-pro', 1));
+
+    await expect(result).rejects.toMatchObject({ code: 'perfil_vencido' });
   });
 
   it('restores accepted offers only for the matching quote', async () => {

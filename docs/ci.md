@@ -78,10 +78,10 @@ una prueba o compilación.
   integración AWS, navegación E2E o cumplimiento completo de las historias.
 
 Actions valida también `pnpm test:pages` y `pnpm build:pages` en los PRs, sin publicar.
-El workflow separado `pages.yml` publica únicamente tras un push a `develop`, usando
+El workflow separado `pages.yml` publica únicamente tras un push a `master`, usando
 producción con backend AWS y la subruta `/solventa-web-pf2/`. El environment `github-pages`
-debe permitir esa rama: su política consultada el 17 de octubre de 2026 solo admitía
-`master`, por lo que requiere autorización administrativa antes del despliegue.
+debe permitir esa rama, como en la política consultada el 17 de octubre de 2026.
+La release se integra mediante PR a `master`; no se publica desde `develop` ni desde el PR.
 No se cambia esa protección desde el workflow. El detalle del fallback `404.html` y sus
 limitaciones está en el README.
 

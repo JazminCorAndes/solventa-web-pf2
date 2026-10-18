@@ -1,13 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
 import { MockQuoteRequestGateway } from './mock-quote-request.gateway';
 
 describe('MockQuoteRequestGateway', () => {
   it('incluye los ocho ramos del catálogo y conserva los datos de cada solicitud', async () => {
+    const createProfile = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         MockQuoteRequestGateway,
+        { provide: MockProfilingGateway, useValue: { createProfile } },
         {
           provide: AuthService,
           useValue: {
@@ -47,5 +50,6 @@ describe('MockQuoteRequestGateway', () => {
     expect(record.productData).toEqual(productData);
     expect(record.id).toBeTruthy();
     expect(record.status).toBe('received');
+    expect(createProfile).toHaveBeenCalledExactlyOnceWith(record.id);
   });
 });

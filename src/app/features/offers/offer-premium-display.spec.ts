@@ -8,6 +8,8 @@ import { of } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
 import { SubscriptionService } from '../../core/subscriptions/subscription.service';
+import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
+import { createConsent } from '../../core/profiling/profiling.fixtures';
 import {
   InsuranceOffer,
   OfferCalculation,
@@ -39,7 +41,7 @@ async function configurePage(periodicity: PremiumPeriodicity): Promise<void> {
     liabilityLabel: 'Según el plan',
     coverages: [],
     conditions: [],
-    additionalBenefits: [],
+    additionalBenefits: ['Asistencia adicional del plan'],
     recommended: true,
     status: 'available',
     validUntil: '2030-01-01T00:00:00Z',
@@ -127,6 +129,7 @@ async function configurePage(periodicity: PremiumPeriodicity): Promise<void> {
         },
       },
       { provide: SubscriptionService, useValue: { start: vi.fn() } },
+      { provide: PROFILING_GATEWAY, useValue: { loadConsent: () => of(createConsent()) } },
     ],
   }).compileComponents();
 }
@@ -144,6 +147,9 @@ describe('Importe y periodicidad visibles', () => {
       const price = fixture.nativeElement.querySelector('.plan-price');
       expect(price.textContent).toContain(label);
       expect(price.querySelector('strong').textContent.replace(/\s+/g, '')).toBe('$48.000');
+      expect(fixture.nativeElement.querySelector('.plan-benefits').textContent).toContain(
+        'Asistencia adicional del plan',
+      );
       if (periodicity !== 'mensual') {
         expect(price.textContent).not.toContain('Prima mensual');
       }
