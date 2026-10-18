@@ -92,7 +92,9 @@ una prueba o compilación.
 Actions valida también `pnpm test:pages` y `pnpm build:pages` en los PRs, sin publicar.
 El workflow separado `pages.yml` publica después del CI exitoso de un push a `master`, usando
 producción con backend AWS y la subruta `/solventa-web-pf2/`. El environment `github-pages`
-permite esa rama. La publicación recupera el artefacto del CI validado, sin recompilar.
+conserva master y develop permitidas: GitHub ejecuta `workflow_run` con la referencia de
+la rama predeterminada, develop. La publicación solo acepta el CI de origen de master y
+recupera su artefacto exacto, sin recompilar; no publica el código de la rama de ejecución.
 La release se integra mediante PR a `master`; no se publica desde `develop` ni desde el PR.
 No se cambia esa protección desde el workflow. El detalle del fallback `404.html` y sus
 limitaciones está en el README.
