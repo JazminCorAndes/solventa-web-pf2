@@ -1,61 +1,77 @@
-name: Publicar frontend en Pages
+name: CD · Solventa Web
 
 on:
-  push:
-    branches:
-      - develop
+  workflow_run:
+    workflows: ['CI · Validación']
+    types: [completed]
+    branches: [develop]
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: github-pages
   cancel-in-progress: false
 
 jobs:
-  build:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+  prepare:
+    if: >-
+      github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'develop' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.source.outputs.publish }}
+      run_id: ${{ steps.source.outputs.run_id }}
     steps:
-      - name: Descargar repositorio
-        uses: actions/checkout@v6
-      - name: Instalar pnpm
-        uses: pnpm/action-setup@v5
+      - name: Obtener automatización del commit validado
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          version: 11.19.0
-      - name: Configurar Node.js
-        uses: actions/setup-node@v6
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Verificar origen y vigencia de la compilación
+        id: source
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
         with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - name: Instalar dependencias
-        run: pnpm install --frozen-lockfile
-      - name: Ejecutar lint
-        run: pnpm lint
-      - name: Ejecutar pruebas
-        run: pnpm test:ci
-      - name: Verificar fallback Pages
-        run: pnpm test:pages
-      - name: Compilar frontend para Pages con backend AWS
-        run: pnpm build:pages
-      - name: Preparar artefacto
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist/solventa-web-pf2/browser
+          script: |
+            const { pagesSource } = require('./.github/scripts/pages-source.cjs');
+            const source = await pagesSource({ github, context });
+            core.setOutput('publish', source.publish);
+            core.setOutput('run_id', source.runId || '');
+            if (!source.publish) core.info('Publicación omitida: develop contiene cambios más recientes.');
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-    needs: build
+    name: Publicar Solventa Web
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      contents: read
+      actions: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Publicar artefacto revisado
+      - name: Recuperar el sitio de la ejecución validada
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: github-pages
+          path: pages
+          run-id: ${{ needs.prepare.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Transferir el mismo archivo al publicador de Pages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: github-pages
+          path: pages/artifact.tar
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+      - name: Publicar sitio validado sin recompilar
         id: deployment
         uses: actions/deploy-pages@v4
