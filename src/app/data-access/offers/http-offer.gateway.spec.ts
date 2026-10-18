@@ -90,6 +90,19 @@ describe('HttpOfferGateway', () => {
     });
   });
 
+  it.each([
+    [403, 'consentimiento_no_vigente'],
+    [422, 'perfil_vencido'],
+    [503, 'perfilamiento_no_disponible'],
+  ])('conserva el error de perfilamiento al seleccionar %s', async (status, code) => {
+    const result = firstValueFrom(gateway.confirmSelection(REQUEST.id, OFFER.id, OFFER.version));
+    const assertion = expect(result).rejects.toMatchObject({ status, error: { code } });
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`)
+      .flush({ code }, { status, statusText: 'Error' });
+    await assertion;
+  });
+
   it('loads and maps offers from the latest quote request', async () => {
     const result = firstValueFrom(gateway.loadOffers());
     const request = http.expectOne(

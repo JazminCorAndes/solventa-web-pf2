@@ -200,6 +200,49 @@
       "unexpected": "Ocurrió un error inesperado al enviar la solicitud."
     }
   },
+  "profiling": {
+    "sessionIdentity": "Tu identidad y tus datos de contacto se obtienen de tu sesión autenticada. No necesitas ingresarlos de nuevo.",
+    "title": "Información de perfilamiento",
+    "detail": "Detalle del perfil y fuentes",
+    "simulated": "Datos simulados. No es una consulta financiera real.",
+    "purpose": "Autoriza el uso de Open Finance y Open Data para calcular tu cotización. La autorización dura 30 días y puedes revocarla aquí. El perfil dura 15 minutos.",
+    "loading": "Consultando consentimiento y perfil",
+    "noConsent": "No tienes una autorización registrada.",
+    "authorize": "Autorizar perfilamiento",
+    "revoke": "Revocar autorización",
+    "consentStatus": {
+      "autorizado": "Autorización registrada",
+      "revocado": "Autorización revocada"
+    },
+    "beforeRequest": "El perfil se consultará al crear la solicitud y quedará asociado a esa cotización.",
+    "request": "Solicitud asociada",
+    "profile": "Perfil",
+    "version": "Versión",
+    "model": "Versión del modelo",
+    "score": "Score",
+    "level": "Nivel",
+    "calculatedAt": "Calculado el",
+    "validUntil": "Vigente hasta",
+    "consent": "Consentimiento y versión utilizados",
+    "sources": "Fuentes utilizadas",
+    "source": {
+      "open_finance": "Open Finance",
+      "open_data": "Open Data"
+    },
+    "simulatedSource": "Fuente simulada",
+    "indicator": "Indicador de riesgo",
+    "consultedAt": "Consultada el",
+    "errors": {
+      "consent": "Necesitas una autorización vigente. Autoriza el perfilamiento y crea una nueva solicitud si la anterior usó otra versión.",
+      "conflict": "La autorización cambió en otra sesión. Reintenta la consulta antes de modificarla.",
+      "expired": "El perfil venció. Crea una nueva solicitud para obtener un perfil vigente.",
+      "unavailable": "No se pudo consultar el perfilamiento. No se mostrarán resultados parciales. Reintenta la consulta.",
+      "identity": "No se pudo validar tu identidad. Revisa tu sesión antes de continuar.",
+      "session": "Tu sesión no es válida. Inicia sesión nuevamente.",
+      "notFound": "No se encontró el perfil de esta solicitud. Crea una nueva cotización.",
+      "invalid": "El perfil recibido no es completo, vigente o no corresponde a esta solicitud. No se mostrarán sus datos."
+    }
+  },
   "quoteSummary": {
     "eyebrow": "Resumen",
     "title": "Mis cotizaciones",

@@ -20,6 +20,25 @@ describe('HttpQuoteRequestGateway', () => {
 
   afterEach(() => http.verify());
 
+  it.each([
+    [403, 'consentimiento_ausente'],
+    [403, 'consentimiento_no_vigente'],
+    [422, 'perfil_vencido'],
+    [503, 'perfilamiento_no_disponible'],
+  ])('conserva el error de perfilamiento %s %s', async (status, code) => {
+    const result = firstValueFrom(
+      gateway.submitRequest({
+        productId: 'automotive',
+        productData: { vehiclePlate: 'ABC123' },
+      }),
+    );
+    const assertion = expect(result).rejects.toMatchObject({ status, error: { code } });
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion`)
+      .flush({ code }, { status, statusText: 'Error' });
+    await assertion;
+  });
+
   it('loads and maps the insurance catalog', async () => {
     const result = firstValueFrom(gateway.loadProducts());
     const request = http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro`);
@@ -95,6 +114,7 @@ describe('HttpQuoteRequestGateway', () => {
       id: 'AQT-2026-ABCDEF1234',
       customerType: 'natural',
       status: 'received',
+      productData: { vehiclePlate: 'ABC123' },
     });
   });
 

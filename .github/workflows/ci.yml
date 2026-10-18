@@ -104,7 +104,7 @@ jobs:
         run: pnpm build:pages
 
       - name: Conservar sitio validado para publicación
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && steps.policy.outputs.skip_tests != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.policy.outputs.skip_tests != 'true'
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist/solventa-web-pf2/browser

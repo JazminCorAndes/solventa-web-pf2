@@ -16,7 +16,7 @@ async function pagesSource({ github, context }) {
     run.event !== 'push' ||
     run.status !== 'completed' ||
     run.conclusion !== 'success' ||
-    run.head_branch !== 'develop' ||
+    run.head_branch !== 'master' ||
     run.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}` ||
     !/^[a-f0-9]{40}$/.test(run.head_sha || '') ||
     run.head_sha !== event.head_sha
@@ -35,9 +35,9 @@ async function pagesSource({ github, context }) {
     quality[0].conclusion !== 'success'
   )
     throw new Error('Calidad no terminó correctamente');
-  const develop = (await github.rest.git.getRef({ ...context.repo, ref: 'heads/develop' })).data
+  const master = (await github.rest.git.getRef({ ...context.repo, ref: 'heads/master' })).data
     .object.sha;
-  if (develop !== run.head_sha) return { publish: false };
+  if (master !== run.head_sha) return { publish: false };
   return { publish: true, runId: run.id, sha: run.head_sha };
 }
 

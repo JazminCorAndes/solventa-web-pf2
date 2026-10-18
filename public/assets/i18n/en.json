@@ -200,6 +200,49 @@
       "unexpected": "An unexpected error occurred while sending the request."
     }
   },
+  "profiling": {
+    "sessionIdentity": "Your identity and contact details come from your authenticated session. You do not need to enter them again.",
+    "title": "Profiling information",
+    "detail": "Profile and source details",
+    "simulated": "Simulated data. This is not a real financial inquiry.",
+    "purpose": "Authorize Open Finance and Open Data for your insurance quote. Authorization lasts 30 days and can be revoked here. Profiles last 15 minutes.",
+    "loading": "Checking consent and profile",
+    "noConsent": "No authorization is registered.",
+    "authorize": "Authorize profiling",
+    "revoke": "Revoke authorization",
+    "consentStatus": {
+      "autorizado": "Authorization registered",
+      "revocado": "Authorization revoked"
+    },
+    "beforeRequest": "A profile will be obtained when you submit the request and will be linked to that quote.",
+    "request": "Linked request",
+    "profile": "Profile",
+    "version": "Version",
+    "model": "Model version",
+    "score": "Score",
+    "level": "Level",
+    "calculatedAt": "Calculated at",
+    "validUntil": "Valid until",
+    "consent": "Consent and version used",
+    "sources": "Sources used",
+    "source": {
+      "open_finance": "Open Finance",
+      "open_data": "Open Data"
+    },
+    "simulatedSource": "Simulated source",
+    "indicator": "Risk indicator",
+    "consultedAt": "Consulted at",
+    "errors": {
+      "consent": "A current authorization is required. Authorize profiling and create a new request if the previous one used another version.",
+      "conflict": "Authorization changed in another session. Reload before changing it.",
+      "expired": "The profile expired. Create a new request to obtain a current profile.",
+      "unavailable": "Profiling could not be loaded. No partial results will be shown. Retry the query.",
+      "identity": "Your identity could not be verified. Check your session before continuing.",
+      "session": "Your session is invalid. Sign in again.",
+      "notFound": "The request profile was not found. Create a new quote.",
+      "invalid": "The profile is incomplete, expired or does not match this request. Its data will not be shown."
+    }
+  },
   "quoteSummary": {
     "eyebrow": "Summary",
     "title": "My quotes",

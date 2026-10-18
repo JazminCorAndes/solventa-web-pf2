@@ -1,0 +1,45 @@
+name: Validación GitFlow
+
+on:
+  pull_request:
+    branches: [master, develop]
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-branch:
+    name: validate-branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validar ramas de origen y destino
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          echo "PR: $HEAD_REF -> $BASE_REF"
+
+          case "$BASE_REF" in
+            master)
+              allowed="release/ hotfix/"
+              ;;
+            develop)
+              allowed="feature/ backport/"
+              ;;
+            *)
+              echo "::error::La rama destino '$BASE_REF' no pertenece al GitFlow."
+              exit 1
+              ;;
+          esac
+
+          for prefix in $allowed; do
+            if [[ "$HEAD_REF" == "$prefix"* ]]; then
+              echo "OK: '$HEAD_REF' puede integrarse en '$BASE_REF'."
+              exit 0
+            fi
+          done
+
+          echo "::error::'$HEAD_REF' no puede integrarse en '$BASE_REF'. Prefijos permitidos: $allowed"
+          exit 1
