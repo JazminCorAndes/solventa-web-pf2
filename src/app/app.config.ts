@@ -25,7 +25,7 @@ import {
 } from './core/offers/offer-selection-storage.service';
 import { MockAuthGateway } from './data-access/auth/mock-auth.gateway';
 import { HttpAuthGateway } from './data-access/auth/http-auth.gateway';
-import { MockDashboardGateway } from './data-access/dashboard/mock-dashboard.gateway';
+import { HttpDashboardGateway } from './data-access/dashboard/http-dashboard.gateway';
 import { MockOfferGateway } from './data-access/offers/mock-offer.gateway';
 import { HttpOfferGateway } from './data-access/offers/http-offer.gateway';
 import { SUBSCRIPTION_GATEWAY } from './core/subscriptions/subscription.gateway';
@@ -62,7 +62,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'es-CO' },
     { provide: AUTH_GATEWAY, useClass: backendMode ? HttpAuthGateway : MockAuthGateway },
     { provide: AUTH_STORAGE, useClass: BrowserAuthStorage },
-    { provide: DASHBOARD_GATEWAY, useClass: MockDashboardGateway },
+    { provide: DASHBOARD_GATEWAY, useClass: HttpDashboardGateway },
     { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
     {

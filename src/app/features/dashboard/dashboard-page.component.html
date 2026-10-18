@@ -9,8 +9,13 @@
       <a mat-flat-button routerLink="/app/cotizaciones/solicitar">
         {{ 'dashboard.newQuote' | transloco }}
       </a>
-      <button mat-stroked-button type="button" disabled>
-        {{ 'dashboard.reportClaim' | transloco }}
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="dashboard.load()"
+        [disabled]="dashboard.status() === 'loading'"
+      >
+        {{ 'dashboard.refresh' | transloco }}
       </button>
     </div>
   </header>
@@ -31,74 +36,141 @@
     <div class="metric-grid">
       <mat-card appearance="raised">
         <mat-card-content>
-          <span>{{ 'dashboard.activePolicies' | transloco }}</span>
-          <strong>{{ dashboard.activePolicies() }}</strong>
-          <small>{{ 'dashboard.policiesStatus' | transloco }}</small>
+          <span>{{ 'dashboard.quotes' | transloco }}</span>
+          <strong>{{ snapshot.quotes.length }}</strong>
+          <small>{{ 'dashboard.persisted' | transloco }}</small>
         </mat-card-content>
       </mat-card>
       <mat-card appearance="raised">
         <mat-card-content>
-          <span>{{ 'dashboard.notifications' | transloco }}</span>
-          <strong>{{ dashboard.unreadNotifications() }}</strong>
-          <small>{{ 'dashboard.unread' | transloco }}</small>
+          <span>{{ 'dashboard.subscriptions' | transloco }}</span>
+          <strong>{{ snapshot.subscriptions.length }}</strong>
+          <small>{{ 'dashboard.persisted' | transloco }}</small>
         </mat-card-content>
       </mat-card>
       <mat-card appearance="raised" class="accent-card">
         <mat-card-content>
-          <span>{{ 'dashboard.upcomingTrip' | transloco }}</span>
-          <strong>{{ snapshot.upcomingTrip }}</strong>
-          <small>{{ 'dashboard.trip' | transloco }}</small>
+          <span>{{ 'dashboard.payments' | transloco }}</span>
+          <strong>{{ snapshot.payments.length }}</strong>
+          <small>{{ 'dashboard.simulatedOnly' | transloco }}</small>
         </mat-card-content>
       </mat-card>
     </div>
 
+    <p class="scope-notice">{{ 'dashboard.readOnly' | transloco }}</p>
     <div class="dashboard-grid">
       <mat-card appearance="raised">
         <mat-card-header>
-          <mat-card-title>{{ 'dashboard.activePolicies' | transloco }}</mat-card-title>
-          <span class="card-spacer"></span>
-          <span class="disabled-action">{{ 'navigation.policies' | transloco }}</span>
+          <mat-card-title>{{ 'dashboard.quotes' | transloco }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          <mat-list>
-            @for (policy of snapshot.policies; track policy.id) {
-              <mat-list-item>
-                <div matListItemTitle>{{ policy.product }}</div>
-                <div matListItemLine>
-                  {{ policy.premiumCop | currency: 'COP' : 'symbol-narrow' : '1.0-0' : 'es-CO' }}
-                </div>
-                <mat-chip matListItemMeta [class.pending]="policy.status === 'pending'">
-                  {{ 'dashboard.status.' + policy.status | transloco }}
-                </mat-chip>
-              </mat-list-item>
+          <ul class="records">
+            @for (quote of snapshot.quotes; track quote.id) {
+              <li data-testid="dashboard-quote">
+                <h2>{{ quote.productId }}</h2>
+                <p>{{ 'dashboard.quoteId' | transloco }}: {{ quote.id }}</p>
+                @if (quote.requestId) {
+                  <p>{{ 'dashboard.requestId' | transloco }}: {{ quote.requestId }}</p>
+                }
+                <p>{{ 'dashboard.state' | transloco }}: {{ stateLabel(quote.status) }}</p>
+                <p>
+                  {{ 'dashboard.createdAt' | transloco }}:
+                  {{ quote.createdAt | date: 'medium' : undefined : dateLocale }}
+                </p>
+                <p>
+                  {{ 'dashboard.validUntil' | transloco }}:
+                  {{ quote.validUntil | date: 'medium' : undefined : dateLocale }}
+                </p>
+                <p>
+                  {{ 'dashboard.estimatedPremium' | transloco }}:
+                  {{ quote.estimatedPremium.amount }} {{ quote.estimatedPremium.currency }}
+                </p>
+                @if (quote.selection; as selection) {
+                  <p>{{ 'dashboard.selectedOffer' | transloco }}: {{ selection.offerName }}</p>
+                  <p>
+                    {{ 'dashboard.selectedPremium' | transloco }}: {{ selection.premium.amount }}
+                    {{ selection.premium.currency }} ·
+                    {{ 'offers.premiumLabels.' + selection.periodicity | transloco }}
+                  </p>
+                  <p>
+                    {{ 'dashboard.selectedAt' | transloco }}:
+                    {{ selection.selectedAt | date: 'medium' : undefined : dateLocale }}
+                  </p>
+                }
+              </li>
+            } @empty {
+              <li class="empty-state">{{ 'dashboard.emptyQuotes' | transloco }}</li>
             }
-          </mat-list>
+          </ul>
         </mat-card-content>
       </mat-card>
 
       <mat-card appearance="raised">
         <mat-card-header>
-          <mat-card-title>{{ 'dashboard.recentNotifications' | transloco }}</mat-card-title>
-          <span class="card-spacer"></span>
-          <span class="disabled-action">{{ 'navigation.notifications' | transloco }}</span>
+          <mat-card-title>{{ 'dashboard.subscriptions' | transloco }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          <mat-list>
-            @for (notification of snapshot.notifications; track notification.id) {
-              <mat-list-item>
-                <span
-                  matListItemIcon
-                  class="notification-dot"
-                  [class.read]="notification.read"
-                  aria-hidden="true"
-                ></span>
-                <div matListItemTitle>{{ notification.title }}</div>
-                <div matListItemLine>
-                  {{ notification.createdAt | date: 'mediumDate' : '' : 'es-CO' }}
-                </div>
-              </mat-list-item>
+          <ul class="records">
+            @for (subscription of snapshot.subscriptions; track subscription.id) {
+              <li data-testid="dashboard-subscription">
+                <h2>{{ 'dashboard.subscriptionId' | transloco }}: {{ subscription.id }}</h2>
+                <p>{{ 'dashboard.requestId' | transloco }}: {{ subscription.requestId }}</p>
+                <p>{{ 'dashboard.quoteId' | transloco }}: {{ subscription.quoteId }}</p>
+                <p>{{ 'dashboard.state' | transloco }}: {{ stateLabel(subscription.status) }}</p>
+                <p>
+                  {{ 'dashboard.updatedAt' | transloco }}:
+                  {{ subscription.updatedAt | date: 'medium' : undefined : dateLocale }}
+                </p>
+                <p>
+                  {{ 'dashboard.saga' | transloco }}: {{ stateLabel(subscription.saga.status) }}
+                </p>
+              </li>
+            } @empty {
+              <li class="empty-state">{{ 'dashboard.emptySubscriptions' | transloco }}</li>
             }
-          </mat-list>
+          </ul>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="raised">
+        <mat-card-header>
+          <mat-card-title>{{ 'dashboard.payments' | transloco }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ 'dashboard.simulationNotice' | transloco }}</p>
+          <ul class="records">
+            @for (payment of snapshot.payments; track payment.id) {
+              <li data-testid="dashboard-payment">
+                <h2>{{ 'dashboard.paymentId' | transloco }}: {{ payment.id }}</h2>
+                <p>{{ 'dashboard.requestId' | transloco }}: {{ payment.requestId }}</p>
+                <p>{{ 'dashboard.subscriptionId' | transloco }}: {{ payment.subscriptionId }}</p>
+                <p>{{ 'dashboard.state' | transloco }}: {{ stateLabel(payment.status) }}</p>
+                <p>
+                  {{ 'dashboard.amount' | transloco }}: {{ payment.amount.amount }}
+                  {{ payment.amount.currency }} ·
+                  {{ 'offers.premiumLabels.' + payment.periodicity | transloco }}
+                </p>
+                <p>
+                  {{ 'dashboard.confirmedAt' | transloco }}:
+                  {{ payment.confirmedAt | date: 'medium' : undefined : dateLocale }}
+                </p>
+              </li>
+            } @empty {
+              <li class="empty-state">{{ 'dashboard.emptyPayments' | transloco }}</li>
+            }
+          </ul>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="raised">
+        <mat-card-header>
+          <mat-card-title>{{ 'dashboard.unavailableTitle' | transloco }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <h2>{{ 'navigation.policies' | transloco }}</h2>
+          <p>{{ 'dashboard.policiesUnavailable' | transloco }}</p>
+          <h2>{{ 'navigation.notifications' | transloco }}</h2>
+          <p>{{ 'dashboard.notificationsUnavailable' | transloco }}</p>
         </mat-card-content>
       </mat-card>
     </div>
