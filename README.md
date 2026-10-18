@@ -202,9 +202,10 @@ sin repetir lint, pruebas o compilación; solo el job de despliegue recibe `page
 despliegues simultáneos.
 
 **Requisito administrativo:** Pages debe usar GitHub Actions y el environment
-`github-pages` debe permitir `master`, como en la política consultada el 17 de octubre de 2026.
-Este cambio de código se ajusta a esa rama y no modifica ni elude las revisiones y
-protecciones del environment.
+`github-pages` conserva `master` y `develop` permitidas: GitHub ejecuta `workflow_run`
+desde la rama predeterminada (`develop`). CD comprueba por API que el artefacto procede
+del CI exitoso de `master`; esa es la versión publicada, no la de la rama de ejecución.
+No se modifican ni eluden las revisiones o protecciones del environment.
 
 `pnpm build:pages` utiliza producción (backend AWS, no mocks) con base
 `/solventa-web-pf2/` y genera el artefacto `dist/solventa-web-pf2/browser`.

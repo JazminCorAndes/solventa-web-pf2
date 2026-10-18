@@ -33,7 +33,12 @@ function fixture() {
         getWorkflow: async () => ({ data: { id: 1 } }),
         listJobsForWorkflowRun: () => {},
       },
-      git: { getRef: async () => ({ data: { object: { sha: state.tip } } }) },
+      git: {
+        getRef: async ({ ref }) => {
+          assert.equal(ref, 'heads/master');
+          return { data: { object: { sha: state.tip } } };
+        },
+      },
     },
     paginate: async () => jobs,
   };
@@ -42,6 +47,12 @@ function fixture() {
 
 test('Pages selecciona la ejecución exacta de CI, no otra compilación', async () => {
   assert.deepEqual(await pagesSource(fixture()), { publish: true, runId: 10, sha: SHA });
+});
+test('CD puede ejecutarse desde develop pero publica únicamente el SHA validado de master', async () => {
+  const f = fixture();
+  f.context.ref = 'refs/heads/develop';
+  f.context.sha = 'b'.repeat(40);
+  assert.deepEqual(await pagesSource(f), { publish: true, runId: 10, sha: SHA });
 });
 for (const [name, mutate] of [
   [
@@ -146,7 +157,9 @@ test('CI y CD permanecen separados y no se recompila el sitio al publicar', () =
 });
 
 test('la excepción de backport no ejecuta código del PR y el resto conserva CI normal', () => {
-  const ci = fs.readFileSync(path.join(__dirname, '../workflows/ci.yml'), 'utf8');
+  const ci = fs
+    .readFileSync(path.join(__dirname, '../workflows/ci.yml'), 'utf8')
+    .replace(/\r\n/g, '\n');
   const steps = ci.split('\n      - name: ').slice(1);
   for (const step of steps.slice(0, 2)) {
     assert.ok(step.includes("vars.BACKPORT_AUTOMATION_ENABLED == 'true'"));

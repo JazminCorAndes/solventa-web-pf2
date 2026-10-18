@@ -63,10 +63,12 @@ Los hotfixes no se incluyen en esta excepción.
      Integration en modo pull_request en este segundo ruleset.
 5. Comparar protecciones efectivas y conservar master sin cambios. No dejar un intervalo
    desprotegido ni añadir bypass a usuarios, administradores o roles.
-6. El environment github-pages debe permitir solo master para mantener la publicación
-   estable. Conservar sus otras reglas; no crear credenciales de publicación nuevas.
-   Develop se habilitó durante la transición inicial de CI/CD, pero la reconciliación
-   conserva la decisión del equipo de publicar solo las releases integradas en master.
+6. El environment github-pages debe conservar master y develop permitidas. GitHub asigna
+   `GITHUB_REF` y `GITHUB_SHA` de la rama predeterminada (develop) a `workflow_run`, aunque
+   el CI de origen sea de master. Quitar develop puede bloquear CD. Esto no permite
+   publicar su build: `pages-source.cjs` exige por API un push exitoso de master, de este
+   repositorio y del workflow esperado, y descarga únicamente su artefacto validado.
+   Conservar las otras reglas y no crear credenciales de publicación nuevas.
 7. Sincronizar los historiales divergentes con revisión humana o una release que incluya
    correctamente develop. Activar `BACKPORT_AUTOMATION_ENABLED=true` y observar una entrega
    real: identidad, omisión en el PR, integración exacta, CI posterior y Pages correctos.
