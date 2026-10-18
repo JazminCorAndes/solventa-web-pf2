@@ -13,7 +13,7 @@ import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { finalize, switchMap, take } from 'rxjs';
+import { defer, finalize, switchMap, take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferSelectionService } from '../../core/offers/offer-selection.service';
@@ -94,8 +94,7 @@ export class OfferAcceptancePageComponent implements OnInit {
 
     this.confirming.set(true);
     this.errorKey.set(null);
-    this.offers
-      .confirmSelected()
+    defer(() => this.offers.confirmSelected())
       .pipe(
         switchMap(() => this.subscriptions.start()),
         take(1),
@@ -114,13 +113,12 @@ export class OfferAcceptancePageComponent implements OnInit {
   }
 
   continueWithSubscription(): void {
-    if (this.confirming()) {
+    if (!this.confirmed() || this.confirming()) {
       return;
     }
     this.confirming.set(true);
     this.errorKey.set(null);
-    this.subscriptions
-      .start()
+    defer(() => this.subscriptions.start())
       .pipe(
         take(1),
         finalize(() => this.confirming.set(false)),
