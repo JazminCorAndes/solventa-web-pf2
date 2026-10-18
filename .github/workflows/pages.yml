@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: ['CI · Validación']
     types: [completed]
-    branches: [develop]
+    branches: [master]
 
 permissions:
   contents: read
@@ -18,7 +18,7 @@ jobs:
   prepare:
     if: >-
       github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'develop' &&
+      github.event.workflow_run.head_branch == 'master' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -40,7 +40,7 @@ jobs:
             const source = await pagesSource({ github, context });
             core.setOutput('publish', source.publish);
             core.setOutput('run_id', source.runId || '');
-            if (!source.publish) core.info('Publicación omitida: develop contiene cambios más recientes.');
+            if (!source.publish) core.info('Publicación omitida: master contiene cambios más recientes.');
 
   deploy:
     name: Publicar Solventa Web

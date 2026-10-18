@@ -36,8 +36,10 @@ function fixture(t) {
   const bot = { id: 3, type: 'Bot', login: 'backport-app[bot]' };
   const checks = [
     ['Calidad', 15368],
+    ['validate-branch', 15368],
     ['CI / Validación (Jenkins)', 5277435],
-  ].map(([name, id]) => ({
+  ].map(([name, id], index) => ({
+    id: 100 + index,
     name,
     app: { id },
     head_sha: HEAD,
@@ -135,6 +137,32 @@ test('la App se verifica mediante la identidad real del bot, sin campos opcional
   assert.equal('performed_via_github_app' in f.pull, false);
   await verifyPull(f);
 });
+
+test('una entrega sin GitFlow válido no concede la excepción de backport', async (t) => {
+  const f = fixture(t);
+  f.checks.splice(1, 1);
+  await assert.rejects(verifyPull(f));
+});
+
+test('suites repetidas del mismo SHA usan el check más reciente', async (t) => {
+  const f = fixture(t);
+  f.checks.push({ ...f.checks[1], id: 200 });
+  await verifyPull(f);
+});
+
+test('un fallo antiguo permite el éxito posterior del mismo check', async (t) => {
+  const f = fixture(t);
+  f.checks.push({ ...f.checks[1], id: 99, conclusion: 'failure' });
+  await verifyPull(f);
+});
+
+for (const change of [{ conclusion: 'failure' }, { status: 'in_progress', conclusion: null }]) {
+  test(`un éxito antiguo no oculta el check reciente ${change.status || change.conclusion}`, async (t) => {
+    const f = fixture(t);
+    f.checks.push({ ...f.checks[1], id: 200, ...change });
+    await assert.rejects(verifyPull(f));
+  });
+}
 
 for (const [name, mutate] of [
   [

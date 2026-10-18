@@ -25,6 +25,9 @@ import {
   QuoteRequestStorage,
 } from '../../core/quotes/quote-request-storage.service';
 import { QuoteRequestPageComponent } from './quote-request-page.component';
+import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
+import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { environment } from '../../../environments/environment';
 
 const PRODUCT: InsuranceProduct = {
   id: 'automotive',
@@ -102,6 +105,7 @@ class TestOfferSelectionStorage implements OfferSelectionStorage {
 }
 
 describe('QuoteRequestPageComponent', () => {
+  const originalMode = environment.dataAccessMode;
   let fixture: ComponentFixture<QuoteRequestPageComponent>;
   let component: QuoteRequestPageComponent;
   let gateway: TestQuoteRequestGateway;
@@ -120,6 +124,7 @@ describe('QuoteRequestPageComponent', () => {
       phone: '+573001234567',
     });
 
+    environment.dataAccessMode = 'mock';
     await TestBed.configureTestingModule({
       imports: [
         QuoteRequestPageComponent,
@@ -137,6 +142,13 @@ describe('QuoteRequestPageComponent', () => {
         { provide: QUOTE_REQUEST_GATEWAY, useClass: TestQuoteRequestGateway },
         { provide: QUOTE_REQUEST_STORAGE, useClass: TestQuoteRequestStorage },
         { provide: OFFER_SELECTION_STORAGE, useClass: TestOfferSelectionStorage },
+        {
+          provide: PROFILING_GATEWAY,
+          useValue: {
+            loadConsent: () => of(createConsent()),
+            loadProfile: (id: string) => of(createProfile(id)),
+          },
+        },
       ],
     }).compileComponents();
 
@@ -146,6 +158,24 @@ describe('QuoteRequestPageComponent', () => {
     router = TestBed.inject(Router);
     navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    environment.dataAccessMode = originalMode;
+  });
+
+  it('usa identidad de sesion sin pedir documento o contacto en modo backend', () => {
+    fixture.destroy();
+    environment.dataAccessMode = 'backend';
+    fixture = TestBed.createComponent(QuoteRequestPageComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    component.form.patchValue({ productId: PRODUCT.id, vehiclePlate: 'ABC123' });
+    component.submit();
+    expect(gateway.submitCalls).toBe(1);
+    expect(fixture.nativeElement.querySelector('#national-id')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#quote-email')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#quote-phone')).toBeNull();
   });
 
   it('does not send an invalid request', () => {
@@ -225,6 +255,14 @@ describe('QuoteRequestPageComponent', () => {
     expect(gateway.submitCalls).toBe(1);
     expect(component.submitting()).toBe(true);
     expect(fixture.nativeElement.querySelector('.quote-processing-overlay')).not.toBeNull();
+  });
+
+  it('no envia una solicitud sin consentimiento vigente', () => {
+    fillValidForm(component);
+    component.profilingReady.set(false);
+    component.submit();
+    expect(gateway.submitCalls).toBe(0);
+    expect(component.errorKey()).toBe('profiling.errors.consent');
   });
 
   it('navigates to the offers after a successful request', () => {

@@ -18,7 +18,7 @@ function fixture() {
     workflow_id: 1,
     name: 'CI · Validación',
     event: 'push',
-    head_branch: 'develop',
+    head_branch: 'master',
     head_sha: SHA,
     head_repository: { full_name: 'owner/web' },
     status: 'completed',
@@ -63,9 +63,9 @@ for (const [name, mutate] of [
     },
   ],
   [
-    'rama master',
+    'rama develop',
     (f) => {
-      f.run.head_branch = 'master';
+      f.run.head_branch = 'develop';
     },
   ],
   [
@@ -136,7 +136,8 @@ test('CI y CD permanecen separados y no se recompila el sitio al publicar', () =
   assert.doesNotMatch(ci, /pages: write|id-token: write|deploy-pages|backport_policy:/);
   assert.match(ci, /actions\/upload-pages-artifact@/);
   assert.match(cd, /workflows: \['CI · Validación'\]/);
-  assert.match(cd, /branches: \[develop\]/);
+  assert.match(cd, /branches: \[master\]/);
+  assert.ok(ci.includes("github.event_name == 'push' && github.ref == 'refs/heads/master'"));
   assert.ok(cd.includes('run-id: ${{ needs.prepare.outputs.run_id }}'));
   assert.match(cd, /path: pages\/artifact\.tar/);
   assert.doesNotMatch(cd, /pnpm|npm|build:pages|tar -x/);

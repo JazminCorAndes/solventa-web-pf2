@@ -3,6 +3,7 @@
 const stable = 'master';
 const checks = [
   ['Calidad', 15368],
+  ['validate-branch', 15368],
   ['CI / Validación (Jenkins)', 5277435],
 ];
 const shaPattern = /^[0-9a-f]{40}$/;
@@ -44,10 +45,17 @@ async function verifySource({ github, repo, number }) {
     per_page: 100,
   });
   for (const [name, appId] of checks) {
-    const matches = results.filter((check) => check.name === name && check.app?.id === appId);
+    // GitHub puede devolver varias suites del mismo SHA después de editar el PR.
+    const matches = results
+      .filter((check) => check.name === name && check.app?.id === appId)
+      .sort((a, b) => b.id - a.id);
     if (
-      matches.length !== 1 ||
-      matches[0].head_sha !== source.head.sha ||
+      !matches.length ||
+      matches.some(
+        (check) =>
+          !Number.isSafeInteger(check.id) || check.id < 1 || check.head_sha !== source.head.sha,
+      ) ||
+      new Set(matches.map((check) => check.id)).size !== matches.length ||
       matches[0].status !== 'completed' ||
       matches[0].conclusion !== 'success'
     ) {

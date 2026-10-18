@@ -90,10 +90,10 @@ una prueba o compilación.
   integración AWS, navegación E2E o cumplimiento completo de las historias.
 
 Actions valida también `pnpm test:pages` y `pnpm build:pages` en los PRs, sin publicar.
-El workflow separado `pages.yml` publica después del CI exitoso de un push a `develop`, usando
+El workflow separado `pages.yml` publica después del CI exitoso de un push a `master`, usando
 producción con backend AWS y la subruta `/solventa-web-pf2/`. El environment `github-pages`
-debe permitir esa rama: su política consultada el 17 de octubre de 2026 solo admitía
-`master`, por lo que requiere autorización administrativa antes del despliegue.
+permite esa rama. La publicación recupera el artefacto del CI validado, sin recompilar.
+La release se integra mediante PR a `master`; no se publica desde `develop` ni desde el PR.
 No se cambia esa protección desde el workflow. El detalle del fallback `404.html` y sus
 limitaciones está en el README.
 
@@ -104,7 +104,7 @@ adicional en la portada del repositorio.
 ## Preparación de CI/CD y backport verificado
 
 `ci.yml` pasa a **CI · Validación** sin cambiar el check obligatorio Calidad. Para un push
-a develop conserva el sitio compilado; **CD · Solventa Web** lo publica después de verificar
+a master conserva el sitio compilado; **CD · Solventa Web** lo publica después de verificar
 por API la ejecución de CI, sin repetir lint, pruebas o compilación. No cambia el destino
 Pages, la subruta ni la configuración del backend. Los PRs no incluyen jobs de publicación.
 
@@ -112,3 +112,15 @@ La automatización de backport se prepara desactivada y sus pruebas se ejecutan 
 de Calidad. Solo un candidato verificado consulta la excepción desde la base confiable.
 El [procedimiento de activación](automatic-backport.md) requiere App y configuración de
 protecciones por Jazmín; no se aplican cambios administrativos al integrar este PR.
+
+## GitFlow
+
+El check **validate-branch**, publicado por Actions, valida el origen y destino del PR:
+
+- `release/*` o `hotfix/*` hacia `master`.
+- `feature/*` o `backport/*` hacia `develop`.
+
+Se ejecuta al abrir, editar, reabrir o actualizar el PR, sin credenciales ni checkout.
+Debe añadirse a las protecciones junto a Calidad y Jenkins, vinculado a Actions (15368),
+una vez exista una ejecución correcta; tener el workflow sin exigir su check no bloquea
+una integración incorrecta. No sustituye la revisión humana ni prueba cómo se creó una rama.

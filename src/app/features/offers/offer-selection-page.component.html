@@ -5,25 +5,29 @@
     <p>{{ 'offers.subtitle' | transloco }}</p>
   </header>
 
-  @if (offers.status() === 'loading' || offers.status() === 'idle') {
+  <app-profiling-panel
+    [requestId]="request()?.id ?? null"
+    (availabilityChange)="profilingChanged($event)"
+  />
+  @if (profilingReady() && (offers.status() === 'loading' || offers.status() === 'idle')) {
     <div class="state-panel" role="status">
       <mat-spinner diameter="36" />
       <span>{{ 'offers.loading' | transloco }}</span>
     </div>
-  } @else if (offers.status() === 'error') {
+  } @else if (profilingReady() && offers.status() === 'error') {
     <div class="state-panel" role="alert">
       <h2>{{ 'offers.errors.loadTitle' | transloco }}</h2>
-      <p>{{ 'offers.errors.loadBody' | transloco }}</p>
+      <p>{{ offers.errorKey() ?? 'offers.errors.loadBody' | transloco }}</p>
       <button mat-stroked-button type="button" (click)="offers.load()">
         {{ 'common.retry' | transloco }}
       </button>
     </div>
-  } @else if (offers.status() === 'empty') {
+  } @else if (profilingReady() && offers.status() === 'empty') {
     <div class="state-panel empty-state" role="status">
       <h2>{{ 'offers.empty.title' | transloco }}</h2>
       <p>{{ 'offers.empty.body' | transloco }}</p>
     </div>
-  } @else if (offers.calculation(); as calculation) {
+  } @else if (profilingReady() ? offers.calculation() : null; as calculation) {
     <div class="calculation-summary">
       <span
         >{{ 'offers.quoteId' | transloco }}: <strong>{{ calculation.quoteId }}</strong></span

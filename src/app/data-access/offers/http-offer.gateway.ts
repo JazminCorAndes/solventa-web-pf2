@@ -14,6 +14,7 @@ import {
   SelectedOfferRecord,
 } from '../../core/offers/offer.models';
 import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
+import { profilingErrorKey } from '../../core/profiling/profiling.errors';
 
 interface MoneyResponse {
   monto: string;
@@ -110,6 +111,9 @@ export class HttpOfferGateway implements OfferGateway {
         map(toSelection),
         catchError((error: unknown) => {
           if (error instanceof HttpErrorResponse && error.status === 422) {
+            if (profilingErrorKey(error)) {
+              return throwError(() => error);
+            }
             return throwError(() => new OfferUnavailableError());
           }
           return throwError(() => error);

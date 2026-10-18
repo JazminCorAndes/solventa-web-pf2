@@ -12,6 +12,7 @@ import {
   QuoteRequestRecord,
   TravelDestination,
 } from '../../core/quotes/quote-request.models';
+import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
 
 const PRODUCTS: InsuranceProduct[] = [
   {
@@ -104,6 +105,7 @@ const TRAVEL_DESTINATIONS: TravelDestination[] = [
 @Injectable()
 export class MockQuoteRequestGateway implements QuoteRequestGateway {
   private readonly auth = inject(AuthService);
+  private readonly profiling = inject(MockProfilingGateway);
 
   loadProducts(): Observable<InsuranceProduct[]> {
     return of(PRODUCTS).pipe(delay(250));
@@ -127,6 +129,8 @@ export class MockQuoteRequestGateway implements QuoteRequestGateway {
           throw new InsuranceProductUnavailableError();
         }
 
+        const id = generateQuoteId();
+        this.profiling.createProfile(id);
         return {
           ...request,
           customerType: 'natural' as const,
@@ -134,7 +138,7 @@ export class MockQuoteRequestGateway implements QuoteRequestGateway {
           nationalId: user?.nationalId ?? '',
           email: user?.email ?? '',
           phone: user?.phone ?? '',
-          id: generateQuoteId(),
+          id,
           status: 'received',
           createdAt: new Date().toISOString(),
         };

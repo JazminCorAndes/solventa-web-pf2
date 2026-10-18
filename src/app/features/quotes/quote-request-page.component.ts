@@ -6,6 +6,7 @@ import {
   inject,
   OnInit,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
@@ -42,6 +43,8 @@ import {
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
 import { InputFilterDirective } from '../../shared/input-filter/input-filter.directive';
 import { LocalizedDateAdapter } from '../../shared/dates/localized-date-adapter';
+import { profilingErrorKey } from '../../core/profiling/profiling.errors';
+import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.component';
 
 @Component({
   selector: 'app-quote-request-page',
@@ -49,6 +52,7 @@ import { LocalizedDateAdapter } from '../../shared/dates/localized-date-adapter'
   imports: [
     InputFilterDirective,
     MatAutocompleteModule,
+    ProfilingPanelComponent,
     MatButtonModule,
     MatCardModule,
     MatDatepickerModule,
@@ -88,6 +92,8 @@ export class QuoteRequestPageComponent implements OnInit {
   );
   readonly flightCoverageTypes = FLIGHT_COVERAGE_TYPES;
   readonly weatherEventTypes = WEATHER_EVENT_TYPES;
+  readonly profilingReady = signal(false);
+  private readonly profilingPanel = viewChild(ProfilingPanelComponent);
   readonly submitting = signal(false);
   readonly attempted = signal(false);
   readonly errorKey = signal<string | null>(null);
@@ -182,6 +188,10 @@ export class QuoteRequestPageComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
+    if (!this.profilingReady()) {
+      this.errorKey.set('profiling.errors.consent');
+      return;
+    }
 
     this.submitting.set(true);
     this.form.disable();
@@ -207,12 +217,16 @@ export class QuoteRequestPageComponent implements OnInit {
         },
         error: (error: unknown) => {
           this.errorKey.set(
-            error instanceof QuoteRequestUnavailableError
-              ? 'quoteRequest.errors.unavailable'
-              : error instanceof InsuranceProductUnavailableError
-                ? 'quoteRequest.errors.productUnavailable'
-                : 'quoteRequest.errors.unexpected',
+            profilingErrorKey(error) ??
+              (error instanceof QuoteRequestUnavailableError
+                ? 'quoteRequest.errors.unavailable'
+                : error instanceof InsuranceProductUnavailableError
+                  ? 'quoteRequest.errors.productUnavailable'
+                  : 'quoteRequest.errors.unexpected'),
           );
+          if (profilingErrorKey(error)) {
+            this.profilingPanel()?.reload();
+          }
         },
       });
   }

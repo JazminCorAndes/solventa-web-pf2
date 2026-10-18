@@ -14,6 +14,7 @@ import {
   QuoteRequestRecord,
   TravelDestination,
 } from '../../core/quotes/quote-request.models';
+import { profilingErrorKey } from '../../core/profiling/profiling.errors';
 
 interface ProductsResponse {
   productos: Array<{
@@ -101,6 +102,9 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
           createdAt: response.creadaEn,
         })),
         catchError((error: unknown) => {
+          if (profilingErrorKey(error)) {
+            return throwError(() => error);
+          }
           if (error instanceof HttpErrorResponse && error.status === 422) {
             return throwError(() => new InsuranceProductUnavailableError());
           }

@@ -11,10 +11,10 @@ administrativas mediante este PR. Pasar pruebas locales no demuestra una publica
 - `ci.yml` conserva el check obligatorio **Calidad**: lint, pruebas, fallback y compilación
   de Pages. Las pruebas pequeñas de automatización se ejecutan dentro del mismo job.
 - Los PRs normales no tienen checks adicionales de backport ni publicación.
-- En un push a `develop`, CI conserva el sitio con `upload-pages-artifact`.
-- `pages.yml` (**CD · Solventa Web**) escucha solo CI · Validación terminado en develop.
+- En un push a `master`, CI conserva el sitio con `upload-pages-artifact`.
+- `pages.yml` (**CD · Solventa Web**) escucha solo CI · Validación terminado en master.
   Verifica por API workflow, evento push, repositorio, SHA y Calidad exitosa. Si la revisión
-  ya fue superada por develop, omite la publicación antes de crear un deployment.
+  ya fue superada por master, omite la publicación antes de crear un deployment.
 - CD descarga el `artifact.tar` del ID de ejecución validado y lo transfiere al publicador
   oficial de Pages, sin extraerlo, instalar dependencias ni recompilar. Se conserva el
   environment `github-pages`, la URL del sitio y la configuración de producción existente.
@@ -25,7 +25,7 @@ administrativas mediante este PR. Pasar pruebas locales no demuestra una publica
 ## Qué puede integrarse automáticamente
 
 Solo un PR `release/*` del mismo repositorio ya integrado en `master`, con aprobación
-humana vigente y checks exitosos de su head: Calidad (App 15368) y
+humana vigente y checks exitosos de su head: Calidad y validate-branch (App 15368), y
 CI / Validación (Jenkins) (App 5277435).
 
 La App crea `backport/release-pr-<número>` en el SHA integrado exacto. Se comprueban autor,
@@ -41,7 +41,9 @@ requerir revisión posterior. No hay rollback destructivo automático.
 
 El backport válido no solicita Jenkins ni otra aprobación. Su PR reutiliza evidencia de
 la entrega. **No se usa `[skip ci]` al integrar en web**: el push a develop conserva CI y
-publicación Pages, con un único build validado. Los hotfixes no se incluyen en esta excepción.
+no publica Pages. CD solo publica master. La posible omisión de CI redundante después de
+un backport ya integrado queda para otro ajuste; no se relaja aquí la validación del PR.
+Los hotfixes no se incluyen en esta excepción.
 
 ## Pendiente de Jazmín: configuración administrativa
 
@@ -61,11 +63,10 @@ publicación Pages, con un único build validado. Los hotfixes no se incluyen en
      Integration en modo pull_request en este segundo ruleset.
 5. Comparar protecciones efectivas y conservar master sin cambios. No dejar un intervalo
    desprotegido ni añadir bypass a usuarios, administradores o roles.
-6. Verificar que el environment github-pages permite develop. Mantener sus otras reglas;
-   no reemplazar su configuración ni crear credenciales de publicación nuevas.
-   El run existente `39080158598` compiló correctamente pero fue rechazado por esa política
-   antes de ejecutar deploy: `Branch "develop" is not allowed to deploy to github-pages`.
-   Es un bloqueo previo a este ajuste y necesita resolución desde la cuenta propietaria.
+6. El environment github-pages debe permitir solo master para mantener la publicación
+   estable. Conservar sus otras reglas; no crear credenciales de publicación nuevas.
+   Develop se habilitó durante la transición inicial de CI/CD, pero la reconciliación
+   conserva la decisión del equipo de publicar solo las releases integradas en master.
 7. Sincronizar los historiales divergentes con revisión humana o una release que incluya
    correctamente develop. Activar `BACKPORT_AUTOMATION_ENABLED=true` y observar una entrega
    real: identidad, omisión en el PR, integración exacta, CI posterior y Pages correctos.
@@ -75,6 +76,17 @@ exactos está en el workflow confiable de master; proteger su clave y revisar su
 El token se crea para el App ID y su clave; el slug autenticado por esa acción debe coincidir
 con el configurado. Users API confirma login, tipo Bot e ID del autor. No se depende de
 `performed_via_github_app`: no viene en el payload de PR y puede ser nulo en Issues API.
+
+## GitFlow y reconciliación
+
+`validate-branch` exige release/hotfix hacia master y feature/backport hacia develop.
+La revisión de origen de un backport también exige ese check desde Actions 15368.
+Si GitHub devuelve varias suites del mismo nombre/App/SHA, se valida la más reciente:
+un éxito anterior no oculta una ejecución posterior pendiente o fallida.
+
+La reconciliación incorpora el historial y el perfilamiento/consentimiento de master en
+una rama feature basada en develop, conservando CI/CD separado y publicando solo master.
+Se revisa por PR normal; no usa la excepción de la App, force-push ni descarte de contenido.
 
 ## Recuperación
 

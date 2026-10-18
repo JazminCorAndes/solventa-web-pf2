@@ -44,11 +44,14 @@
       </mat-card-content>
 
       <mat-card-actions align="end">
-        <a mat-flat-button routerLink="/app/cotizaciones/ofertas">
-          {{ 'quoteSummary.viewOffers' | transloco }}
-        </a>
+        @if (profilingReady()) {
+          <a mat-flat-button routerLink="/app/cotizaciones/ofertas">
+            {{ 'quoteSummary.viewOffers' | transloco }}
+          </a>
+        }
       </mat-card-actions>
     </mat-card>
+    <app-profiling-panel [requestId]="quote.id" (availabilityChange)="profilingReady.set($event)" />
   } @else {
     <mat-card appearance="outlined" class="empty-card">
       <mat-card-content>

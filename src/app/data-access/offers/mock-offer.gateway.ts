@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { delay, map, Observable, of, throwError } from 'rxjs';
+import { delay, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferGateway } from '../../core/offers/offer.gateway';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../../core/offers/offer.models';
 import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
 import { OFFER_SELECTION_STORAGE } from '../../core/offers/offer-selection-storage.service';
+import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
 import { ACTIVE_MARKET } from '../../core/market/market.config';
 import {
   FLIGHT_COVERAGE_TYPES,
@@ -417,6 +418,7 @@ function offersFor(productId: string, productData: QuoteProductData): InsuranceO
 export class MockOfferGateway implements OfferGateway {
   private readonly quoteRequestStorage = inject(QUOTE_REQUEST_STORAGE);
   private readonly selectionStorage = inject(OFFER_SELECTION_STORAGE);
+  private readonly profiling = inject(MockProfilingGateway);
 
   loadOffers(): Observable<OfferCalculation> {
     const request = this.quoteRequestStorage.read();
@@ -425,6 +427,7 @@ export class MockOfferGateway implements OfferGateway {
     }
     return of(request).pipe(
       delay(450),
+      switchMap((record) => this.profiling.loadProfile(record.id).pipe(map(() => record))),
       map((record): OfferCalculation => {
         const selection = this.selectionStorage.read();
         return {
@@ -456,6 +459,7 @@ export class MockOfferGateway implements OfferGateway {
   ): Observable<SelectedOfferRecord> {
     return of(null).pipe(
       delay(350),
+      switchMap(() => this.profiling.loadProfile(quoteId)),
       map(() => {
         const request = this.quoteRequestStorage.read();
         if (!request || request.id !== quoteId) {
