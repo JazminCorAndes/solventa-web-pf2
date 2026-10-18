@@ -6,7 +6,7 @@
   antiguos. Su enlace abre Checks en GitHub; los HTML detallados permanecen en Jenkins privado.
 - **CI / Validación (Jenkins)** es el check principal obligatorio, publicado automáticamente
   por el controlador. No depende de que cada rama incluya un publicador dentro del Jenkinsfile.
-- El workflow del PR define **CI · Actions**; GitHub puede mostrar todavía el nombre de
+- El workflow del PR define **CI · Validación**; GitHub puede mostrar todavía el nombre de
   la rama predeterminada hasta integrarlo. El contexto obligatorio `Calidad` no cambia.
 - JUnit permanece en Jenkins pero deja de publicar `Tests / Declarative: Post Actions`.
 - Cada build limpia su workspace antes del checkout. Un reporte ausente o inválido no se
@@ -14,7 +14,7 @@
   Un reporte parcial tras otra etapa fallida se publica como neutral, sin ocultar el fallo.
 
 El resumen usa Python 3.10+ del agente compartido, sin paquetes nuevos. Prueba del publicador:
-`python3 -m unittest discover -s scripts -p test_coverage_summary.py`.
+`python3 -m unittest discover -s scripts -p 'test_*summary.py'`.
 La cobertura informa ejecución del código instrumentado, no suficiencia funcional ni despliegue.
 
 ### Configuración administrativa verificada
@@ -31,8 +31,8 @@ conversaciones resueltas y aplicación a administradores, sin permitir force-pus
 El cambio de nombre del publicador se aplica también a ramas con Jenkinsfiles anteriores;
 no es necesario integrar este PR para que Jenkins publique el nuevo contexto principal.
 
-`Cobertura` permanece informativa: no se exige un porcentaje mínimo ni se hace obligatorio
-un reporte que las ramas antiguas todavía no generan. Su incorporación al código sigue
+`Cobertura` permanece informativa y recomienda alcanzar **80 % en líneas y ramas**.
+No añade un requisito de integración ni exige reportes que las ramas antiguas todavía no generan. Su incorporación al código sigue
 en este PR, pendiente de revisión e integración normal, sin aprobar ni integrar automáticamente.
 
 El scanner difiere el comentario mientras su PR esté en cola o ejecutándose, sin marcarlo
@@ -63,6 +63,18 @@ El agente tiene un ejecutor compartido con Android y backend: esperar en cola no
 
 ## Leer Jenkins
 
+### Resúmenes de resultados
+
+Actions muestra el resultado real de cada validación, conteos del JUnit de Vitest y la
+revisión validada. El reporte se conserva como artefacto de esa ejecución. Los fallos,
+pasos omitidos e informes ausentes se identifican explícitamente. Un backport verificado
+indica que reutiliza evidencia y no presenta pruebas como si se hubieran repetido.
+
+Cobertura desglosa líneas y ramas, elementos cubiertos, pendientes y distancia al objetivo
+recomendado del 80 %. Los indicadores 🟢/🟠/⚪/🔴 llevan texto y distinguen objetivo alcanzado,
+mejora pendiente, métrica no aplicable e informe inválido. Los enlaces HTML/JUnit y la
+revisión compilada completan el detalle, sin crear otro check ni cambiar el principal de Jenkins.
+
 Etapas: Código → Herramientas → Dependencias → Lint → Pruebas y cobertura → Compilación.
 La etapa roja identifica el fallo. Los reportes disponibles se conservan incluso si falla
 una prueba o compilación.
@@ -70,17 +82,19 @@ una prueba o compilación.
 - **Tests**: resultados JUnit de Vitest.
 - **Artifacts → coverage/solventa-web-pf2/**: HTML y `cobertura-coverage.xml`.
   Descargar el directorio completo para abrir `index.html` si Jenkins restringe scripts.
-- La consola muestra porcentajes de líneas, sentencias, funciones y ramas. No se añade
-  un porcentaje mínimo obligatorio: primero se establece una línea base revisable.
+- La consola muestra porcentajes de líneas, sentencias, funciones y ramas. La tabla de GitHub
+  compara líneas y ramas con el objetivo recomendado del 80 %, sin bloquear por ese porcentaje.
 - Comando local: `pnpm test:coverage`. Usa los mismos tests de `pnpm test:ci`, con V8
   y reportes adicionales. No introduce un segundo conjunto de pruebas.
 - La cobertura corresponde al código instrumentado por Angular/Vitest y no demuestra
   integración AWS, navegación E2E o cumplimiento completo de las historias.
 
 Actions valida también `pnpm test:pages` y `pnpm build:pages` en los PRs, sin publicar.
-El workflow separado `pages.yml` publica únicamente tras un push a `master`, usando
+El workflow separado `pages.yml` publica después del CI exitoso de un push a `master`, usando
 producción con backend AWS y la subruta `/solventa-web-pf2/`. El environment `github-pages`
-debe permitir esa rama, como en la política consultada el 17 de octubre de 2026.
+conserva master y develop permitidas: GitHub ejecuta `workflow_run` con la referencia de
+la rama predeterminada, develop. La publicación solo acepta el CI de origen de master y
+recupera su artefacto exacto, sin recompilar; no publica el código de la rama de ejecución.
 La release se integra mediante PR a `master`; no se publica desde `develop` ni desde el PR.
 No se cambia esa protección desde el workflow. El detalle del fallback `404.html` y sus
 limitaciones está en el README.
@@ -88,3 +102,27 @@ limitaciones está en el README.
 Un check verde no prueba que haya un despliegue ni conectividad con el backend real.
 La cobertura se consulta dentro del PR, no como un porcentaje fijo o un servicio
 adicional en la portada del repositorio.
+
+## Preparación de CI/CD y backport verificado
+
+`ci.yml` pasa a **CI · Validación** sin cambiar el check obligatorio Calidad. Para un push
+a master conserva el sitio compilado; **CD · Solventa Web** lo publica después de verificar
+por API la ejecución de CI, sin repetir lint, pruebas o compilación. No cambia el destino
+Pages, la subruta ni la configuración del backend. Los PRs no incluyen jobs de publicación.
+
+La automatización de backport se prepara desactivada y sus pruebas se ejecutan dentro
+de Calidad. Solo un candidato verificado consulta la excepción desde la base confiable.
+El [procedimiento de activación](automatic-backport.md) requiere App y configuración de
+protecciones por Jazmín; no se aplican cambios administrativos al integrar este PR.
+
+## GitFlow
+
+El check **validate-branch**, publicado por Actions, valida el origen y destino del PR:
+
+- `release/*` o `hotfix/*` hacia `master`.
+- `feature/*` o `backport/*` hacia `develop`.
+
+Se ejecuta al abrir, editar, reabrir o actualizar el PR, sin credenciales ni checkout.
+Debe añadirse a las protecciones junto a Calidad y Jenkins, vinculado a Actions (15368),
+una vez exista una ejecución correcta; tener el workflow sin exigir su check no bloquea
+una integración incorrecta. No sustituye la revisión humana ni prueba cómo se creó una rama.

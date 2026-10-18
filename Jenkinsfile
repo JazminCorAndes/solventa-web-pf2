@@ -41,8 +41,8 @@ pipeline {
         }
         stage('Pruebas y cobertura') {
             steps {
-                publishChecks name: 'Cobertura', status: 'IN_PROGRESS', conclusion: 'NONE', title: 'Generando cobertura web', summary: 'Código instrumentado por Angular/Vitest V8.', detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks"
-                sh 'python3 -m unittest discover -s scripts -p test_coverage_summary.py'
+                publishChecks name: 'Cobertura', status: 'IN_PROGRESS', conclusion: 'NONE', title: 'Analizando cobertura web', summary: 'Objetivo recomendado: 80 % en líneas y ramas. Medición Angular/Vitest V8.', detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks"
+                sh "python3 -m unittest discover -s scripts -p 'test_*summary.py'"
                 sh 'mkdir -p reports && pnpm test:coverage'
             }
         }
@@ -67,7 +67,8 @@ pipeline {
                     ''')
                     def summary = readFile(file: 'reports/coverage-summary.md', encoding: 'UTF-8')
                     def revision = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-                    summary += "\nRevisión compilada (puede incluir merge con destino): `${revision}`.\n"
+                    summary += "\n**Revisión compilada:** [`${revision}`](https://github.com/JazminCorAndes/solventa-web-pf2/commit/${revision}).\n"
+                    summary += "\n[Informe HTML de cobertura](${env.BUILD_URL}artifact/coverage/solventa-web-pf2/index.html) · [Pruebas JUnit](${env.BUILD_URL}testReport/)\n"
                     publishChecks name: 'Cobertura', title: summary.readLines()[0], summary: summary,
                         detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks",
                         conclusion: result == 0 ? 'SUCCESS' : (currentBuild.currentResult == 'SUCCESS' ? 'FAILURE' : 'NEUTRAL')

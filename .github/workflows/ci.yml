@@ -1,4 +1,4 @@
-name: CI · Actions
+name: CI · Validación
 
 on:
   push:
@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
+  checks: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -21,31 +23,104 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Obtener política confiable del backport
+        if: github.event_name == 'pull_request' && vars.BACKPORT_AUTOMATION_ENABLED == 'true' && startsWith(github.head_ref, 'backport/release-pr-')
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Verificar excepción de sincronización exacta
+        id: policy
+        if: github.event_name == 'pull_request' && vars.BACKPORT_AUTOMATION_ENABLED == 'true' && startsWith(github.head_ref, 'backport/release-pr-')
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        env:
+          APP_ID: ${{ vars.BACKPORT_APP_ID }}
+          APP_SLUG: ${{ vars.BACKPORT_APP_SLUG }}
+        with:
+          script: |
+            core.setOutput('skip_tests', 'false');
+            try {
+              const { verifyPull } = require('./.github/scripts/verified-backport.cjs');
+              const pull = (await github.rest.pulls.get({ ...context.repo, pull_number: context.issue.number })).data;
+              await verifyPull({ github, repo: context.repo, pull, appId: Number(process.env.APP_ID), appSlug: process.env.APP_SLUG });
+              core.setOutput('skip_tests', 'true');
+              core.info('Sincronización exacta: se reutiliza la evidencia de la entrega.');
+            } catch {
+              core.warning('Excepción no verificada; se ejecuta CI normal.');
+            }
+
       - name: Descargar repositorio
+        if: steps.policy.outputs.skip_tests != 'true'
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Instalar pnpm
+        if: steps.policy.outputs.skip_tests != 'true'
         uses: pnpm/action-setup@v5
         with:
           version: 11.19.0
 
       - name: Configurar Node.js
+        if: steps.policy.outputs.skip_tests != 'true'
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
+      - name: Probar automatización
+        id: automation
+        if: steps.policy.outputs.skip_tests != 'true'
+        run: |
+          node --test .github/scripts/*.test.cjs
+          python3 -m unittest discover -s scripts -p 'test_*summary.py'
+
       - name: Instalar dependencias
+        id: dependencies
+        if: steps.policy.outputs.skip_tests != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Ejecutar lint
+        id: lint
+        if: steps.policy.outputs.skip_tests != 'true'
         run: pnpm lint
 
       - name: Ejecutar pruebas
-        run: pnpm test:ci
+        id: tests
+        if: steps.policy.outputs.skip_tests != 'true'
+        run: |
+          mkdir -p reports
+          pnpm test:ci --reporters=junit --output-file=reports/unit-tests.xml
 
       - name: Verificar fallback Pages
+        id: pages
+        if: steps.policy.outputs.skip_tests != 'true'
         run: pnpm test:pages
 
       - name: Compilar aplicación para Pages
+        id: build
+        if: steps.policy.outputs.skip_tests != 'true'
         run: pnpm build:pages
+
+      - name: Conservar sitio validado para publicación
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.policy.outputs.skip_tests != 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/solventa-web-pf2/browser
+
+      - name: Conservar informes de pruebas
+        id: reports
+        if: always() && steps.policy.outputs.skip_tests != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-test-reports
+          path: reports/unit-tests.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publicar resumen de validación
+        if: always()
+        env:
+          CI_STEPS: ${{ toJSON(steps) }}
+        run: python3 scripts/ci_summary.py
