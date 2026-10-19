@@ -187,6 +187,13 @@ sin reformatear para preservar los bytes originales y comprobar que el contrato 
 se rechaza explícitamente; no son fixtures de producción.
 Este cotejo local no acredita el despliegue de la nueva API ni del consumidor en AWS/Pages.
 
+La captura `src/app/data-access/dashboard/testing/dashboard-policies-integration.json`
+incluye respuestas vacía y poblada del contrato nuevo, obtenidas por el backend mediante
+JWT y llamadas HTTP reales BFF → Cotización → Pólizas con dos bases SQLite temporales
+migradas. Las pruebas del adaptador y del componente consumen esas respuestas y cotejan
+vigencias, tipo, estado y suscripción de origen. Es evidencia de compatibilidad del contrato,
+no una verificación del entorno principal desplegado, ni datos de producción.
+
 | Configuración | `apiBaseUrl`             | Uso                                        |
 | ------------- | ------------------------ | ------------------------------------------ |
 | `production`  | URL del API Gateway      | `pnpm build`                               |

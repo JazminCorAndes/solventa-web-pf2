@@ -17,6 +17,7 @@ import { DASHBOARD_RESPONSE } from '../../core/dashboard/dashboard.testing';
 import { HttpDashboardGateway } from '../../data-access/dashboard/http-dashboard.gateway';
 import populatedReal from '../../data-access/dashboard/testing/dashboard-populated-real.json';
 import emptyReal from '../../data-access/dashboard/testing/dashboard-empty-real.json';
+import policyIntegration from '../../data-access/dashboard/testing/dashboard-policies-integration.json';
 import { DashboardPageComponent } from './dashboard-page.component';
 
 registerLocaleData(localeEsCo);
@@ -144,6 +145,31 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     fixture.detectChanges();
     expect(elements('[role="alert"]')).toHaveLength(1);
     expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
+  });
+
+  it('renders the captured persisted policy through the HTTP consumer without shifting coverage dates', () => {
+    http.expectOne(URL).flush(policyIntegration.populated);
+    fixture.detectChanges();
+    const policies = elements('[data-testid="dashboard-policy"]');
+    expect(policies).toHaveLength(1);
+    const policyText = policies[0].textContent ?? '';
+    expect(policyText).toContain(policyIntegration.populated.polizas[0].id);
+    expect(policyText).toContain(policyIntegration.populated.polizas[0].suscripcionId);
+    expect(policyText).toContain(es.dashboard.policyTypes.automotive);
+    expect(policyText).toContain(es.dashboard.states.active);
+    expect(policyText).toContain('19/10/2026');
+    expect(policyText).toContain('19/11/2026');
+    expect(policyText).toContain(es.dashboard.academicPolicy);
+    expect(elements('[data-testid="dashboard-payment"]')).toHaveLength(1);
+    expect(elements('[role="alert"]')).toHaveLength(0);
+  });
+
+  it('renders the captured empty policy account as empty, not unavailable', () => {
+    http.expectOne(URL).flush(policyIntegration.empty);
+    fixture.detectChanges();
+    expect(text()).toContain(es.dashboard.emptyPolicies);
+    expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
+    expect(elements('[role="alert"]')).toHaveLength(0);
   });
 
   it('does not treat legacy unavailable policies as a valid empty account', () => {

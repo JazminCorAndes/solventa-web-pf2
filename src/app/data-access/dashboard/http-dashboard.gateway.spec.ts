@@ -17,6 +17,7 @@ import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
 import { HttpDashboardGateway } from './http-dashboard.gateway';
 import populatedReal from './testing/dashboard-populated-real.json';
 import emptyReal from './testing/dashboard-empty-real.json';
+import policyIntegration from './testing/dashboard-policies-integration.json';
 
 const URL = `${environment.apiBaseUrl}/v1/clientes/me/dashboard`;
 const EMPTY_RESPONSE = {
@@ -92,6 +93,33 @@ describe('HttpDashboardGateway', () => {
     http.expectOne(URL).flush(DASHBOARD_RESPONSE);
     const snapshot = await result;
     expect(snapshot.policies).toEqual(DASHBOARD_SNAPSHOT.policies);
+  });
+
+  it('consumes the captured policy response from authenticated HTTP services and migrated databases', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(URL).flush(policyIntegration.populated);
+    const snapshot = await result;
+    const source = policyIntegration.populated.polizas[0];
+    expect(snapshot.policies).toEqual([
+      {
+        id: source.id,
+        subscriptionId: source.suscripcionId,
+        type: source.tipo,
+        startDate: source.fechaInicio,
+        endDate: source.fechaFin,
+        status: source.estado,
+        simulated: source.simulada,
+      },
+    ]);
+    expect(snapshot.subscriptions[0].id).toBe(source.suscripcionId);
+    expect(snapshot.payments[0].subscriptionId).toBe(source.suscripcionId);
+    expect(snapshot.quotes[0].productId).toBe(source.tipo);
+  });
+
+  it('consumes the captured empty policy account without fallback', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(URL).flush(policyIntegration.empty);
+    await expect(result).resolves.toEqual(EMPTY_DASHBOARD);
   });
 
   it.each([populatedReal, emptyReal])(
