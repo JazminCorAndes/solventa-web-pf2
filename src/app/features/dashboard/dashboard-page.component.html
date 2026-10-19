@@ -43,8 +43,8 @@
       </mat-card>
       <mat-card appearance="raised">
         <mat-card-content>
-          <span>{{ 'dashboard.subscriptions' | transloco }}</span>
-          <strong>{{ snapshot.subscriptions.length }}</strong>
+          <span>{{ 'dashboard.policies' | transloco }}</span>
+          <strong>{{ snapshot.policies.length }}</strong>
           <small>{{ 'dashboard.persisted' | transloco }}</small>
         </mat-card-content>
       </mat-card>
@@ -107,26 +107,28 @@
 
       <mat-card appearance="raised">
         <mat-card-header>
-          <mat-card-title>{{ 'dashboard.subscriptions' | transloco }}</mat-card-title>
+          <mat-card-title>{{ 'dashboard.policies' | transloco }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <ul class="records">
-            @for (subscription of snapshot.subscriptions; track subscription.id) {
-              <li data-testid="dashboard-subscription">
-                <h2>{{ 'dashboard.subscriptionId' | transloco }}: {{ subscription.id }}</h2>
-                <p>{{ 'dashboard.requestId' | transloco }}: {{ subscription.requestId }}</p>
-                <p>{{ 'dashboard.quoteId' | transloco }}: {{ subscription.quoteId }}</p>
-                <p>{{ 'dashboard.state' | transloco }}: {{ stateLabel(subscription.status) }}</p>
+            @for (policy of snapshot.policies; track policy.id) {
+              <li data-testid="dashboard-policy">
+                <h2>{{ 'dashboard.policyId' | transloco }}: {{ policy.id }}</h2>
+                <p>{{ 'dashboard.academicPolicy' | transloco }}</p>
+                <p>{{ 'dashboard.policyType' | transloco }}: {{ policyTypeLabel(policy.type) }}</p>
+                <p>{{ 'dashboard.subscriptionId' | transloco }}: {{ policy.subscriptionId }}</p>
+                <p>{{ 'dashboard.state' | transloco }}: {{ stateLabel(policy.status) }}</p>
                 <p>
-                  {{ 'dashboard.updatedAt' | transloco }}:
-                  {{ subscription.updatedAt | date: 'medium' : undefined : dateLocale }}
+                  {{ 'dashboard.startDate' | transloco }}:
+                  {{ policy.startDate | date: 'mediumDate' : undefined : dateLocale }}
                 </p>
                 <p>
-                  {{ 'dashboard.saga' | transloco }}: {{ stateLabel(subscription.saga.status) }}
+                  {{ 'dashboard.endDate' | transloco }}:
+                  {{ policy.endDate | date: 'mediumDate' : undefined : dateLocale }}
                 </p>
               </li>
             } @empty {
-              <li class="empty-state">{{ 'dashboard.emptySubscriptions' | transloco }}</li>
+              <li class="empty-state">{{ 'dashboard.emptyPolicies' | transloco }}</li>
             }
           </ul>
         </mat-card-content>
@@ -159,18 +161,6 @@
               <li class="empty-state">{{ 'dashboard.emptyPayments' | transloco }}</li>
             }
           </ul>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card appearance="raised">
-        <mat-card-header>
-          <mat-card-title>{{ 'dashboard.unavailableTitle' | transloco }}</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <h2>{{ 'navigation.policies' | transloco }}</h2>
-          <p>{{ 'dashboard.policiesUnavailable' | transloco }}</p>
-          <h2>{{ 'navigation.notifications' | transloco }}</h2>
-          <p>{{ 'dashboard.notificationsUnavailable' | transloco }}</p>
         </mat-card-content>
       </mat-card>
     </div>

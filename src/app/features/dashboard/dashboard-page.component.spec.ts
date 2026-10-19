@@ -14,7 +14,6 @@ import { AuthService } from '../../core/auth/auth.service';
 import { TEST_USER } from '../../core/auth/auth.testing';
 import { DASHBOARD_GATEWAY } from '../../core/dashboard/dashboard.gateway';
 import { DASHBOARD_RESPONSE } from '../../core/dashboard/dashboard.testing';
-import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
 import { HttpDashboardGateway } from '../../data-access/dashboard/http-dashboard.gateway';
 import populatedReal from '../../data-access/dashboard/testing/dashboard-populated-real.json';
 import emptyReal from '../../data-access/dashboard/testing/dashboard-empty-real.json';
@@ -59,72 +58,101 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders loading, persisted amounts and explicit unavailability without policy fiction', () => {
+  it('renders persisted policies with their coverage dates and originating subscription', () => {
     expect(text()).toContain(es.dashboard.loading);
     http.expectOne(URL).flush(DASHBOARD_RESPONSE);
     fixture.detectChanges();
     expect(elements('[data-testid="dashboard-quote"]')).toHaveLength(1);
-    expect(elements('[data-testid="dashboard-subscription"]')).toHaveLength(1);
+    expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(1);
+    expect(elements('[data-testid="dashboard-subscription"]')).toHaveLength(0);
     expect(elements('[data-testid="dashboard-payment"]')).toHaveLength(1);
     expect(text()).toContain('12345.67 COP');
     expect(text()).toContain(es.offers.premiumLabels.por_viaje);
     expect(text()).toContain(es.dashboard.estimatedPremium);
     expect(text()).toContain(es.dashboard.states.calculated);
-    expect(text()).toContain(es.dashboard.policiesUnavailable);
-    expect(text()).toContain(es.dashboard.notificationsUnavailable);
+    const policyText = elements('[data-testid="dashboard-policy"]')[0].textContent ?? '';
+    expect(policyText).toContain(DASHBOARD_RESPONSE.polizas[0].id);
+    expect(policyText).toContain(DASHBOARD_RESPONSE.polizas[0].suscripcionId);
+    expect(policyText).toContain(es.dashboard.policyTypes.travel);
+    expect(policyText).toContain(es.dashboard.academicPolicy);
+    expect(policyText).toContain(es.dashboard.states.active);
+    expect(policyText).toContain('10/10/2026');
+    expect(policyText).toContain('20/10/2026');
+    expect(policyText).toContain(es.dashboard.startDate);
+    expect(policyText).toContain(es.dashboard.endDate);
+    expect(text()).toContain(es.dashboard.policies);
+    expect(text()).not.toContain('Funciones no disponibles');
+    expect(text()).not.toContain('Notificaciones');
     expect(text()).toContain(es.dashboard.simulationNotice);
     expect(elements('a')).toHaveLength(1);
     expect(elements('a')[0].getAttribute('href')).toBe('/app/cotizaciones/solicitar');
     expect(text()).not.toContain('Madrid');
   });
 
-  it('shows valid empty records separately from unavailable domains', () => {
+  it('shows valid empty policies without presenting subscriptions as policies', () => {
     http.expectOne(URL).flush({
       ...DASHBOARD_RESPONSE,
       cotizaciones: [],
       suscripciones: [],
       pagos: [],
+      polizas: [],
     });
     fixture.detectChanges();
     expect(text()).toContain(es.dashboard.emptyQuotes);
-    expect(text()).toContain(es.dashboard.emptySubscriptions);
+    expect(text()).toContain(es.dashboard.emptyPolicies);
     expect(text()).toContain(es.dashboard.emptyPayments);
-    expect(text()).toContain(es.dashboard.policiesUnavailable);
+    expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
     expect(elements('[role="alert"]')).toHaveLength(0);
   });
 
-  it('renders the unmodified SQL-backed BFF export through the real consumer', () => {
+  it('counts only policies and preserves unknown policy types and states literally', () => {
+    http.expectOne(URL).flush({
+      ...DASHBOARD_RESPONSE,
+      suscripciones: [],
+      polizas: [
+        DASHBOARD_RESPONSE.polizas[0],
+        { ...DASHBOARD_RESPONSE.polizas[0], id: 'policy-002', tipo: 'futuro', estado: 'FUTURA' },
+      ],
+    });
+    fixture.detectChanges();
+    expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(2);
+    expect(elements('.metric-grid mat-card')[1].textContent).toContain('2');
+    expect(text()).toContain('futuro');
+    expect(text()).toContain('FUTURA');
+  });
+
+  it.each(['programada', 'vigente', 'vencida'] as const)(
+    'translates the persisted %s policy state without deriving it from dates',
+    (estado) => {
+      http.expectOne(URL).flush({
+        ...DASHBOARD_RESPONSE,
+        polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], estado }],
+      });
+      fixture.detectChanges();
+      const states = {
+        programada: es.dashboard.states.scheduled,
+        vigente: es.dashboard.states.active,
+        vencida: es.dashboard.states.expired,
+      };
+      expect(elements('[data-testid="dashboard-policy"]')[0].textContent).toContain(states[estado]);
+    },
+  );
+
+  it('rejects the legacy populated BFF response rather than inventing policies', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     http.expectOne(URL).flush(populatedReal);
     fixture.detectChanges();
-    expect(elements('[data-testid="dashboard-quote"]')).toHaveLength(4);
-    expect(elements('[data-testid="dashboard-subscription"]')).toHaveLength(4);
-    expect(elements('[data-testid="dashboard-payment"]')).toHaveLength(4);
-    for (const quote of populatedReal.cotizaciones) {
-      expect(text()).toContain(quote.id);
-      expect(text()).toContain(quote.solicitudId);
-      expect(text()).toContain(quote.seleccion.nombreOferta);
-      expect(text()).toContain(`${quote.primaEstimada.monto} ${quote.primaEstimada.moneda}`);
-    }
-    for (const payment of populatedReal.pagos) {
-      expect(text()).toContain(payment.id);
-      expect(text()).toContain(`${payment.importe.monto} ${payment.importe.moneda}`);
-    }
-    for (const periodicity of PREMIUM_PERIODICITIES) {
-      expect(text()).toContain(es.offers.premiumLabels[periodicity]);
-    }
-    expect(text()).toContain(es.dashboard.policiesUnavailable);
-    expect(text()).toContain(es.dashboard.notificationsUnavailable);
-    expect(text()).toContain(es.dashboard.simulationNotice);
+    expect(elements('[role="alert"]')).toHaveLength(1);
+    expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
   });
 
-  it('renders the unmodified empty-account BFF export without implying implemented policies', () => {
+  it('does not treat legacy unavailable policies as a valid empty account', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     http.expectOne(URL).flush(emptyReal);
     fixture.detectChanges();
-    expect(text()).toContain(es.dashboard.emptyQuotes);
-    expect(text()).toContain(es.dashboard.emptySubscriptions);
-    expect(text()).toContain(es.dashboard.emptyPayments);
-    expect(text()).toContain(es.dashboard.policiesUnavailable);
-    expect(elements('[role="alert"]')).toHaveLength(0);
+    expect(text()).toContain(es.dashboard.error);
+    expect(text()).not.toContain(es.dashboard.emptyPolicies);
+    expect(elements('[role="alert"]')).toHaveLength(1);
   });
 
   it('renders an HTTP failure as an error, not an empty account, and retries', () => {
@@ -144,6 +172,7 @@ describe('DashboardPageComponent with HTTP consumer', () => {
   it('keeps unknown persisted states literal and does not turn an issued saga into a policy', () => {
     http.expectOne(URL).flush({
       ...DASHBOARD_RESPONSE,
+      polizas: [],
       cotizaciones: [{ ...DASHBOARD_RESPONSE.cotizaciones[0], estado: 'FUTURO' }],
       suscripciones: [
         {
@@ -154,8 +183,8 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     });
     fixture.detectChanges();
     expect(text()).toContain('FUTURO');
-    expect(text()).toContain(es.dashboard.states.issued);
-    expect(text()).toContain(es.dashboard.policiesUnavailable);
+    expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
+    expect(text()).toContain(es.dashboard.emptyPolicies);
   });
 
   it('preserves unlike currencies and periodicities as separate records without totals', () => {
@@ -185,10 +214,14 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     fixture.detectChanges();
     expect(text()).toContain(en.dashboard.payments);
     expect(text()).toContain(en.dashboard.states.calculated);
-    expect(text()).toContain(en.dashboard.policiesUnavailable);
+    expect(text()).toContain(en.dashboard.policies);
+    expect(text()).toContain(en.dashboard.startDate);
+    expect(text()).toContain('Oct 10, 2026');
+    expect(text()).toContain(en.dashboard.simulationNotice);
     user.set(null);
     fixture.detectChanges();
     expect(elements('[data-testid="dashboard-quote"]')).toHaveLength(0);
+    expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
     expect(text()).not.toContain('12345.67');
   });
 });
