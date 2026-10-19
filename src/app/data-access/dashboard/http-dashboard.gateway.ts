@@ -6,6 +6,7 @@ import { DashboardGateway } from '../../core/dashboard/dashboard.gateway';
 import {
   DashboardMoney,
   DashboardPayment,
+  DashboardPolicy,
   DashboardQuote,
   DashboardSnapshot,
   DashboardSubscription,
@@ -142,13 +143,41 @@ function payment(value: unknown): DashboardPayment {
   };
 }
 
+function coverageDate(value: unknown): string {
+  const result = text(value);
+  const parsed = new Date(`${result}T00:00:00Z`);
+  return /^\d{4}-\d{2}-\d{2}$/.test(result) &&
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === result
+    ? result
+    : invalid();
+}
+
+function policy(value: unknown): DashboardPolicy {
+  const item = record(value);
+  const startDate = coverageDate(item['fechaInicio']);
+  const endDate = coverageDate(item['fechaFin']);
+  if (endDate < startDate || item['simulada'] !== true) {
+    invalid();
+  }
+  return {
+    id: text(item['id']),
+    subscriptionId: text(item['suscripcionId']),
+    type: text(item['tipo']),
+    startDate,
+    endDate,
+    status: text(item['estado']),
+    simulated: true,
+  };
+}
+
 function toSnapshot(value: unknown): DashboardSnapshot {
   const item = record(value);
   return {
     quotes: items(item['cotizaciones'], quote),
     subscriptions: items(item['suscripciones'], subscription),
     payments: items(item['pagos'], payment),
-    policies: unavailable(item['polizas']),
+    policies: items(item['polizas'], policy),
     notifications: unavailable(item['notificaciones']),
   };
 }
