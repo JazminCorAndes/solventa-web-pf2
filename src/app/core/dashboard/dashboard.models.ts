@@ -23,6 +23,8 @@ export interface DashboardQuote {
 }
 
 export interface DashboardSubscription {
+  validFrom?: string | null;
+  validUntil?: string | null;
   id: string;
   requestId: string;
   quoteId: string;

@@ -25,6 +25,7 @@ export class SimulatedPaymentService {
   readonly canConfirm = computed(
     () =>
       !!this.selection() &&
+      this.subscription?.saga.status === 'payment_pending' &&
       !this.payment() &&
       !this.loading() &&
       !this.confirming() &&
@@ -46,7 +47,7 @@ export class SimulatedPaymentService {
     if (
       !this.available ||
       subscription.status !== 'approved' ||
-      !['payment_pending', 'payment_confirmed'].includes(subscription.saga.status)
+      !['payment_pending', 'payment_confirmed', 'issued'].includes(subscription.saga.status)
     ) {
       this.errorKey.set('payment.errors.notAllowed');
       return of(undefined);
@@ -70,7 +71,7 @@ export class SimulatedPaymentService {
         }
         if (payment) {
           this.validatePayment(payment, subscription, selection);
-        } else if (subscription.saga.status === 'payment_confirmed') {
+        } else if (['payment_confirmed', 'issued'].includes(subscription.saga.status)) {
           throw new Error('A confirmed payment could not be recovered.');
         }
         this.selection.set(selection);

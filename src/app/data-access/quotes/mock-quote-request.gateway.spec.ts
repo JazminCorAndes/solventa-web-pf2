@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
 import { MockQuoteRequestGateway } from './mock-quote-request.gateway';
+import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
 
 describe('MockQuoteRequestGateway', () => {
   it('incluye los ocho ramos del catálogo y conserva los datos de cada solicitud', async () => {
@@ -10,6 +11,7 @@ describe('MockQuoteRequestGateway', () => {
     TestBed.configureTestingModule({
       providers: [
         MockQuoteRequestGateway,
+        { provide: QUOTE_REQUEST_STORAGE, useValue: { read: () => null } },
         { provide: MockProfilingGateway, useValue: { createProfile } },
         {
           provide: AuthService,

@@ -10,6 +10,8 @@ import {
 } from '../../core/subscriptions/subscription.models';
 
 interface SubscriptionResponse {
+  vigenteDesde?: string | null;
+  vigenteHasta?: string | null;
   id: string;
   solicitudId: string;
   ofertaId: string;
@@ -64,6 +66,8 @@ export class HttpSubscriptionGateway implements SubscriptionGateway {
 function toSubscription(response: SubscriptionResponse): SubscriptionRecord {
   return {
     id: response.id,
+    validFrom: coverageDate(response.vigenteDesde),
+    validUntil: coverageDate(response.vigenteHasta),
     quoteId: response.solicitudId,
     offerId: response.ofertaId,
     offerVersion: response.ofertaVersion,
@@ -83,6 +87,20 @@ function toSubscription(response: SubscriptionResponse): SubscriptionRecord {
       updatedAt: response.saga.actualizadaEn,
     },
   };
+}
+
+function coverageDate(value: string | null | undefined): string | null {
+  if (value == null) {
+    return null;
+  }
+  if (
+    typeof value !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) ||
+    !Number.isFinite(Date.parse(value))
+  ) {
+    throw new Error('The subscription contains an invalid coverage date.');
+  }
+  return value;
 }
 
 function toStatus(status: SubscriptionResponse['estado']): SubscriptionStatus {
