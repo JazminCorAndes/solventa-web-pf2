@@ -7,6 +7,8 @@ gestiona en Jira y las decisiones visuales deben seguir la versión más recient
 
 ## Comprobaciones y cobertura
 
+[📊 Cobertura de código](https://github.com/Migue765/backend-solventa/wiki/Cobertura-de-codigo)
+
 En cada [pull request](https://github.com/JazminCorAndes/solventa-web-pf2/pulls), abre **Checks → Cobertura**
 para ver líneas, ramas, pruebas y revisión compilada. El reporte corresponde a ese commit;
 no es un porcentaje fijo de la portada. En web mide el código instrumentado por Angular/Vitest V8.
