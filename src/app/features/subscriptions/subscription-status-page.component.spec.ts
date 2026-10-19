@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeEsCo from '@angular/common/locales/es-CO';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -101,6 +101,43 @@ describe('SubscriptionStatusPageComponent', () => {
     expect(text).toContain(es.payment.pending);
     expect(paymentGateway.confirm).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('.success-icon')).not.toBeNull();
+  });
+
+  it('links confirmed payments to their own subscription, never back to acceptance', () => {
+    paymentGateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    subscription.set({
+      ...SUBSCRIPTION,
+      saga: { ...SUBSCRIPTION.saga, status: 'payment_confirmed' },
+    });
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('a');
+    expect(link.getAttribute('href')).toBe(
+      `/app/cotizaciones/suscripcion/detalle?solicitud=${SUBSCRIPTION.quoteId}`,
+    );
+    expect(link.textContent).toContain(es.quoteSummary.viewSubscription);
+    expect(
+      fixture.nativeElement.querySelector('a[href="/app/cotizaciones/aceptacion"]'),
+    ).toBeNull();
+  });
+
+  it('renders the persisted subscription details and coverage without payment controls', () => {
+    fixture.destroy();
+    TestBed.inject(ActivatedRoute).snapshot.data['detail'] = true;
+    subscription.set({
+      ...SUBSCRIPTION,
+      validFrom: '2026-10-18T12:00:00Z',
+      validUntil: '2027-10-18T12:00:00Z',
+      saga: { ...SUBSCRIPTION.saga, status: 'payment_confirmed' },
+    });
+    paymentGateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    fixture = TestBed.createComponent(SubscriptionStatusPageComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(es.subscription.detailTitle);
+    expect(fixture.nativeElement.textContent).toContain(SUBSCRIPTION.quoteId);
+    expect(fixture.nativeElement.textContent).toContain('2027');
+    expect(fixture.nativeElement.textContent).toContain(CONFIRMED_PAYMENT.reference);
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a').getAttribute('href')).toBe('/app/cotizaciones');
   });
 
   it.each([

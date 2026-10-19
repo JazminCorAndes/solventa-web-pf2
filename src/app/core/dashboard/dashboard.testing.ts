@@ -43,7 +43,17 @@ export const DASHBOARD_RESPONSE = {
       confirmadaEn: '2026-10-01T12:15:00Z',
     },
   ],
-  polizas: { disponibilidad: 'no_implementado' },
+  polizas: [
+    {
+      id: '50000000-0000-4000-8000-000000000001',
+      suscripcionId: '30000000-0000-4000-8000-000000000001',
+      tipo: 'travel',
+      fechaInicio: '2026-10-10',
+      fechaFin: '2026-10-20',
+      estado: 'vigente',
+      simulada: true,
+    },
+  ],
   notificaciones: { disponibilidad: 'no_implementado' },
 };
 
@@ -51,12 +61,23 @@ export const EMPTY_DASHBOARD: DashboardSnapshot = {
   quotes: [],
   subscriptions: [],
   payments: [],
-  policies: { availability: 'no_implementado' },
+  policies: [],
   notifications: { availability: 'no_implementado' },
 };
 
 export const DASHBOARD_SNAPSHOT: DashboardSnapshot = {
   ...EMPTY_DASHBOARD,
+  policies: [
+    {
+      id: DASHBOARD_RESPONSE.polizas[0].id,
+      subscriptionId: DASHBOARD_RESPONSE.suscripciones[0].id,
+      type: 'travel',
+      startDate: '2026-10-10',
+      endDate: '2026-10-20',
+      status: 'vigente',
+      simulated: true,
+    },
+  ],
   quotes: [
     {
       id: DASHBOARD_RESPONSE.cotizaciones[0].id,
@@ -77,6 +98,8 @@ export const DASHBOARD_SNAPSHOT: DashboardSnapshot = {
   ],
   subscriptions: [
     {
+      validFrom: null,
+      validUntil: null,
       id: DASHBOARD_RESPONSE.suscripciones[0].id,
       requestId: 'request-001',
       quoteId: DASHBOARD_RESPONSE.cotizaciones[0].id,

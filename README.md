@@ -7,6 +7,8 @@ gestiona en Jira y las decisiones visuales deben seguir la versión más recient
 
 ## Comprobaciones y cobertura
 
+[📊 Cobertura de código](https://github.com/Migue765/backend-solventa/wiki/Cobertura-de-codigo)
+
 En cada [pull request](https://github.com/JazminCorAndes/solventa-web-pf2/pulls), abre **Checks → Cobertura**
 para ver líneas, ramas, pruebas y revisión compilada. El reporte corresponde a ese commit;
 no es un porcentaje fijo de la portada. En web mide el código instrumentado por Angular/Vitest V8.
@@ -154,29 +156,64 @@ Bearer de la sesión. Requiere la versión de backend que implementa ese contrat
 404, 503 o una respuesta inválida se muestran como error con reintento, nunca como
 una cuenta vacía. No se envía un identificador de cliente ni se usa un fallback a fixtures.
 
-La respuesta contiene `cotizaciones`, `suscripciones`, `pagos` y la disponibilidad
-`no_implementado` de `polizas` y `notificaciones`. Los tres primeros son registros
+La respuesta contiene `cotizaciones`, `suscripciones`, `pagos`, `polizas` y la disponibilidad
+de `notificaciones`. El inicio muestra cotizaciones, pólizas y pagos
 persistidos del usuario autenticado; listas vacías válidas se presentan como ausencia
 de registros. Se conservan los estados, fechas e importes decimales del contrato,
 sin sumar monedas ni periodicidades distintas. La prima estimada no tiene periodicidad;
 solo la selección y el pago muestran su periodicidad registrada.
 
-Los pagos continúan siendo **simulados**, sin tarjeta, cobro real ni emisión de póliza.
-Incluso el estado de saga `emitida` es solo un estado registrado del proceso y no
-habilita pólizas. Pólizas y notificaciones aparecen explícitamente como no implementadas.
+Los pagos continúan siendo **simulados**, sin tarjeta ni cobro real. Las pólizas son
+**académicas**, sin cobertura de seguro real, y requieren emisión persistida en el backend.
+`polizas` debe ser una lista con `id`, `suscripcionId`, `tipo`, `fechaInicio`, `fechaFin`
+y `estado`, además de `simulada: true`; las vigencias son fechas de calendario `YYYY-MM-DD`, no instantes UTC.
+El inicio muestra esos campos sin reconstruir pólizas desde la suscripción ni la saga.
+Una respuesta antigua con `polizas: { disponibilidad: 'no_implementado' }` se trata
+como error de contrato y permite reintentar; nunca se interpreta como una lista vacía.
+Se requiere desplegar primero el backend compatible. Se retira el panel de funciones
+no implementadas; esto no habilita notificaciones.
 El resumen no reconstruye ni reactiva solicitudes históricas: el enlace para cotizar
 usa el flujo existente, con consentimiento y perfilamiento, sin cambiar la solicitud
 activa al consultar el historial. Al salir o cambiar de usuario se descarta el resumen
 y se cancela su petición pendiente.
 
-Las pruebas HTTP y de componentes cotejan además las capturas literales
+Las pruebas HTTP y de componentes conservan además las capturas literales históricas
 `src/app/data-access/dashboard/testing/dashboard-{populated,empty}-real.json`.
-Provienen de respuestas 200 del BFF con SQLite y claves foráneas activas, después
+Provienen del contrato anterior, de respuestas 200 del BFF con SQLite y claves foráneas activas, después
 del flujo crear solicitud → ofertas → selección → suscripción → pago simulado
 para las cuatro periodicidades, y de una cuenta sin registros. No contienen
 credenciales ni datos personales y solo se importan en pruebas. Se conservan
-sin reformatear para preservar los bytes originales; no son fixtures de producción.
+sin reformatear para preservar los bytes originales y comprobar que el contrato antiguo
+se rechaza explícitamente; no son fixtures de producción.
 Este cotejo local no acredita el despliegue de la nueva API ni del consumidor en AWS/Pages.
+
+La captura `src/app/data-access/dashboard/testing/dashboard-policies-integration.json`
+incluye respuestas vacía y poblada del contrato nuevo, obtenidas por el backend mediante
+JWT y llamadas HTTP reales BFF → Cotización → Pólizas con dos bases SQLite temporales
+migradas. Las pruebas del adaptador y del componente consumen esas respuestas y cotejan
+vigencias, tipo, estado y suscripción de origen. Es evidencia de compatibilidad del contrato,
+no una verificación del entorno principal desplegado, ni datos de producción.
+
+### Historial de cotizaciones y continuación
+
+`/app/cotizaciones` consulta el dashboard autenticado y recupera cada solicitud mediante
+`GET /v1/solicitudes-cotizacion/{id}`. Muestra tarjetas independientes, ordenadas por
+fecha, sin depender de la última solicitud de `sessionStorage`. El backend calcula y
+guarda solicitud y cotización atómicamente; el dashboard incluye todas esas solicitudes.
+
+Cada tarjeta continúa su propia solicitud (`?solicitud={id}`): ofertas cuando no hay
+selección, aceptación cuando falta crear la suscripción, pago para suscripciones
+aprobadas pendientes y detalle para las pagadas. La guarda recupera solicitud, selección
+y suscripción del propietario antes de habilitar el destino; una recuperación fallida
+se informa explícitamente. Consultar el listado no cambia la solicitud activa ni
+confirma ofertas o pagos.
+
+Los estados superiores son «Solicitud en proceso», «Activa» y «Vencida». El vencimiento
+usa exclusivamente `vigenteHasta` de la suscripción (fin exclusivo), nunca `validaHasta`
+de la cotización. El backend compatible entrega `vigenteDesde`/`vigenteHasta` como ISO UTC
+o `null` tanto en suscripción individual como en dashboard. Si no informa fin contractual,
+no se inventa un vencimiento. El detalle muestra la vigencia disponible y el comprobante
+de pago simulado; no habilita un segundo pago ni supone emisión de una póliza real.
 
 | Configuración | `apiBaseUrl`             | Uso                                        |
 | ------------- | ------------------------ | ------------------------------------------ |

@@ -1,8 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth/auth.guards';
-import { offerSelectionGuard } from './core/offers/offer-selection.guard';
-import { quoteRequestGuard } from './core/quotes/quote-request.guard';
-import { subscriptionGuard } from './core/subscriptions/subscription.guard';
+import { quoteResumeGuard } from './core/quotes/quote-resume.guard';
 
 export const routes: Routes = [
   {
@@ -49,7 +47,8 @@ export const routes: Routes = [
       },
       {
         path: 'cotizaciones/ofertas',
-        canActivate: [quoteRequestGuard],
+        canActivate: [quoteResumeGuard],
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
         loadComponent: () =>
           import('./features/offers/offer-selection-page.component').then(
             (component) => component.OfferSelectionPageComponent,
@@ -58,7 +57,8 @@ export const routes: Routes = [
       },
       {
         path: 'cotizaciones/aceptacion',
-        canActivate: [quoteRequestGuard, offerSelectionGuard],
+        canActivate: [quoteResumeGuard],
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
         loadComponent: () =>
           import('./features/offers/offer-acceptance-page.component').then(
             (component) => component.OfferAcceptancePageComponent,
@@ -66,8 +66,20 @@ export const routes: Routes = [
         title: 'Resumen de oferta | Solventa',
       },
       {
+        path: 'cotizaciones/suscripcion/detalle',
+        canActivate: [quoteResumeGuard],
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
+        data: { detail: true },
+        loadComponent: () =>
+          import('./features/subscriptions/subscription-status-page.component').then(
+            (component) => component.SubscriptionStatusPageComponent,
+          ),
+        title: 'Detalle de suscripción | Solventa',
+      },
+      {
         path: 'cotizaciones/suscripcion',
-        canActivate: [quoteRequestGuard, offerSelectionGuard, subscriptionGuard],
+        canActivate: [quoteResumeGuard],
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
         loadComponent: () =>
           import('./features/subscriptions/subscription-status-page.component').then(
             (component) => component.SubscriptionStatusPageComponent,

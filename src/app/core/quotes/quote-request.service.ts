@@ -97,4 +97,9 @@ export class QuoteRequestService {
       }),
     );
   }
+
+  activate(request: QuoteRequestRecord): void {
+    this.storage.write(request);
+    this.latestRequestState.set(request);
+  }
 }

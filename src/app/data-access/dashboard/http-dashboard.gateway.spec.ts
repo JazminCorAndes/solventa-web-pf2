@@ -17,6 +17,7 @@ import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
 import { HttpDashboardGateway } from './http-dashboard.gateway';
 import populatedReal from './testing/dashboard-populated-real.json';
 import emptyReal from './testing/dashboard-empty-real.json';
+import policyIntegration from './testing/dashboard-policies-integration.json';
 
 const URL = `${environment.apiBaseUrl}/v1/clientes/me/dashboard`;
 const EMPTY_RESPONSE = {
@@ -24,6 +25,7 @@ const EMPTY_RESPONSE = {
   cotizaciones: [],
   suscripciones: [],
   pagos: [],
+  polizas: [],
 };
 
 describe('HttpDashboardGateway', () => {
@@ -62,6 +64,21 @@ describe('HttpDashboardGateway', () => {
     await expect(result).resolves.toEqual(DASHBOARD_SNAPSHOT);
   });
 
+  it('preserves subscription coverage separately from quote validity', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(`${environment.apiBaseUrl}/v1/clientes/me/dashboard`).flush({
+      ...DASHBOARD_RESPONSE,
+      suscripciones: DASHBOARD_RESPONSE.suscripciones.map((item) => ({
+        ...item,
+        vigenteDesde: '2026-10-01T12:15:00Z',
+        vigenteHasta: '2027-10-01T12:15:00Z',
+      })),
+    });
+    const snapshot = await result;
+    expect(snapshot.subscriptions[0].validUntil).toBe('2027-10-01T12:15:00Z');
+    expect(snapshot.quotes[0].validUntil).toBe(DASHBOARD_RESPONSE.cotizaciones[0].validaHasta);
+  });
+
   it('renews the session on 401 using the existing interceptor', async () => {
     const result = firstValueFrom(gateway.load());
     http.expectOne(URL).flush({}, { status: 401, statusText: 'Unauthorized' });
@@ -86,83 +103,49 @@ describe('HttpDashboardGateway', () => {
     await expect(result).rejects.toMatchObject({ status: 0 });
   });
 
-  it('consumes the literal BFF response captured after four persisted SQL payment flows', async () => {
+  it('maps persisted policy fields without deriving them from subscriptions or payments', async () => {
     const result = firstValueFrom(gateway.load());
-    http.expectOne(URL).flush(populatedReal);
+    http.expectOne(URL).flush(DASHBOARD_RESPONSE);
     const snapshot = await result;
-    expect(snapshot.quotes).toHaveLength(4);
-    expect(snapshot.subscriptions).toHaveLength(4);
-    expect(snapshot.payments).toHaveLength(4);
-    expect(new Set(snapshot.payments.map((payment) => payment.periodicity))).toEqual(
-      new Set(PREMIUM_PERIODICITIES),
-    );
-    for (const [index, quote] of snapshot.quotes.entries()) {
-      const source = populatedReal.cotizaciones[index];
-      expect(quote).toMatchObject({
-        id: source.id,
-        requestId: source.solicitudId,
-        productId: source.productoId,
-        status: source.estado,
-        createdAt: source.creadaEn,
-        validUntil: source.validaHasta,
-        estimatedPremium: {
-          amount: source.primaEstimada.monto,
-          currency: source.primaEstimada.moneda,
-        },
-        selection: {
-          offerId: source.seleccion.ofertaId,
-          offerName: source.seleccion.nombreOferta,
-          premium: {
-            amount: source.seleccion.prima.monto,
-            currency: source.seleccion.prima.moneda,
-          },
-          periodicity: source.seleccion.periodicidad,
-          selectedAt: source.seleccion.seleccionadaEn,
-        },
-      });
-    }
-    for (const [index, subscription] of snapshot.subscriptions.entries()) {
-      const source = populatedReal.suscripciones[index];
-      expect(subscription).toEqual({
-        id: source.id,
-        requestId: source.solicitudId,
-        quoteId: source.cotizacionId,
-        offerId: source.ofertaId,
-        status: source.estado,
-        createdAt: source.creadaEn,
-        updatedAt: source.actualizadaEn,
-        saga: {
-          status: source.saga.estado,
-          version: source.saga.version,
-          updatedAt: source.saga.actualizadaEn,
-        },
-      });
-    }
-    for (const [index, payment] of snapshot.payments.entries()) {
-      const source = populatedReal.pagos[index];
-      expect(payment).toEqual({
-        id: source.id,
-        requestId: source.solicitudId,
-        subscriptionId: source.suscripcionId,
-        status: source.estado,
-        simulated: source.simulada,
-        amount: { amount: source.importe.monto, currency: source.importe.moneda },
-        periodicity: source.periodicidad,
-        confirmedAt: source.confirmadaEn,
-      });
-      expect(
-        snapshot.subscriptions.find((item) => item.id === payment.subscriptionId)?.requestId,
-      ).toBe(payment.requestId);
-    }
-    expect(snapshot.policies.availability).toBe('no_implementado');
-    expect(snapshot.notifications.availability).toBe('no_implementado');
+    expect(snapshot.policies).toEqual(DASHBOARD_SNAPSHOT.policies);
+    expect(snapshot.subscriptions).toEqual(DASHBOARD_SNAPSHOT.subscriptions);
   });
 
-  it('consumes the literal BFF response captured for a real account without SQL records', async () => {
+  it('consumes the captured policy response from authenticated HTTP services and migrated databases', async () => {
     const result = firstValueFrom(gateway.load());
-    http.expectOne(URL).flush(emptyReal);
+    http.expectOne(URL).flush(policyIntegration.populated);
+    const snapshot = await result;
+    const source = policyIntegration.populated.polizas[0];
+    expect(snapshot.policies).toEqual([
+      {
+        id: source.id,
+        subscriptionId: source.suscripcionId,
+        type: source.tipo,
+        startDate: source.fechaInicio,
+        endDate: source.fechaFin,
+        status: source.estado,
+        simulated: source.simulada,
+      },
+    ]);
+    expect(snapshot.subscriptions[0].id).toBe(source.suscripcionId);
+    expect(snapshot.payments[0].subscriptionId).toBe(source.suscripcionId);
+    expect(snapshot.quotes[0].productId).toBe(source.tipo);
+  });
+
+  it('consumes the captured empty policy account without fallback', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(URL).flush(policyIntegration.empty);
     await expect(result).resolves.toEqual(EMPTY_DASHBOARD);
   });
+
+  it.each([populatedReal, emptyReal])(
+    'rejects the captured legacy policy-unavailable contract',
+    async (response) => {
+      const result = firstValueFrom(gateway.load());
+      http.expectOne(URL).flush(response);
+      await expect(result).rejects.toThrow('The dashboard response is invalid.');
+    },
+  );
 
   it.each([400, 403, 404, 500, 503])(
     'propagates HTTP %s without fixture or empty fallback',
@@ -218,7 +201,30 @@ describe('HttpDashboardGateway', () => {
     {},
     { ...EMPTY_RESPONSE, cotizaciones: null },
     { ...EMPTY_RESPONSE, pagos: {} },
-    { ...EMPTY_RESPONSE, polizas: [] },
+    { ...EMPTY_RESPONSE, polizas: { disponibilidad: 'no_implementado' } },
+    { ...EMPTY_RESPONSE, polizas: null },
+    { ...DASHBOARD_RESPONSE, polizas: [{}] },
+    { ...DASHBOARD_RESPONSE, polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], simulada: false }] },
+    { ...DASHBOARD_RESPONSE, polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], simulada: undefined }] },
+    { ...DASHBOARD_RESPONSE, polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], suscripcionId: '' }] },
+    { ...DASHBOARD_RESPONSE, polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], tipo: null }] },
+    { ...DASHBOARD_RESPONSE, polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], estado: '' }] },
+    {
+      ...DASHBOARD_RESPONSE,
+      polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], fechaInicio: '2026-02-30' }],
+    },
+    {
+      ...DASHBOARD_RESPONSE,
+      polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], fechaInicio: '2026-10-10T00:00:00Z' }],
+    },
+    {
+      ...DASHBOARD_RESPONSE,
+      polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], fechaFin: '2026-10-09' }],
+    },
+    {
+      ...DASHBOARD_RESPONSE,
+      polizas: [{ ...DASHBOARD_RESPONSE.polizas[0], fechaFin: '2026-13-01' }],
+    },
     { ...EMPTY_RESPONSE, notificaciones: { disponibilidad: 'disponible' } },
     {
       ...DASHBOARD_RESPONSE,

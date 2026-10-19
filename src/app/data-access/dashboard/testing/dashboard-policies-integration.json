@@ -1,0 +1,83 @@
+{
+  "source": "Authenticated integration test with real HTTP services and separate migrated SQLite databases; not production",
+  "empty": {
+    "cotizaciones": [],
+    "notificaciones": {
+      "disponibilidad": "no_implementado"
+    },
+    "pagos": [],
+    "polizas": [],
+    "suscripciones": []
+  },
+  "populated": {
+    "cotizaciones": [
+      {
+        "creadaEn": "2026-10-19T00:17:45.442211Z",
+        "estado": "CALCULADA",
+        "id": "4a65aaed-99e6-48c7-940c-73978ce1b192",
+        "primaEstimada": {
+          "moneda": "COP",
+          "monto": "41250.00"
+        },
+        "productoId": "automotive",
+        "seleccion": {
+          "nombreOferta": "Seguro Automotriz Total Esencial",
+          "ofertaId": "5acf7258-6b8d-5f83-b3eb-3fc2118e98a4",
+          "periodicidad": "mensual",
+          "prima": {
+            "moneda": "COP",
+            "monto": "41250.00"
+          },
+          "seleccionadaEn": "2026-10-19T00:17:45.521818Z"
+        },
+        "solicitudId": "AQT-2026-70C6655777",
+        "validaHasta": "2026-11-18T00:17:45.442211Z"
+      }
+    ],
+    "notificaciones": {
+      "disponibilidad": "no_implementado"
+    },
+    "pagos": [
+      {
+        "confirmadaEn": "2026-10-19T00:17:45.607723Z",
+        "estado": "confirmado",
+        "id": "58848321-41d9-4771-ae95-2b5de8ab9703",
+        "importe": {
+          "moneda": "COP",
+          "monto": "41250.00"
+        },
+        "periodicidad": "mensual",
+        "simulada": true,
+        "solicitudId": "AQT-2026-70C6655777",
+        "suscripcionId": "74a3414e-60f0-458e-95c7-6a73c0401a85"
+      }
+    ],
+    "polizas": [
+      {
+        "estado": "vigente",
+        "fechaFin": "2026-11-19",
+        "fechaInicio": "2026-10-19",
+        "id": "fd35f065-0bbf-4f50-b0e1-6bddd518a55b",
+        "simulada": true,
+        "suscripcionId": "74a3414e-60f0-458e-95c7-6a73c0401a85",
+        "tipo": "automotive"
+      }
+    ],
+    "suscripciones": [
+      {
+        "actualizadaEn": "2026-10-19T00:17:45.607723Z",
+        "cotizacionId": "4a65aaed-99e6-48c7-940c-73978ce1b192",
+        "creadaEn": "2026-10-19T00:17:45.568227Z",
+        "estado": "aprobada",
+        "id": "74a3414e-60f0-458e-95c7-6a73c0401a85",
+        "ofertaId": "5acf7258-6b8d-5f83-b3eb-3fc2118e98a4",
+        "saga": {
+          "actualizadaEn": "2026-10-19T00:17:45.666031Z",
+          "estado": "emitida",
+          "version": 3
+        },
+        "solicitudId": "AQT-2026-70C6655777"
+      }
+    ]
+  }
+}

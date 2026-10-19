@@ -23,6 +23,8 @@ export interface DashboardQuote {
 }
 
 export interface DashboardSubscription {
+  validFrom?: string | null;
+  validUntil?: string | null;
   id: string;
   requestId: string;
   quoteId: string;
@@ -44,10 +46,20 @@ export interface DashboardPayment {
   confirmedAt: string;
 }
 
+export interface DashboardPolicy {
+  id: string;
+  subscriptionId: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  simulated: true;
+}
+
 export interface DashboardSnapshot {
   quotes: DashboardQuote[];
   subscriptions: DashboardSubscription[];
   payments: DashboardPayment[];
-  policies: { availability: 'no_implementado' };
+  policies: DashboardPolicy[];
   notifications: { availability: 'no_implementado' };
 }

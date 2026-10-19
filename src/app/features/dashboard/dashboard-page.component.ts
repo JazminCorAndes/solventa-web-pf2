@@ -38,7 +38,27 @@ export class DashboardPageComponent implements OnInit {
     emitida: 'dashboard.states.issued',
     fallida: 'dashboard.states.failed',
     confirmado: 'dashboard.states.confirmed',
+    programada: 'dashboard.states.scheduled',
+    vigente: 'dashboard.states.active',
+    vencida: 'dashboard.states.expired',
   };
+
+  readonly policyTypeKeys: Readonly<Record<string, string>> = {
+    automotive: 'dashboard.policyTypes.automotive',
+    travel: 'dashboard.policyTypes.travel',
+    life: 'dashboard.policyTypes.life',
+    'device-protection': 'dashboard.policyTypes.device',
+    parametric: 'dashboard.policyTypes.flight',
+    'parametric-weather': 'dashboard.policyTypes.weather',
+    'payment-protection': 'dashboard.policyTypes.payment',
+    'mortgage-life': 'dashboard.policyTypes.mortgage',
+  };
+
+  policyTypeLabel(type: string): string {
+    return Object.hasOwn(this.policyTypeKeys, type)
+      ? this.i18n.translate(this.policyTypeKeys[type])
+      : type;
+  }
 
   get dateLocale(): string {
     return this.i18n.getActiveLang() === 'en' ? 'en-US' : 'es-CO';

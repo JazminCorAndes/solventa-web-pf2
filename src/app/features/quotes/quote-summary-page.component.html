@@ -10,58 +10,79 @@
     </a>
   </header>
 
-  @if (request(); as quote) {
-    <mat-card appearance="outlined" class="summary-card">
-      <mat-card-header>
-        <div>
-          <span class="status">{{ 'quoteSummary.status.' + quote.status | transloco }}</span>
-          <mat-card-title>{{ productName() }}</mat-card-title>
-          <mat-card-subtitle>{{ quote.id }}</mat-card-subtitle>
-        </div>
-      </mat-card-header>
-
-      <mat-card-content>
-        <dl>
-          <div>
-            <dt>{{ 'quoteSummary.requestedAt' | transloco }}</dt>
-            <dd>{{ quote.createdAt | date: 'medium' }}</dd>
-          </div>
-          @for (detail of productDetails(); track detail.labelKey) {
-            <div>
-              <dt>{{ detail.labelKey | transloco }}</dt>
-              <dd>{{ detail.valueKey ? (detail.valueKey | transloco) : detail.value }}</dd>
-            </div>
-          }
-          <div>
-            <dt>{{ 'quoteSummary.email' | transloco }}</dt>
-            <dd>{{ quote.email }}</dd>
-          </div>
-          <div>
-            <dt>{{ 'quoteSummary.phone' | transloco }}</dt>
-            <dd>{{ quote.phone }}</dd>
-          </div>
-        </dl>
-      </mat-card-content>
-
-      <mat-card-actions align="end">
-        @if (profilingReady()) {
-          <a mat-flat-button routerLink="/app/cotizaciones/ofertas">
-            {{ 'quoteSummary.viewOffers' | transloco }}
-          </a>
-        }
-      </mat-card-actions>
-    </mat-card>
-    <app-profiling-panel [requestId]="quote.id" (availabilityChange)="profilingReady.set($event)" />
+  @if (resumeError) {
+    <p role="alert">{{ 'quoteSummary.resumeError' | transloco }}</p>
+  }
+  @if (loading()) {
+    <p role="status">{{ 'quoteSummary.loading' | transloco }}</p>
+  } @else if (error()) {
+    <div role="alert">
+      <p>{{ 'quoteSummary.error' | transloco }}</p>
+      <button mat-stroked-button type="button" (click)="load()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
   } @else {
-    <mat-card appearance="outlined" class="empty-card">
-      <mat-card-content>
-        <span class="empty-icon" aria-hidden="true">◇</span>
-        <h2>{{ 'quoteSummary.empty.title' | transloco }}</h2>
-        <p>{{ 'quoteSummary.empty.body' | transloco }}</p>
-        <a mat-flat-button routerLink="/app/cotizaciones/solicitar">
-          {{ 'quoteSummary.empty.action' | transloco }}
-        </a>
-      </mat-card-content>
-    </mat-card>
+    @for (card of cards(); track card.request.id) {
+      @let quote = card.request;
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-header>
+          <div>
+            <span class="status">{{
+              'quoteSummary.status.' + card.progress.status | transloco
+            }}</span>
+            <mat-card-title>{{ productName(quote) }}</mat-card-title>
+            <mat-card-subtitle>{{ quote.id }}</mat-card-subtitle>
+          </div>
+        </mat-card-header>
+
+        <mat-card-content>
+          <dl>
+            <div>
+              <dt>{{ 'quoteSummary.requestedAt' | transloco }}</dt>
+              <dd>{{ quote.createdAt | date: 'medium' }}</dd>
+            </div>
+            @for (detail of productDetails(quote); track detail.labelKey) {
+              <div>
+                <dt>{{ detail.labelKey | transloco }}</dt>
+                <dd>{{ detail.valueKey ? (detail.valueKey | transloco) : detail.value }}</dd>
+              </div>
+            }
+            <div>
+              <dt>{{ 'quoteSummary.email' | transloco }}</dt>
+              <dd>{{ quote.email }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'quoteSummary.phone' | transloco }}</dt>
+              <dd>{{ quote.phone }}</dd>
+            </div>
+          </dl>
+        </mat-card-content>
+
+        <mat-card-actions align="end">
+          <a
+            mat-flat-button
+            [routerLink]="card.progress.path"
+            [queryParams]="{ solicitud: quote.id }"
+          >
+            {{ 'quoteSummary.' + card.progress.action | transloco }}
+          </a>
+        </mat-card-actions>
+      </mat-card>
+      @if (card.progress.action === 'viewOffers') {
+        <app-profiling-panel [requestId]="quote.id" />
+      }
+    } @empty {
+      <mat-card appearance="outlined" class="empty-card">
+        <mat-card-content>
+          <span class="empty-icon" aria-hidden="true">◇</span>
+          <h2>{{ 'quoteSummary.empty.title' | transloco }}</h2>
+          <p>{{ 'quoteSummary.empty.body' | transloco }}</p>
+          <a mat-flat-button routerLink="/app/cotizaciones/solicitar">
+            {{ 'quoteSummary.empty.action' | transloco }}
+          </a>
+        </mat-card-content>
+      </mat-card>
+    }
   }
 </section>

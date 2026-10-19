@@ -48,7 +48,7 @@ describe('DashboardService', () => {
     service.load();
     expect(service.status()).toBe('ready');
     expect(service.snapshot()?.quotes).toEqual([]);
-    expect(service.snapshot()?.policies.availability).toBe('no_implementado');
+    expect(service.snapshot()?.policies).toEqual([]);
   });
 
   it('prevents duplicate loads while a request is pending', () => {
