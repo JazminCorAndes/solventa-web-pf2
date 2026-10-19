@@ -153,20 +153,17 @@ describe('SimulatedPaymentService', () => {
     },
   );
 
-  it.each(['failed', 'issued'] as const)(
-    'never starts another payment for saga %s',
-    async (status) => {
-      await firstValueFrom(
-        service.load({
-          ...PAYMENT_SUBSCRIPTION,
-          saga: { ...PAYMENT_SUBSCRIPTION.saga, status },
-        }),
-      );
+  it.each(['failed'] as const)('never starts another payment for saga %s', async (status) => {
+    await firstValueFrom(
+      service.load({
+        ...PAYMENT_SUBSCRIPTION,
+        saga: { ...PAYMENT_SUBSCRIPTION.saga, status },
+      }),
+    );
 
-      expect(service.canConfirm()).toBe(false);
-      expect(gateway.load).not.toHaveBeenCalled();
-    },
-  );
+    expect(service.canConfirm()).toBe(false);
+    expect(gateway.load).not.toHaveBeenCalled();
+  });
 
   it('does not turn a missing payment into a retry after the saga is confirmed', async () => {
     await firstValueFrom(
@@ -178,6 +175,20 @@ describe('SimulatedPaymentService', () => {
 
     expect(service.canConfirm()).toBe(false);
     expect(service.errorKey()).toBe('payment.errors.unavailable');
+  });
+
+  it('loads the existing payment for issued subscriptions without permitting another confirmation', async () => {
+    gateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    await firstValueFrom(
+      service.load({
+        ...PAYMENT_SUBSCRIPTION,
+        saga: { ...PAYMENT_SUBSCRIPTION.saga, status: 'issued' },
+      }),
+    );
+    expect(service.payment()).toEqual(CONFIRMED_PAYMENT);
+    expect(service.canConfirm()).toBe(false);
+    await firstValueFrom(service.confirm());
+    expect(gateway.confirm).not.toHaveBeenCalled();
   });
 
   it.each([

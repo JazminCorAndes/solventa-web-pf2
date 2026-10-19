@@ -98,6 +98,8 @@ export const DASHBOARD_SNAPSHOT: DashboardSnapshot = {
   ],
   subscriptions: [
     {
+      validFrom: null,
+      validUntil: null,
       id: DASHBOARD_RESPONSE.suscripciones[0].id,
       requestId: 'request-001',
       quoteId: DASHBOARD_RESPONSE.cotizaciones[0].id,

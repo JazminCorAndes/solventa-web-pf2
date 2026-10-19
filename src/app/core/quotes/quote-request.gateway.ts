@@ -8,6 +8,7 @@ import {
 } from './quote-request.models';
 
 export interface QuoteRequestGateway {
+  loadRequest(id: string): Observable<QuoteRequestRecord>;
   loadProducts(): Observable<InsuranceProduct[]>;
   loadTravelDestinations(): Observable<TravelDestination[]>;
   submitRequest(request: QuoteRequestDraft): Observable<QuoteRequestRecord>;

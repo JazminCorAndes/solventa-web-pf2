@@ -194,6 +194,27 @@ migradas. Las pruebas del adaptador y del componente consumen esas respuestas y 
 vigencias, tipo, estado y suscripción de origen. Es evidencia de compatibilidad del contrato,
 no una verificación del entorno principal desplegado, ni datos de producción.
 
+### Historial de cotizaciones y continuación
+
+`/app/cotizaciones` consulta el dashboard autenticado y recupera cada solicitud mediante
+`GET /v1/solicitudes-cotizacion/{id}`. Muestra tarjetas independientes, ordenadas por
+fecha, sin depender de la última solicitud de `sessionStorage`. El backend calcula y
+guarda solicitud y cotización atómicamente; el dashboard incluye todas esas solicitudes.
+
+Cada tarjeta continúa su propia solicitud (`?solicitud={id}`): ofertas cuando no hay
+selección, aceptación cuando falta crear la suscripción, pago para suscripciones
+aprobadas pendientes y detalle para las pagadas. La guarda recupera solicitud, selección
+y suscripción del propietario antes de habilitar el destino; una recuperación fallida
+se informa explícitamente. Consultar el listado no cambia la solicitud activa ni
+confirma ofertas o pagos.
+
+Los estados superiores son «Solicitud en proceso», «Activa» y «Vencida». El vencimiento
+usa exclusivamente `vigenteHasta` de la suscripción (fin exclusivo), nunca `validaHasta`
+de la cotización. El backend compatible entrega `vigenteDesde`/`vigenteHasta` como ISO UTC
+o `null` tanto en suscripción individual como en dashboard. Si no informa fin contractual,
+no se inventa un vencimiento. El detalle muestra la vigencia disponible y el comprobante
+de pago simulado; no habilita un segundo pago ni supone emisión de una póliza real.
+
 | Configuración | `apiBaseUrl`             | Uso                                        |
 | ------------- | ------------------------ | ------------------------------------------ |
 | `production`  | URL del API Gateway      | `pnpm build`                               |

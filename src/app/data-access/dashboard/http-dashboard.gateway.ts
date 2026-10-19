@@ -112,6 +112,8 @@ function subscription(value: unknown): DashboardSubscription {
     id: text(item['id']),
     requestId: text(item['solicitudId']),
     quoteId: text(item['cotizacionId']),
+    validFrom: item['vigenteDesde'] == null ? null : date(item['vigenteDesde']),
+    validUntil: item['vigenteHasta'] == null ? null : date(item['vigenteHasta']),
     offerId: text(item['ofertaId']),
     status: text(item['estado']),
     createdAt: date(item['creadaEn']),

@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { delay, map, Observable, of } from 'rxjs';
+import { delay, map, Observable, of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   InsuranceProductUnavailableError,
@@ -13,6 +13,7 @@ import {
   TravelDestination,
 } from '../../core/quotes/quote-request.models';
 import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
+import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
 
 const PRODUCTS: InsuranceProduct[] = [
   {
@@ -104,8 +105,16 @@ const TRAVEL_DESTINATIONS: TravelDestination[] = [
 
 @Injectable()
 export class MockQuoteRequestGateway implements QuoteRequestGateway {
+  private readonly storage = inject(QUOTE_REQUEST_STORAGE);
   private readonly auth = inject(AuthService);
   private readonly profiling = inject(MockProfilingGateway);
+
+  loadRequest(id: string): Observable<QuoteRequestRecord> {
+    const request = this.storage.read();
+    return request?.id === id
+      ? of(request)
+      : throwError(() => new Error('The simulated quote request is not available.'));
+  }
 
   loadProducts(): Observable<InsuranceProduct[]> {
     return of(PRODUCTS).pipe(delay(250));

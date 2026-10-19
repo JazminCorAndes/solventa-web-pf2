@@ -69,6 +69,39 @@ describe('HttpSubscriptionGateway', () => {
     await expect(result).resolves.toBeNull();
   });
 
+  it('maps real coverage dates without using quote validity', async () => {
+    const result = firstValueFrom(gateway.load(RESPONSE.solicitudId));
+    http
+      .expectOne(
+        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${RESPONSE.solicitudId}/suscripcion`,
+      )
+      .flush({
+        ...RESPONSE,
+        vigenteDesde: '2026-10-18T12:00:00Z',
+        vigenteHasta: '2027-10-18T12:00:00Z',
+      });
+    await expect(result).resolves.toMatchObject({
+      validFrom: '2026-10-18T12:00:00Z',
+      validUntil: '2027-10-18T12:00:00Z',
+    });
+  });
+
+  it.each(['invalid', '2026-10-18', 123])(
+    'rejects invalid coverage date %s',
+    async (vigenteHasta) => {
+      const result = firstValueFrom(gateway.load(RESPONSE.solicitudId));
+      http
+        .expectOne(
+          `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${RESPONSE.solicitudId}/suscripcion`,
+        )
+        .flush({
+          ...RESPONSE,
+          vigenteHasta,
+        });
+      await expect(result).rejects.toThrow('invalid coverage date');
+    },
+  );
+
   it.each([
     { backend: 'aprobada', status: 'approved' },
     { backend: 'revision', status: 'review' },
