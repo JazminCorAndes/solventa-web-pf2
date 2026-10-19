@@ -2,6 +2,7 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   inject,
@@ -11,7 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { SubscriptionService } from '../../core/subscriptions/subscription.service';
 import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
@@ -34,9 +35,17 @@ import { SimulatedPaymentService } from '../../core/payments/simulated-payment.s
   styleUrl: './subscription-status-page.component.scss',
 })
 export class SubscriptionStatusPageComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  readonly detail = this.route.snapshot.data['detail'] === true;
   readonly subscriptions = inject(SubscriptionService);
   readonly payments = inject(SimulatedPaymentService);
   readonly market = ACTIVE_MARKET;
+  readonly paid = computed(
+    () =>
+      ['payment_confirmed', 'issued'].includes(
+        this.subscriptions.subscription()?.saga.status ?? '',
+      ) || !!this.payments.payment(),
+  );
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -49,7 +58,7 @@ export class SubscriptionStatusPageComponent implements OnInit {
           subscription &&
           !unavailable &&
           subscription.status === 'approved' &&
-          ['payment_pending', 'payment_confirmed'].includes(subscription.saga.status)
+          ['payment_pending', 'payment_confirmed', 'issued'].includes(subscription.saga.status)
         ) {
           const request = this.payments.load(subscription).subscribe();
           onCleanup(() => request.unsubscribe());
@@ -59,7 +68,9 @@ export class SubscriptionStatusPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.subscriptions.load();
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.subscriptions.load());
   }
 
   confirmPayment(): void {

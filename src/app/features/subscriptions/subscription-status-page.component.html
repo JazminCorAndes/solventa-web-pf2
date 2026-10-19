@@ -11,7 +11,7 @@
   } @else if (subscriptions.subscription(); as subscription) {
     <header>
       <span>{{ 'subscription.eyebrow' | transloco }}</span>
-      <h1>{{ 'subscription.title' | transloco }}</h1>
+      <h1>{{ (detail ? 'subscription.detailTitle' : 'subscription.title') | transloco }}</h1>
       <p>{{ 'subscription.subtitle' | transloco }}</p>
     </header>
 
@@ -23,6 +23,36 @@
           <app-icon name="shield" [size]="30" />
         }
         <dl>
+          @if (detail) {
+            <div>
+              <dt>{{ 'dashboard.requestId' | transloco }}</dt>
+              <dd>{{ subscription.quoteId }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'dashboard.createdAt' | transloco }}</dt>
+              <dd>{{ subscription.createdAt | date: 'medium' }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'subscription.validFrom' | transloco }}</dt>
+              <dd>
+                {{
+                  subscription.validFrom
+                    ? (subscription.validFrom | date: 'medium')
+                    : ('subscription.coverageUnavailable' | transloco)
+                }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ 'subscription.validUntil' | transloco }}</dt>
+              <dd>
+                {{
+                  subscription.validUntil
+                    ? (subscription.validUntil | date: 'medium')
+                    : ('subscription.coverageUnavailable' | transloco)
+                }}
+              </dd>
+            </div>
+          }
           <div>
             <dt>{{ 'subscription.operation' | transloco }}</dt>
             <dd>{{ subscription.id }}</dd>
@@ -47,7 +77,8 @@
         @if (
           subscription.status === 'approved' &&
           (subscription.saga.status === 'payment_pending' ||
-            subscription.saga.status === 'payment_confirmed')
+            subscription.saga.status === 'payment_confirmed' ||
+            subscription.saga.status === 'issued')
         ) {
           <section class="payment-section" aria-labelledby="payment-title">
             <h2 id="payment-title">{{ 'payment.title' | transloco }}</h2>
@@ -98,7 +129,7 @@
                     </div>
                   </dl>
                 </div>
-              } @else if (payments.selection(); as selection) {
+              } @else if (!detail && payments.selection(); as selection) {
                 <p role="status">{{ 'payment.pending' | transloco }}</p>
                 <p class="payment-amount">
                   {{ 'payment.amount' | transloco }}:
@@ -127,9 +158,21 @@
             }
           </section>
         }
-        <a mat-stroked-button routerLink="/app/cotizaciones/aceptacion">
-          ← {{ 'subscription.back' | transloco }}
-        </a>
+        @if (detail) {
+          <a mat-stroked-button routerLink="/app/cotizaciones">{{ 'offers.back' | transloco }}</a>
+        } @else if (paid()) {
+          <a
+            mat-flat-button
+            routerLink="/app/cotizaciones/suscripcion/detalle"
+            [queryParams]="{ solicitud: subscription.quoteId }"
+          >
+            {{ 'quoteSummary.viewSubscription' | transloco }}
+          </a>
+        } @else {
+          <a mat-stroked-button routerLink="/app/cotizaciones/aceptacion">
+            ← {{ 'subscription.back' | transloco }}
+          </a>
+        }
       </mat-card-content>
     </mat-card>
   } @else {

@@ -1,7 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import es from '../../../../public/assets/i18n/es.json';
+import { DASHBOARD_GATEWAY } from '../../core/dashboard/dashboard.gateway';
+import { DASHBOARD_SNAPSHOT, EMPTY_DASHBOARD } from '../../core/dashboard/dashboard.testing';
+import { DashboardSnapshot } from '../../core/dashboard/dashboard.models';
 import {
   OFFER_SELECTION_STORAGE,
   OfferSelectionStorage,
@@ -39,6 +43,9 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadRequest(id: string): Observable<QuoteRequestRecord> {
+    return of({ ...RECORD, id });
+  }
   loadProducts(): Observable<InsuranceProduct[]> {
     return of([
       {
@@ -86,18 +93,31 @@ class TestOfferSelectionStorage implements OfferSelectionStorage {
 describe('QuoteSummaryPageComponent', () => {
   let fixture: ComponentFixture<QuoteSummaryPageComponent>;
   let storage: TestQuoteRequestStorage;
+  let snapshot: DashboardSnapshot;
+  const dashboard = { load: vi.fn() };
 
   beforeEach(async () => {
+    snapshot = {
+      ...DASHBOARD_SNAPSHOT,
+      quotes: DASHBOARD_SNAPSHOT.quotes.map((quote) => ({ ...quote, requestId: RECORD.id })),
+      subscriptions: DASHBOARD_SNAPSHOT.subscriptions.map((subscription) => ({
+        ...subscription,
+        requestId: RECORD.id,
+        validUntil: '2099-01-01T00:00:00Z',
+      })),
+    };
+    dashboard.load.mockReset().mockImplementation(() => of(snapshot));
     await TestBed.configureTestingModule({
       imports: [
         QuoteSummaryPageComponent,
         TranslocoTestingModule.forRoot({
-          langs: { es: {} },
+          langs: { es },
           translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
         }),
       ],
       providers: [
         provideRouter([]),
+        { provide: DASHBOARD_GATEWAY, useValue: dashboard },
         { provide: QUOTE_REQUEST_GATEWAY, useClass: TestQuoteRequestGateway },
         { provide: QUOTE_REQUEST_STORAGE, useClass: TestQuoteRequestStorage },
         { provide: OFFER_SELECTION_STORAGE, useClass: TestOfferSelectionStorage },
@@ -114,23 +134,29 @@ describe('QuoteSummaryPageComponent', () => {
     storage = TestBed.inject(QUOTE_REQUEST_STORAGE) as TestQuoteRequestStorage;
   });
 
-  it('shows the current quote and links to its offers', () => {
+  it('loads persisted quotes and links paid requests to subscription details without profiling', () => {
+    storage.request = null;
     fixture = TestBed.createComponent(QuoteSummaryPageComponent);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('AQT-2026-123456');
     expect(fixture.nativeElement.textContent).toContain('Seguro Automotriz Total');
     expect(
-      fixture.nativeElement.querySelector('a[href="/app/cotizaciones/ofertas"]'),
+      fixture.nativeElement.querySelector(
+        `a[href="/app/cotizaciones/suscripcion/detalle?solicitud=${RECORD.id}"]`,
+      ),
     ).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Activa');
+    expect(fixture.nativeElement.querySelector('app-profiling-panel')).toBeNull();
   });
 
   it('shows an empty state before the first quote request', () => {
     storage.request = null;
+    snapshot = EMPTY_DASHBOARD;
     fixture = TestBed.createComponent(QuoteSummaryPageComponent);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.request()).toBeNull();
+    expect(fixture.componentInstance.cards()).toEqual([]);
     expect(
       fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
     ).not.toBeNull();
@@ -139,10 +165,9 @@ describe('QuoteSummaryPageComponent', () => {
   it.each<QuoteProductData>([{ coverageType: 'missed-connection' }, { weatherEvent: 'drought' }])(
     'traduce los valores de cobertura sin mostrar códigos al cliente',
     (productData) => {
-      storage.request = { ...RECORD, productData };
       fixture = TestBed.createComponent(QuoteSummaryPageComponent);
       fixture.detectChanges();
-      const detail = fixture.componentInstance.productDetails()[0];
+      const detail = fixture.componentInstance.productDetails({ ...RECORD, productData })[0];
       expect(detail.valueKey).toBe(
         'coverageType' in productData
           ? 'quoteRequest.flightCoverages.missed-connection'
@@ -150,4 +175,60 @@ describe('QuoteSummaryPageComponent', () => {
       );
     },
   );
+
+  it('renders every quote separately with its own state and next step', () => {
+    snapshot = {
+      ...snapshot,
+      quotes: [
+        ...snapshot.quotes,
+        { ...snapshot.quotes[0], id: 'quote-pending', requestId: 'pending', selection: null },
+        { ...snapshot.quotes[0], id: 'quote-selected', requestId: 'selected' },
+        { ...snapshot.quotes[0], id: 'quote-expired', requestId: 'expired' },
+        { ...snapshot.quotes[0], id: 'quote-payment', requestId: 'payment' },
+      ],
+      subscriptions: [
+        ...snapshot.subscriptions,
+        {
+          ...snapshot.subscriptions[0],
+          id: 'expired-sub',
+          requestId: 'expired',
+          validUntil: '2000-01-01T00:00:00Z',
+        },
+        {
+          ...snapshot.subscriptions[0],
+          id: 'pending-sub',
+          requestId: 'payment',
+          saga: { ...snapshot.subscriptions[0].saga, status: 'pago_pendiente' },
+        },
+      ],
+    };
+    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
+    fixture.detectChanges();
+    const cards: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.summary-card'),
+    );
+    expect(cards).toHaveLength(5);
+    expect(cards[0].textContent).toContain('Activa');
+    expect(cards[1].textContent).toContain('Solicitud en proceso');
+    expect(cards[1].querySelector('a')?.getAttribute('href')).toContain(
+      '/ofertas?solicitud=pending',
+    );
+    expect(cards[2].textContent).toContain('Continuar aceptación');
+    expect(cards[3].textContent).toContain('Vencida');
+    expect(cards[4].textContent).toContain('Proceder al pago');
+    expect(cards[4].querySelector('a')?.getAttribute('href')).toContain(
+      '/suscripcion?solicitud=payment',
+    );
+  });
+
+  it('shows an explicit retry if persisted history fails instead of displaying a cached last quote', () => {
+    dashboard.load.mockReturnValueOnce(throwError(() => new Error('offline')));
+    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.summary-card')).toBeNull();
+    fixture.nativeElement.querySelector('button').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.summary-card')).not.toBeNull();
+  });
 });

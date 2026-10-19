@@ -240,7 +240,14 @@
   "quoteSummary": {
     "eyebrow": "Resumen",
     "title": "Mis cotizaciones",
-    "subtitle": "Consulta tu solicitud actual o inicia una nueva cotización.",
+    "subtitle": "Consulta todas tus cotizaciones y continúa cada proceso donde lo dejaste.",
+    "loading": "Consultando tus cotizaciones",
+    "error": "No fue posible consultar el historial de cotizaciones.",
+    "resumeError": "No fue posible recuperar esta solicitud. Reintenta desde su tarjeta.",
+    "viewSubscription": "Ver detalle de la suscripción",
+    "proceedToPayment": "Proceder al pago",
+    "continueAcceptance": "Continuar aceptación",
+    "viewStatus": "Ver estado de la solicitud",
     "newQuote": "Cotizar seguro",
     "requestedAt": "Fecha de solicitud",
     "productDetails": "Datos del seguro",
@@ -248,7 +255,10 @@
     "phone": "Teléfono",
     "viewOffers": "Ver ofertas",
     "status": {
-      "received": "Solicitud recibida"
+      "received": "Solicitud recibida",
+      "inProgress": "Solicitud en proceso",
+      "active": "Activa",
+      "expired": "Vencida"
     },
     "empty": {
       "title": "Aún no tienes cotizaciones",
@@ -360,6 +370,10 @@
     }
   },
   "subscription": {
+    "detailTitle": "Detalle de la suscripción",
+    "validFrom": "Inicio de vigencia",
+    "validUntil": "Fin de vigencia",
+    "coverageUnavailable": "No informada por el servicio",
     "eyebrow": "Suscripción",
     "title": "Estado de suscripción",
     "subtitle": "Consulta la decisión y el estado de emisión informados por el servicio.",

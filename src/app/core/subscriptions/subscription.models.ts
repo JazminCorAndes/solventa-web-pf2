@@ -2,6 +2,8 @@ export type SubscriptionStatus = 'approved' | 'review' | 'rejected';
 export type IssuanceSagaStatus = 'payment_pending' | 'payment_confirmed' | 'issued' | 'failed';
 
 export interface SubscriptionRecord {
+  validFrom?: string | null;
+  validUntil?: string | null;
   id: string;
   quoteId: string;
   offerId: string;

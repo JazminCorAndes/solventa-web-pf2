@@ -62,6 +62,21 @@ describe('HttpDashboardGateway', () => {
     await expect(result).resolves.toEqual(DASHBOARD_SNAPSHOT);
   });
 
+  it('preserves subscription coverage separately from quote validity', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(`${environment.apiBaseUrl}/v1/clientes/me/dashboard`).flush({
+      ...DASHBOARD_RESPONSE,
+      suscripciones: DASHBOARD_RESPONSE.suscripciones.map((item) => ({
+        ...item,
+        vigenteDesde: '2026-10-01T12:15:00Z',
+        vigenteHasta: '2027-10-01T12:15:00Z',
+      })),
+    });
+    const snapshot = await result;
+    expect(snapshot.subscriptions[0].validUntil).toBe('2027-10-01T12:15:00Z');
+    expect(snapshot.quotes[0].validUntil).toBe(DASHBOARD_RESPONSE.cotizaciones[0].validaHasta);
+  });
+
   it('renews the session on 401 using the existing interceptor', async () => {
     const result = firstValueFrom(gateway.load());
     http.expectOne(URL).flush({}, { status: 401, statusText: 'Unauthorized' });
@@ -124,6 +139,8 @@ describe('HttpDashboardGateway', () => {
     for (const [index, subscription] of snapshot.subscriptions.entries()) {
       const source = populatedReal.suscripciones[index];
       expect(subscription).toEqual({
+        validFrom: null,
+        validUntil: null,
         id: source.id,
         requestId: source.solicitudId,
         quoteId: source.cotizacionId,

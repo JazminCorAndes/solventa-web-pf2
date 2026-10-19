@@ -50,6 +50,12 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiBaseUrl}/v1`;
 
+  loadRequest(id: string): Observable<QuoteRequestRecord> {
+    return this.http
+      .get<QuoteRequestResponse>(`${this.apiUrl}/solicitudes-cotizacion/${encodeURIComponent(id)}`)
+      .pipe(map(toQuoteRequest));
+  }
+
   loadProducts(): Observable<InsuranceProduct[]> {
     return this.http.get<ProductsResponse>(`${this.apiUrl}/productos-seguro`).pipe(
       map((response) =>
@@ -89,22 +95,12 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
         },
       )
       .pipe(
-        map((response): QuoteRequestRecord => ({
-          id: response.id,
-          productId: response.productoId,
-          customerType: 'natural',
-          documentType: response.tipoDocumento,
-          nationalId: response.identificacion,
-          productData: response.datosProducto,
-          email: response.correo,
-          phone: response.telefono,
-          status: 'received',
-          createdAt: response.creadaEn,
-        })),
+        map(toQuoteRequest),
         catchError((error: unknown) => {
           if (profilingErrorKey(error)) {
             return throwError(() => error);
           }
+
           if (error instanceof HttpErrorResponse && error.status === 422) {
             return throwError(() => new InsuranceProductUnavailableError());
           }
@@ -119,4 +115,19 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
     }
     return throwError(() => error);
   }
+}
+
+function toQuoteRequest(response: QuoteRequestResponse): QuoteRequestRecord {
+  return {
+    id: response.id,
+    productId: response.productoId,
+    customerType: 'natural',
+    documentType: response.tipoDocumento,
+    nationalId: response.identificacion,
+    productData: response.datosProducto,
+    email: response.correo,
+    phone: response.telefono,
+    status: 'received',
+    createdAt: response.creadaEn,
+  };
 }

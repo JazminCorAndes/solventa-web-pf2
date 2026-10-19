@@ -47,6 +47,9 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadRequest(): Observable<QuoteRequestRecord> {
+    return of(RECORD);
+  }
   loadCalls = 0;
   productsResponse: Observable<InsuranceProduct[]> = of(PRODUCTS);
   requestResponse: Observable<QuoteRequestRecord> = of(RECORD);

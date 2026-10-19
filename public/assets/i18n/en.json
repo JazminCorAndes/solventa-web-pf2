@@ -240,7 +240,14 @@
   "quoteSummary": {
     "eyebrow": "Summary",
     "title": "My quotes",
-    "subtitle": "Review your current request or start a new quote.",
+    "subtitle": "Review all your quotes and continue each process where you left off.",
+    "loading": "Loading your quotes",
+    "error": "The quote history could not be loaded.",
+    "resumeError": "This request could not be recovered. Retry from its card.",
+    "viewSubscription": "View subscription details",
+    "proceedToPayment": "Proceed to payment",
+    "continueAcceptance": "Continue acceptance",
+    "viewStatus": "View request status",
     "newQuote": "Quote insurance",
     "requestedAt": "Request date",
     "productDetails": "Insurance details",
@@ -248,7 +255,10 @@
     "phone": "Phone",
     "viewOffers": "View offers",
     "status": {
-      "received": "Request received"
+      "received": "Request received",
+      "inProgress": "Request in progress",
+      "active": "Active",
+      "expired": "Expired"
     },
     "empty": {
       "title": "You do not have any quotes yet",
@@ -360,6 +370,10 @@
     }
   },
   "subscription": {
+    "detailTitle": "Subscription details",
+    "validFrom": "Coverage starts",
+    "validUntil": "Coverage ends",
+    "coverageUnavailable": "Not reported by the service",
     "eyebrow": "Subscription",
     "title": "Subscription status",
     "subtitle": "View the decision and issuance status reported by the service.",
