@@ -4,7 +4,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const ci = fs.readFileSync(path.join(__dirname, '../workflows/ci.yml'), 'utf8');
+const ci = fs
+  .readFileSync(path.join(__dirname, '../workflows/ci.yml'), 'utf8')
+  .replace(/\r\n/g, '\n');
 
 test('Calidad conserva sus validaciones y publica el resumen sin nuevos checks', () => {
   assert.match(ci, /name: Calidad/);
