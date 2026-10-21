@@ -1,7 +1,9 @@
 import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   EventEmitter,
   inject,
   Input,
@@ -18,13 +20,18 @@ import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { Observable, of, Subscription, switchMap, take } from 'rxjs';
+import { catchError, map, Observable, of, Subscription, switchMap, take, throwError } from 'rxjs';
 import { ProfilingError, profilingErrorKey } from '../../core/profiling/profiling.errors';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { ProfilingClock } from '../../core/profiling/profiling-clock.service';
 import {
   consentIsComplete,
   consentIsCurrent,
+  consentIsReadable,
+  ConsentDecision,
+  ConsentRequest,
+  consentRequestIssues,
+  createConsentRequest,
   ProfilingConsent,
   profileIsCurrent,
   RiskProfile,
@@ -57,6 +64,13 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
   readonly errorKey = signal<string | null>(null);
   readonly authorized = signal(false);
   readonly consentLoaded = signal(false);
+  readonly consentRequest = signal<ConsentRequest | null>(null);
+  readonly incompleteEvidence = signal(false);
+  readonly confirmingRevocation = signal(false);
+  readonly consentExpired = signal(false);
+  readonly requestIssues = computed(() =>
+    consentRequestIssues(this.consentRequest(), this.clock.now()),
+  );
 
   ngOnInit(): void {
     this.reload();
@@ -88,7 +102,75 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
     if (this.loading() || !this.consentLoaded()) {
       return;
     }
-    this.run(this.gateway.saveConsent(authorized, this.consent()?.version ?? 0));
+    const solicitud = this.consentRequest();
+    if (solicitud && Date.parse(solicitud.vigenteHasta) <= this.clock.now()) {
+      this.errorKey.set('profiling.errors.decisionExpired');
+      return;
+    }
+    if (!solicitud || consentRequestIssues(solicitud, this.clock.now()).length) {
+      this.errorKey.set('profiling.errors.incompleteRequest');
+      return;
+    }
+    this.saveDecision({
+      autorizado: authorized,
+      version: this.consent()?.version ?? 0,
+      solicitud,
+    });
+  }
+
+  revoke(): void {
+    if (!this.loading() && this.consentLoaded() && this.consent()?.estado === 'autorizado') {
+      this.confirmingRevocation.set(true);
+    }
+  }
+
+  cancelRevocation(): void {
+    this.confirmingRevocation.set(false);
+  }
+
+  confirmRevocation(): void {
+    const consent = this.consent();
+    if (
+      !this.confirmingRevocation() ||
+      this.loading() ||
+      !this.consentLoaded() ||
+      consent?.estado !== 'autorizado'
+    ) {
+      return;
+    }
+    this.saveDecision({ autorizado: false, version: consent.version });
+  }
+
+  private saveDecision(decision: ConsentDecision): void {
+    const expectedState = decision.autorizado
+      ? 'autorizado'
+      : decision.solicitud
+        ? 'rechazado'
+        : 'revocado';
+    this.run(
+      this.gateway.saveConsent(decision).pipe(
+        catchError((error: unknown) => {
+          if (
+            (error instanceof HttpErrorResponse && error.status === 400) ||
+            (error instanceof ProfilingError && error.code === 'solicitud_invalida')
+          ) {
+            return throwError(() => new ProfilingError('solicitud_consentimiento_invalida'));
+          }
+          return throwError(() => error);
+        }),
+        map((consent) => {
+          if (
+            !consentIsReadable(consent) ||
+            consent.estado !== expectedState ||
+            consent.version !== decision.version + 1 ||
+            (decision.autorizado && !consentIsComplete(consent))
+          ) {
+            throw new ProfilingError('respuesta_invalida');
+          }
+          return consent;
+        }),
+      ),
+    );
   }
 
   private run(operation: Observable<ProfilingConsent | null>): void {
@@ -101,15 +183,22 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
     this.errorKey.set(null);
     this.loading.set(true);
     this.consentLoaded.set(false);
+    this.consentRequest.set(null);
+    this.incompleteEvidence.set(false);
+    this.confirmingRevocation.set(false);
+    this.consentExpired.set(false);
     this.subscription = operation
       .pipe(
         take(1),
         switchMap((consent) => {
-          if (consent && !consentIsComplete(consent)) {
+          if (consent && !consentIsReadable(consent)) {
             throw new ProfilingError('respuesta_invalida');
           }
           this.consent.set(consent);
+          this.updateExpiration();
           this.consentLoaded.set(true);
+          this.consentRequest.set(createConsentRequest(this.clock.earliestNow()));
+          this.incompleteEvidence.set(!!consent && !consentIsComplete(consent));
           const authorized = consentIsCurrent(consent, this.clock.now());
           this.authorized.set(authorized);
           if (!authorized) {
@@ -173,10 +262,18 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
         }
         this.profile.set(null);
         this.authorized.set(false);
+        this.updateExpiration();
         this.errorKey.set(errorKey);
         this.availabilityChange.emit(false);
       },
       Math.min(Math.max(delay, 0), 2147483647),
+    );
+  }
+
+  private updateExpiration(): void {
+    const consent = this.consent();
+    this.consentExpired.set(
+      consent?.estado === 'autorizado' && Date.parse(consent.vigenteHasta) <= this.clock.now(),
     );
   }
 }

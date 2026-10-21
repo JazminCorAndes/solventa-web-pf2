@@ -289,9 +289,98 @@ Las primas y selecciones conservan la moneda devuelta por el BFF (COP en el back
 sin convertirla ni presentarla como UF. Se conservan prima y periodicidad propias del ramo;
 los adaptadores mock usan COP y no fabrican mensualidades.
 
-El panel permite autorizar y revocar; envía la versión vigente, o `0` para la primera
-autorización. Ante un conflicto se exige recargar antes de volver a escribir. La autorización
-persiste en el backend, dura 30 días y comprende Open Finance y Open Data para cotización.
+El panel permite autorizar, rechazar y revocar; envía la versión vigente, o `0` para la primera
+decisión. Ante un conflicto se exige recargar antes de volver a escribir. La autorización
+persiste en el backend, dura hasta 30 días y comprende Open Finance y Open Data para cotización.
+Antes de autorizar o rechazar se muestran la finalidad, ambos alcances y fuentes, el dato
+`indicador_riesgo`, los términos `1.0` y la fecha exacta de vencimiento con zona horaria.
+La fecha se fija al mostrar la solicitud y no se amplía silenciosamente al pulsar un botón.
+Revocar envía únicamente `autorizado: false` y la versión actual, sin una nueva solicitud.
+
+### Decisión informada SOL-203 (HU-OF-01-FE)
+
+La pantalla integrada valida finalidad, alcances y fuentes sin duplicados, datos, términos y
+vigencia antes de enviar una decisión. Una solicitud incompleta identifica los campos
+faltantes o inválidos y deshabilita los botones; recargar permite revisar la información
+nuevamente. Los alcances, fuentes y datos visibles corresponden a la solicitud enviada.
+
+«Revocar autorización» abre una confirmación explícita. «Conservar autorización» la cancela
+sin enviar un PUT y conserva el consentimiento. Al confirmar se oculta el perfil y se
+bloquea la continuación mientras responde el servicio; solo una respuesta válida con estado
+`revocado` y la siguiente versión se presenta como revocación registrada. Aprobar y rechazar
+también requieren confirmación del backend, sin éxito optimista ni aprobación automática.
+Un error 400, 409 o 503 permite recargar la evidencia y decidir de nuevo, nunca sobrescribir
+automáticamente una versión. La evidencia cuyo actor no corresponde al titular no habilita
+el perfilamiento. El vencimiento retira el acceso y se refleja sin cambiar de pantalla.
+
+Las pruebas de `profiling-panel.component.spec.ts`, `profiling-panel.http.spec.ts` y los
+modelos/gateways cubren decisión pendiente, aprobación, rechazo, campos incompletos,
+errores y reintento, versión obsoleta, evidencia legada, expiración y revocación
+confirmada/cancelada. El recorrido HTTP prueba el interceptor Bearer y que el perfil no
+se consulte antes de una autorización válida.
+
+El alcance frontend de ASR-PRV-01 (arquitectura, páginas 23–24; enunciado, páginas 9 y 11–13)
+es presentar la evidencia y aplicar denegación por defecto. La persistencia auditable,
+Outbox, bloqueo autoritativo y propagación a todos los consumidores en cinco minutos
+son responsabilidad de SOL326; ninguna prueba de UI por sí sola demuestra ese límite.
+No se replican PEP, eventos ni permisos en el cliente. La simulación ocurre en las fuentes
+del adaptador Open Finance, no en el consentimiento del modo conectado.
+
+La verificación local del 20 de octubre de 2026 usó Chrome con la aplicación principal y
+el backend `082f41a216df71eb1a81688d7c3e950a3a0c3fc8`: BFF, Identidad, Perfilamiento,
+Cotización y Pólizas reales por HTTP, JWT y bases SQLite migradas temporales.
+El historial persistió rechazo v1, aprobación v2 y revocación v3. Se creó una cotización,
+se mostró su perfil en el resumen, cancelar no envió PUT y revocar retiró el perfil.
+Tras recargar se conservó la revocación; consultar ese perfil devolvió 403. El bloqueo
+se observó en 156 ms desde el clic y el acuse del consumidor local en 1750 ms, con los
+tres eventos publicados. Son observaciones del entorno local, no un benchmark ni prueba
+de todos los consumidores o del despliegue productivo. También se inspeccionó el panel
+en escritorio y a 390 px sin desbordamiento horizontal.
+
+El stack de prueba debe configurar Pólizas y su cliente HTTP en Cotización: sin ese
+servicio el backend devuelve `polizas: { disponibilidad: 'no_implementado' }` y el
+historial actual rechaza correctamente el contrato antiguo. No se convierte ese
+descriptor en una lista vacía ni se cambia el frontend para ocultar el error.
+
+### Compatibilidad de consentimiento SOL326
+
+Requiere el contrato de [backend-solventa PR #48](https://github.com/Migue765/backend-solventa/pull/48).
+Autorizar y rechazar envían la solicitud que el usuario acaba de revisar:
+
+```json
+{
+  "autorizado": true,
+  "version": 0,
+  "solicitud": {
+    "finalidad": "cotizacion",
+    "alcances": ["open_finance", "open_data"],
+    "fuentes": ["open_finance", "open_data"],
+    "datos": ["indicador_riesgo"],
+    "versionTerminos": "1.0",
+    "vigenteHasta": "2026-11-20T03:00:00.000Z"
+  }
+}
+```
+
+La fecha del ejemplo no es un valor fijo: se calcula desde el reloj del servidor, debe ser futura
+y no superar 30 días desde la decisión. El límite inferior de `Date` evita exceder ese máximo
+por incertidumbre de red. El `404 consentimiento_ausente` también debe incluir `Date`.
+No se envían `clienteId` ni `actorId`: ambos pertenecen a la identidad JWT del backend.
+Los estados `rechazado`, `revocado` y `vencido` bloquean el perfil y permiten una nueva decisión.
+La evidencia legada sin actor, fuentes, datos o términos válidos nunca habilita cotización;
+se conserva su versión para registrar una nueva decisión explícita, sin migración automática.
+Los permisos parciales tampoco habilitan consultas a fuentes ni generación de perfil.
+Un GET no renueva la evidencia ni su versión. El mock respeta esos estados y conserva la
+fecha autorizada al revocar, pero sigue siendo solo una ayuda de desarrollo en memoria.
+
+El despliegue debe coordinarse con backend: no publicar esta web contra el contrato anterior
+ni desplegar SOL326 dejando indefinidamente el cliente que solo envía el booleano.
+`.github/workflows/pages.yml` (`CD · Solventa Web`) no tiene inputs ni `workflow_dispatch`:
+escucha la ejecución exitosa de `CI · Validación` originada por un push a `master`.
+Publica el artefacto `github-pages` del mismo run validado y comprueba que el SHA siga vigente.
+Un PR hacia `develop` no publica producción. La comprobación final del rollout debe incluir
+decisión desde el panel autenticado, recarga de evidencia persistida, cotización y revocación;
+los tests locales no acreditan por sí solos persistencia ni despliegue en AWS/Pages.
 
 El panel se conserva en «Solicitar cotización» para gestionar la autorización y en el
 resumen para consultar el perfil de la solicitud. En el resumen muestra el identificador
@@ -324,7 +413,7 @@ Contratos consumidos (todos con token Bearer):
 | Método    | Ruta                                                    | Uso                                                                     |
 | --------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
 | GET       | `/v1/consentimientos/perfilamiento`                     | Leer autorización; solo `404 consentimiento_ausente` significa ausencia |
-| PUT       | `/v1/consentimientos/perfilamiento`                     | `{ autorizado: boolean, version: number }`                              |
+| PUT       | `/v1/consentimientos/perfilamiento`                     | Decisión con `solicitud` completa; revocación sin `solicitud`           |
 | POST      | `/v1/solicitudes-cotizacion`                            | Crear solicitud y asociar su perfil                                     |
 | GET       | `/v1/solicitudes-cotizacion/{id}/perfilamiento`         | Leer el perfil usado por la solicitud                                   |
 | GET / PUT | `/v1/solicitudes-cotizacion/{id}/ofertas` / `seleccion` | Revalidación del perfil en el backend                                   |
