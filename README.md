@@ -289,9 +289,53 @@ Las primas y selecciones conservan la moneda devuelta por el BFF (COP en el back
 sin convertirla ni presentarla como UF. Se conservan prima y periodicidad propias del ramo;
 los adaptadores mock usan COP y no fabrican mensualidades.
 
-El panel permite autorizar y revocar; envía la versión vigente, o `0` para la primera
-autorización. Ante un conflicto se exige recargar antes de volver a escribir. La autorización
-persiste en el backend, dura 30 días y comprende Open Finance y Open Data para cotización.
+El panel permite autorizar, rechazar y revocar; envía la versión vigente, o `0` para la primera
+decisión. Ante un conflicto se exige recargar antes de volver a escribir. La autorización
+persiste en el backend, dura hasta 30 días y comprende Open Finance y Open Data para cotización.
+Antes de autorizar o rechazar se muestran la finalidad, ambos alcances y fuentes, el dato
+`indicador_riesgo`, los términos `1.0` y la fecha exacta de vencimiento con zona horaria.
+La fecha se fija al mostrar la solicitud y no se amplía silenciosamente al pulsar un botón.
+Revocar envía únicamente `autorizado: false` y la versión actual, sin una nueva solicitud.
+
+### Compatibilidad de consentimiento SOL326
+
+Requiere el contrato de [backend-solventa PR #48](https://github.com/Migue765/backend-solventa/pull/48).
+Autorizar y rechazar envían la solicitud que el usuario acaba de revisar:
+
+```json
+{
+  "autorizado": true,
+  "version": 0,
+  "solicitud": {
+    "finalidad": "cotizacion",
+    "alcances": ["open_finance", "open_data"],
+    "fuentes": ["open_finance", "open_data"],
+    "datos": ["indicador_riesgo"],
+    "versionTerminos": "1.0",
+    "vigenteHasta": "2026-11-20T03:00:00.000Z"
+  }
+}
+```
+
+La fecha del ejemplo no es un valor fijo: se calcula desde el reloj del servidor, debe ser futura
+y no superar 30 días desde la decisión. El límite inferior de `Date` evita exceder ese máximo
+por incertidumbre de red. El `404 consentimiento_ausente` también debe incluir `Date`.
+No se envían `clienteId` ni `actorId`: ambos pertenecen a la identidad JWT del backend.
+Los estados `rechazado`, `revocado` y `vencido` bloquean el perfil y permiten una nueva decisión.
+La evidencia legada sin actor, fuentes, datos o términos válidos nunca habilita cotización;
+se conserva su versión para registrar una nueva decisión explícita, sin migración automática.
+Los permisos parciales tampoco habilitan consultas a fuentes ni generación de perfil.
+Un GET no renueva la evidencia ni su versión. El mock respeta esos estados y conserva la
+fecha autorizada al revocar, pero sigue siendo solo una ayuda de desarrollo en memoria.
+
+El despliegue debe coordinarse con backend: no publicar esta web contra el contrato anterior
+ni desplegar SOL326 dejando indefinidamente el cliente que solo envía el booleano.
+`.github/workflows/pages.yml` (`CD · Solventa Web`) no tiene inputs ni `workflow_dispatch`:
+escucha la ejecución exitosa de `CI · Validación` originada por un push a `master`.
+Publica el artefacto `github-pages` del mismo run validado y comprueba que el SHA siga vigente.
+Un PR hacia `develop` no publica producción. La comprobación final del rollout debe incluir
+decisión desde el panel autenticado, recarga de evidencia persistida, cotización y revocación;
+los tests locales no acreditan por sí solos persistencia ni despliegue en AWS/Pages.
 
 El panel se conserva en «Solicitar cotización» para gestionar la autorización y en el
 resumen para consultar el perfil de la solicitud. En el resumen muestra el identificador
@@ -324,7 +368,7 @@ Contratos consumidos (todos con token Bearer):
 | Método    | Ruta                                                    | Uso                                                                     |
 | --------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
 | GET       | `/v1/consentimientos/perfilamiento`                     | Leer autorización; solo `404 consentimiento_ausente` significa ausencia |
-| PUT       | `/v1/consentimientos/perfilamiento`                     | `{ autorizado: boolean, version: number }`                              |
+| PUT       | `/v1/consentimientos/perfilamiento`                     | Decisión con `solicitud` completa; revocación sin `solicitud`             |
 | POST      | `/v1/solicitudes-cotizacion`                            | Crear solicitud y asociar su perfil                                     |
 | GET       | `/v1/solicitudes-cotizacion/{id}/perfilamiento`         | Leer el perfil usado por la solicitud                                   |
 | GET / PUT | `/v1/solicitudes-cotizacion/{id}/ofertas` / `seleccion` | Revalidación del perfil en el backend                                   |
