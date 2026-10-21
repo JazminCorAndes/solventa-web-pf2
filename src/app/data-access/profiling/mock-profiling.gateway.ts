@@ -5,6 +5,8 @@ import { ProfilingError } from '../../core/profiling/profiling.errors';
 import { ProfilingGateway } from '../../core/profiling/profiling.gateway';
 import {
   consentIsCurrent,
+  consentRequestIssues,
+  ConsentDecision,
   ProfilingConsent,
   RiskProfile,
 } from '../../core/profiling/profiling.models';
@@ -18,26 +20,43 @@ export class MockProfilingGateway implements ProfilingGateway {
   loadConsent(): Observable<ProfilingConsent | null> {
     return defer(() => {
       const id = this.customerId();
-      return of(this.consents.get(id) ?? null);
+      const consent = this.consents.get(id);
+      return of(
+        consent?.estado === 'autorizado' && Date.parse(consent.vigenteHasta) <= Date.now()
+          ? { ...consent, estado: 'vencido' as const }
+          : (consent ?? null),
+      );
     });
   }
 
-  saveConsent(authorized: boolean, version: number): Observable<ProfilingConsent> {
+  saveConsent(decision: ConsentDecision): Observable<ProfilingConsent> {
     return defer(() => {
+      const { autorizado: authorized, version, solicitud } = decision;
       const id = this.customerId();
       const current = this.consents.get(id);
       if ((current?.version ?? 0) !== version) {
         return throwError(() => new ProfilingError('conflicto_version'));
       }
+      if (solicitud && consentRequestIssues(solicitud, Date.now()).length) {
+        return throwError(() => new ProfilingError('solicitud_invalida'));
+      }
+      if (!solicitud && (!current || current.estado !== 'autorizado')) {
+        return throwError(() => new ProfilingError('consentimiento_no_vigente'));
+      }
+      const evidence = solicitud ?? current!;
       const consent: ProfilingConsent = {
         consentimientoId: current?.consentimientoId ?? crypto.randomUUID(),
         clienteId: id,
         version: version + 1,
-        estado: authorized ? 'autorizado' : 'revocado',
-        finalidad: 'cotizacion',
-        alcances: ['open_finance', 'open_data'],
+        estado: authorized ? 'autorizado' : solicitud ? 'rechazado' : 'revocado',
+        actorId: id,
+        finalidad: evidence.finalidad,
+        alcances: [...evidence.alcances],
+        fuentes: evidence.fuentes ? [...evidence.fuentes] : undefined,
+        datos: evidence.datos ? [...evidence.datos] : undefined,
+        versionTerminos: evidence.versionTerminos,
         efectivaEn: new Date().toISOString(),
-        vigenteHasta: new Date(Date.now() + 30 * 86400000).toISOString(),
+        vigenteHasta: evidence.vigenteHasta,
       };
       this.consents.set(id, consent);
       return of(consent);

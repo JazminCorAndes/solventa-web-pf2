@@ -1,12 +1,78 @@
+export interface ConsentRequest {
+  finalidad: 'cotizacion';
+  alcances: ('open_finance' | 'open_data')[];
+  fuentes: ('open_finance' | 'open_data')[];
+  datos: 'indicador_riesgo'[];
+  versionTerminos: '1.0';
+  vigenteHasta: string;
+}
+
+export type ConsentDecision =
+  | { autorizado: boolean; version: number; solicitud: ConsentRequest }
+  | { autorizado: false; version: number; solicitud?: never };
+
+export function createConsentRequest(now: number): ConsentRequest {
+  return {
+    finalidad: 'cotizacion',
+    alcances: ['open_finance', 'open_data'],
+    fuentes: ['open_finance', 'open_data'],
+    datos: ['indicador_riesgo'],
+    versionTerminos: '1.0',
+    vigenteHasta: new Date(now + 30 * 86400000).toISOString(),
+  };
+}
+
+export function consentRequestIssues(request: ConsentRequest | null, now: number): string[] {
+  const issues: string[] = [];
+  const validSources = (values: unknown): values is ConsentRequest['fuentes'] =>
+    Array.isArray(values) &&
+    values.length > 0 &&
+    new Set(values).size === values.length &&
+    values.every((value) => value === 'open_finance' || value === 'open_data');
+  if (request?.finalidad !== 'cotizacion') {
+    issues.push('purpose');
+  }
+  if (!validSources(request?.alcances)) {
+    issues.push('scopes');
+  }
+  if (
+    !validSources(request?.fuentes) ||
+    !validSources(request?.alcances) ||
+    !request.fuentes.every((source) => request.alcances.includes(source))
+  ) {
+    issues.push('sources');
+  }
+  if (request?.datos?.length !== 1 || request.datos[0] !== 'indicador_riesgo') {
+    issues.push('data');
+  }
+  if (request?.versionTerminos !== '1.0') {
+    issues.push('terms');
+  }
+  if (
+    !request?.vigenteHasta ||
+    !/(?:Z|[+-]\d{2}:\d{2})$/.test(request.vigenteHasta) ||
+    !Number.isFinite(Date.parse(request.vigenteHasta)) ||
+    Date.parse(request.vigenteHasta) <= now ||
+    Date.parse(request.vigenteHasta) > now + 30 * 86400000
+  ) {
+    issues.push('validity');
+  }
+  return issues;
+}
+
 export interface ProfilingConsent {
   consentimientoId: string;
   clienteId: string;
   version: number;
-  estado: 'autorizado' | 'revocado';
+  estado: 'autorizado' | 'rechazado' | 'revocado' | 'vencido';
   finalidad: 'cotizacion';
   alcances: ('open_finance' | 'open_data')[];
   efectivaEn: string;
   vigenteHasta: string;
+  actorId?: string;
+  fuentes?: ('open_finance' | 'open_data')[];
+  datos?: 'indicador_riesgo'[];
+  versionTerminos?: string;
 }
 
 export interface RiskProfile {
@@ -31,10 +97,10 @@ export interface RiskProfile {
   fallbackUsed: false;
 }
 
-export function consentIsComplete(consent: ProfilingConsent | null): boolean {
+export function consentIsReadable(consent: ProfilingConsent | null): boolean {
   return (
     !!consent &&
-    ['autorizado', 'revocado'].includes(consent.estado) &&
+    ['autorizado', 'rechazado', 'revocado', 'vencido'].includes(consent.estado) &&
     consent.finalidad === 'cotizacion' &&
     Number.isInteger(consent.version) &&
     consent.version > 0 &&
@@ -43,10 +109,26 @@ export function consentIsComplete(consent: ProfilingConsent | null): boolean {
     typeof consent.clienteId === 'string' &&
     !!consent.clienteId &&
     Array.isArray(consent.alcances) &&
-    consent.alcances.includes('open_finance') &&
-    consent.alcances.includes('open_data') &&
     Number.isFinite(Date.parse(consent.efectivaEn)) &&
     Number.isFinite(Date.parse(consent.vigenteHasta))
+  );
+}
+
+export function consentIsComplete(consent: ProfilingConsent | null): boolean {
+  return (
+    consentIsReadable(consent) &&
+    !!consent &&
+    typeof consent.actorId === 'string' &&
+    !!consent.actorId &&
+    consent.actorId === consent.clienteId &&
+    consent.versionTerminos === '1.0' &&
+    consent.alcances.includes('open_finance') &&
+    consent.alcances.includes('open_data') &&
+    Array.isArray(consent.fuentes) &&
+    consent.fuentes.includes('open_finance') &&
+    consent.fuentes.includes('open_data') &&
+    Array.isArray(consent.datos) &&
+    consent.datos.includes('indicador_riesgo')
   );
 }
 
