@@ -5,7 +5,12 @@ import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of, Subject, throwError } from 'rxjs';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
-import { ProfilingConsent, RiskProfile } from '../../core/profiling/profiling.models';
+import {
+  ConsentRequest,
+  createConsentRequest,
+  ProfilingConsent,
+  RiskProfile,
+} from '../../core/profiling/profiling.models';
 import { ProfilingPanelComponent } from './profiling-panel.component';
 
 describe('ProfilingPanelComponent', () => {
@@ -84,6 +89,7 @@ describe('ProfilingPanelComponent', () => {
     openProfile();
     gateway.saveConsent.mockReturnValue(of({ ...createConsent(), version: 2, estado: 'revocado' }));
     component.revoke();
+    component.confirmRevocation();
     expect(gateway.saveConsent).toHaveBeenCalledWith({ autorizado: false, version: 1 });
     expect(component.profile()).toBeNull();
     expect(component.authorized()).toBe(false);
@@ -102,6 +108,28 @@ describe('ProfilingPanelComponent', () => {
     );
     expect(component.profile()).toBeNull();
     expect(component.errorKey()).toBe('profiling.errors.unavailable');
+  });
+
+  it('no consulta perfil ni habilita cotizacion mientras la aprobacion esta pendiente', () => {
+    gateway.loadConsent.mockReturnValue(of(null));
+    openProfile();
+    const availability = vi.fn();
+    component.availabilityChange.subscribe(availability);
+    const pending = new Subject<ProfilingConsent>();
+    gateway.saveConsent.mockReturnValue(pending);
+    component.save(true);
+    component.save(true);
+    component.save(false);
+    expect(gateway.saveConsent).toHaveBeenCalledTimes(1);
+    expect(component.loading()).toBe(true);
+    expect(component.consent()).toBeNull();
+    expect(component.authorized()).toBe(false);
+    expect(gateway.loadProfile).not.toHaveBeenCalled();
+    expect(availability).not.toHaveBeenCalledWith(true);
+    pending.next(createConsent());
+    expect(gateway.loadProfile).toHaveBeenCalledWith('AQT-2026-123456');
+    expect(component.authorized()).toBe(true);
+    expect(availability).toHaveBeenLastCalledWith(true);
   });
 
   it.each([
@@ -128,7 +156,9 @@ describe('ProfilingPanelComponent', () => {
       ),
     );
     component.revoke();
+    component.confirmRevocation();
     component.revoke();
+    component.confirmRevocation();
     expect(gateway.saveConsent).toHaveBeenCalledTimes(1);
     expect(component.errorKey()).toBe('profiling.errors.conflict');
     component.reload();
@@ -206,6 +236,78 @@ describe('ProfilingPanelComponent', () => {
     component.save(true);
     expect(gateway.saveConsent).not.toHaveBeenCalled();
     expect(component.errorKey()).toBe('profiling.errors.decisionExpired');
+  });
+
+  it.each<[Partial<ConsentRequest>, string]>([
+    [{ alcances: [] }, 'scopes'],
+    [{ fuentes: [] }, 'sources'],
+    [{ datos: [] }, 'data'],
+    [{ vigenteHasta: '' }, 'validity'],
+  ])('bloquea la decision e identifica el campo incompleto %j', (change, field) => {
+    gateway.loadConsent.mockReturnValue(of(null));
+    fixture.detectChanges();
+    component.consentRequest.set({ ...createConsentRequest(Date.now()), ...change });
+    fixture.detectChanges();
+    const buttons: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    );
+    expect(
+      buttons.find((button) => button.textContent?.includes('profiling.authorize'))?.disabled,
+    ).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain(`profiling.decision.fields.${field}`);
+    component.save(true);
+    component.save(false);
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+    expect(gateway.loadProfile).not.toHaveBeenCalled();
+    expect(component.errorKey()).toBe('profiling.errors.incompleteRequest');
+  });
+
+  it('identifica todos los campos de una solicitud ausente sin autorizar', () => {
+    gateway.loadConsent.mockReturnValue(of(null));
+    fixture.detectChanges();
+    component.consentRequest.set(null);
+    fixture.detectChanges();
+    expect(component.requestIssues()).toEqual([
+      'purpose',
+      'scopes',
+      'sources',
+      'data',
+      'terms',
+      'validity',
+    ]);
+    component.save(true);
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+  });
+
+  it('conserva la autorizacion al cancelar y exige confirmacion vigente', () => {
+    openProfile();
+    component.confirmRevocation();
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+    component.revoke();
+    expect(component.confirmingRevocation()).toBe(true);
+    component.cancelRevocation();
+    component.confirmRevocation();
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+    expect(component.profile()).not.toBeNull();
+    expect(component.authorized()).toBe(true);
+    component.revoke();
+    component.reload();
+    component.confirmRevocation();
+    expect(component.confirmingRevocation()).toBe(false);
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+  });
+
+  it('muestra vencimiento local y bloquea la cotizacion sin navegar', () => {
+    gateway.loadConsent.mockReturnValue(
+      of({ ...createConsent(), vigenteHasta: new Date(Date.now() + 1000).toISOString() }),
+    );
+    fixture.detectChanges();
+    vi.advanceTimersByTime(1001);
+    fixture.detectChanges();
+    expect(component.consentExpired()).toBe(true);
+    expect(component.authorized()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('profiling.consentStatus.vencido');
+    expect(fixture.nativeElement.textContent).not.toContain('profiling.consentStatus.autorizado');
   });
 
   it.each([

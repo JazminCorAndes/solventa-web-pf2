@@ -22,6 +22,44 @@ export function createConsentRequest(now: number): ConsentRequest {
   };
 }
 
+export function consentRequestIssues(request: ConsentRequest | null, now: number): string[] {
+  const issues: string[] = [];
+  const validSources = (values: unknown): values is ConsentRequest['fuentes'] =>
+    Array.isArray(values) &&
+    values.length > 0 &&
+    new Set(values).size === values.length &&
+    values.every((value) => value === 'open_finance' || value === 'open_data');
+  if (request?.finalidad !== 'cotizacion') {
+    issues.push('purpose');
+  }
+  if (!validSources(request?.alcances)) {
+    issues.push('scopes');
+  }
+  if (
+    !validSources(request?.fuentes) ||
+    !validSources(request?.alcances) ||
+    !request.fuentes.every((source) => request.alcances.includes(source))
+  ) {
+    issues.push('sources');
+  }
+  if (request?.datos?.length !== 1 || request.datos[0] !== 'indicador_riesgo') {
+    issues.push('data');
+  }
+  if (request?.versionTerminos !== '1.0') {
+    issues.push('terms');
+  }
+  if (
+    !request?.vigenteHasta ||
+    !/(?:Z|[+-]\d{2}:\d{2})$/.test(request.vigenteHasta) ||
+    !Number.isFinite(Date.parse(request.vigenteHasta)) ||
+    Date.parse(request.vigenteHasta) <= now ||
+    Date.parse(request.vigenteHasta) > now + 30 * 86400000
+  ) {
+    issues.push('validity');
+  }
+  return issues;
+}
+
 export interface ProfilingConsent {
   consentimientoId: string;
   clienteId: string;
@@ -82,6 +120,7 @@ export function consentIsComplete(consent: ProfilingConsent | null): boolean {
     !!consent &&
     typeof consent.actorId === 'string' &&
     !!consent.actorId &&
+    consent.actorId === consent.clienteId &&
     consent.versionTerminos === '1.0' &&
     consent.alcances.includes('open_finance') &&
     consent.alcances.includes('open_data') &&

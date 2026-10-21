@@ -55,12 +55,22 @@ describe('Panel de consentimiento con gateway HTTP autenticado', () => {
   });
 
   function click(text: string): void {
+    fixture.detectChanges();
     const buttons: HTMLButtonElement[] = Array.from(
       fixture.nativeElement.querySelectorAll('button'),
     );
     const button = buttons.find((candidate) => candidate.textContent?.trim() === text);
     expect(button).toBeDefined();
     button!.click();
+    fixture.detectChanges();
+  }
+
+  function consentResponse() {
+    return {
+      ...createConsent(),
+      efectivaEn: new Date(serverTime).toISOString(),
+      vigenteHasta: new Date(serverTime + 30 * 86400000).toISOString(),
+    };
   }
 
   it.each([true, false])('presenta evidencia y envia decision %s desde la UI', (authorized) => {
@@ -75,6 +85,11 @@ describe('Panel de consentimiento con gateway HTTP autenticado', () => {
     http.expectNone(url);
     click(authorized ? es.profiling.authorize : es.profiling.reject);
     const request = http.expectOne(url);
+    expect(fixture.componentInstance.loading()).toBe(true);
+    expect(fixture.componentInstance.authorized()).toBe(false);
+    expect(fixture.componentInstance.consent()).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain(es.profiling.consentStatus.autorizado);
+    http.expectNone((pending) => pending.url.includes('solicitudes-cotizacion'));
     expect(request.request.headers.get('Authorization')).toBe('Bearer consent-test-token');
     expect(request.request.body).toEqual({
       autorizado: authorized,
@@ -131,11 +146,93 @@ describe('Panel de consentimiento con gateway HTTP autenticado', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.profile()?.perfilId).toBe(profile.perfilId);
     click(es.profiling.revoke);
+    http.expectNone(url);
+    expect(fixture.componentInstance.profile()).not.toBeNull();
+    click(es.profiling.revocation.cancel);
+    http.expectNone(url);
+    expect(fixture.componentInstance.authorized()).toBe(true);
+    click(es.profiling.revoke);
+    click(es.profiling.revocation.confirm);
     expect(fixture.componentInstance.profile()).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain(es.profiling.consentStatus.revocado);
     const revocation = http.expectOne(url);
     expect(revocation.request.body).toEqual({ autorizado: false, version: 1 });
     revocation.flush({ ...consent, estado: 'revocado', version: 2 }, { headers });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(es.profiling.consentStatus.revocado);
     expect(fixture.componentInstance.authorized()).toBe(false);
     http.expectNone((request) => request.url.includes('solicitudes-cotizacion'));
+  });
+
+  it.each([
+    [400, 'solicitud_invalida', es.profiling.errors.incompleteRequest],
+    [409, 'conflicto_version', es.profiling.errors.conflict],
+    [503, 'perfilamiento_no_disponible', es.profiling.errors.unavailable],
+  ])('no confirma tras HTTP %s; recarga la version antes de reintentar', (status, code, text) => {
+    click(es.profiling.authorize);
+    http.expectOne(url).flush({ code }, { status, statusText: 'Error', headers });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(text);
+    expect(fixture.componentInstance.authorized()).toBe(false);
+    expect(fixture.componentInstance.consentLoaded()).toBe(false);
+    fixture.componentInstance.save(true);
+    http.expectNone(url);
+    click(es.common.retry);
+    const current = { ...consentResponse(), estado: 'rechazado', version: 3 };
+    http.expectOne(url).flush(current, { headers });
+    http.expectNone((pending) => pending.method === 'PUT');
+    click(es.profiling.authorize);
+    const retry = http.expectOne(url);
+    expect(retry.request.body.version).toBe(3);
+    retry.flush({ ...consentResponse(), version: 4 }, { headers });
+    expect(fixture.componentInstance.authorized()).toBe(true);
+  });
+
+  it('no presenta revocacion exitosa tras error y permite confirmarla de nuevo', () => {
+    click(es.profiling.authorize);
+    http.expectOne(url).flush(consentResponse(), { headers });
+    click(es.profiling.revoke);
+    click(es.profiling.revocation.confirm);
+    http
+      .expectOne(url)
+      .flush(
+        { code: 'perfilamiento_no_disponible' },
+        { status: 503, statusText: 'Unavailable', headers },
+      );
+    fixture.detectChanges();
+    expect(fixture.componentInstance.authorized()).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain(es.profiling.consentStatus.revocado);
+    expect(fixture.nativeElement.textContent).toContain(es.profiling.errors.unavailable);
+    click(es.common.retry);
+    http.expectOne(url).flush(consentResponse(), { headers });
+    click(es.profiling.revoke);
+    click(es.profiling.revocation.confirm);
+    http
+      .expectOne(url)
+      .flush({ ...consentResponse(), estado: 'revocado', version: 2 }, { headers });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(es.profiling.consentStatus.revocado);
+    http.expectNone((pending) => pending.url.includes('solicitudes-cotizacion'));
+  });
+
+  it.each([
+    { estado: 'autorizado', version: 1 },
+    { estado: 'rechazado', version: 8 },
+  ])('no acepta una respuesta que no confirma el rechazo enviado: %j', (change) => {
+    click(es.profiling.reject);
+    http.expectOne(url).flush({ ...consentResponse(), ...change }, { headers });
+    expect(fixture.componentInstance.authorized()).toBe(false);
+    expect(fixture.componentInstance.consent()).toBeNull();
+    expect(fixture.componentInstance.errorKey()).toBe('profiling.errors.invalid');
+    http.expectNone((pending) => pending.url.includes('solicitudes-cotizacion'));
+  });
+
+  it('rechaza una aprobacion con evidencia incompleta aunque el servicio responda 200', () => {
+    click(es.profiling.authorize);
+    http.expectOne(url).flush({ ...consentResponse(), actorId: null }, { headers });
+    expect(fixture.componentInstance.authorized()).toBe(false);
+    expect(fixture.componentInstance.consent()).toBeNull();
+    expect(fixture.componentInstance.errorKey()).toBe('profiling.errors.invalid');
+    http.expectNone((pending) => pending.url.includes('solicitudes-cotizacion'));
   });
 });

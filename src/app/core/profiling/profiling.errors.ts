@@ -7,6 +7,7 @@ export class ProfilingError extends Error {
 }
 
 const ERROR_KEYS: Record<string, string> = {
+  solicitud_consentimiento_invalida: 'profiling.errors.incompleteRequest',
   consentimiento_ausente: 'profiling.errors.consent',
   consentimiento_no_vigente: 'profiling.errors.consent',
   conflicto_version: 'profiling.errors.conflict',

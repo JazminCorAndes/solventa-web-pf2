@@ -5,6 +5,7 @@ import { ProfilingError } from '../../core/profiling/profiling.errors';
 import { ProfilingGateway } from '../../core/profiling/profiling.gateway';
 import {
   consentIsCurrent,
+  consentRequestIssues,
   ConsentDecision,
   ProfilingConsent,
   RiskProfile,
@@ -36,12 +37,7 @@ export class MockProfilingGateway implements ProfilingGateway {
       if ((current?.version ?? 0) !== version) {
         return throwError(() => new ProfilingError('conflicto_version'));
       }
-      if (
-        solicitud &&
-        (!Number.isFinite(Date.parse(solicitud.vigenteHasta)) ||
-          Date.parse(solicitud.vigenteHasta) <= Date.now() ||
-          Date.parse(solicitud.vigenteHasta) > Date.now() + 30 * 86400000)
-      ) {
+      if (solicitud && consentRequestIssues(solicitud, Date.now()).length) {
         return throwError(() => new ProfilingError('solicitud_invalida'));
       }
       if (!solicitud && (!current || current.estado !== 'autorizado')) {

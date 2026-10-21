@@ -221,12 +221,28 @@
     "decision": {
       "title": "Tu decisión de consentimiento",
       "purpose": "Finalidad: calcular el perfil de riesgo para tu cotización de seguro.",
-      "permissions": "Alcances y fuentes solicitados: Open Finance y Open Data. El modelo necesita ambos permisos; sin ellos no se consultará ninguna fuente ni se generará el perfil.",
-      "data": "Dato utilizado: indicador de riesgo de cada fuente. Todas las fuentes son simuladas; no se conectan proveedores reales.",
+      "permissions": "El modelo necesita permisos para Open Finance y Open Data; sin ambos no se consultará ninguna fuente ni se generará el perfil. Revisa los alcances y las fuentes de esta solicitud.",
+      "data": "Solo se utilizarán los datos indicados en esta solicitud. Todas las fuentes son simuladas; no se conectan proveedores reales.",
+      "fields": {
+        "purpose": "Finalidad",
+        "scopes": "Alcances",
+        "sources": "Fuentes",
+        "data": "Datos solicitados",
+        "terms": "Versión de términos",
+        "validity": "Vigencia futura con zona horaria (máximo 30 días)"
+      },
       "terms": "Términos de esta autorización, versión",
       "rights": "Al autorizar aceptas el uso descrito hasta la fecha indicada. Puedes rechazarlo o revocarlo después desde este panel. Consultar este panel no renueva la autorización."
     },
     "revoke": "Revocar autorización",
+    "revocation": {
+      "title": "¿Confirmas la revocación?",
+      "body": "Se solicitará revocar tu autorización actual. El perfil dejará de estar disponible. Solo mostraremos la revocación registrada cuando el servicio la confirme.",
+      "cancel": "Conservar autorización",
+      "confirm": "Confirmar revocación"
+    },
+    "purposes": { "cotizacion": "Calcular el perfil de riesgo para tu cotización de seguro" },
+    "data": { "indicador_riesgo": "Indicador de riesgo" },
     "consentStatus": {
       "autorizado": "Autorización registrada",
       "revocado": "Autorización revocada",
@@ -253,6 +269,7 @@
     "consultedAt": "Consultada el",
     "errors": {
       "decisionExpired": "La fecha mostrada ya venció. Reintenta la consulta y revisa la nueva fecha antes de decidir.",
+      "incompleteRequest": "La solicitud de consentimiento está incompleta o contiene información inválida. No se enviará la decisión. Revisa los campos indicados y reintenta la consulta.",
       "consent": "Necesitas una autorización vigente. Autoriza el perfilamiento y crea una nueva solicitud si la anterior usó otra versión.",
       "conflict": "La autorización cambió en otra sesión. Reintenta la consulta antes de modificarla.",
       "expired": "El perfil venció. Crea una nueva solicitud para obtener un perfil vigente.",
