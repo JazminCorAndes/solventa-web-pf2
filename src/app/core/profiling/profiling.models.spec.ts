@@ -1,5 +1,5 @@
 import { createConsent, createProfile } from './profiling.fixtures';
-import { consentIsCurrent, profileIsCurrent } from './profiling.models';
+import { consentIsCurrent, profileIsCurrent, ProfilingConsent } from './profiling.models';
 
 describe('Vigencia del perfilamiento', () => {
   it.each(['0', '0.000000', '0.250000', '1', '1.000000'])(
@@ -39,5 +39,21 @@ describe('Vigencia del perfilamiento', () => {
       }),
     ).toBe(false);
     expect(consentIsCurrent({ ...createConsent(), alcances: ['open_data'] })).toBe(false);
+  });
+
+  it.each<Partial<ProfilingConsent>>([
+    { actorId: undefined },
+    { fuentes: undefined },
+    { datos: undefined },
+    { versionTerminos: undefined },
+    { versionTerminos: '2.0' },
+    { fuentes: ['open_data'] },
+    { datos: [] },
+    { estado: 'rechazado' as const },
+    { estado: 'vencido' as const },
+  ])('no autoriza evidencia incompleta o estado no autorizado: %s', (change) => {
+    const consent = { ...createConsent(), ...change };
+    expect(consentIsCurrent(consent)).toBe(false);
+    expect(profileIsCurrent(createProfile(), consent, 'AQT-2026-123456')).toBe(false);
   });
 });

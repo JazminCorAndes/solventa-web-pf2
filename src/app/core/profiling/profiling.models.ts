@@ -1,12 +1,40 @@
+export interface ConsentRequest {
+  finalidad: 'cotizacion';
+  alcances: ('open_finance' | 'open_data')[];
+  fuentes: ('open_finance' | 'open_data')[];
+  datos: 'indicador_riesgo'[];
+  versionTerminos: '1.0';
+  vigenteHasta: string;
+}
+
+export type ConsentDecision =
+  | { autorizado: boolean; version: number; solicitud: ConsentRequest }
+  | { autorizado: false; version: number; solicitud?: never };
+
+export function createConsentRequest(now: number): ConsentRequest {
+  return {
+    finalidad: 'cotizacion',
+    alcances: ['open_finance', 'open_data'],
+    fuentes: ['open_finance', 'open_data'],
+    datos: ['indicador_riesgo'],
+    versionTerminos: '1.0',
+    vigenteHasta: new Date(now + 30 * 86400000).toISOString(),
+  };
+}
+
 export interface ProfilingConsent {
   consentimientoId: string;
   clienteId: string;
   version: number;
-  estado: 'autorizado' | 'revocado';
+  estado: 'autorizado' | 'rechazado' | 'revocado' | 'vencido';
   finalidad: 'cotizacion';
   alcances: ('open_finance' | 'open_data')[];
   efectivaEn: string;
   vigenteHasta: string;
+  actorId?: string;
+  fuentes?: ('open_finance' | 'open_data')[];
+  datos?: 'indicador_riesgo'[];
+  versionTerminos?: string;
 }
 
 export interface RiskProfile {
@@ -31,10 +59,10 @@ export interface RiskProfile {
   fallbackUsed: false;
 }
 
-export function consentIsComplete(consent: ProfilingConsent | null): boolean {
+export function consentIsReadable(consent: ProfilingConsent | null): boolean {
   return (
     !!consent &&
-    ['autorizado', 'revocado'].includes(consent.estado) &&
+    ['autorizado', 'rechazado', 'revocado', 'vencido'].includes(consent.estado) &&
     consent.finalidad === 'cotizacion' &&
     Number.isInteger(consent.version) &&
     consent.version > 0 &&
@@ -43,10 +71,25 @@ export function consentIsComplete(consent: ProfilingConsent | null): boolean {
     typeof consent.clienteId === 'string' &&
     !!consent.clienteId &&
     Array.isArray(consent.alcances) &&
-    consent.alcances.includes('open_finance') &&
-    consent.alcances.includes('open_data') &&
     Number.isFinite(Date.parse(consent.efectivaEn)) &&
     Number.isFinite(Date.parse(consent.vigenteHasta))
+  );
+}
+
+export function consentIsComplete(consent: ProfilingConsent | null): boolean {
+  return (
+    consentIsReadable(consent) &&
+    !!consent &&
+    typeof consent.actorId === 'string' &&
+    !!consent.actorId &&
+    consent.versionTerminos === '1.0' &&
+    consent.alcances.includes('open_finance') &&
+    consent.alcances.includes('open_data') &&
+    Array.isArray(consent.fuentes) &&
+    consent.fuentes.includes('open_finance') &&
+    consent.fuentes.includes('open_data') &&
+    Array.isArray(consent.datos) &&
+    consent.datos.includes('indicador_riesgo')
   );
 }
 

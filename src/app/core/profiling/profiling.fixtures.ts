@@ -4,6 +4,10 @@ export function createConsent(): ProfilingConsent {
   return {
     consentimientoId: '11111111-1111-4111-8111-111111111111',
     clienteId: '22222222-2222-4222-8222-222222222222',
+    actorId: '22222222-2222-4222-8222-222222222222',
+    fuentes: ['open_finance', 'open_data'],
+    datos: ['indicador_riesgo'],
+    versionTerminos: '1.0',
     version: 1,
     estado: 'autorizado',
     finalidad: 'cotizacion',
