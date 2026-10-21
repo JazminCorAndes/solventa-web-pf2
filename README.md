@@ -297,6 +297,51 @@ Antes de autorizar o rechazar se muestran la finalidad, ambos alcances y fuentes
 La fecha se fija al mostrar la solicitud y no se amplía silenciosamente al pulsar un botón.
 Revocar envía únicamente `autorizado: false` y la versión actual, sin una nueva solicitud.
 
+### Decisión informada SOL-203 (HU-OF-01-FE)
+
+La pantalla integrada valida finalidad, alcances y fuentes sin duplicados, datos, términos y
+vigencia antes de enviar una decisión. Una solicitud incompleta identifica los campos
+faltantes o inválidos y deshabilita los botones; recargar permite revisar la información
+nuevamente. Los alcances, fuentes y datos visibles corresponden a la solicitud enviada.
+
+«Revocar autorización» abre una confirmación explícita. «Conservar autorización» la cancela
+sin enviar un PUT y conserva el consentimiento. Al confirmar se oculta el perfil y se
+bloquea la continuación mientras responde el servicio; solo una respuesta válida con estado
+`revocado` y la siguiente versión se presenta como revocación registrada. Aprobar y rechazar
+también requieren confirmación del backend, sin éxito optimista ni aprobación automática.
+Un error 400, 409 o 503 permite recargar la evidencia y decidir de nuevo, nunca sobrescribir
+automáticamente una versión. La evidencia cuyo actor no corresponde al titular no habilita
+el perfilamiento. El vencimiento retira el acceso y se refleja sin cambiar de pantalla.
+
+Las pruebas de `profiling-panel.component.spec.ts`, `profiling-panel.http.spec.ts` y los
+modelos/gateways cubren decisión pendiente, aprobación, rechazo, campos incompletos,
+errores y reintento, versión obsoleta, evidencia legada, expiración y revocación
+confirmada/cancelada. El recorrido HTTP prueba el interceptor Bearer y que el perfil no
+se consulte antes de una autorización válida.
+
+El alcance frontend de ASR-PRV-01 (arquitectura, páginas 23–24; enunciado, páginas 9 y 11–13)
+es presentar la evidencia y aplicar denegación por defecto. La persistencia auditable,
+Outbox, bloqueo autoritativo y propagación a todos los consumidores en cinco minutos
+son responsabilidad de SOL326; ninguna prueba de UI por sí sola demuestra ese límite.
+No se replican PEP, eventos ni permisos en el cliente. La simulación ocurre en las fuentes
+del adaptador Open Finance, no en el consentimiento del modo conectado.
+
+La verificación local del 20 de octubre de 2026 usó Chrome con la aplicación principal y
+el backend `082f41a216df71eb1a81688d7c3e950a3a0c3fc8`: BFF, Identidad, Perfilamiento,
+Cotización y Pólizas reales por HTTP, JWT y bases SQLite migradas temporales.
+El historial persistió rechazo v1, aprobación v2 y revocación v3. Se creó una cotización,
+se mostró su perfil en el resumen, cancelar no envió PUT y revocar retiró el perfil.
+Tras recargar se conservó la revocación; consultar ese perfil devolvió 403. El bloqueo
+se observó en 156 ms desde el clic y el acuse del consumidor local en 1750 ms, con los
+tres eventos publicados. Son observaciones del entorno local, no un benchmark ni prueba
+de todos los consumidores o del despliegue productivo. También se inspeccionó el panel
+en escritorio y a 390 px sin desbordamiento horizontal.
+
+El stack de prueba debe configurar Pólizas y su cliente HTTP en Cotización: sin ese
+servicio el backend devuelve `polizas: { disponibilidad: 'no_implementado' }` y el
+historial actual rechaza correctamente el contrato antiguo. No se convierte ese
+descriptor en una lista vacía ni se cambia el frontend para ocultar el error.
+
 ### Compatibilidad de consentimiento SOL326
 
 Requiere el contrato de [backend-solventa PR #48](https://github.com/Migue765/backend-solventa/pull/48).
@@ -368,7 +413,7 @@ Contratos consumidos (todos con token Bearer):
 | Método    | Ruta                                                    | Uso                                                                     |
 | --------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
 | GET       | `/v1/consentimientos/perfilamiento`                     | Leer autorización; solo `404 consentimiento_ausente` significa ausencia |
-| PUT       | `/v1/consentimientos/perfilamiento`                     | Decisión con `solicitud` completa; revocación sin `solicitud`             |
+| PUT       | `/v1/consentimientos/perfilamiento`                     | Decisión con `solicitud` completa; revocación sin `solicitud`           |
 | POST      | `/v1/solicitudes-cotizacion`                            | Crear solicitud y asociar su perfil                                     |
 | GET       | `/v1/solicitudes-cotizacion/{id}/perfilamiento`         | Leer el perfil usado por la solicitud                                   |
 | GET / PUT | `/v1/solicitudes-cotizacion/{id}/ofertas` / `seleccion` | Revalidación del perfil en el backend                                   |
