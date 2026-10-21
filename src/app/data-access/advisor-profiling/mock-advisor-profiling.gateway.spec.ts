@@ -14,7 +14,7 @@ describe('MockAdvisorProfilingGateway', () => {
       phone: '+573001234567',
     },
     credit: { reference: 'HIP-001', amount: 310_000_000, termMonths: 240 },
-    consentReference: 'CONS-001',
+    consent: { id: '11111111-1111-4111-8111-111111111111', version: 1 },
   };
 
   it('devuelve la misma confirmación al repetir la misma operación', async () => {
@@ -48,7 +48,12 @@ describe('MockAdvisorProfilingGateway', () => {
       ),
     ).rejects.toMatchObject({ code: 'incomplete_data' });
     await expect(
-      firstValueFrom(gateway.start({ ...request, consentReference: 'CONS-INVALIDO' })),
+      firstValueFrom(
+        gateway.start({
+          ...request,
+          consent: { id: '00000000-0000-0000-0000-000000000000', version: 1 },
+        }),
+      ),
     ).rejects.toMatchObject({ code: 'invalid_consent' });
   });
 });

@@ -14,7 +14,10 @@ export interface MortgageProfilingInput {
     amount: number;
     termMonths: number;
   };
-  consentReference: string;
+  consent: {
+    id: string;
+    version: number;
+  };
 }
 
 export interface MortgageProfilingRequest extends MortgageProfilingInput {

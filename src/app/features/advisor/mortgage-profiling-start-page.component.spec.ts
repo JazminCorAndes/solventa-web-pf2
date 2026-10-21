@@ -25,7 +25,8 @@ describe('MortgageProfilingStartPageComponent', () => {
     creditReference: 'HIP-001',
     creditAmount: 310_000_000,
     termMonths: 240,
-    consentReference: 'CONS-001',
+    consentId: '11111111-1111-4111-8111-111111111111',
+    consentVersion: 1,
     consentVerified: true,
   };
 

@@ -19,8 +19,9 @@ export class MockAdvisorProfilingGateway implements AdvisorProfilingGateway {
       return throwError(() => new MortgageProfilingError('incomplete_data'));
     }
     if (
-      !request.consentReference.toUpperCase().startsWith('CONS-') ||
-      request.consentReference.toUpperCase() === 'CONS-INVALIDO'
+      !UUID_PATTERN.test(request.consent.id) ||
+      request.consent.id === '00000000-0000-0000-0000-000000000000' ||
+      request.consent.version < 1
     ) {
       return throwError(() => new MortgageProfilingError('invalid_consent'));
     }
@@ -56,6 +57,9 @@ function hasRequiredData(request: MortgageProfilingRequest): boolean {
     request.credit.reference &&
     request.credit.amount > 0 &&
     request.credit.termMonths > 0 &&
-    request.consentReference,
+    request.consent.id &&
+    request.consent.version > 0,
   );
 }
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

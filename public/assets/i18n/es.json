@@ -486,7 +486,8 @@
     "creditReference": "Referencia del crédito",
     "creditAmount": "Monto del crédito",
     "termMonths": "Plazo en meses",
-    "consentReference": "Referencia del consentimiento",
+    "consentId": "Identificador del consentimiento",
+    "consentVersion": "Versión del consentimiento",
     "consentNotice": "El cliente debe haber tomado una decisión explícita en el canal de consentimiento correspondiente. Este formulario solo verifica y referencia esa decisión; no la sustituye.",
     "consentVerified": "Verifiqué que el cliente otorgó el consentimiento explícito y que la referencia está vigente.",
     "submit": "Iniciar perfilamiento",
@@ -509,7 +510,8 @@
       "creditReference": "Ingresa una referencia de crédito válida.",
       "creditAmount": "El monto debe ser de al menos COP 1.000.000.",
       "termMonths": "El plazo debe estar entre 12 y 360 meses.",
-      "consentReference": "Ingresa una referencia válida con formato CONS-123456.",
+      "consentId": "Ingresa el UUID del consentimiento registrado por el cliente.",
+      "consentVersion": "Ingresa una versión de consentimiento válida.",
       "consentVerified": "Debes verificar el consentimiento explícito antes de continuar."
     },
     "errors": {

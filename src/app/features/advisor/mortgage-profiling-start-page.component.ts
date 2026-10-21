@@ -19,6 +19,7 @@ import {
 import { DocumentType } from '../../core/auth/auth.models';
 
 const PARTNER_ID = 'SOC-CO-001';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Component({
   selector: 'app-mortgage-profiling-start-page',
@@ -62,7 +63,11 @@ export class MortgageProfilingStartPageComponent {
       Validators.min(12),
       Validators.max(360),
     ]),
-    consentReference: ['', [Validators.required, Validators.pattern(/^CONS-[A-Za-z0-9-]+$/i)]],
+    consentId: ['', [Validators.required, Validators.pattern(UUID_PATTERN)]],
+    consentVersion: this.formBuilder.control<number | null>(null, [
+      Validators.required,
+      Validators.min(1),
+    ]),
     consentVerified: [false, Validators.requiredTrue],
   });
 
@@ -114,7 +119,8 @@ export class MortgageProfilingStartPageComponent {
       creditReference: '',
       creditAmount: null,
       termMonths: null,
-      consentReference: '',
+      consentId: '',
+      consentVersion: null,
       consentVerified: false,
     });
     this.form.enable();
@@ -141,7 +147,10 @@ export class MortgageProfilingStartPageComponent {
         amount: value.creditAmount ?? 0,
         termMonths: value.termMonths ?? 0,
       },
-      consentReference: value.consentReference.trim().toUpperCase(),
+      consent: {
+        id: value.consentId.trim().toLowerCase(),
+        version: value.consentVersion ?? 0,
+      },
     };
   }
 }

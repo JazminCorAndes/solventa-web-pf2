@@ -41,7 +41,8 @@ export class HttpAdvisorProfilingGateway implements AdvisorProfilingGateway {
             monto: request.credit.amount,
             plazoMeses: request.credit.termMonths,
           },
-          consentimientoReferencia: request.consentReference,
+          consentimientoId: request.consent.id,
+          consentimientoVersion: request.consent.version,
         },
         {
           headers: new HttpHeaders({ 'Idempotency-Key': request.operationId }),

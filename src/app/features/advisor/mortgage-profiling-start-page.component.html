@@ -133,12 +133,21 @@
           <h2>{{ 'mortgageProfiling.consentSection' | transloco }}</h2>
           <p>{{ 'mortgageProfiling.consentNotice' | transloco }}</p>
           <mat-form-field appearance="outline">
-            <mat-label>{{ 'mortgageProfiling.consentReference' | transloco }}</mat-label>
-            <input matInput formControlName="consentReference" placeholder="CONS-123456" />
-            @if (showError('consentReference')) {
-              <mat-error>{{
-                'mortgageProfiling.validation.consentReference' | transloco
-              }}</mat-error>
+            <mat-label>{{ 'mortgageProfiling.consentId' | transloco }}</mat-label>
+            <input
+              matInput
+              formControlName="consentId"
+              placeholder="11111111-1111-4111-8111-111111111111"
+            />
+            @if (showError('consentId')) {
+              <mat-error>{{ 'mortgageProfiling.validation.consentId' | transloco }}</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'mortgageProfiling.consentVersion' | transloco }}</mat-label>
+            <input matInput type="number" min="1" formControlName="consentVersion" />
+            @if (showError('consentVersion')) {
+              <mat-error>{{ 'mortgageProfiling.validation.consentVersion' | transloco }}</mat-error>
             }
           </mat-form-field>
           <mat-checkbox formControlName="consentVerified">

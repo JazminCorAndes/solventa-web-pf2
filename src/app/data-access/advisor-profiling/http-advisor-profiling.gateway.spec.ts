@@ -20,7 +20,7 @@ describe('HttpAdvisorProfilingGateway', () => {
       phone: '+573001234567',
     },
     credit: { reference: 'HIP-001', amount: 310_000_000, termMonths: 240 },
-    consentReference: 'CONS-001',
+    consent: { id: '11111111-1111-4111-8111-111111111111', version: 2 },
   };
 
   beforeEach(() => {
@@ -48,7 +48,8 @@ describe('HttpAdvisorProfilingGateway', () => {
         telefono: '+573001234567',
       },
       credito: { referencia: 'HIP-001', monto: 310_000_000, plazoMeses: 240 },
-      consentimientoReferencia: 'CONS-001',
+      consentimientoId: '11111111-1111-4111-8111-111111111111',
+      consentimientoVersion: 2,
     });
     expect(pending.request.headers.get('Idempotency-Key')).toBe(request.operationId);
     pending.flush({

@@ -55,7 +55,8 @@ paths:
                     referencia: HIP-2026-001
                     monto: 310000000
                     plazoMeses: 240
-                  consentimientoReferencia: CONS-2026-001
+                  consentimientoId: 22222222-2222-4222-8222-222222222222
+                  consentimientoVersion: 2
       responses:
         '202':
           description: Solicitud aceptada o repetición idempotente de una solicitud aceptada.
@@ -128,7 +129,8 @@ components:
         - socioId
         - cliente
         - credito
-        - consentimientoReferencia
+        - consentimientoId
+        - consentimientoVersion
       properties:
         operationId:
           type: string
@@ -141,10 +143,14 @@ components:
           $ref: '#/components/schemas/Cliente'
         credito:
           $ref: '#/components/schemas/CreditoHipotecario'
-        consentimientoReferencia:
+        consentimientoId:
           type: string
-          pattern: ^CONS-[A-Za-z0-9-]+$
-          description: Referencia de la decisión explícita registrada por HU-OF-01.
+          format: uuid
+          description: Identificador de la decisión explícita registrada por HU-OF-01.
+        consentimientoVersion:
+          type: integer
+          minimum: 1
+          description: Versión autoritativa que debe continuar vigente y autorizada.
     Cliente:
       type: object
       additionalProperties: false

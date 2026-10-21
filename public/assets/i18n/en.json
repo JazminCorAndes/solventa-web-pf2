@@ -486,7 +486,8 @@
     "creditReference": "Credit reference",
     "creditAmount": "Credit amount",
     "termMonths": "Term in months",
-    "consentReference": "Consent reference",
+    "consentId": "Consent identifier",
+    "consentVersion": "Consent version",
     "consentNotice": "The customer must have made an explicit decision in the corresponding consent channel. This form only verifies and references that decision; it does not replace it.",
     "consentVerified": "I verified that the customer gave explicit consent and that the reference is current.",
     "submit": "Start profiling",
@@ -509,7 +510,8 @@
       "creditReference": "Enter a valid credit reference.",
       "creditAmount": "The amount must be at least COP 1,000,000.",
       "termMonths": "The term must be between 12 and 360 months.",
-      "consentReference": "Enter a valid reference using the format CONS-123456.",
+      "consentId": "Enter the UUID of the consent recorded by the customer.",
+      "consentVersion": "Enter a valid consent version.",
       "consentVerified": "You must verify explicit consent before continuing."
     },
     "errors": {
