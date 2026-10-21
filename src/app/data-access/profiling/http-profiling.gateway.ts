@@ -3,7 +3,11 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of, OperatorFunction, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ProfilingGateway } from '../../core/profiling/profiling.gateway';
-import { ProfilingConsent, RiskProfile } from '../../core/profiling/profiling.models';
+import {
+  ConsentDecision,
+  ProfilingConsent,
+  RiskProfile,
+} from '../../core/profiling/profiling.models';
 import { ProfilingClock } from '../../core/profiling/profiling-clock.service';
 import { ProfilingError } from '../../core/profiling/profiling.errors';
 
@@ -31,6 +35,7 @@ export class HttpProfilingGateway implements ProfilingGateway {
               'code' in body &&
               body.code === 'consentimiento_ausente'
             ) {
+              this.clock.synchronize(error.headers.get('Date'), startedAt);
               return of(null);
             }
           }
@@ -39,14 +44,10 @@ export class HttpProfilingGateway implements ProfilingGateway {
       );
   }
 
-  saveConsent(authorized: boolean, version: number): Observable<ProfilingConsent> {
+  saveConsent(decision: ConsentDecision): Observable<ProfilingConsent> {
     const startedAt = performance.now();
     return this.http
-      .put<ProfilingConsent>(
-        this.consentUrl,
-        { autorizado: authorized, version },
-        { observe: 'response' },
-      )
+      .put<ProfilingConsent>(this.consentUrl, decision, { observe: 'response' })
       .pipe(this.receive<ProfilingConsent>(startedAt));
   }
 
