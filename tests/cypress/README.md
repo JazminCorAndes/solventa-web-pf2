@@ -44,8 +44,10 @@ instaladas según `tests/jmeter/README.md`. Debe incluir emisión académica hab
 y todas las bases migradas; no sirve un BFF aislado ni un `/ping` saludable.
 
 Revisión reproducible publicada por SSH:
-[`fdeccf51380cb0bf32f53f673922c2254a314eb3`](https://github.com/Migue765/backend-solventa/commit/fdeccf51380cb0bf32f53f673922c2254a314eb3).
+[`5a4f5776c4b37c2cb77e700b98d37649a6c47f52`](https://github.com/Migue765/backend-solventa/commit/5a4f5776c4b37c2cb77e700b98d37649a6c47f52).
 El workflow usa ese SHA inmutable, no `develop` ni una rama que pueda cambiar.
+Esta revisión deja JMeter exclusivamente manual en el backend; el workflow web
+solo utiliza su helper de servicios y no ejecuta JMeter.
 
 ```sh
 # En el checkout backend de pruebas, nunca en producción:
@@ -148,8 +150,13 @@ pasado. No activar ejecuciones con secretos sobre cambios no confiables.
 
 Windows, Node 24.22.0, pnpm 11.19.0, Cypress 16.2.0 y Electron 146:
 24/24 UI y 11/11 integradas aprobadas, sin pendientes ni skips. La integración usó
-el helper real de la revisión indicada, BFF web en 5000 y bases SQLite migradas
+el helper real de la revisión
+[`fdeccf51380cb0bf32f53f673922c2254a314eb3`](https://github.com/Migue765/backend-solventa/commit/fdeccf51380cb0bf32f53f673922c2254a314eb3),
+BFF web en 5000 y bases SQLite migradas
 temporales, con fuentes externas simuladas explícitamente. También pasaron 511
 pruebas Vitest existentes, build Pages, lint, typecheck Cypress y la prueba del
 runner. Estos resultados son una ejecución local, no evidencia de CI remoto ni
 certificación de todos los requisitos de arquitectura.
+El pin actualiza únicamente el workflow, la documentación y su prueba de protección
+manual del backend, sin cambios en APIs ni en el helper. No se repitió Cypress
+integrado contra el nuevo SHA.
