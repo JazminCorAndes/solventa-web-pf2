@@ -212,14 +212,26 @@
     "title": "Profiling information",
     "detail": "Profile and source details",
     "simulated": "Simulated data. This is not a real financial inquiry.",
-    "purpose": "Authorize Open Finance and Open Data for your insurance quote. Authorization lasts 30 days and can be revoked here. Profiles last 15 minutes.",
+    "purpose": "You may authorize Open Finance and Open Data for your quote until the displayed date (up to 30 days) and revoke here. Profiles last 15 minutes.",
     "loading": "Checking consent and profile",
     "noConsent": "No authorization is registered.",
     "authorize": "Authorize profiling",
+    "reject": "Reject profiling",
+    "incompleteEvidence": "Previous evidence is incomplete or does not include both permissions. It does not enable profiling. Review the terms and record a new decision.",
+    "decision": {
+      "title": "Your consent decision",
+      "purpose": "Purpose: calculate a risk profile for your insurance quote.",
+      "permissions": "Requested scopes and sources: Open Finance and Open Data. The model requires both permissions; otherwise no source is queried and no profile is generated.",
+      "data": "Data used: the risk indicator from each source. All sources are simulated; no real providers are connected.",
+      "terms": "Terms of this authorization, version",
+      "rights": "By authorizing, you accept the described use until the displayed date. You can reject it or revoke it later from this panel. Viewing this panel does not renew authorization."
+    },
     "revoke": "Revoke authorization",
     "consentStatus": {
       "autorizado": "Authorization registered",
-      "revocado": "Authorization revoked"
+      "revocado": "Authorization revoked",
+      "rechazado": "Authorization rejected",
+      "vencido": "Authorization expired"
     },
     "beforeRequest": "A profile will be obtained when you submit the request and will be linked to that quote.",
     "request": "Linked request",
@@ -240,6 +252,7 @@
     "indicator": "Risk indicator",
     "consultedAt": "Consulted at",
     "errors": {
+      "decisionExpired": "The displayed date has expired. Reload and review the new date before deciding.",
       "consent": "A current authorization is required. Authorize profiling and create a new request if the previous one used another version.",
       "conflict": "Authorization changed in another session. Reload before changing it.",
       "expired": "The profile expired. Create a new request to obtain a current profile.",

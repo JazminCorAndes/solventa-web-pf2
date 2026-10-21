@@ -35,19 +35,40 @@
           <p>{{ 'profiling.noConsent' | transloco }}</p>
         }
         @if (consent()?.estado === 'autorizado') {
-          <button mat-button type="button" (click)="save(false)">
+          <button mat-button type="button" (click)="revoke()">
             {{ 'profiling.revoke' | transloco }}
           </button>
         }
-        @if (
-          !authorized() &&
-          (!consent() ||
-            consent()?.estado === 'revocado' ||
-            errorKey() === 'profiling.errors.consent')
-        ) {
-          <button mat-flat-button type="button" (click)="save(true)">
-            {{ 'profiling.authorize' | transloco }}
-          </button>
+        @if (incompleteEvidence()) {
+          <p role="status">{{ 'profiling.incompleteEvidence' | transloco }}</p>
+        }
+        @if (!authorized()) {
+          @if (consentRequest(); as request) {
+            <section aria-labelledby="consent-decision-title">
+              <h3 id="consent-decision-title">{{ 'profiling.decision.title' | transloco }}</h3>
+              <p>{{ 'profiling.decision.purpose' | transloco }}</p>
+              <p>{{ 'profiling.decision.permissions' | transloco }}</p>
+              <p>{{ 'profiling.decision.data' | transloco }}</p>
+              <p>
+                {{ 'profiling.decision.terms' | transloco }} {{ request.versionTerminos }}.
+                {{ 'profiling.decision.rights' | transloco }}
+              </p>
+              <p>
+                {{ 'profiling.validUntil' | transloco }}:
+                <time [attr.datetime]="request.vigenteHasta">
+                  {{ request.vigenteHasta | date: 'medium' }} ({{
+                    request.vigenteHasta | date: 'ZZZZZ'
+                  }})
+                </time>
+              </p>
+              <button mat-flat-button type="button" (click)="save(true)">
+                {{ 'profiling.authorize' | transloco }}
+              </button>
+              <button mat-stroked-button type="button" (click)="save(false)">
+                {{ 'profiling.reject' | transloco }}
+              </button>
+            </section>
+          }
         }
       }
       @if (profile(); as profile) {

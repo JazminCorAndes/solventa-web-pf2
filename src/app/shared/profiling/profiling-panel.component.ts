@@ -25,6 +25,9 @@ import { ProfilingClock } from '../../core/profiling/profiling-clock.service';
 import {
   consentIsComplete,
   consentIsCurrent,
+  consentIsReadable,
+  ConsentRequest,
+  createConsentRequest,
   ProfilingConsent,
   profileIsCurrent,
   RiskProfile,
@@ -57,6 +60,8 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
   readonly errorKey = signal<string | null>(null);
   readonly authorized = signal(false);
   readonly consentLoaded = signal(false);
+  readonly consentRequest = signal<ConsentRequest | null>(null);
+  readonly incompleteEvidence = signal(false);
 
   ngOnInit(): void {
     this.reload();
@@ -88,7 +93,26 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
     if (this.loading() || !this.consentLoaded()) {
       return;
     }
-    this.run(this.gateway.saveConsent(authorized, this.consent()?.version ?? 0));
+    const solicitud = this.consentRequest();
+    if (!solicitud || Date.parse(solicitud.vigenteHasta) <= this.clock.now()) {
+      this.errorKey.set('profiling.errors.decisionExpired');
+      return;
+    }
+    this.run(
+      this.gateway.saveConsent({
+        autorizado: authorized,
+        version: this.consent()?.version ?? 0,
+        solicitud,
+      }),
+    );
+  }
+
+  revoke(): void {
+    const consent = this.consent();
+    if (this.loading() || !this.consentLoaded() || consent?.estado !== 'autorizado') {
+      return;
+    }
+    this.run(this.gateway.saveConsent({ autorizado: false, version: consent.version }));
   }
 
   private run(operation: Observable<ProfilingConsent | null>): void {
@@ -101,15 +125,19 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
     this.errorKey.set(null);
     this.loading.set(true);
     this.consentLoaded.set(false);
+    this.consentRequest.set(null);
+    this.incompleteEvidence.set(false);
     this.subscription = operation
       .pipe(
         take(1),
         switchMap((consent) => {
-          if (consent && !consentIsComplete(consent)) {
+          if (consent && !consentIsReadable(consent)) {
             throw new ProfilingError('respuesta_invalida');
           }
           this.consent.set(consent);
           this.consentLoaded.set(true);
+          this.consentRequest.set(createConsentRequest(this.clock.earliestNow()));
+          this.incompleteEvidence.set(!!consent && !consentIsComplete(consent));
           const authorized = consentIsCurrent(consent, this.clock.now());
           this.authorized.set(authorized);
           if (!authorized) {

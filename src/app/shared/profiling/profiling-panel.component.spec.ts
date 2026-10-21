@@ -57,7 +57,18 @@ describe('ProfilingPanelComponent', () => {
     expect(component.authorized()).toBe(false);
     gateway.saveConsent.mockReturnValue(of(createConsent()));
     component.save(true);
-    expect(gateway.saveConsent).toHaveBeenCalledWith(true, 0);
+    expect(gateway.saveConsent).toHaveBeenCalledWith({
+      autorizado: true,
+      version: 0,
+      solicitud: {
+        finalidad: 'cotizacion',
+        alcances: ['open_finance', 'open_data'],
+        fuentes: ['open_finance', 'open_data'],
+        datos: ['indicador_riesgo'],
+        versionTerminos: '1.0',
+        vigenteHasta: new Date(Date.now() + 30 * 86400000).toISOString(),
+      },
+    });
     expect(component.authorized()).toBe(true);
   });
 
@@ -72,8 +83,8 @@ describe('ProfilingPanelComponent', () => {
   it('revoca la version actual y retira inmediatamente el perfil', () => {
     openProfile();
     gateway.saveConsent.mockReturnValue(of({ ...createConsent(), version: 2, estado: 'revocado' }));
-    component.save(false);
-    expect(gateway.saveConsent).toHaveBeenCalledWith(false, 1);
+    component.revoke();
+    expect(gateway.saveConsent).toHaveBeenCalledWith({ autorizado: false, version: 1 });
     expect(component.profile()).toBeNull();
     expect(component.authorized()).toBe(false);
     expect(component.errorKey()).toBe('profiling.errors.consent');
@@ -116,12 +127,85 @@ describe('ProfilingPanelComponent', () => {
         () => new HttpErrorResponse({ status: 409, error: { code: 'conflicto_version' } }),
       ),
     );
-    component.save(false);
-    component.save(false);
+    component.revoke();
+    component.revoke();
     expect(gateway.saveConsent).toHaveBeenCalledTimes(1);
     expect(component.errorKey()).toBe('profiling.errors.conflict');
     component.reload();
     expect(component.consentLoaded()).toBe(true);
+  });
+
+  it('rechaza con la solicitud mostrada sin autorizar ni consultar fuentes', () => {
+    gateway.loadConsent.mockReturnValue(of(null));
+    fixture.detectChanges();
+    const displayed = component.consentRequest();
+    const time: HTMLTimeElement = fixture.nativeElement.querySelector('time');
+    expect(time.dateTime).toBe(displayed?.vigenteHasta);
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+    gateway.saveConsent.mockReturnValue(of({ ...createConsent(), estado: 'rechazado' }));
+    const buttons: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    );
+    buttons.find((button) => button.textContent?.includes('profiling.reject'))!.click();
+    expect(gateway.saveConsent).toHaveBeenCalledWith({
+      autorizado: false,
+      version: 0,
+      solicitud: displayed,
+    });
+    expect(gateway.loadProfile).not.toHaveBeenCalled();
+    expect(component.authorized()).toBe(false);
+  });
+
+  it.each(['rechazado', 'vencido', 'revocado'] as const)(
+    'permite una nueva decision explicita tras estado %s',
+    (estado) => {
+      gateway.loadConsent.mockReturnValue(of({ ...createConsent(), estado }));
+      openProfile();
+      expect(gateway.loadProfile).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.textContent).toContain(`profiling.consentStatus.${estado}`);
+      expect(fixture.nativeElement.textContent).toContain('profiling.authorize');
+      expect(fixture.nativeElement.textContent).toContain('profiling.reject');
+    },
+  );
+
+  it('bloquea evidencia legada y conserva su version para una nueva decision', () => {
+    gateway.loadConsent.mockReturnValue(
+      of({
+        ...createConsent(),
+        actorId: undefined,
+        fuentes: undefined,
+        datos: undefined,
+        versionTerminos: undefined,
+      }),
+    );
+    openProfile();
+    expect(component.incompleteEvidence()).toBe(true);
+    expect(component.authorized()).toBe(false);
+    expect(gateway.loadProfile).not.toHaveBeenCalled();
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+    const solicitud = component.consentRequest();
+    gateway.saveConsent.mockReturnValue(of({ ...createConsent(), version: 2 }));
+    component.save(true);
+    expect(gateway.saveConsent).toHaveBeenCalledWith({ autorizado: true, version: 1, solicitud });
+  });
+
+  it('no cambia silenciosamente la fecha presentada al decidir mas tarde', () => {
+    gateway.loadConsent.mockReturnValue(of(null));
+    fixture.detectChanges();
+    const solicitud = component.consentRequest();
+    vi.advanceTimersByTime(60000);
+    gateway.saveConsent.mockReturnValue(of(createConsent()));
+    component.save(true);
+    expect(gateway.saveConsent).toHaveBeenCalledWith({ autorizado: true, version: 0, solicitud });
+  });
+
+  it('no envia una decision con la fecha mostrada vencida', () => {
+    gateway.loadConsent.mockReturnValue(of(null));
+    fixture.detectChanges();
+    vi.advanceTimersByTime(30 * 86400000 + 1);
+    component.save(true);
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+    expect(component.errorKey()).toBe('profiling.errors.decisionExpired');
   });
 
   it.each([
