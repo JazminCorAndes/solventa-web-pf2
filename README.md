@@ -20,6 +20,12 @@ Consulta [la guía de CI](docs/ci.md) para ver alcance, nombres y lectura de res
 
 ## Tecnologías
 
+Las pruebas adicionales están en [`tests/cypress`](tests/cypress/README.md):
+`pnpm test:cypress:ui` valida la interfaz con HTTP controlado y
+`pnpm test:cypress:integrated` recorre servicios/persistencia reales en un backend
+local desechable. Sus resultados no sustituyen cobertura unitaria ni mediciones
+de carga de JMeter.
+
 - Angular 22
 - Angular Material 22
 - TypeScript 6 en modo estricto

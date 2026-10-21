@@ -1,0 +1,90 @@
+name: Cypress · Integración real
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cypress-integrated-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrated:
+    name: Cypress con servicios y persistencia locales
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BACKEND_REVISION: fdeccf51380cb0bf32f53f673922c2254a314eb3
+      CYPRESS_DISPOSABLE_BACKEND: '1'
+      CYPRESS_BACKEND_URL: http://127.0.0.1:5000
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Exigir acceso SSH autorizado al backend
+        env:
+          BACKEND_SSH_KEY: ${{ secrets.SOLVENTA_BACKEND_SSH_KEY }}
+        run: |
+          if [ -z "$BACKEND_SSH_KEY" ]; then
+            echo "::error::Falta SOLVENTA_BACKEND_SSH_KEY para leer el backend por SSH. No se omite E2E."
+            exit 1
+          fi
+      - name: Obtener backend reproducible por SSH
+        uses: actions/checkout@v6
+        with:
+          repository: Migue765/backend-solventa
+          ref: ${{ env.BACKEND_REVISION }}
+          path: .angular/cypress-backend
+          ssh-key: ${{ secrets.SOLVENTA_BACKEND_SSH_KEY }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pnpm install --frozen-lockfile
+      - name: Instalar servicios reales
+        working-directory: .angular/cypress-backend
+        run: |
+          python -m pip install -r requirements-dev.txt
+          for project in services/*/pyproject.toml; do
+            python -m pip install -e "$(dirname "$project")"
+          done
+      - name: Arrancar entorno desechable y recorrer la aplicación
+        run: |
+          mkdir -p .angular/cypress
+          (cd .angular/cypress-backend && exec python -m tests.jmeter.local_stack --web-port 5000 --mobile-port 5001) > .angular/cypress/backend.log 2>&1 &
+          backend_pid=$!
+          trap 'kill "$backend_pid" 2>/dev/null || true; wait "$backend_pid" 2>/dev/null || true' EXIT
+          python - <<'PY'
+          import time
+          import urllib.error
+          import urllib.request
+
+          deadline = time.monotonic() + 60
+          while time.monotonic() < deadline:
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:5000/ping", timeout=1) as response:
+                      if response.status == 200:
+                          break
+              except (OSError, urllib.error.URLError):
+                  time.sleep(0.25)
+          else:
+              raise SystemExit("El BFF local no arranco en 60s; no se omiten pruebas.")
+          PY
+          pnpm test:cypress:integrated
+      - name: Conservar solo informes E2E
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cypress-integrated-results
+          path: reports/cypress/integrated/*.xml
+          if-no-files-found: warn
+          retention-days: 14
