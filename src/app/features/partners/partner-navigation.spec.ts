@@ -91,6 +91,11 @@ describe('Partner navigation through production routes', () => {
     expect(TestBed.inject(Router).url).toBe('/app/socios');
     expect(harness.routeNativeElement?.textContent).toContain('BANCO-001');
     expect(harness.routeNativeElement?.textContent).toContain('mortgage-life');
+    expect(
+      harness.routeNativeElement?.querySelector(
+        'a[href="/app/socios/cotizaciones/solicitar?socio=BANCO-001"]',
+      ),
+    ).not.toBeNull();
     expect(harness.routeNativeElement?.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
     expect(JSON.stringify(storage.stored)).not.toContain('secret');
     expect(JSON.stringify(storage.stored)).not.toContain('partner-access');
@@ -142,29 +147,9 @@ describe('Partner navigation through production routes', () => {
   });
 
   it('denies a protected operation when the authenticated context lacks its scope', async () => {
-    const partnerRoute = routes
-      .find((route) => route.path === 'app')
-      ?.children?.find((route) => route.path === 'socios');
     const router = TestBed.inject(Router);
-    router.resetConfig(
-      routes.map((route) =>
-        route.path === 'app'
-          ? {
-              ...route,
-              children: route.children?.map((child) =>
-                child === partnerRoute
-                  ? {
-                      ...child,
-                      data: { partnerScope: 'perfilamientos:crear' },
-                    }
-                  : child,
-              ),
-            }
-          : route,
-      ),
-    );
     await login();
-    const navigation = harness.navigateByUrl('/app/socios');
+    const navigation = harness.navigateByUrl('/app/socios/cotizaciones/solicitar?socio=BANCO-001');
     const request = await vi.waitFor(() => http.expectOne(`${API}/v1/socios/actual`));
     request.flush({ ...CONTEXT, alcances: [] });
     await navigation;
