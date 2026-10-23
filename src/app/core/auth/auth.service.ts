@@ -1,15 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import {
-  catchError,
-  finalize,
-  map,
-  Observable,
-  of,
-  shareReplay,
-  tap,
-  throwError,
-} from 'rxjs';
-import { InvalidRefreshTokenError } from './auth.errors';
+import { catchError, finalize, map, Observable, of, shareReplay, tap, throwError } from 'rxjs';
+import { InvalidRefreshTokenError, SessionChangedError } from './auth.errors';
 import { AUTH_GATEWAY } from './auth.gateway';
 import {
   AuthGrant,
@@ -34,6 +25,7 @@ export class AuthService {
   private refreshToken: string | null = null;
   private refreshExpiresAt = 0;
   private refreshInFlight: Observable<string> | null = null;
+  private sessionGeneration = 0;
 
   private readonly sessionState = signal<AuthSession | null>(this.restoreSession());
 
@@ -45,8 +37,15 @@ export class AuthService {
   }
 
   login(credentials: LoginCredentials): Observable<AuthSession> {
+    const generation = ++this.sessionGeneration;
+    this.refreshInFlight = null;
     return this.gateway.login(credentials).pipe(
-      tap((grant) => this.applyGrant(grant)),
+      tap((grant) => {
+        if (generation !== this.sessionGeneration) {
+          throw new SessionChangedError();
+        }
+        this.applyGrant(grant);
+      }),
       map((grant) => grant.session),
     );
   }
@@ -90,16 +89,24 @@ export class AuthService {
       return throwError(() => new InvalidRefreshTokenError());
     }
 
+    const generation = this.sessionGeneration;
     const request$ = this.gateway.refresh(this.refreshToken).pipe(
-      tap((grant) => this.applyGrant(grant)),
+      tap((grant) => {
+        if (generation !== this.sessionGeneration) {
+          throw new SessionChangedError();
+        }
+        this.applyGrant(grant);
+      }),
       map((grant) => grant.tokens.accessToken),
       catchError((error: unknown) => {
-        if (error instanceof InvalidRefreshTokenError) {
+        if (error instanceof InvalidRefreshTokenError && generation === this.sessionGeneration) {
           this.clearLocalSession();
         }
         return throwError(() => error);
       }),
-      finalize(() => (this.refreshInFlight = null)),
+      finalize(() => {
+        if (this.refreshInFlight === request$) this.refreshInFlight = null;
+      }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.refreshInFlight = request$;
@@ -107,9 +114,11 @@ export class AuthService {
   }
 
   logout(): Observable<void> {
-    return this.gateway
-      .logout(this.refreshToken)
-      .pipe(finalize(() => this.clearLocalSession()));
+    return this.gateway.logout(this.refreshToken).pipe(finalize(() => this.clearLocalSession()));
+  }
+
+  invalidateSession(): void {
+    this.clearLocalSession();
   }
 
   hasActiveSession(): boolean {
@@ -155,6 +164,8 @@ export class AuthService {
   }
 
   private clearLocalSession(): void {
+    this.sessionGeneration++;
+    this.refreshInFlight = null;
     this.accessToken = null;
     this.accessExpiresAt = 0;
     this.refreshToken = null;

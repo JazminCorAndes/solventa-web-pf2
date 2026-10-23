@@ -30,6 +30,20 @@ describe('BrowserAuthStorage', () => {
     expect(JSON.stringify(Object.entries(sessionStorage))).not.toContain('access');
   });
 
+  it('restores partner identity but rejects missing membership', () => {
+    const user = { ...TEST_USER, role: 'partner' as const, partnerIds: ['BANCO-001'] };
+    storage.write({ ...STORED, user });
+    expect(storage.read()?.user).toEqual(user);
+    sessionStorage.setItem(
+      'solventa.auth.refresh',
+      JSON.stringify({
+        ...STORED,
+        user: { ...user, partnerIds: [] },
+      }),
+    );
+    expect(storage.read()).toBeNull();
+  });
+
   it('discards malformed data', () => {
     sessionStorage.setItem('solventa.auth.refresh', '{"refreshToken":1}');
 

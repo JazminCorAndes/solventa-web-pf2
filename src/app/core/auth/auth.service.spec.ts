@@ -1,6 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of, Subject, throwError } from 'rxjs';
-import { AuthenticationUnavailableError, InvalidRefreshTokenError } from './auth.errors';
+import {
+  AuthenticationUnavailableError,
+  InvalidRefreshTokenError,
+  SessionChangedError,
+} from './auth.errors';
 import { AUTH_GATEWAY } from './auth.gateway';
 import { AuthGrant } from './auth.models';
 import { AuthService } from './auth.service';
@@ -202,5 +206,38 @@ describe('AuthService', () => {
 
     expect(user.email).toBe('ana@solventa.co');
     expect(service.session()).toBeNull();
+  });
+
+  it('does not restore a session when an earlier refresh finishes after logout', async () => {
+    const service = createService();
+    await firstValueFrom(service.login(CREDENTIALS));
+    const pending = new Subject<AuthGrant>();
+    gateway.refreshResult = () => pending;
+    const renewal = firstValueFrom(service.renewAccessToken()).catch((error: unknown) => error);
+    await firstValueFrom(service.logout());
+    pending.next(grantFor('late-access', 'late-refresh'));
+    pending.complete();
+    expect(await renewal).toBeInstanceOf(SessionChangedError);
+    expect(service.session()).toBeNull();
+    expect(storage.stored).toBeNull();
+  });
+
+  it('does not replace a new account with an older in-flight refresh', async () => {
+    const service = createService();
+    await firstValueFrom(service.login(CREDENTIALS));
+    const pending = new Subject<AuthGrant>();
+    gateway.refreshResult = () => pending;
+    const renewal = firstValueFrom(service.renewAccessToken()).catch((error: unknown) => error);
+    gateway.loginResult = () => {
+      const next = grantFor('new-access', 'new-refresh');
+      next.session.user = { ...TEST_USER, id: 'new-account' };
+      return of(next);
+    };
+    await firstValueFrom(service.login(CREDENTIALS));
+    pending.next(grantFor('late-access', 'late-refresh'));
+    pending.complete();
+    expect(await renewal).toBeInstanceOf(SessionChangedError);
+    expect(service.user()?.id).toBe('new-account');
+    await expect(firstValueFrom(service.getAccessToken())).resolves.toBe('new-access');
   });
 });

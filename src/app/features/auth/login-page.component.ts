@@ -16,6 +16,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { finalize, take } from 'rxjs';
 import {
+  AccessDeniedError,
   AuthenticationUnavailableError,
   InvalidCredentialsError,
   TooManyAttemptsError,
@@ -80,7 +81,7 @@ export class LoginPageComponent {
       .subscribe({
         next: () => {
           const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-          void this.router.navigateByUrl(safePostLoginUrl(returnUrl));
+          void this.router.navigateByUrl(safePostLoginUrl(returnUrl, this.auth.user()));
         },
         error: (error: unknown) => {
           this.errorKey.set(
@@ -88,9 +89,11 @@ export class LoginPageComponent {
               ? 'auth.errors.invalidCredentials'
               : error instanceof TooManyAttemptsError
                 ? 'auth.errors.tooManyAttempts'
-                : error instanceof AuthenticationUnavailableError
-                  ? 'auth.errors.unavailable'
-                  : 'auth.errors.unexpected',
+                : error instanceof AccessDeniedError
+                  ? 'partners.errors.forbidden'
+                  : error instanceof AuthenticationUnavailableError
+                    ? 'auth.errors.unavailable'
+                    : 'auth.errors.unexpected',
           );
           queueMicrotask(() => this.alert()?.nativeElement.focus());
         },
