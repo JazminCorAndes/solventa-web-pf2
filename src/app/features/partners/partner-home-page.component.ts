@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { RouterLink } from '@angular/router';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
 
 @Component({
   selector: 'app-partner-home-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoPipe],
+  imports: [RouterLink, TranslocoPipe],
   template: `
     @if (partners.context(); as context) {
       <h1>{{ 'partners.title' | transloco }}</h1>
@@ -21,6 +22,13 @@ import { PartnerContextService } from '../../core/partners/partner-context.servi
               <li>{{ 'partners.noProducts' | transloco }}</li>
             }
           </ul>
+          @if (partner.productos.length && context.alcances.includes('perfilamientos:crear')) {
+            <a
+              routerLink="/app/socios/cotizaciones/solicitar"
+              [queryParams]="{ socio: partner.socioId }"
+              >{{ 'quoteRequest.submit' | transloco }}</a
+            >
+          }
         </section>
       }
       <p>{{ 'partners.scopeNotice' | transloco }}</p>
