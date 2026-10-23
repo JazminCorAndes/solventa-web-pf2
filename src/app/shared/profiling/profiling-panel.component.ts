@@ -128,6 +128,12 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
     this.confirmingRevocation.set(false);
   }
 
+  sourceLabelKey(name: string): string {
+    return name === 'open_finance' || name === 'open_data'
+      ? `profiling.source.${name}`
+      : 'profiling.additionalSource';
+  }
+
   confirmRevocation(): void {
     const consent = this.consent();
     if (

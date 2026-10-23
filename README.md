@@ -344,6 +344,15 @@ CD. Las pruebas locales no acreditan publicación ni persistencia productiva: la
 requiere recorrido de navegador en Pages contra AWS con identidades sintéticas autorizadas,
 verificación de asociación persistida y cierre de sesiones de prueba.
 
+Compatibilidad del despliegue con SOL201: el perfil puede reutilizar evidencia en caché
+vigente, sin relajar consentimiento, versión, fechas ni indicadores. `fallbackUsed: true`
+solo se acepta con `estadoFuentes` completo, único y coincidente con `fuentes`, con
+al menos un estado `cache` y ninguno `fallida`. Los perfiles anteriores sin esos
+metadatos siguen permitidos únicamente con `fallbackUsed: false`. Se requieren
+`open_finance` y `open_data`; los adaptadores adicionales deben aportar evidencia
+completa y vigente, sin duplicados, y se muestran por su nombre como adicionales,
+nunca como proveedores conocidos. Las fuentes continúan siendo simuladas.
+
 ## Autenticación con tokens
 
 1. `POST /v1/sesiones` devuelve un **access token** (JWT, de corta duración; el vencimiento lo
