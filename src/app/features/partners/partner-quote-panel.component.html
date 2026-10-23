@@ -1,0 +1,112 @@
+<section aria-labelledby="partner-customer-title">
+  <h2 id="partner-customer-title">{{ 'partnerQuote.title' | transloco }}</h2>
+  <p>{{ 'partnerQuote.instructions' | transloco }}</p>
+  <div class="fields" [formGroup]="form">
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'partnerQuote.partner' | transloco }}</mat-label>
+      <mat-select formControlName="socioId">
+        @for (partner of context()?.socios ?? []; track partner.socioId) {
+          <mat-option [value]="partner.socioId">{{ partner.socioId }}</mat-option>
+        }
+      </mat-select>
+      <mat-error>{{ 'partnerQuote.required' | transloco }}</mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'partnerQuote.customerId' | transloco }}</mat-label>
+      <input matInput formControlName="clienteId" autocomplete="off" />
+      <mat-error>{{ 'partnerQuote.uuid' | transloco }}</mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'quoteRequest.documentType' | transloco }}</mat-label>
+      <mat-select formControlName="tipoDocumento">
+        @for (type of ['cc', 'ce', 'passport', 'ppt']; track type) {
+          <mat-option [value]="type">{{
+            'quoteRequest.documentTypes.' + type | transloco
+          }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'partnerQuote.document' | transloco }}</mat-label>
+      <input matInput formControlName="numeroDocumento" autocomplete="off" maxlength="15" />
+      <mat-error>{{ 'partnerQuote.documentInvalid' | transloco }}</mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'quoteRequest.phone' | transloco }}</mat-label>
+      <input
+        matInput
+        formControlName="telefono"
+        autocomplete="off"
+        type="tel"
+        placeholder="+573001234567"
+      />
+      <mat-error>{{ 'partnerQuote.phoneInvalid' | transloco }}</mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'partnerQuote.consentId' | transloco }}</mat-label>
+      <input matInput formControlName="consentimientoId" autocomplete="off" />
+      <mat-error>{{ 'partnerQuote.uuid' | transloco }}</mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'partnerQuote.consentVersion' | transloco }}</mat-label>
+      <input matInput formControlName="consentimientoVersion" type="number" min="1" step="1" />
+      <mat-error>{{ 'partnerQuote.versionInvalid' | transloco }}</mat-error>
+    </mat-form-field>
+  </div>
+  @if (operationId(); as id) {
+    <p>
+      {{ 'partnerQuote.operation' | transloco }}: <code>{{ id }}</code>
+    </p>
+    <p>{{ 'partnerQuote.recoveryNote' | transloco }}</p>
+  }
+  @if (errorKey(); as key) {
+    <p class="error" role="alert">{{ key | transloco }}</p>
+    @if (operationId()) {
+      <button
+        mat-stroked-button
+        type="button"
+        [disabled]="loading() || retrySeconds() > 0"
+        (click)="retry()"
+      >
+        {{ 'common.retry' | transloco }}
+      </button>
+      <button
+        mat-button
+        type="button"
+        [disabled]="loading() || retrySeconds() > 0"
+        (click)="recover()"
+      >
+        {{ 'partnerQuote.recover' | transloco }}
+      </button>
+    }
+  }
+  @if (retrySeconds()) {
+    <p role="status">{{ 'partnerQuote.retryAfter' | transloco: { seconds: retrySeconds() } }}</p>
+  }
+  @if (result(); as result) {
+    <h3 role="status">{{ 'partnerQuote.completed' | transloco }}</h3>
+    <dl>
+      <dt>{{ 'partnerQuote.partner' | transloco }}</dt>
+      <dd>{{ result.socioId }}</dd>
+      <dt>{{ 'partnerQuote.customerId' | transloco }}</dt>
+      <dd>{{ result.clienteId }}</dd>
+      <dt>{{ 'quoteRequest.selectedInsurance' | transloco }}</dt>
+      <dd>{{ result.productoId }}</dd>
+      <dt>{{ 'profiling.request' | transloco }}</dt>
+      <dd>{{ result.solicitudId }}</dd>
+      <dt>{{ 'partnerQuote.quoteId' | transloco }}</dt>
+      <dd>{{ result.cotizacionId }}</dd>
+      <dt>{{ 'profiling.profile' | transloco }}</dt>
+      <dd>{{ result.perfilamientoReferencia }}</dd>
+      <dt>{{ 'partnerQuote.receivedAt' | transloco }}</dt>
+      <dd>{{ result.recibidaEn | date: 'medium' }}</dd>
+    </dl>
+    <p>{{ 'partnerQuote.customerContinues' | transloco }}</p>
+  }
+  @if (operationId() && !loading()) {
+    <p>{{ 'partnerQuote.newWarning' | transloco }}</p>
+    <button mat-button type="button" [disabled]="retrySeconds() > 0" (click)="newOperation()">
+      {{ 'partnerQuote.newOperation' | transloco }}
+    </button>
+  }
+</section>

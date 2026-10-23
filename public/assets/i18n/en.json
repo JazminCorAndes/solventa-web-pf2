@@ -1,4 +1,43 @@
 {
+  "partnerQuote": {
+    "title": "Customer and quote authorization",
+    "instructions": "Select your organization and enter the details provided by the registered customer. The server validates their current consent before profiling. You cannot consent on their behalf.",
+    "partner": "Partner organization",
+    "customerId": "Customer identifier",
+    "document": "Document number",
+    "consentId": "Consent identifier",
+    "consentVersion": "Consent version",
+    "required": "Select an authorized organization.",
+    "uuid": "Enter a valid UUID.",
+    "documentInvalid": "Enter 6 to 15 alphanumeric characters. The server verifies the document type and its owner.",
+    "phoneInvalid": "Enter +57 followed by 10 digits.",
+    "versionInvalid": "Enter an integer version of at least 1.",
+    "operation": "Operation identifier",
+    "recoveryNote": "This page address retains only the operation and organization. Reloading retrieves its result; if a retry is needed, enter exactly the same details. Documents and phone numbers are not stored in the browser.",
+    "recover": "Retrieve result",
+    "retryAfter": "Wait {{ seconds }} seconds before retrying.",
+    "completed": "Quote recorded by the server",
+    "quoteId": "Quote identifier",
+    "receivedAt": "Received",
+    "customerContinues": "The customer can continue this request from their quotes in their own session. This operation does not accept offers or purchase insurance on their behalf.",
+    "newWarning": "A new operation is not a retry: it may create another quote. Retrieve the current operation's result first.",
+    "newOperation": "Prepare another operation",
+    "shareConsent": "Details for quoting through a partner",
+    "shareInstructions": "You may provide these identifiers to your chosen partner. Never share your password or session. The partner cannot authorize or revoke consent for you.",
+    "errors": {
+      "consent": "The customer's consent is not current or does not match this version. The customer must review it in their own session.",
+      "identity": "These details do not match the registered customer. Check them with their owner.",
+      "processing": "The operation is still running. Retrieve its result or retry with the same identifier.",
+      "retryable": "The operation has no confirmed result. Send exactly the same details with the same identifier.",
+      "conflict": "This identifier is associated with different details or there is a conflict. Retrieve the result; do not change the details of a retry.",
+      "invalid": "Check the organization, product, customer and consent details. No quote has been confirmed.",
+      "forbidden": "Your session cannot access this organization, product or operation.",
+      "notFound": "The operation or requested record was not found. No quote has been confirmed.",
+      "quota": "The organization has reached its request limit or has another active operation. Wait and retry the same operation.",
+      "response": "The response does not match the requested operation. It is not shown as successful; retrieve its result.",
+      "unavailable": "The operation could not be confirmed. Retrieve its result or retry with the same identifier."
+    }
+  },
   "auth": {
     "title": "Sign in",
     "email": {

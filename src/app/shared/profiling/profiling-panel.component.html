@@ -38,6 +38,20 @@
           <p>{{ 'profiling.noConsent' | transloco }}</p>
         }
         @if (consent()?.estado === 'autorizado') {
+          @if (authorized()) {
+            <details>
+              <summary>{{ 'partnerQuote.shareConsent' | transloco }}</summary>
+              <p>{{ 'partnerQuote.shareInstructions' | transloco }}</p>
+              <dl>
+                <dt>{{ 'partnerQuote.customerId' | transloco }}</dt>
+                <dd>{{ consent()?.clienteId }}</dd>
+                <dt>{{ 'partnerQuote.consentId' | transloco }}</dt>
+                <dd>{{ consent()?.consentimientoId }}</dd>
+                <dt>{{ 'partnerQuote.consentVersion' | transloco }}</dt>
+                <dd>{{ consent()?.version }}</dd>
+              </dl>
+            </details>
+          }
           <button
             #revokeButton
             mat-button
