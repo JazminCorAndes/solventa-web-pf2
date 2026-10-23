@@ -68,6 +68,22 @@
       "unexpected": "An unexpected error occurred. Please try again."
     }
   },
+  "partners": {
+    "title": "Partner portal",
+    "subtitle": "Organizations authorized for your authenticated session.",
+    "products": "Authorized products",
+    "noProducts": "No products are enabled for this organization.",
+    "scopeNotice": "Every operation requires server authorization for the selected organization and product.",
+    "accessError": "Access unavailable",
+    "retry": "Verify access again",
+    "errors": {
+      "forbidden": "Your account does not have the required scope for this section.",
+      "contract": "The service response is incompatible. Access was not enabled.",
+      "expired": "Your session expired or is no longer valid. Verify access again.",
+      "quota": "The request limit has been reached. Wait before trying again.",
+      "unavailable": "Access could not be verified. Try again when the service is available."
+    }
+  },
   "navigation": {
     "skipToContent": "Skip to main content",
     "primary": "Primary navigation",

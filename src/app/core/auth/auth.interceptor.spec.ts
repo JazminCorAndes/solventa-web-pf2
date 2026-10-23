@@ -136,6 +136,8 @@ describe('authInterceptor', () => {
 
     await expect(result).resolves.toMatchObject({ status: 401 });
     expect(gateway.refreshCalls).toEqual(['refresh-1']);
+    expect(auth.session()).toBeNull();
+    expect(navigate).toHaveBeenCalledTimes(1);
   });
 
   it('logs out and redirects to the login when the renewal fails', async () => {

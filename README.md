@@ -149,6 +149,43 @@ El build de producción (`pnpm build`) y `pnpm start:aws` usan el API Gateway di
 (`src/environments/environment.ts`, `apiBaseUrl: https://65qgzhody9.execute-api.us-east-2.amazonaws.com`).
 No hay proxy ni cookies: la autenticación usa tokens JWT.
 
+### Portal de socios (SOL-194)
+
+El mismo inicio de sesión admite clientes y cuentas con rol backend `socio`; un asesor
+no se convierte en socio. Las cuentas de socio se provisionan en identidad por el operador,
+nunca mediante registro público ni credenciales incluidas en Angular. Después del login,
+el socio entra en `/app/socios` y el cliente conserva su tablero y cotizaciones.
+
+El portal requiere el contrato compatible del BFF:
+
+- `POST /v1/sesiones` y `/renovar`: respuesta Bearer existente con
+  `usuario.rol: "socio"` y `usuario.socios: ["identificador-organizacion"]`.
+- `GET /v1/socios/actual`, con Bearer y `API-Version: 1`: respuesta
+  `{ apiVersion: "1", usuario, socios: [{ socioId, productos: ["id-producto"] }], alcances: ["perfilamientos:crear"] }`.
+  El servidor determina las organizaciones desde la identidad autenticada; el frontend
+  no envía un tenant arbitrario para consultar este contexto.
+- Las operaciones de SOL-195 se integran bajo `/app/socios/*`, con `partnerGuard` y
+  `data.partnerScope` para verificar el alcance antes de activar su pantalla.
+
+El contexto se consulta nuevamente al entrar al portal; no se autoriza desde `sessionStorage`.
+La UI rechaza versiones incompatibles, identidad diferente y organizaciones fuera de la
+sesión, oculta las rutas de cliente al socio y viceversa, y descarta los datos al salir,
+cambiar de cuenta o vencer el access token. La recuperación de acceso renueva el token y
+revalida el contexto. Credenciales inválidas, 403, 429 y servicio no disponible se informan
+sin habilitar acceso ni recurrir a mocks. El servidor sigue siendo responsable de
+autorizar cada operación, organización y producto: una guarda de Angular no reemplaza esa comprobación.
+
+**Publicación coordinada:** desplegar primero el BFF/identidad compatibles y validar el
+login real, `/actual`, rechazo de otra organización y expiración. El PR de SOL-194 va a
+`develop`; la publicación del sitio principal requiere integrar la entrega autorizada en
+`master`. `.github/workflows/ci.yml` (`CI · Validación`) compila `build:pages` y conserva el
+artefacto `github-pages` únicamente para un push a `master`. `.github/workflows/pages.yml`
+(`CD · Solventa Web`) usa el `head_sha` de ese CI exitoso, comprueba que aún sea el SHA de
+`master` mediante `pages-source.cjs`, descarga el artefacto del mismo `run_id` y lo publica
+sin recompilar. No existe `workflow_dispatch` ni se debe cambiar la configuración de Pages.
+El operador coordina el merge de entrega y comprueba los dos runs y la URL publicada;
+una prueba HTTP simulada del frontend no acredita el despliegue backend ni el flujo real.
+
 ### Tablero integrado
 
 El inicio consume `GET /v1/clientes/me/dashboard` del BFF principal con el interceptor

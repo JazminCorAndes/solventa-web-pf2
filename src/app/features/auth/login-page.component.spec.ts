@@ -3,7 +3,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { Observable, Subject, throwError } from 'rxjs';
-import { InvalidCredentialsError, TooManyAttemptsError } from '../../core/auth/auth.errors';
+import {
+  AccessDeniedError,
+  InvalidCredentialsError,
+  TooManyAttemptsError,
+} from '../../core/auth/auth.errors';
 import { AUTH_GATEWAY } from '../../core/auth/auth.gateway';
 import { AuthGrant } from '../../core/auth/auth.models';
 import { AUTH_STORAGE } from '../../core/auth/auth-storage.service';
@@ -94,6 +98,15 @@ describe('LoginPageComponent', () => {
     component.submit();
 
     expect(component.errorKey()).toBe('auth.errors.invalidCredentials');
+  });
+
+  it('shows access denied without navigating', () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    gateway.loginResult = () => throwError(() => new AccessDeniedError());
+    component.form.setValue({ email: 'socio@example.com', password: 'secret' });
+    component.submit();
+    expect(component.errorKey()).toBe('partners.errors.forbidden');
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('shows a rate limit error', () => {
