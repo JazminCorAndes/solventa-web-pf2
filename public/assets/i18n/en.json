@@ -78,6 +78,7 @@
     "retry": "Verify access again",
     "errors": {
       "forbidden": "Your account does not have the required scope for this section.",
+      "logoutUnavailable": "The local session was cleared, but the server could not confirm sign-out.",
       "contract": "The service response is incompatible. Access was not enabled.",
       "expired": "Your session expired or is no longer valid. Verify access again.",
       "quota": "The request limit has been reached. Wait before trying again.",

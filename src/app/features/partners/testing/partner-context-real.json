@@ -1,0 +1,26 @@
+{
+  "alcances": ["perfilamientos:crear"],
+  "apiVersion": "1",
+  "socios": [
+    {
+      "productos": [
+        "automotive",
+        "travel",
+        "life",
+        "device-protection",
+        "parametric",
+        "parametric-weather",
+        "payment-protection",
+        "mortgage-life"
+      ],
+      "socioId": "BANK-E2E"
+    }
+  ],
+  "usuario": {
+    "correo": "socio@integracion.co",
+    "id": "731a302c-0fb5-4417-b154-903095c3b73e",
+    "nombre": "Socio integrado",
+    "rol": "socio",
+    "socios": ["BANK-E2E"]
+  }
+}

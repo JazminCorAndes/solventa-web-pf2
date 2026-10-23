@@ -78,6 +78,7 @@
     "retry": "Volver a verificar el acceso",
     "errors": {
       "forbidden": "Tu cuenta no tiene el alcance necesario para acceder a esta sección.",
+      "logoutUnavailable": "Se cerró la sesión local, pero no fue posible confirmar el cierre en el servidor.",
       "contract": "La respuesta del servicio no es compatible. No se habilitó el acceso.",
       "expired": "La sesión venció o dejó de ser válida. Verifica el acceso nuevamente.",
       "quota": "Se alcanzó el límite de solicitudes. Espera antes de volver a intentarlo.",

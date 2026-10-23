@@ -186,6 +186,12 @@ sin recompilar. No existe `workflow_dispatch` ni se debe cambiar la configuraci�
 El operador coordina el merge de entrega y comprueba los dos runs y la URL publicada;
 una prueba HTTP simulada del frontend no acredita el despliegue backend ni el flujo real.
 
+La prueba de navegación consume `src/app/features/partners/testing/partner-context-real.json`,
+capturado por `tests/test_partner_flow.py` del backend en una ejecución HTTP local con
+identidad, BFF, cotización, perfilamiento y bases migradas. Contiene únicamente la cuenta
+sintética `BANK-E2E`, sin tokens ni credenciales, y se importa solo en pruebas. Coteja el
+consumidor con una respuesta real del contrato; no sustituye la verificación en AWS/Pages.
+
 ### Tablero integrado
 
 El inicio consume `GET /v1/clientes/me/dashboard` del BFF principal con el interceptor

@@ -15,21 +15,11 @@ import { AuthService } from '../../core/auth/auth.service';
 import { TestAuthStorage } from '../../core/auth/auth.testing';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
 import { HttpAuthGateway } from '../../data-access/auth/http-auth.gateway';
+import realContext from './testing/partner-context-real.json';
 
 const API = environment.apiBaseUrl;
-const USER = {
-  id: 'partner-1',
-  nombre: 'Socio Uno',
-  correo: 'socio@example.com',
-  rol: 'socio',
-  socios: ['BANCO-001'],
-};
-const CONTEXT = {
-  apiVersion: '1',
-  usuario: USER,
-  socios: [{ socioId: 'BANCO-001', productos: ['mortgage-life'] }],
-  alcances: ['perfilamientos:crear'],
-};
+const CONTEXT = realContext;
+const USER = CONTEXT.usuario;
 
 describe('Partner navigation through production routes', () => {
   let http: HttpTestingController;
@@ -89,11 +79,11 @@ describe('Partner navigation through production routes', () => {
     await navigation;
     harness.detectChanges();
     expect(TestBed.inject(Router).url).toBe('/app/socios');
-    expect(harness.routeNativeElement?.textContent).toContain('BANCO-001');
+    expect(harness.routeNativeElement?.textContent).toContain('BANK-E2E');
     expect(harness.routeNativeElement?.textContent).toContain('mortgage-life');
     expect(
       harness.routeNativeElement?.querySelector(
-        'a[href="/app/socios/cotizaciones/solicitar?socio=BANCO-001"]',
+        'a[href="/app/socios/cotizaciones/solicitar?socio=BANK-E2E"]',
       ),
     ).not.toBeNull();
     expect(harness.routeNativeElement?.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
@@ -110,7 +100,7 @@ describe('Partner navigation through production routes', () => {
       request.flush({}, { status, statusText: 'Rejected' });
       await navigation;
       expect(TestBed.inject(Router).url).toContain('/acceso-no-disponible');
-      expect(harness.routeNativeElement?.textContent).not.toContain('BANCO-001');
+      expect(harness.routeNativeElement?.textContent).not.toContain('BANK-E2E');
       expect(harness.routeNativeElement?.querySelector('[role="alert"]')).not.toBeNull();
     },
   );
@@ -146,10 +136,33 @@ describe('Partner navigation through production routes', () => {
     http.expectNone(`${API}/v1/clientes/me/dashboard`);
   });
 
+  it('uses the renewed role rather than stored identity when authorizing a child route', async () => {
+    storage.stored = {
+      user: { id: USER.id, name: USER.nombre, email: USER.correo, role: 'client' },
+      refreshToken: 'stored-refresh',
+      refreshExpiresAt: Date.now() + 60_000,
+    };
+    const navigation = harness.navigateByUrl('/app/dashboard');
+    const renewal = await vi.waitFor(() => http.expectOne(`${API}/v1/sesiones/renovar`));
+    renewal.flush({
+      usuario: USER,
+      tokenType: 'Bearer',
+      accessToken: 'renewed-access',
+      refreshToken: 'renewed-refresh',
+      expiraEn: new Date(Date.now() + 3_600_000).toISOString(),
+      refreshExpiraEn: new Date(Date.now() + 86_400_000).toISOString(),
+    });
+    const request = await vi.waitFor(() => http.expectOne(`${API}/v1/socios/actual`));
+    request.flush(CONTEXT);
+    await navigation;
+    expect(TestBed.inject(Router).url).toBe('/app/socios');
+    http.expectNone(`${API}/v1/clientes/me/dashboard`);
+  });
+
   it('denies a protected operation when the authenticated context lacks its scope', async () => {
     const router = TestBed.inject(Router);
     await login();
-    const navigation = harness.navigateByUrl('/app/socios/cotizaciones/solicitar?socio=BANCO-001');
+    const navigation = harness.navigateByUrl('/app/socios/cotizaciones/solicitar?socio=BANK-E2E');
     const request = await vi.waitFor(() => http.expectOne(`${API}/v1/socios/actual`));
     request.flush({ ...CONTEXT, alcances: [] });
     await navigation;
