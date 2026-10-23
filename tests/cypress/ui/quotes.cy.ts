@@ -36,11 +36,92 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
   it('no cotiza sin consentimiento y bloquea nuevamente al revocarlo', () => {
     cy.visit('/app/cotizaciones/solicitar?producto=automotive');
     cy.get('button[type=submit]').should('be.disabled');
-    cy.contains('button', 'Autorizar perfilamiento').click();
-    cy.wait('@consent').its('request.body').should('deep.eq', { autorizado: true, version: 0 });
+    cy.get('app-profiling-panel time')
+      .invoke('attr', 'datetime')
+      .then((vigenteHasta) => {
+        cy.contains('button', 'Autorizar perfilamiento').click();
+        cy.wait('@consent')
+          .its('request.body')
+          .should('deep.eq', {
+            autorizado: true,
+            version: 0,
+            solicitud: {
+              finalidad: 'cotizacion',
+              alcances: ['open_finance', 'open_data'],
+              fuentes: ['open_finance', 'open_data'],
+              datos: ['indicador_riesgo'],
+              versionTerminos: '1.0',
+              vigenteHasta,
+            },
+          });
+      });
+    cy.get('button[type=submit]').should('be.enabled');
+    cy.reload();
     cy.get('button[type=submit]').should('be.enabled');
     cy.contains('button', 'Revocar autorización').click();
+    cy.contains('[role=group]', '¿Confirmas la revocación?').should('be.visible');
+    cy.get('@consent.all').should('have.length', 1);
+    cy.contains('button', 'Conservar autorización').click();
+    cy.contains('[role=group]', '¿Confirmas la revocación?').should('not.exist');
+    cy.get('button[type=submit]').should('be.enabled');
+    cy.contains('button', 'Revocar autorización').click();
+    cy.contains('button', 'Confirmar revocación').click();
     cy.wait('@consent').its('request.body').should('deep.eq', { autorizado: false, version: 1 });
+    cy.contains('app-profiling-panel [role=status]', 'Autorización revocada').should('be.visible');
+    cy.reload();
+    cy.get('button[type=submit]').should('be.disabled');
+    cy.get('@quote.all').should('have.length', 0);
+  });
+
+  it('registra el rechazo informado y permite autorizar con la siguiente version', () => {
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.contains('button', 'Rechazar perfilamiento').click();
+    cy.wait('@consent').then(({ request, response }) => {
+      expect(request.body).to.include({ autorizado: false, version: 0 });
+      expect(request.body.solicitud).to.include({
+        finalidad: 'cotizacion',
+        versionTerminos: '1.0',
+      });
+      expect(response?.body).to.include({ estado: 'rechazado', version: 1 });
+    });
+    cy.contains('app-profiling-panel [role=status]', 'Autorización rechazada').should('be.visible');
+    cy.get('button[type=submit]').should('be.disabled');
+    cy.get('@quote.all').should('have.length', 0);
+    cy.contains('button', 'Autorizar perfilamiento').click();
+    cy.wait('@consent').then(({ request, response }) => {
+      expect(request.body).to.include({ autorizado: true, version: 1 });
+      expect(response?.body).to.include({ estado: 'autorizado', version: 2 });
+    });
+    cy.get('button[type=submit]').should('be.enabled');
+  });
+
+  it('no habilita cotizacion con evidencia de consentimiento anterior incompleta', () => {
+    cy.intercept('GET', '/api/v1/consentimientos/perfilamiento', {
+      body: {
+        ...consent(),
+        actorId: undefined,
+        fuentes: undefined,
+        datos: undefined,
+        versionTerminos: undefined,
+      },
+    });
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.contains('app-profiling-panel [role=status]', 'La evidencia anterior es incompleta').should(
+      'be.visible',
+    );
+    cy.get('button[type=submit]').should('be.disabled');
+    cy.get('@quote.all').should('have.length', 0);
+  });
+
+  it('rechaza una respuesta de autorizacion sin evidencia completa', () => {
+    cy.intercept('PUT', '/api/v1/consentimientos/perfilamiento', {
+      body: { ...consent(), actorId: undefined },
+    }).as('incompleteConsent');
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.contains('button', 'Autorizar perfilamiento').click();
+    cy.wait('@incompleteConsent');
+    cy.get('app-profiling-panel [role=alert]').should('be.visible');
+    cy.contains('button', 'Revocar autorización').should('not.exist');
     cy.get('button[type=submit]').should('be.disabled');
     cy.get('@quote.all').should('have.length', 0);
   });

@@ -99,6 +99,13 @@ observación HTTP y assertions reintentables de Cypress. La emisión se consulta
 con polling de estado real, backoff 100–1000 ms y límite total de 60 segundos.
 Ese límite detecta falta de convergencia funcional; **no mide p95/p99**.
 
+La suite UI incluye 27 casos. El consentimiento informado comprueba el payload
+completo de la decisión (incluida la vigencia mostrada), rechazo y posterior
+autorización versionada, cancelación/confirmación de revocación y lectura tras
+recargar. Los mocks conservan el estado solo durante cada caso; no acreditan
+persistencia real. También se verifica que la evidencia anterior incompleta y una
+respuesta de autorización sin actor no habiliten cotizaciones.
+
 ## Fuentes de verdad y brechas
 
 Prevalecen **Documento de arquitectura v7** y **enunciado**, no una estrategia anterior
@@ -160,3 +167,10 @@ certificación de todos los requisitos de arquitectura.
 El pin actualiza únicamente el workflow, la documentación y su prueba de protección
 manual del backend, sin cambios en APIs ni en el helper. No se repitió Cypress
 integrado contra el nuevo SHA.
+
+Tras incorporar el contrato de consentimiento informado de `develop`, se
+reprodujeron 17 fallos UI debidos a mocks desactualizados. La corrección conserva
+las validaciones del producto y actualiza los datos y la confirmación de revocación
+de las pruebas: 27/27 UI aprobadas localmente, sin pendientes ni skips. El caso
+integrado de revocación también espera la confirmación HTTP real antes de comprobar
+los 403; no se volvió a ejecutar la suite integrada en esta corrección.

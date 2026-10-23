@@ -1,4 +1,8 @@
 import { products } from './products';
+import type {
+  ConsentDecision,
+  ProfilingConsent,
+} from '../../../src/app/core/profiling/profiling.models';
 
 export const syntheticUser = {
   id: 'cypress-ui-customer',
@@ -18,13 +22,17 @@ export const emptyDashboard = {
   notificaciones: { disponibilidad: 'no_implementado' },
 };
 export const quoteId = 'AQT-CYPRESS-UI';
-export const consent = () => ({
+export const consent = (): ProfilingConsent => ({
   consentimientoId: 'consent-ui',
   clienteId: syntheticUser.id,
   version: 1,
   estado: 'autorizado',
   finalidad: 'cotizacion',
   alcances: ['open_finance', 'open_data'],
+  actorId: syntheticUser.id,
+  fuentes: ['open_finance', 'open_data'],
+  datos: ['indicador_riesgo'],
+  versionTerminos: '1.0',
   efectivaEn: new Date(Date.now() - 10000).toISOString(),
   vigenteHasta: new Date(Date.now() + 86400000).toISOString(),
 });
@@ -63,6 +71,7 @@ export const offers = () => ({
 
 /** Only used by ui specs. Unmatched calls fail instead of reaching a real backend. */
 export function mockBackend() {
+  let savedConsent: ProfilingConsent | null = null;
   cy.intercept('/api/**', {
     statusCode: 501,
     body: { code: 'contrato_ui_no_definido' },
@@ -76,12 +85,22 @@ export function mockBackend() {
     productos: products.map(({ id }) => ({ id, nombre: id, descripcion: id, disponible: true })),
   }).as('catalog');
   cy.intercept('GET', '/api/v1/destinos-viaje', { destinos: [{ codigo: 'ES', nombre: 'España' }] });
-  cy.intercept('GET', '/api/v1/consentimientos/perfilamiento', {
-    statusCode: 404,
-    body: { code: 'consentimiento_ausente' },
+  cy.intercept('GET', '/api/v1/consentimientos/perfilamiento', (request) => {
+    request.reply(
+      savedConsent
+        ? { body: savedConsent }
+        : { statusCode: 404, body: { code: 'consentimiento_ausente' } },
+    );
   });
   cy.intercept('PUT', '/api/v1/consentimientos/perfilamiento', (request) => {
-    request.reply({ ...consent(), estado: request.body.autorizado ? 'autorizado' : 'revocado' });
+    const decision: ConsentDecision = request.body;
+    savedConsent = {
+      ...(savedConsent ?? consent()),
+      ...decision.solicitud,
+      version: decision.version + 1,
+      estado: decision.autorizado ? 'autorizado' : decision.solicitud ? 'rechazado' : 'revocado',
+    };
+    request.reply(savedConsent);
   }).as('consent');
   cy.intercept('POST', '/api/v1/solicitudes-cotizacion', (request) => {
     request.reply({

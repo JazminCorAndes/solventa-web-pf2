@@ -186,7 +186,13 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
       });
       cy.location('pathname').should('eq', '/app/cotizaciones/ofertas');
       cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+      cy.intercept('PUT', '/api/v1/consentimientos/perfilamiento').as('realRevocation');
       cy.contains('button', 'Revocar autorización').click();
+      cy.contains('button', 'Confirmar revocación').click();
+      cy.wait('@realRevocation', { log: false }).then(({ response }) => {
+        expect(response?.statusCode).to.eq(200);
+        expect(response?.body.estado).to.eq('revocado');
+      });
       cy.get('button[type=submit]').should('be.disabled');
       cy.then(() => {
         request({
