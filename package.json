@@ -16,6 +16,9 @@
     "test:ci": "ng test --watch=false",
     "test:pages": "node --test scripts/prepare-pages.test.cjs",
     "test:coverage": "ng test --watch=false --coverage --reporters=junit --output-file=reports/unit-tests.xml",
+    "test:cypress:ui": "node tests/cypress/run.cjs ui",
+    "test:cypress:integrated": "node tests/cypress/run.cjs integrated",
+    "test:cypress:types": "tsc --project tests/cypress/tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -47,6 +50,7 @@
     "@eslint/js": "10.0.1",
     "@vitest/coverage-v8": "4.1.11",
     "angular-eslint": "22.5.0",
+    "cypress": "16.2.0",
     "eslint": "10.10.0",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
