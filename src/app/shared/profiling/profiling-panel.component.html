@@ -173,6 +173,9 @@
         }
       }
       @if (profile(); as profile) {
+        @if (profile.fallbackUsed) {
+          <p>{{ 'profiling.cachedEvidence' | transloco }}</p>
+        }
         <dl class="metrics">
           <div>
             <dt>{{ 'profiling.score' | transloco }}</dt>
@@ -191,7 +194,7 @@
           {{ 'profiling.sources' | transloco }}:
           @for (source of profile.fuentes; track source.nombre) {
             <span
-              >{{ 'profiling.source.' + source.nombre | transloco }} ·
+              >{{ sourceLabelKey(source.nombre) | transloco: { name: source.nombre } }} ·
               {{ 'profiling.simulatedSource' | transloco }}
               @if (!$last) {
                 ;
@@ -231,7 +234,9 @@
           <div class="sources">
             @for (source of profile.fuentes; track source.nombre) {
               <section class="source">
-                <strong>{{ 'profiling.source.' + source.nombre | transloco }}</strong>
+                <strong>{{
+                  sourceLabelKey(source.nombre) | transloco: { name: source.nombre }
+                }}</strong>
                 <span>{{ 'profiling.simulatedSource' | transloco }} · {{ source.version }}</span>
                 <span>{{ 'profiling.indicator' | transloco }}: {{ source.indicadorRiesgo }}</span>
                 <span

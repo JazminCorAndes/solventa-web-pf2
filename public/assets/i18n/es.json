@@ -264,6 +264,8 @@
     }
   },
   "profiling": {
+    "additionalSource": "Adaptador adicional: {{ name }}",
+    "cachedEvidence": "El servidor reutilizó evidencia en caché que sigue vigente y vinculada al consentimiento actual. Las fuentes siguen siendo simuladas.",
     "sessionIdentity": "Tu identidad y tus datos de contacto se obtienen de tu sesión autenticada. No necesitas ingresarlos de nuevo.",
     "title": "Información de perfilamiento",
     "detail": "Detalle del perfil y fuentes",

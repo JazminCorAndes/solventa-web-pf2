@@ -33,7 +33,11 @@ describe('ProfilingPanelComponent', () => {
         TranslocoTestingModule.forRoot({
           langs: {
             es: {
-              profiling: { simulated: 'Datos simulados. No es una consulta financiera real.' },
+              profiling: {
+                simulated: 'Datos simulados. No es una consulta financiera real.',
+                additionalSource: 'Adaptador adicional: {{ name }}',
+                cachedEvidence: 'Evidencia en caché vigente y simulada.',
+              },
             },
           },
           translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
@@ -83,6 +87,28 @@ describe('ProfilingPanelComponent', () => {
     expect(component.profile()?.fuentes).toHaveLength(2);
     expect(fixture.nativeElement.textContent).toContain('No es una consulta financiera real.');
     expect(fixture.nativeElement.textContent).toContain('0.250000');
+  });
+
+  it('presenta cache vigente y adaptadores adicionales sin hacerlos pasar por proveedores conocidos', () => {
+    const profile = createProfile();
+    profile.fuentes.push({ ...profile.fuentes[0], nombre: 'adaptador_qa' });
+    profile.fallbackUsed = true;
+    profile.estadoFuentes = profile.fuentes.map((source) => ({
+      fuente: source.nombre,
+      estado: 'cache',
+      intentos: 2,
+      motivo: 'fuente_no_disponible',
+    }));
+    gateway.loadProfile.mockReturnValue(of(profile));
+    openProfile();
+    expect(component.profile()).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Adaptador adicional: adaptador_qa');
+    expect(fixture.nativeElement.textContent).toContain('Evidencia en caché vigente y simulada.');
+    expect(fixture.nativeElement.textContent).not.toContain('profiling.source.adaptador_qa');
+    profile.estadoFuentes[0].estado = 'fallida';
+    component.reload();
+    expect(component.profile()).toBeNull();
+    expect(component.errorKey()).toBe('profiling.errors.invalid');
   });
 
   it('revoca la version actual y retira inmediatamente el perfil', () => {

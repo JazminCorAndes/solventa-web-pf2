@@ -6,6 +6,7 @@ import {
   createConsentRequest,
   profileIsCurrent,
   ProfilingConsent,
+  RiskProfile,
 } from './profiling.models';
 
 describe('Vigencia del perfilamiento', () => {
@@ -75,6 +76,98 @@ describe('Solicitud de consentimiento', () => {
     expect(
       consentRequestIssues({ ...request, alcances: ['open_data'], fuentes: ['open_data'] }, now),
     ).toEqual([]);
+  });
+
+  describe('Compatibilidad de evidencia SOL201', () => {
+    function cachedProfile(): RiskProfile {
+      const profile = createProfile();
+      return {
+        ...profile,
+        fallbackUsed: true,
+        estadoFuentes: profile.fuentes.map((source, index) => ({
+          fuente: source.nombre,
+          estado: index === 0 ? 'cache' : 'disponible',
+          intentos: index === 0 ? 2 : 1,
+          motivo: index === 0 ? 'fuente_no_disponible' : null,
+        })),
+      };
+    }
+
+    it('acepta cache vigente con metadatos completos y conserva el contrato anterior', () => {
+      for (const profile of [
+        createProfile(),
+        { ...createProfile(), estadoFuentes: [] },
+        cachedProfile(),
+      ]) {
+        expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(true);
+      }
+    });
+
+    it.each<Partial<RiskProfile>>([
+      { estadoFuentes: undefined },
+      { estadoFuentes: [] },
+      { estadoFuentes: [{ fuente: 'open_finance', estado: 'cache', intentos: 2, motivo: null }] },
+      {
+        estadoFuentes: [
+          { fuente: 'open_finance', estado: 'cache', intentos: 2, motivo: null },
+          { fuente: 'open_finance', estado: 'disponible', intentos: 1, motivo: null },
+        ],
+      },
+      {
+        estadoFuentes: [
+          { fuente: 'open_finance', estado: 'cache', intentos: 2, motivo: null },
+          { fuente: 'open_data', estado: 'fallida', intentos: 2, motivo: 'error' },
+        ],
+      },
+      {
+        estadoFuentes: [
+          { fuente: 'open_finance', estado: 'disponible', intentos: 1, motivo: null },
+          { fuente: 'open_data', estado: 'disponible', intentos: 1, motivo: null },
+        ],
+      },
+      {
+        estadoFuentes: [
+          { fuente: 'open_finance', estado: 'cache', intentos: 3, motivo: null },
+          { fuente: 'open_data', estado: 'disponible', intentos: 1, motivo: null },
+        ],
+      },
+      { fallbackUsed: false },
+    ])('rechaza cache parcial/incoherente: %j', (change) => {
+      const profile = { ...cachedProfile(), ...change };
+      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(false);
+    });
+
+    it('cache no evita las restricciones de consentimiento, expiracion o version', () => {
+      const profile = cachedProfile();
+      expect(
+        profileIsCurrent(profile, { ...createConsent(), estado: 'revocado' }, profile.solicitudId),
+      ).toBe(false);
+      expect(
+        profileIsCurrent(profile, { ...createConsent(), version: 2 }, profile.solicitudId),
+      ).toBe(false);
+      profile.fuentes[0].vigenteHasta = new Date(Date.now() - 1).toISOString();
+      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(false);
+    });
+
+    it('valida todas las fuentes adicionales y rechaza duplicados o falta de fuentes obligatorias', () => {
+      const profile = cachedProfile();
+      const extra = { ...profile.fuentes[0], nombre: 'adaptador_qa' };
+      profile.fuentes.push(extra);
+      profile.estadoFuentes!.push({
+        fuente: 'adaptador_qa',
+        estado: 'disponible',
+        intentos: 1,
+        motivo: null,
+      });
+      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(true);
+      extra.vigenteHasta = new Date(Date.now() - 1).toISOString();
+      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(false);
+      extra.vigenteHasta = profile.vigenteHasta;
+      extra.nombre = 'open_finance';
+      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(false);
+      profile.fuentes = profile.fuentes.filter((source) => source.nombre !== 'open_data');
+      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(false);
+    });
   });
 
   it.each<[Partial<ConsentRequest>, string]>([

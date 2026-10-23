@@ -264,6 +264,8 @@
     }
   },
   "profiling": {
+    "additionalSource": "Additional adapter: {{ name }}",
+    "cachedEvidence": "The server reused cached evidence that is still current and linked to the current consent. Sources remain simulated.",
     "sessionIdentity": "Your identity and contact details come from your authenticated session. You do not need to enter them again.",
     "title": "Profiling information",
     "detail": "Profile and source details",
