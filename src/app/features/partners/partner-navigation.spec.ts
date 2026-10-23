@@ -15,21 +15,11 @@ import { AuthService } from '../../core/auth/auth.service';
 import { TestAuthStorage } from '../../core/auth/auth.testing';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
 import { HttpAuthGateway } from '../../data-access/auth/http-auth.gateway';
+import realContext from './testing/partner-context-real.json';
 
 const API = environment.apiBaseUrl;
-const USER = {
-  id: 'partner-1',
-  nombre: 'Socio Uno',
-  correo: 'socio@example.com',
-  rol: 'socio',
-  socios: ['BANCO-001'],
-};
-const CONTEXT = {
-  apiVersion: '1',
-  usuario: USER,
-  socios: [{ socioId: 'BANCO-001', productos: ['mortgage-life'] }],
-  alcances: ['perfilamientos:crear'],
-};
+const CONTEXT = realContext;
+const USER = CONTEXT.usuario;
 
 describe('Partner navigation through production routes', () => {
   let http: HttpTestingController;
@@ -89,7 +79,7 @@ describe('Partner navigation through production routes', () => {
     await navigation;
     harness.detectChanges();
     expect(TestBed.inject(Router).url).toBe('/app/socios');
-    expect(harness.routeNativeElement?.textContent).toContain('BANCO-001');
+    expect(harness.routeNativeElement?.textContent).toContain('BANK-E2E');
     expect(harness.routeNativeElement?.textContent).toContain('mortgage-life');
     expect(harness.routeNativeElement?.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
     expect(JSON.stringify(storage.stored)).not.toContain('secret');
@@ -105,7 +95,7 @@ describe('Partner navigation through production routes', () => {
       request.flush({}, { status, statusText: 'Rejected' });
       await navigation;
       expect(TestBed.inject(Router).url).toContain('/acceso-no-disponible');
-      expect(harness.routeNativeElement?.textContent).not.toContain('BANCO-001');
+      expect(harness.routeNativeElement?.textContent).not.toContain('BANK-E2E');
       expect(harness.routeNativeElement?.querySelector('[role="alert"]')).not.toBeNull();
     },
   );
