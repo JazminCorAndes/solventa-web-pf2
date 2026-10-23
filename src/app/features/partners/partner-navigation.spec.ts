@@ -141,6 +141,29 @@ describe('Partner navigation through production routes', () => {
     http.expectNone(`${API}/v1/clientes/me/dashboard`);
   });
 
+  it('uses the renewed role rather than stored identity when authorizing a child route', async () => {
+    storage.stored = {
+      user: { id: USER.id, name: USER.nombre, email: USER.correo, role: 'client' },
+      refreshToken: 'stored-refresh',
+      refreshExpiresAt: Date.now() + 60_000,
+    };
+    const navigation = harness.navigateByUrl('/app/dashboard');
+    const renewal = await vi.waitFor(() => http.expectOne(`${API}/v1/sesiones/renovar`));
+    renewal.flush({
+      usuario: USER,
+      tokenType: 'Bearer',
+      accessToken: 'renewed-access',
+      refreshToken: 'renewed-refresh',
+      expiraEn: new Date(Date.now() + 3_600_000).toISOString(),
+      refreshExpiraEn: new Date(Date.now() + 86_400_000).toISOString(),
+    });
+    const request = await vi.waitFor(() => http.expectOne(`${API}/v1/socios/actual`));
+    request.flush(CONTEXT);
+    await navigation;
+    expect(TestBed.inject(Router).url).toBe('/app/socios');
+    http.expectNone(`${API}/v1/clientes/me/dashboard`);
+  });
+
   it('denies a protected operation when the authenticated context lacks its scope', async () => {
     const partnerRoute = routes
       .find((route) => route.path === 'app')

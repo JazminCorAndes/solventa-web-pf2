@@ -23,13 +23,24 @@ export const guestGuard: CanActivateFn = () => {
     : true;
 };
 
-export const portalGuard: CanActivateFn = (route) => {
+export const portalGuard: CanActivateFn = (route, state) => {
   const auth = inject(AuthService);
+  const router = inject(Router);
   const partnerRoute =
     route.routeConfig?.path === 'socios' || route.routeConfig?.path?.startsWith('socios/');
-  return (auth.user()?.role === 'partner') === !!partnerRoute
-    ? true
-    : inject(Router).createUrlTree([homeUrl(auth.user())]);
+  return auth.getAccessToken().pipe(
+    map((token) => {
+      if (!token || !auth.hasActiveSession()) {
+        return router.createUrlTree(['/iniciar-sesion'], {
+          queryParams: { returnUrl: state.url },
+        });
+      }
+      return (auth.user()?.role === 'partner') === !!partnerRoute
+        ? true
+        : router.createUrlTree([homeUrl(auth.user())]);
+    }),
+    catchError(() => of(router.createUrlTree(['/acceso-no-disponible']))),
+  );
 };
 
 export function homeUrl(user: AuthUser | null): string {

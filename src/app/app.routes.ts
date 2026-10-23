@@ -24,7 +24,7 @@ export const routes: Routes = [
   {
     path: 'app',
     canActivate: [authGuard],
-    canActivateChild: [authGuard, portalGuard],
+    canActivateChild: [portalGuard],
     loadComponent: () =>
       import('./layout/authenticated-layout/authenticated-layout.component').then(
         (component) => component.AuthenticatedLayoutComponent,
