@@ -1,4 +1,6 @@
 import { products } from './products';
+import { compactDecrypt, exportJWK, generateKeyPair, type JWK } from 'jose';
+import { expectEncryptedLogin } from './login-crypto';
 import type {
   ConsentDecision,
   ProfilingConsent,
@@ -97,12 +99,54 @@ export const offers = () => ({
 /** Only used by ui specs. Unmatched calls fail instead of reaching a real backend. */
 export function mockBackend() {
   let savedConsent: ProfilingConsent | null = null;
+  let privateKey: CryptoKey;
+  let publicJwk: JWK;
+  let challengeId: string;
+  cy.then(async () => {
+    const pair = await generateKeyPair('RSA-OAEP-256');
+    privateKey = pair.privateKey;
+    publicJwk = await exportJWK(pair.publicKey);
+  });
   cy.intercept('/api/**', {
     statusCode: 501,
     body: { code: 'contrato_ui_no_definido' },
     log: false,
   });
-  cy.intercept('POST', '/api/v1/sesiones', { body: grant(), log: false }).as('login');
+  cy.intercept('GET', '/api/v1/sesiones/desafio', (request) => {
+    challengeId = crypto.randomUUID();
+    request.reply({
+      headers: { 'Cache-Control': 'no-store' },
+      body: {
+        desafioId: challengeId,
+        clavePublica: {
+          kty: publicJwk.kty,
+          n: publicJwk.n,
+          e: publicJwk.e,
+          alg: 'RSA-OAEP-256',
+          use: 'enc',
+          kid: 'cypress-ephemeral-key',
+        },
+        expiraEn: new Date(Date.now() + 60000).toISOString(),
+      },
+      log: false,
+    });
+  }).as('loginChallenge');
+  cy.intercept('POST', '/api/v1/sesiones', async (request) => {
+    expectEncryptedLogin(request.body);
+    expect(JSON.stringify(request.body).includes(password), 'sin contraseña en HTTP').to.eq(false);
+    const { plaintext, protectedHeader } = await compactDecrypt(
+      request.body.credencialCifrada,
+      privateKey,
+    );
+    const payload = JSON.parse(new TextDecoder().decode(plaintext));
+    expect(protectedHeader.kid, 'clave emitida').to.eq('cypress-ephemeral-key');
+    expect(payload.desafioId, 'desafio emitido').to.eq(challengeId);
+    expect(payload.correo === request.body.correo, 'correo vinculado').to.eq(true);
+    expect(payload.contrasena === password, 'contraseña recuperable por el destinatario').to.eq(
+      true,
+    );
+    request.reply({ body: grant(), log: false });
+  }).as('login');
   cy.intercept('POST', '/api/v1/sesiones/renovar', { body: grant(), log: false }).as('refresh');
   cy.intercept('DELETE', '/api/v1/sesiones/actual', { statusCode: 204, log: false }).as('logout');
   cy.intercept('GET', '/api/v1/clientes/me/dashboard', { body: emptyDashboard }).as('dashboard');

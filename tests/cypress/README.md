@@ -18,6 +18,14 @@ El setup registra cuentas sintéticas por API porque **no existe pantalla de reg
 Cada caso usa correo único `cypress-<uuid>@example.com` y contraseña aleatoria;
 no necesita cuentas preexistentes ni secretos productivos.
 
+En esta rama, el login HTTP usa desafío y JWE (`RSA-OAEP-256` / `A256GCM`).
+La suite UI genera una clave RSA efímera por caso, responde al desafío y descifra
+el login con su clave privada de prueba. Comprueba el correo vinculado, la contraseña
+recuperable y su ausencia del cuerpo HTTP. También cubre desafío inválido/vencido,
+503 y falta de Web Crypto sin POST ni fallback; el reintento obtiene otro desafío.
+La suite integrada observa el formato JWE de los logins válidos e inválidos, sin
+reemplazar el backend. El registro de cuentas sintéticas conserva su contrato existente.
+
 ## Ejecución
 
 Requisitos: Node según `.nvmrc`, pnpm según `package.json` y dependencias del
@@ -42,16 +50,24 @@ Para integración, arrancar primero el helper compartido del repositorio
 `Migue765/backend-solventa`, `tests.jmeter.local_stack`, con sus dependencias
 instaladas según `tests/jmeter/README.md`. Debe incluir emisión académica habilitada
 y todas las bases migradas; no sirve un BFF aislado ni un `/ping` saludable.
+Además, esta rama requiere el backend nuevo con `ENCRYPTED_LOGIN_ENABLED`
+habilitado tanto en identidad como en BFF web del entorno desechable.
+El helper compatible activa ambas configuraciones mediante `--encrypted-login`;
+el workflow integrado ya pasa ese argumento.
+El workflow fija `jobs.integrated.env.BACKEND_REVISION` en
+`.github/workflows/cypress-integrated.yml` al commit
+`7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1`, que incluye socios y login cifrado.
+Es una referencia del entorno de pruebas, no un destino de despliegue productivo.
 
-Revisión reproducible publicada por SSH:
-[`5a4f5776c4b37c2cb77e700b98d37649a6c47f52`](https://github.com/Migue765/backend-solventa/commit/5a4f5776c4b37c2cb77e700b98d37649a6c47f52).
+Revisión reproducible del backend público:
+[`7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1`](https://github.com/Migue765/backend-solventa/commit/7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1).
 El workflow usa ese SHA inmutable, no `develop` ni una rama que pueda cambiar.
 Esta revisión deja JMeter exclusivamente manual en el backend; el workflow web
 solo utiliza su helper de servicios y no ejecuta JMeter.
 
 ```sh
 # En el checkout backend de pruebas, nunca en producción:
-python -m tests.jmeter.local_stack --web-port 5000 --mobile-port 5001
+python -m tests.jmeter.local_stack --web-port 5000 --mobile-port 5001 --encrypted-login
 ```
 
 En otra terminal del repositorio web:
@@ -99,7 +115,7 @@ observación HTTP y assertions reintentables de Cypress. La emisión se consulta
 con polling de estado real, backoff 100–1000 ms y límite total de 60 segundos.
 Ese límite detecta falta de convergencia funcional; **no mide p95/p99**.
 
-La suite UI incluye 27 casos. El consentimiento informado comprueba el payload
+La suite UI incluye 33 casos. El consentimiento informado comprueba el payload
 completo de la decisión (incluida la vigencia mostrada), rechazo y posterior
 autorización versionada, cancelación/confirmación de revocación y lectura tras
 recargar. Los mocks conservan el estado solo durante cada caso; no acreditan
@@ -141,17 +157,14 @@ HTTP, bases, storage, fixtures con credenciales reales ni Cypress Cloud recordin
 Revisar siempre los informes antes de publicarlos: los errores pueden incluir
 datos sintéticos/IDs, pero no deben incluir credenciales.
 
-El CI integrado necesita checkout backend por **SSH** y un commit publicado que
-incluya el helper. No se crean claves o secretos automáticamente. La falta de
-credencial o backend es un fallo explícito, no una ejecución omitida.
+El CI integrado descarga por HTTPS el repositorio público `Migue765/backend-solventa`
+y fija un commit que incluya el helper. No necesita claves SSH ni permisos de escritura.
+Si el repositorio deja de ser público, el checkout falla; no se omiten las pruebas.
 
 `Cypress · Integración real` es manual (`workflow_dispatch`): descarga la revisión
 fijada, instala los servicios, arranca el mismo helper y lo detiene al salir.
-Un administrador debe provisionar `SOLVENTA_BACKEND_SSH_KEY` con acceso SSH autorizado
-de Migue765 al repositorio backend; no se encontró una credencial Actions reutilizable
-en la configuración del checkout. **La ejecución remota integrada queda pendiente
-de esa configuración y de disparar el workflow**, aunque las pruebas locales hayan
-pasado. No activar ejecuciones con secretos sobre cambios no confiables.
+Para ejecutar la suite remota, selecciona la rama que quieres comprobar al
+disparar el workflow. Las pruebas locales no acreditan esa ejecución remota.
 
 ## Evidencia local de esta incorporación
 

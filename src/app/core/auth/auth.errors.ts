@@ -22,6 +22,30 @@ export class InvalidRefreshTokenError extends Error {
   }
 }
 
+export class SessionChangedError extends Error {
+  override readonly name = 'SessionChangedError';
+
+  constructor() {
+    super('The authentication request belongs to an earlier session');
+  }
+}
+
+export class AccessDeniedError extends Error {
+  override readonly name = 'AccessDeniedError';
+
+  constructor() {
+    super('Access denied');
+  }
+}
+
+export class LoginEncryptionUnavailableError extends Error {
+  override readonly name = 'LoginEncryptionUnavailableError';
+
+  constructor() {
+    super('Login requires a secure context and Web Crypto support');
+  }
+}
+
 export class EmailAlreadyRegisteredError extends Error {
   override readonly name = 'EmailAlreadyRegisteredError';
 

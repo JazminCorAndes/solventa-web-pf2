@@ -1,4 +1,9 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -55,6 +60,7 @@ describe('authInterceptor', () => {
 
   it.each([
     ['login', `${API}/v1/sesiones`, 'POST'],
+    ['login challenge', `${API}/v1/sesiones/desafio`, 'GET'],
     ['renew', `${API}/v1/sesiones/renovar`, 'POST'],
     ['register', `${API}/v1/usuarios`, 'POST'],
   ])('does not add the token to %s', (_name, url, method) => {
@@ -74,6 +80,16 @@ describe('authInterceptor', () => {
       expect(request.request.headers.get('Authorization')).toBe('Bearer access-1');
       request.flush({});
     }
+  });
+
+  it('does not renew or redirect when the public login challenge is rejected', async () => {
+    const url = `${API}/v1/sesiones/desafio`;
+    const response = firstValueFrom(client.get(url)).catch((error: unknown) => error);
+    http.expectOne(url).flush({}, UNAUTHORIZED);
+
+    expect(await response).toBeInstanceOf(HttpErrorResponse);
+    expect(gateway.refreshCalls).toEqual([]);
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('does not touch requests outside the API', () => {
@@ -136,6 +152,8 @@ describe('authInterceptor', () => {
 
     await expect(result).resolves.toMatchObject({ status: 401 });
     expect(gateway.refreshCalls).toEqual(['refresh-1']);
+    expect(auth.session()).toBeNull();
+    expect(navigate).toHaveBeenCalledTimes(1);
   });
 
   it('logs out and redirects to the login when the renewal fails', async () => {

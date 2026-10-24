@@ -14,7 +14,8 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: 'client';
+  role: 'client' | 'partner';
+  partnerIds?: string[];
   documentType?: DocumentType;
   nationalId?: string;
   phone?: string;

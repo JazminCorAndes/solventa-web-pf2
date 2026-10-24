@@ -2,12 +2,17 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
-import { Observable, Subject, throwError } from 'rxjs';
-import { InvalidCredentialsError, TooManyAttemptsError } from '../../core/auth/auth.errors';
+import { Observable, of, Subject, throwError } from 'rxjs';
+import {
+  AccessDeniedError,
+  InvalidCredentialsError,
+  LoginEncryptionUnavailableError,
+  TooManyAttemptsError,
+} from '../../core/auth/auth.errors';
 import { AUTH_GATEWAY } from '../../core/auth/auth.gateway';
 import { AuthGrant } from '../../core/auth/auth.models';
 import { AUTH_STORAGE } from '../../core/auth/auth-storage.service';
-import { TestAuthGateway, TestAuthStorage } from '../../core/auth/auth.testing';
+import { grantFor, TestAuthGateway, TestAuthStorage } from '../../core/auth/auth.testing';
 import { LoginPageComponent } from './login-page.component';
 
 @Component({ template: '' })
@@ -49,6 +54,7 @@ describe('LoginPageComponent', () => {
                   invalidCredentials: 'Credenciales inválidas',
                   tooManyAttempts: 'Demasiados intentos',
                   unavailable: 'Servicio no disponible',
+                  encryptionUnavailable: 'Usa HTTPS y un navegador con Web Crypto',
                   unexpected: 'Error inesperado',
                 },
               },
@@ -96,6 +102,15 @@ describe('LoginPageComponent', () => {
     expect(component.errorKey()).toBe('auth.errors.invalidCredentials');
   });
 
+  it('shows access denied without navigating', () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    gateway.loginResult = () => throwError(() => new AccessDeniedError());
+    component.form.setValue({ email: 'socio@example.com', password: 'secret' });
+    component.submit();
+    expect(component.errorKey()).toBe('partners.errors.forbidden');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('shows a rate limit error', () => {
     gateway.loginResult = () => throwError(() => new TooManyAttemptsError(300));
     component.form.setValue({
@@ -106,6 +121,19 @@ describe('LoginPageComponent', () => {
     component.submit();
 
     expect(component.errorKey()).toBe('auth.errors.tooManyAttempts');
+  });
+
+  it('shows an actionable crypto error and keeps the form available for retry', () => {
+    gateway.loginResult = () => throwError(() => new LoginEncryptionUnavailableError());
+    component.form.setValue({ email: 'cliente@solventa.co', password: 'Solventa123!' });
+
+    component.submit();
+    fixture.detectChanges();
+
+    expect(component.errorKey()).toBe('auth.errors.encryptionUnavailable');
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('Usa HTTPS');
+    expect(component.loading()).toBe(false);
+    expect(component.form.enabled).toBe(true);
   });
 
   it('prevents duplicate submissions while authentication is pending', () => {
@@ -136,5 +164,23 @@ describe('LoginPageComponent', () => {
     component.submit();
 
     expect(navigate).toHaveBeenCalledWith('/app/dashboard');
+  });
+
+  it('navigates to the partner portal using the authenticated role', () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const grant = grantFor('partner-access', 'partner-refresh');
+    gateway.loginResult = () =>
+      of({
+        ...grant,
+        session: {
+          ...grant.session,
+          user: { ...grant.session.user, role: 'partner', partnerIds: ['BANK-E2E'] },
+        },
+      });
+    component.form.setValue({ email: 'socio@example.com', password: 'secret' });
+
+    component.submit();
+
+    expect(navigate).toHaveBeenCalledWith('/app/socios');
   });
 });

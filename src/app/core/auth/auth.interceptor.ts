@@ -21,6 +21,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
     next(token ? withBearer(request, token) : request);
 
   const expireSession = (error: unknown): Observable<never> => {
+    auth.invalidateSession();
     void router.navigate(['/iniciar-sesion'], { queryParams: { returnUrl: router.url } });
     return throwError(() => error);
   };
@@ -38,7 +39,8 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
           return auth.renewAccessToken(token ?? undefined).pipe(
             switchMap((renewed) => send(renewed)),
             catchError((renewError: unknown) =>
-              renewError instanceof InvalidRefreshTokenError
+              renewError instanceof InvalidRefreshTokenError ||
+              (renewError instanceof HttpErrorResponse && renewError.status === 401)
                 ? expireSession(renewError)
                 : throwError(() => renewError),
             ),
@@ -56,7 +58,8 @@ function isProtectedApiRequest(request: HttpRequest<unknown>): boolean {
   }
   const path = request.url.slice(base.length).split('?')[0];
   const isPublic =
-    PUBLIC_PATHS.includes(path) && (path !== '/v1/sesiones' || request.method === 'POST');
+    (path === '/v1/sesiones/desafio' && request.method === 'GET') ||
+    (PUBLIC_PATHS.includes(path) && (path !== '/v1/sesiones' || request.method === 'POST'));
   return !isPublic;
 }
 

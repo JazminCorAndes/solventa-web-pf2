@@ -100,6 +100,11 @@ Allí se incluyen instalación, migraciones y configuración de los tres servici
 Inicia identidad, cotización y BFF en terminales separadas. La base de datos y las claves
 de firma pertenecen a los servicios backend; no se configuran ni se incluyen en Angular.
 
+Esta rama requiere además el contrato de login cifrado descrito abajo. Prepara primero
+identidad y BFF con esa funcionalidad y habilita su flag `ENCRYPTED_LOGIN_ENABLED`
+en el entorno local de pruebas. El flag del backend viene apagado por defecto.
+El frontend de esta rama no inicia sesión contra un backend anterior o con el flag apagado.
+
 Los ejemplos del backend usan el puerto 15001 para el BFF. Para conservar
 `proxy.conf.json` sin cambios, inicia ese servicio en el puerto 5001, manteniendo las
 variables de entorno indicadas en su guía:
@@ -155,11 +160,99 @@ El build de producción (`pnpm build`) y `pnpm start:aws` usan el API Gateway di
 (`src/environments/environment.ts`, `apiBaseUrl: https://65qgzhody9.execute-api.us-east-2.amazonaws.com`).
 No hay proxy ni cookies: la autenticación usa tokens JWT.
 
-DevTools muestra la contraseña en el cuerpo de la petición antes del transporte TLS;
-esa vista no demuestra que viaje sin cifrar. Las configuraciones públicas usan HTTPS.
-La contraseña no se guarda en el estado de sesión ni se registra en consola; no se
-añade cifrado o hashing propio en el navegador ni se cambia el contrato de identidad.
-Esto no acredita el transporte entre servicios internos del backend.
+Esta configuración apunta al entorno desplegado, pero esta rama **no acredita ni
+habilita su despliegue**. No la uses para comprobar el cambio con cuentas reales.
+
+### Login cifrado de esta rama
+
+En modo HTTP, cada intento explícito consulta `GET /v1/sesiones/desafio` sin token.
+El backend responde con `Cache-Control: no-store`, un `desafioId`, una clave pública RSA
+JWK (`kty`, `n`, `e`, `alg: RSA-OAEP-256`, `use: enc`, `kid`) y `expiraEn` UTC;
+el desafío dura 60 segundos. Angular valida el contrato y cifra
+`{desafioId, correo, contrasena}` con `jose` y Web Crypto.
+El encabezado protegido contiene `alg: RSA-OAEP-256`, `enc: A256GCM`,
+el `kid` recibido y `typ: solventa-login+jwe`.
+
+`POST /v1/sesiones` envía solo `{correo, credencialCifrada}`. En el cuerpo HTTP de
+login, DevTools muestra correo y JWE compacto, no la contraseña original. El servicio
+destinatario descifra el contenido para autenticarlo. Un desafío inválido/vencido,
+una clave privada o incompatible, un error criptográfico o un backend no disponible
+interrumpen el intento; el frontend no reintenta con contraseña en claro. Un nuevo
+clic obtiene otro desafío. Se conservan los errores 401/429/503 y el reintento visible.
+No se guarda la contraseña en sesión ni se registra en consola.
+
+Necesitas HTTPS y un navegador con Web Crypto en un contexto seguro. Para desarrollo,
+los navegadores permiten `http://localhost` y loopback; un origen HTTP de la red local
+puede bloquear el cifrado. La pantalla indica cómo corregirlo, sin usar aleatoriedad
+débil ni degradar el contrato. El cifrado no oculta la contraseña al propietario del
+navegador, a extensiones con acceso ni a código ejecutado por XSS; siguen siendo
+necesarios HTTPS, protección frente a XSS y validación/replay autoritativos en el backend.
+No acredita el transporte entre servicios internos.
+
+El alcance es **solo login web**. Registro continúa enviando `contrasena` mediante
+su contrato existente y exige HTTPS fuera de desarrollo local. No cambian móvil,
+refresh, logout, la gestión de sesión ni los adaptadores mock sin HTTP.
+Para rollout, prepara primero el backend compatible y coordina la activación del flag
+con la publicación del frontend cifrado: al activarlo, los clientes web antiguos
+dejan de poder iniciar sesión. No publiques este frontend contra el backend legado
+ni lo soluciones con downgrade automático. El pin de CI integrado también necesita
+una revisión backend compatible antes de ejecutar ese workflow.
+API Gateway debe exponer `GET /v1/sesiones/desafio` como ruta pública explícita;
+el proxy autenticado actual no basta. Esta rama no modifica infraestructura.
+
+El backend compatible debe conservar `usuario.rol: "socio"` y `usuario.socios`
+en login y renovación para usar el portal descrito abajo. El cifrado no convierte
+un asesor en socio ni sustituye las autorizaciones de organización y producto.
+Las pruebas de navegación de socios usan desafíos y JWE con claves sintéticas;
+no envían contraseñas en claro al endpoint de login.
+
+La pausa de despliegues backend es intencional por costes (hotfix PR46 en `main`).
+Un merge o tag no garantiza publicación; esta rama no reactiva triggers ni cambia
+esa política. Antes de publicar, el operador debe confirmar tanto el contrato cifrado
+como las APIs de socios en las imágenes activas, no solo en ECR o `develop`.
+
+### Portal de socios (SOL-194)
+
+El mismo inicio de sesión admite clientes y cuentas con rol backend `socio`; un asesor
+no se convierte en socio. Las cuentas de socio se provisionan en identidad por el operador,
+nunca mediante registro público ni credenciales incluidas en Angular. Después del login,
+el socio entra en `/app/socios` y el cliente conserva su tablero y cotizaciones.
+
+El portal requiere el contrato compatible del BFF:
+
+- `POST /v1/sesiones` y `/renovar`: respuesta Bearer existente con
+  `usuario.rol: "socio"` y `usuario.socios: ["identificador-organizacion"]`.
+- `GET /v1/socios/actual`, con Bearer y `API-Version: 1`: respuesta
+  `{ apiVersion: "1", usuario, socios: [{ socioId, productos: ["id-producto"] }], alcances: ["perfilamientos:crear"] }`.
+  El servidor determina las organizaciones desde la identidad autenticada; el frontend
+  no envía un tenant arbitrario para consultar este contexto.
+- Las operaciones de SOL-195 se integran bajo `/app/socios/*`, con `partnerGuard` y
+  `data.partnerScope` para verificar el alcance antes de activar su pantalla.
+
+El contexto se consulta nuevamente al entrar al portal; no se autoriza desde `sessionStorage`.
+La UI rechaza versiones incompatibles, identidad diferente y organizaciones fuera de la
+sesión, oculta las rutas de cliente al socio y viceversa, y descarta los datos al salir,
+cambiar de cuenta o vencer el access token. La recuperación de acceso renueva el token y
+revalida el contexto. Credenciales inválidas, 403, 429 y servicio no disponible se informan
+sin habilitar acceso ni recurrir a mocks. El servidor sigue siendo responsable de
+autorizar cada operación, organización y producto: una guarda de Angular no reemplaza esa comprobación.
+
+**Publicación coordinada:** desplegar primero el BFF/identidad compatibles y validar el
+login real, `/actual`, rechazo de otra organización y expiración. El PR de SOL-194 va a
+`develop`; la publicación del sitio principal requiere integrar la entrega autorizada en
+`master`. `.github/workflows/ci.yml` (`CI · Validación`) compila `build:pages` y conserva el
+artefacto `github-pages` únicamente para un push a `master`. `.github/workflows/pages.yml`
+(`CD · Solventa Web`) usa el `head_sha` de ese CI exitoso, comprueba que aún sea el SHA de
+`master` mediante `pages-source.cjs`, descarga el artefacto del mismo `run_id` y lo publica
+sin recompilar. No existe `workflow_dispatch` ni se debe cambiar la configuración de Pages.
+El operador coordina el merge de entrega y comprueba los dos runs y la URL publicada;
+una prueba HTTP simulada del frontend no acredita el despliegue backend ni el flujo real.
+
+La prueba de navegación consume `src/app/features/partners/testing/partner-context-real.json`,
+capturado por `tests/test_partner_flow.py` del backend en una ejecución HTTP local con
+identidad, BFF, cotización, perfilamiento y bases migradas. Contiene únicamente la cuenta
+sintética `BANK-E2E`, sin tokens ni credenciales, y se importa solo en pruebas. Coteja el
+consumidor con una respuesta real del contrato; no sustituye la verificación en AWS/Pages.
 
 ### Tablero integrado
 
@@ -278,6 +371,66 @@ que los clientes sin JavaScript vean el contenido. Los guards de autenticación 
 mantienen. Tras el despliegue debe verificarse en navegador el inicio de sesión y
 la apertura/recarga de una URL profunda; las pruebas de artefacto no sustituyen
 esa validación ni prueban conectividad con AWS.
+
+## Cotización de socios (SOL195)
+
+El portal de socios (SOL194) habilita `/app/socios/cotizaciones/solicitar` solo con
+contexto validado de `GET /v1/socios/actual` y alcance `perfilamientos:crear`. Se reutilizan
+el catálogo, los destinos y los campos/validaciones de la solicitud del cliente para los
+ocho productos existentes. El selector limita los productos a los autorizados para la
+organización seleccionada; el servidor vuelve a comprobar organización, producto y cuota.
+No se asignan permisos desde el navegador ni se sustituyen errores por mocks.
+
+El cliente registrado decide personalmente su consentimiento (SOL203). Cuando está
+autorizado y vigente, el panel muestra sus identificadores de cliente y consentimiento,
+y la versión que puede facilitar al socio elegido. El socio los ingresa junto con
+documento y teléfono: no hay búsqueda global de clientes, autorización delegada ni
+registro de cuentas desde este formulario.
+
+`POST /v1/socios/solicitudes-cotizacion` usa la sesión Bearer existente, `API-Version: 1`
+e `Idempotency-Key` igual al UUID `operationId` del cuerpo:
+
+```text
+{
+  operationId, socioId, productoId, datosProducto,
+  cliente: { clienteId, tipoCliente: "persona_natural", tipoDocumento, numeroDocumento, telefono },
+  consentimientoId, consentimientoVersion
+}
+```
+
+El correo se resuelve en backend. `datosProducto` conserva el contrato del flujo cliente.
+Solo una respuesta válida del servidor con `estado: "completada"` y asociación coincidente
+operación/socio/cliente/producto confirma el éxito; se muestran `solicitudId`,
+`cotizacionId`, `perfilamientoReferencia` y `recibidaEn`. La solicitud queda en el flujo
+principal del cliente, que continúa desde sus cotizaciones. No se activan solicitudes
+de terceros en el almacenamiento cliente ni se aceptan ofertas en su nombre.
+
+Antes de enviar se guarda únicamente operación y organización en la URL. Los reintentos
+en la misma página conservan UUID y cuerpo original; `Retry-After` impide reenvíos mientras
+dure la espera. La recarga consulta
+`GET /v1/socios/solicitudes-cotizacion/{operationId}?socioId=...`, sin repetir el POST.
+Si devuelve `operacion_reintentable` o `operacion_no_encontrada`, se pueden reintroducir
+los mismos datos conservando la clave; el servidor detecta cambios mediante su idempotencia.
+Documento, teléfono y cuerpo de la operación no se persisten en el navegador.
+Preparar otra operación es una acción explícita, diferente de reintentar, y advierte
+que puede generar otra cotización.
+
+Desplegar primero el backend compatible con SOL194/SOL195/SOL203, incluidos los
+encabezados CORS `API-Version` y `Retry-After` (expuesto para lectura), antes de publicar
+este frontend. La publicación sigue el workflow Pages descrito arriba: PRs/develop
+no publican; el CI exitoso del SHA integrado en `master` produce el artefacto que consume
+CD. Las pruebas locales no acreditan publicación ni persistencia productiva: la aceptación
+requiere recorrido de navegador en Pages contra AWS con identidades sintéticas autorizadas,
+verificación de asociación persistida y cierre de sesiones de prueba.
+
+Compatibilidad del despliegue con SOL201: el perfil puede reutilizar evidencia en caché
+vigente, sin relajar consentimiento, versión, fechas ni indicadores. `fallbackUsed: true`
+solo se acepta con `estadoFuentes` completo, único y coincidente con `fuentes`, con
+al menos un estado `cache` y ninguno `fallida`. Los perfiles anteriores sin esos
+metadatos siguen permitidos únicamente con `fallbackUsed: false`. Se requieren
+`open_finance` y `open_data`; los adaptadores adicionales deben aportar evidencia
+completa y vigente, sin duplicados, y se muestran por su nombre como adicionales,
+nunca como proveedores conocidos. Las fuentes continúan siendo simuladas.
 
 ## Autenticación con tokens
 
