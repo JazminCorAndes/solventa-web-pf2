@@ -83,7 +83,7 @@ describe('Partner navigation through production routes', () => {
     expect(harness.routeNativeElement?.textContent).toContain('mortgage-life');
     expect(
       harness.routeNativeElement?.querySelector(
-        'a[href="/app/socios/cotizaciones/solicitar?socio=BANCO-001"]',
+        `a[href="/app/socios/cotizaciones/solicitar?socio=${CONTEXT.socios[0].socioId}"]`,
       ),
     ).not.toBeNull();
     expect(harness.routeNativeElement?.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
@@ -162,7 +162,9 @@ describe('Partner navigation through production routes', () => {
   it('denies a protected operation when the authenticated context lacks its scope', async () => {
     const router = TestBed.inject(Router);
     await login();
-    const navigation = harness.navigateByUrl('/app/socios/cotizaciones/solicitar?socio=BANCO-001');
+    const navigation = harness.navigateByUrl(
+      `/app/socios/cotizaciones/solicitar?socio=${CONTEXT.socios[0].socioId}`,
+    );
     const request = await vi.waitFor(() => http.expectOne(`${API}/v1/socios/actual`));
     request.flush({ ...CONTEXT, alcances: [] });
     await navigation;
