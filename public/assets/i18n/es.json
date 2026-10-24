@@ -1,4 +1,43 @@
 {
+  "partnerQuote": {
+    "title": "Cliente y autorización para cotizar",
+    "instructions": "Selecciona tu organización e ingresa los datos facilitados por el cliente registrado. Su consentimiento vigente se valida en el servidor antes del perfilamiento. No puedes autorizar en su nombre.",
+    "partner": "Organización del socio",
+    "customerId": "Identificador del cliente",
+    "document": "Número de documento",
+    "consentId": "Identificador del consentimiento",
+    "consentVersion": "Versión del consentimiento",
+    "required": "Selecciona una organización autorizada.",
+    "uuid": "Ingresa un identificador UUID válido.",
+    "documentInvalid": "Ingresa entre 6 y 15 caracteres alfanuméricos. El servidor verifica el tipo de documento y su titular.",
+    "phoneInvalid": "Ingresa +57 seguido de 10 dígitos.",
+    "versionInvalid": "Ingresa una versión entera mayor o igual a 1.",
+    "operation": "Identificador de operación",
+    "recoveryNote": "La dirección de esta página conserva solo la operación y la organización. Al recargar se consulta su resultado; si debes reintentar, ingresa exactamente los mismos datos. No se guardan documentos ni teléfonos en el navegador.",
+    "recover": "Consultar resultado",
+    "retryAfter": "Espera {{ seconds }} segundos antes de reintentar.",
+    "completed": "Cotización registrada por el servidor",
+    "quoteId": "Identificador de cotización",
+    "receivedAt": "Recibida",
+    "customerContinues": "El cliente puede continuar esta solicitud desde sus cotizaciones en su propia sesión. Esta operación no acepta ofertas ni contrata seguros en su nombre.",
+    "newWarning": "Una nueva operación no es un reintento: puede generar otra cotización. Consulta primero el resultado de la operación actual.",
+    "newOperation": "Preparar otra operación",
+    "shareConsent": "Datos para una cotización con un socio",
+    "shareInstructions": "Puedes facilitar estos identificadores al socio que hayas elegido. No compartas tu contraseña ni tu sesión. El socio no puede autorizar ni revocar por ti.",
+    "errors": {
+      "consent": "El consentimiento del cliente no está vigente o no corresponde a la versión indicada. El cliente debe revisarlo en su propia sesión.",
+      "identity": "Los datos no corresponden al cliente registrado. Verifícalos con su titular.",
+      "processing": "La operación sigue en curso. Consulta su resultado o reintenta con el mismo identificador.",
+      "retryable": "La operación no tiene un resultado confirmado. Reenvía exactamente los mismos datos con el mismo identificador.",
+      "conflict": "El identificador ya está asociado a otros datos o existe un conflicto. Consulta el resultado; no cambies los datos de un reintento.",
+      "invalid": "Revisa la organización, el producto, los datos del cliente y del consentimiento. No se ha confirmado ninguna cotización.",
+      "forbidden": "Tu sesión no tiene permiso para esta organización, producto u operación.",
+      "notFound": "No se encontró la operación o el registro solicitado. No se ha confirmado una cotización.",
+      "quota": "La organización alcanzó su límite de solicitudes o tiene otra operación activa. Espera y reintenta la misma operación.",
+      "response": "La respuesta no coincide con la operación solicitada. No se muestra como exitosa; consulta el resultado.",
+      "unavailable": "No se pudo confirmar la operación. Consulta su resultado o reintenta con el mismo identificador."
+    }
+  },
   "auth": {
     "title": "Iniciar sesión",
     "email": {
@@ -225,6 +264,8 @@
     }
   },
   "profiling": {
+    "additionalSource": "Adaptador adicional: {{ name }}",
+    "cachedEvidence": "El servidor reutilizó evidencia en caché que sigue vigente y vinculada al consentimiento actual. Las fuentes siguen siendo simuladas.",
     "sessionIdentity": "Tu identidad y tus datos de contacto se obtienen de tu sesión autenticada. No necesitas ingresarlos de nuevo.",
     "title": "Información de perfilamiento",
     "detail": "Detalle del perfil y fuentes",

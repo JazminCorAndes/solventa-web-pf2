@@ -75,6 +75,7 @@ describe('Panel de consentimiento con gateway HTTP autenticado', () => {
 
   it.each([true, false])('presenta evidencia y envia decision %s desde la UI', (authorized) => {
     const content = fixture.nativeElement.textContent;
+    expect(content).not.toContain(es.partnerQuote.shareConsent);
     expect(content).toContain(es.profiling.decision.purpose);
     expect(content).toContain(es.profiling.decision.permissions);
     expect(content).toContain(es.profiling.decision.data);
@@ -112,6 +113,13 @@ describe('Panel de consentimiento con gateway HTTP autenticado', () => {
     request.flush(consent, { headers });
     fixture.detectChanges();
     expect(fixture.componentInstance.authorized()).toBe(authorized);
+    if (authorized) {
+      expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.shareConsent);
+      expect(fixture.nativeElement.textContent).toContain(consent.consentimientoId);
+      expect(fixture.nativeElement.textContent).toContain(consent.clienteId);
+    } else {
+      expect(fixture.nativeElement.textContent).not.toContain(es.partnerQuote.shareConsent);
+    }
     fixture.componentInstance.reload();
     http.expectOne(url).flush(consent, { headers });
     expect(fixture.componentInstance.consent()?.vigenteHasta).toBe(time.dateTime);
@@ -160,6 +168,7 @@ describe('Panel de consentimiento con gateway HTTP autenticado', () => {
     revocation.flush({ ...consent, estado: 'revocado', version: 2 }, { headers });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(es.profiling.consentStatus.revocado);
+    expect(fixture.nativeElement.textContent).not.toContain(es.partnerQuote.shareConsent);
     expect(fixture.componentInstance.authorized()).toBe(false);
     http.expectNone((request) => request.url.includes('solicitudes-cotizacion'));
   });
