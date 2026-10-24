@@ -1,6 +1,7 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { compactDecrypt, exportJWK, generateKeyPair, type JWK } from 'jose';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
@@ -9,6 +10,7 @@ import {
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
+  LoginEncryptionUnavailableError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { HttpAuthGateway } from './http-auth.gateway';
@@ -61,7 +63,8 @@ describe('HttpAuthGateway', () => {
       const result = firstValueFrom(
         gateway.login({ email: 'socio@example.com', password: 'secret' }),
       );
-      http.expectOne(SESSIONS).flush({
+      const request = await flushChallenge();
+      request.flush({
         ...TOKEN_RESPONSE,
         usuario: { ...USER_RESPONSE, rol: 'socio', socios: ['BANCO-001'] },
       });
@@ -76,7 +79,8 @@ describe('HttpAuthGateway', () => {
         const result = firstValueFrom(
           gateway.login({ email: 'socio@example.com', password: 'secret' }),
         );
-        http.expectOne(SESSIONS).flush({
+        const request = await flushChallenge();
+        request.flush({
           ...TOKEN_RESPONSE,
           usuario: { ...USER_RESPONSE, rol: 'socio', socios },
         });
@@ -88,17 +92,55 @@ describe('HttpAuthGateway', () => {
       const result = firstValueFrom(
         gateway.login({ email: 'asesor@example.com', password: 'secret' }),
       );
-      http.expectOne(SESSIONS).flush({
+      const request = await flushChallenge();
+      request.flush({
         ...TOKEN_RESPONSE,
         usuario: { ...USER_RESPONSE, rol: 'asesor', socios: ['BANCO-001'] },
       });
       await expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
     });
+    let privateKey: CryptoKey;
+    let publicJwk: JWK;
+    const credentials = { email: 'cliente@solventa.co', password: 'Solventa123!' };
+    const challenge = () => ({
+      desafioId: 'test-challenge',
+      clavePublica: {
+        kty: publicJwk.kty,
+        n: publicJwk.n,
+        e: publicJwk.e,
+        alg: 'RSA-OAEP-256',
+        use: 'enc',
+        kid: 'test-key',
+      },
+      expiraEn: new Date(Date.now() + 60000).toISOString(),
+    });
+    const flushChallenge = async () => {
+      const request = http.expectOne(`${SESSIONS}/desafio`);
+      expect(request.request.method).toBe('GET');
+      expect(request.request.body).toBeNull();
+      request.flush(challenge());
+      return vi.waitFor(() => http.expectOne(SESSIONS), { timeout: 2000 });
+    };
+
+    beforeAll(async () => {
+      const pair = await generateKeyPair('RSA-OAEP-256', { extractable: true });
+      privateKey = pair.privateKey;
+      publicJwk = await exportJWK(pair.publicKey);
+    });
+
+    beforeEach(() => {
+      vi.stubGlobal('isSecureContext', true);
+      // jsdom and Node's TextEncoder otherwise expose different Uint8Array realms.
+      vi.stubGlobal('Uint8Array', new TextEncoder().encode('').constructor);
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
     it('rejects unknown roles instead of treating them as clients', async () => {
       const result = firstValueFrom(
         gateway.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }),
       );
-      http.expectOne(SESSIONS).flush({
+      const request = await flushChallenge();
+      request.flush({
         ...TOKEN_RESPONSE,
         usuario: { ...USER_RESPONSE, rol: 'desconocido' },
       });
@@ -114,7 +156,8 @@ describe('HttpAuthGateway', () => {
       const result = firstValueFrom(
         gateway.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }),
       );
-      http.expectOne(SESSIONS).flush({ ...TOKEN_RESPONSE, ...fields });
+      const request = await flushChallenge();
+      request.flush({ ...TOKEN_RESPONSE, ...fields });
 
       await expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
     });
@@ -123,7 +166,8 @@ describe('HttpAuthGateway', () => {
       const result = firstValueFrom(
         gateway.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }),
       );
-      http.expectOne(SESSIONS).flush({
+      const request = await flushChallenge();
+      request.flush({
         ...TOKEN_RESPONSE,
         usuario: {
           ...USER_RESPONSE,
@@ -140,18 +184,36 @@ describe('HttpAuthGateway', () => {
       });
     });
 
-    it('exchanges credentials for tokens and does not use cookies', async () => {
+    it('sends only compact JWE and email, decryptable only with the issued key, without cookies', async () => {
       const result = firstValueFrom(
         gateway.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }),
       );
-      const request = http.expectOne(SESSIONS);
+      const request = await flushChallenge();
 
       expect(request.request.method).toBe('POST');
       expect(request.request.withCredentials).toBe(false);
-      expect(request.request.body).toEqual({
-        correo: 'cliente@solventa.co',
-        contrasena: 'Solventa123!',
+      const body = request.request.body as { correo: string; credencialCifrada: string };
+      expect(Object.keys(body).sort()).toEqual(['correo', 'credencialCifrada']);
+      expect(body.correo).toBe(credentials.email);
+      expect(JSON.stringify(body)).not.toContain(credentials.password);
+      expect(body.credencialCifrada.split('.')).toHaveLength(5);
+      const { plaintext, protectedHeader } = await compactDecrypt(
+        body.credencialCifrada,
+        privateKey,
+      );
+      expect(protectedHeader).toEqual({
+        alg: 'RSA-OAEP-256',
+        enc: 'A256GCM',
+        kid: 'test-key',
+        typ: 'solventa-login+jwe',
       });
+      expect(JSON.parse(new TextDecoder().decode(plaintext))).toEqual({
+        desafioId: 'test-challenge',
+        correo: credentials.email,
+        contrasena: credentials.password,
+      });
+      const otherPair = await generateKeyPair('RSA-OAEP-256');
+      await expect(compactDecrypt(body.credencialCifrada, otherPair.privateKey)).rejects.toThrow();
       request.flush(TOKEN_RESPONSE);
 
       await expect(result).resolves.toEqual({
@@ -173,7 +235,8 @@ describe('HttpAuthGateway', () => {
       const result = firstValueFrom(
         gateway.login({ email: 'cliente@solventa.co', password: 'incorrecta' }),
       );
-      http.expectOne(SESSIONS).flush({}, { status, statusText: 'Error' });
+      const request = await flushChallenge();
+      request.flush({}, { status, statusText: 'Error' });
 
       await expect(result).rejects.toBeInstanceOf(expected);
     });
@@ -182,9 +245,8 @@ describe('HttpAuthGateway', () => {
       const result = firstValueFrom(
         gateway.login({ email: 'cliente@solventa.co', password: 'incorrecta' }),
       );
-      http
-        .expectOne(SESSIONS)
-        .flush({}, { status: 429, statusText: 'Too Many', headers: { 'Retry-After': '300' } });
+      const request = await flushChallenge();
+      request.flush({}, { status: 429, statusText: 'Too Many', headers: { 'Retry-After': '300' } });
 
       await expect(result).rejects.toMatchObject({
         name: 'TooManyAttemptsError',
@@ -194,11 +256,128 @@ describe('HttpAuthGateway', () => {
 
     it('reports an unknown Retry-After as null', async () => {
       const result = firstValueFrom(gateway.login({ email: 'a@solventa.co', password: 'x' }));
-      http.expectOne(SESSIONS).flush({}, { status: 429, statusText: 'Too Many' });
+      const request = await flushChallenge();
+      request.flush({}, { status: 429, statusText: 'Too Many' });
 
       const error = await result.catch((caught: unknown) => caught);
       expect(error).toBeInstanceOf(TooManyAttemptsError);
       expect((error as TooManyAttemptsError).retryAfterSeconds).toBeNull();
+    });
+
+    it.each([
+      null,
+      { desafioId: undefined },
+      { desafioId: '' },
+      { expiraEn: 'not-a-date' },
+      { expiraEn: new Date(0).toISOString() },
+      { expiraEn: '2100-01-01T00:00:00+01:00' },
+      { clavePublica: { kty: 'oct', k: 'secret' } },
+    ])('rejects a malformed or expired challenge without posting: %j', async (fields) => {
+      const result = firstValueFrom(gateway.login(credentials));
+      const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+      http
+        .expectOne(`${SESSIONS}/desafio`)
+        .flush(fields === null ? null : { ...challenge(), ...fields });
+      await rejected;
+      http.expectNone(SESSIONS);
+    });
+
+    it.each([
+      { kty: 'EC' },
+      { alg: 'RSA-OAEP' },
+      { use: 'sig' },
+      { kid: '' },
+      { kid: ' ' },
+      { n: 'invalid!' },
+      { n: 'AQAB' },
+      { e: undefined },
+      { e: '' },
+      { d: 'private-material' },
+      { p: 'private-material' },
+      { q: 'private-material' },
+      { dp: 'private-material' },
+      { dq: 'private-material' },
+      { qi: 'private-material' },
+      { oth: [] },
+    ])('rejects an unusable/private/wrong-algorithm key without posting: %j', async (fields) => {
+      const issued = challenge();
+      const result = firstValueFrom(gateway.login(credentials));
+      const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+      http.expectOne(`${SESSIONS}/desafio`).flush({
+        ...issued,
+        clavePublica: { ...issued.clavePublica, ...fields },
+      });
+      await rejected;
+      http.expectNone(SESSIONS);
+    });
+
+    it.each([
+      [503, AuthenticationUnavailableError],
+      [404, HttpErrorResponse],
+      [429, TooManyAttemptsError],
+    ])('does not downgrade when the challenge endpoint returns %s', async (status, expected) => {
+      const result = firstValueFrom(gateway.login(credentials));
+      const rejected = expect(result).rejects.toBeInstanceOf(expected);
+      http.expectOne(`${SESSIONS}/desafio`).flush({}, { status, statusText: 'Error' });
+      await rejected;
+      http.expectNone(SESSIONS);
+    });
+
+    it.each(['insecure', 'missing-subtle'] as const)(
+      'fails explicitly without making HTTP calls: %s',
+      async (failure) => {
+        if (failure === 'insecure') vi.stubGlobal('isSecureContext', false);
+        else vi.stubGlobal('crypto', { getRandomValues: crypto.getRandomValues.bind(crypto) });
+        await expect(firstValueFrom(gateway.login(credentials))).rejects.toBeInstanceOf(
+          LoginEncryptionUnavailableError,
+        );
+        http.expectNone(`${SESSIONS}/desafio`);
+        http.expectNone(SESSIONS);
+      },
+    );
+
+    it('does not post or expose crypto errors when encryption fails', async () => {
+      const encrypt = vi
+        .spyOn(crypto.subtle, 'encrypt')
+        .mockRejectedValue(new Error('synthetic crypto failure'));
+      try {
+        const result = firstValueFrom(gateway.login(credentials));
+        const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+        http.expectOne(`${SESSIONS}/desafio`).flush(challenge());
+        await rejected;
+        http.expectNone(SESSIONS);
+        expect(encrypt).toHaveBeenCalled();
+      } finally {
+        encrypt.mockRestore();
+      }
+    });
+
+    it('requests a new challenge per retry, without retaining the first ciphertext', async () => {
+      let firstCiphertext: string | undefined;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const result = firstValueFrom(gateway.login(credentials));
+        const rejected = expect(result).rejects.toBeInstanceOf(InvalidCredentialsError);
+        http.expectOne(`${SESSIONS}/desafio`).flush({
+          ...challenge(),
+          desafioId: `challenge-${attempt}`,
+        });
+        let request: ReturnType<HttpTestingController['expectOne']> | undefined;
+        await vi.waitFor(
+          () => {
+            request = http.expectOne(SESSIONS);
+          },
+          { timeout: 2000 },
+        );
+        const ciphertext = request!.request.body.credencialCifrada as string;
+        expect(ciphertext).not.toBe(firstCiphertext);
+        const { plaintext } = await compactDecrypt(ciphertext, privateKey);
+        expect(JSON.parse(new TextDecoder().decode(plaintext)).desafioId).toBe(
+          `challenge-${attempt}`,
+        );
+        firstCiphertext = ciphertext;
+        request!.flush({}, { status: 401, statusText: 'Unauthorized' });
+        await rejected;
+      }
     });
   });
 

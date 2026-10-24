@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { TranslocoTestingModule } from '@jsverse/transloco';
+import { compactDecrypt, exportJWK, generateKeyPair, type JWK } from 'jose';
 import { firstValueFrom } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
 import { environment } from '../../../environments/environment';
@@ -26,8 +27,18 @@ describe('Partner navigation through production routes', () => {
   let auth: AuthService;
   let harness: RouterTestingHarness;
   let storage: TestAuthStorage;
+  let privateKey: CryptoKey;
+  let publicJwk: JWK;
+
+  beforeAll(async () => {
+    const pair = await generateKeyPair('RSA-OAEP-256', { extractable: true });
+    privateKey = pair.privateKey;
+    publicJwk = await exportJWK(pair.publicKey);
+  });
 
   beforeEach(async () => {
+    vi.stubGlobal('isSecureContext', true);
+    vi.stubGlobal('Uint8Array', new TextEncoder().encode('').constructor);
     storage = new TestAuthStorage();
     TestBed.configureTestingModule({
       imports: [
@@ -50,14 +61,35 @@ describe('Partner navigation through production routes', () => {
 
   afterEach(() => {
     TestBed.inject(PartnerContextService).clear();
+    vi.unstubAllGlobals();
     http.verify();
   });
 
   async function login(): Promise<void> {
     auth = TestBed.inject(AuthService);
     const result = firstValueFrom(auth.login({ email: USER.correo, password: 'secret' }));
-    const request = http.expectOne(`${API}/v1/sesiones`);
-    expect(request.request.body).toEqual({ correo: USER.correo, contrasena: 'secret' });
+    const challenge = http.expectOne(`${API}/v1/sesiones/desafio`);
+    expect(challenge.request.method).toBe('GET');
+    expect(challenge.request.headers.has('Authorization')).toBe(false);
+    challenge.flush({
+      desafioId: 'p'.repeat(43),
+      clavePublica: { ...publicJwk, alg: 'RSA-OAEP-256', use: 'enc', kid: 'partner-test-key' },
+      expiraEn: new Date(Date.now() + 60_000).toISOString(),
+    });
+    const request = await vi.waitFor(() => http.expectOne(`${API}/v1/sesiones`), {
+      timeout: 2000,
+    });
+    expect(request.request.method).toBe('POST');
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    expect(Object.keys(request.request.body).sort()).toEqual(['correo', 'credencialCifrada']);
+    expect(request.request.body.correo).toBe(USER.correo);
+    expect(JSON.stringify(request.request.body)).not.toContain('secret');
+    const { plaintext } = await compactDecrypt(request.request.body.credencialCifrada, privateKey);
+    expect(JSON.parse(new TextDecoder().decode(plaintext))).toEqual({
+      desafioId: 'p'.repeat(43),
+      correo: USER.correo,
+      contrasena: 'secret',
+    });
     request.flush({
       usuario: USER,
       tokenType: 'Bearer',

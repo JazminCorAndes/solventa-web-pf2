@@ -100,6 +100,11 @@ Allí se incluyen instalación, migraciones y configuración de los tres servici
 Inicia identidad, cotización y BFF en terminales separadas. La base de datos y las claves
 de firma pertenecen a los servicios backend; no se configuran ni se incluyen en Angular.
 
+Esta rama requiere además el contrato de login cifrado descrito abajo. Prepara primero
+identidad y BFF con esa funcionalidad y habilita su flag `ENCRYPTED_LOGIN_ENABLED`
+en el entorno local de pruebas. El flag del backend viene apagado por defecto.
+El frontend de esta rama no inicia sesión contra un backend anterior o con el flag apagado.
+
 Los ejemplos del backend usan el puerto 15001 para el BFF. Para conservar
 `proxy.conf.json` sin cambios, inicia ese servicio en el puerto 5001, manteniendo las
 variables de entorno indicadas en su guía:
@@ -155,11 +160,56 @@ El build de producción (`pnpm build`) y `pnpm start:aws` usan el API Gateway di
 (`src/environments/environment.ts`, `apiBaseUrl: https://65qgzhody9.execute-api.us-east-2.amazonaws.com`).
 No hay proxy ni cookies: la autenticación usa tokens JWT.
 
-DevTools muestra la contraseña en el cuerpo de la petición antes del transporte TLS;
-esa vista no demuestra que viaje sin cifrar. Las configuraciones públicas usan HTTPS.
-La contraseña no se guarda en el estado de sesión ni se registra en consola; no se
-añade cifrado o hashing propio en el navegador ni se cambia el contrato de identidad.
-Esto no acredita el transporte entre servicios internos del backend.
+Esta configuración apunta al entorno desplegado, pero esta rama **no acredita ni
+habilita su despliegue**. No la uses para comprobar el cambio con cuentas reales.
+
+### Login cifrado de esta rama
+
+En modo HTTP, cada intento explícito consulta `GET /v1/sesiones/desafio` sin token.
+El backend responde con `Cache-Control: no-store`, un `desafioId`, una clave pública RSA
+JWK (`kty`, `n`, `e`, `alg: RSA-OAEP-256`, `use: enc`, `kid`) y `expiraEn` UTC;
+el desafío dura 60 segundos. Angular valida el contrato y cifra
+`{desafioId, correo, contrasena}` con `jose` y Web Crypto.
+El encabezado protegido contiene `alg: RSA-OAEP-256`, `enc: A256GCM`,
+el `kid` recibido y `typ: solventa-login+jwe`.
+
+`POST /v1/sesiones` envía solo `{correo, credencialCifrada}`. En el cuerpo HTTP de
+login, DevTools muestra correo y JWE compacto, no la contraseña original. El servicio
+destinatario descifra el contenido para autenticarlo. Un desafío inválido/vencido,
+una clave privada o incompatible, un error criptográfico o un backend no disponible
+interrumpen el intento; el frontend no reintenta con contraseña en claro. Un nuevo
+clic obtiene otro desafío. Se conservan los errores 401/429/503 y el reintento visible.
+No se guarda la contraseña en sesión ni se registra en consola.
+
+Necesitas HTTPS y un navegador con Web Crypto en un contexto seguro. Para desarrollo,
+los navegadores permiten `http://localhost` y loopback; un origen HTTP de la red local
+puede bloquear el cifrado. La pantalla indica cómo corregirlo, sin usar aleatoriedad
+débil ni degradar el contrato. El cifrado no oculta la contraseña al propietario del
+navegador, a extensiones con acceso ni a código ejecutado por XSS; siguen siendo
+necesarios HTTPS, protección frente a XSS y validación/replay autoritativos en el backend.
+No acredita el transporte entre servicios internos.
+
+El alcance es **solo login web**. Registro continúa enviando `contrasena` mediante
+su contrato existente y exige HTTPS fuera de desarrollo local. No cambian móvil,
+refresh, logout, la gestión de sesión ni los adaptadores mock sin HTTP.
+Para rollout, prepara primero el backend compatible y coordina la activación del flag
+con la publicación del frontend cifrado: al activarlo, los clientes web antiguos
+dejan de poder iniciar sesión. No publiques este frontend contra el backend legado
+ni lo soluciones con downgrade automático. El pin de CI integrado también necesita
+una revisión backend compatible antes de ejecutar ese workflow.
+API Gateway debe exponer `GET /v1/sesiones/desafio` como ruta pública explícita;
+el proxy autenticado actual no basta. Esta rama no modifica infraestructura.
+
+El backend compatible debe conservar `usuario.rol: "socio"` y `usuario.socios`
+en login y renovación para usar el portal descrito abajo. El cifrado no convierte
+un asesor en socio ni sustituye las autorizaciones de organización y producto.
+Las pruebas de navegación de socios usan desafíos y JWE con claves sintéticas;
+no envían contraseñas en claro al endpoint de login.
+
+La pausa de despliegues backend es intencional por costes (hotfix PR46 en `main`).
+Un merge o tag no garantiza publicación; esta rama no reactiva triggers ni cambia
+esa política. Antes de publicar, el operador debe confirmar tanto el contrato cifrado
+como las APIs de socios en las imágenes activas, no solo en ECR o `develop`.
 
 ### Portal de socios (SOL-194)
 

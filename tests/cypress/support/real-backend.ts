@@ -1,3 +1,5 @@
+import { expectEncryptedLogin } from './login-crypto';
+
 export interface Account {
   email: string;
   password: string;
@@ -75,7 +77,9 @@ export function request<T = Record<string, unknown>>(options: RequestOptions) {
 }
 
 export function observeLogin() {
-  cy.intercept('POST', '/api/v1/sesiones').as('realLogin');
+  cy.intercept('POST', '/api/v1/sesiones', (request) => {
+    expectEncryptedLogin(request.body);
+  }).as('realLogin');
 }
 
 export function tokenFromLogin(): Cypress.Chainable<string> {

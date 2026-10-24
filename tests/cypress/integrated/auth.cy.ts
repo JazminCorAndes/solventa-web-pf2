@@ -1,5 +1,6 @@
 import { login, openQuote, products } from '../support/products';
 import { Grant, observeLogin, register, request } from '../support/real-backend';
+import { expectEncryptedLogin } from '../support/login-crypto';
 
 describe('E2E integrado: errores de identidad y autorizacion reales', () => {
   it('rechaza credenciales invalidas, duplicados, consultas anonimas y refresh revocado', () => {
@@ -16,7 +17,13 @@ describe('E2E integrado: errores de identidad y autorizacion reales', () => {
           contrasena: account.password,
         },
       }).then(({ status }) => expect(status, 'correo duplicado').to.eq(409));
-      cy.intercept('POST', '/api/v1/sesiones').as('badLogin');
+      cy.intercept('POST', '/api/v1/sesiones', (request) => {
+        expectEncryptedLogin(request.body);
+        expect(
+          JSON.stringify(request.body).includes('Contrasena-Incorrecta-2026!'),
+          'sin contraseña en el login rechazado',
+        ).to.eq(false);
+      }).as('badLogin');
       cy.visit('/iniciar-sesion');
       cy.get('#login-email').type(account.email, { log: false });
       cy.get('#login-password').type('Contrasena-Incorrecta-2026!', { log: false });

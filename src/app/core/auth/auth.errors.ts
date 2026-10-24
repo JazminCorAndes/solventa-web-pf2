@@ -38,6 +38,14 @@ export class AccessDeniedError extends Error {
   }
 }
 
+export class LoginEncryptionUnavailableError extends Error {
+  override readonly name = 'LoginEncryptionUnavailableError';
+
+  constructor() {
+    super('Login requires a secure context and Web Crypto support');
+  }
+}
+
 export class EmailAlreadyRegisteredError extends Error {
   override readonly name = 'EmailAlreadyRegisteredError';
 

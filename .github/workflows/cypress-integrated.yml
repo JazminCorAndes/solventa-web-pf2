@@ -16,28 +16,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      BACKEND_REVISION: 5a4f5776c4b37c2cb77e700b98d37649a6c47f52
+      BACKEND_REVISION: 7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1
       CYPRESS_DISPOSABLE_BACKEND: '1'
       CYPRESS_BACKEND_URL: http://127.0.0.1:5000
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - name: Exigir acceso SSH autorizado al backend
-        env:
-          BACKEND_SSH_KEY: ${{ secrets.SOLVENTA_BACKEND_SSH_KEY }}
-        run: |
-          if [ -z "$BACKEND_SSH_KEY" ]; then
-            echo "::error::Falta SOLVENTA_BACKEND_SSH_KEY para leer el backend por SSH. No se omite E2E."
-            exit 1
-          fi
-      - name: Obtener backend reproducible por SSH
+      - name: Obtener revision del backend publico
         uses: actions/checkout@v6
         with:
           repository: Migue765/backend-solventa
           ref: ${{ env.BACKEND_REVISION }}
           path: .angular/cypress-backend
-          ssh-key: ${{ secrets.SOLVENTA_BACKEND_SSH_KEY }}
           persist-credentials: false
       - uses: pnpm/action-setup@v5
         with:
@@ -60,7 +51,7 @@ jobs:
       - name: Arrancar entorno desechable y recorrer la aplicación
         run: |
           mkdir -p .angular/cypress
-          (cd .angular/cypress-backend && exec python -m tests.jmeter.local_stack --web-port 5000 --mobile-port 5001) > .angular/cypress/backend.log 2>&1 &
+          (cd .angular/cypress-backend && exec python -m tests.jmeter.local_stack --web-port 5000 --mobile-port 5001 --encrypted-login) > .angular/cypress/backend.log 2>&1 &
           backend_pid=$!
           trap 'kill "$backend_pid" 2>/dev/null || true; wait "$backend_pid" 2>/dev/null || true' EXIT
           python - <<'PY'
