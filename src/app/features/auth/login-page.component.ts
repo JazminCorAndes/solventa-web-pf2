@@ -19,6 +19,7 @@ import {
   AccessDeniedError,
   AuthenticationUnavailableError,
   InvalidCredentialsError,
+  LoginEncryptionUnavailableError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { AuthService } from '../../core/auth/auth.service';
@@ -91,9 +92,11 @@ export class LoginPageComponent {
                 ? 'auth.errors.tooManyAttempts'
                 : error instanceof AccessDeniedError
                   ? 'partners.errors.forbidden'
-                  : error instanceof AuthenticationUnavailableError
-                    ? 'auth.errors.unavailable'
-                    : 'auth.errors.unexpected',
+                  : error instanceof LoginEncryptionUnavailableError
+                    ? 'auth.errors.encryptionUnavailable'
+                    : error instanceof AuthenticationUnavailableError
+                      ? 'auth.errors.unavailable'
+                      : 'auth.errors.unexpected',
           );
           queueMicrotask(() => this.alert()?.nativeElement.focus());
         },

@@ -65,6 +65,7 @@
       "invalidCredentials": "El usuario o la contraseña son incorrectos.",
       "tooManyAttempts": "Demasiados intentos. Espera unos minutos antes de intentarlo nuevamente.",
       "unavailable": "No fue posible iniciar sesión en este momento. Inténtalo nuevamente.",
+      "encryptionUnavailable": "Abre el sitio con HTTPS (o localhost para desarrollo) y usa un navegador actualizado con Web Crypto para iniciar sesión.",
       "unexpected": "Ocurrió un error inesperado. Inténtalo nuevamente."
     }
   },

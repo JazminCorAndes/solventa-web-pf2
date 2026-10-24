@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, map, Observable, of, throwError } from 'rxjs';
+import { CompactEncrypt, importJWK } from 'jose';
+import { catchError, defer, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AccessDeniedError,
@@ -8,6 +9,7 @@ import {
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
+  LoginEncryptionUnavailableError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { AuthGateway } from '../../core/auth/auth.gateway';
@@ -71,20 +73,27 @@ export class HttpAuthGateway implements AuthGateway {
   }
 
   login(credentials: LoginCredentials): Observable<AuthGrant> {
-    return this.http
-      .post<TokenResponse>(this.sessionsUrl, {
-        correo: credentials.email,
-        contrasena: credentials.password,
-      })
-      .pipe(
-        map(toGrant),
-        catchError((error: unknown) => {
-          if (error instanceof HttpErrorResponse && error.status === 401) {
-            return throwError(() => new InvalidCredentialsError());
-          }
-          return this.mapCommonError(error);
+    return defer(() => {
+      if (globalThis.isSecureContext !== true || !globalThis.crypto?.subtle) {
+        throw new LoginEncryptionUnavailableError();
+      }
+      return this.http.get<unknown>(`${this.sessionsUrl}/desafio`);
+    }).pipe(
+      switchMap((challenge) => encryptCredentials(challenge, credentials)),
+      switchMap((credencialCifrada) =>
+        this.http.post<TokenResponse>(this.sessionsUrl, {
+          correo: credentials.email,
+          credencialCifrada,
         }),
-      );
+      ),
+      map(toGrant),
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          return throwError(() => new InvalidCredentialsError());
+        }
+        return this.mapCommonError(error);
+      }),
+    );
   }
 
   refresh(refreshToken: string): Observable<AuthGrant> {
@@ -143,6 +152,66 @@ export class HttpAuthGateway implements AuthGateway {
       }
     }
     return throwError(() => error);
+  }
+}
+
+async function encryptCredentials(
+  response: unknown,
+  credentials: LoginCredentials,
+): Promise<string> {
+  try {
+    if (!response || typeof response !== 'object') {
+      throw new AuthenticationUnavailableError();
+    }
+    const { desafioId, clavePublica, expiraEn } = response as Record<string, unknown>;
+    const key = clavePublica as Record<string, unknown> | null;
+    const expiresAt = typeof expiraEn === 'string' ? Date.parse(expiraEn) : NaN;
+    if (
+      typeof desafioId !== 'string' ||
+      !desafioId.trim() ||
+      typeof expiraEn !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(expiraEn) ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= Date.now() ||
+      !key ||
+      typeof key !== 'object' ||
+      Object.keys(key).some((field) => !['kty', 'n', 'e', 'alg', 'use', 'kid'].includes(field)) ||
+      key['kty'] !== 'RSA' ||
+      key['alg'] !== 'RSA-OAEP-256' ||
+      key['use'] !== 'enc' ||
+      typeof key['kid'] !== 'string' ||
+      !key['kid'].trim() ||
+      typeof key['n'] !== 'string' ||
+      !/^[A-Za-z0-9_-]+$/.test(key['n']) ||
+      typeof key['e'] !== 'string' ||
+      !/^[A-Za-z0-9_-]+$/.test(key['e'])
+    ) {
+      throw new AuthenticationUnavailableError();
+    }
+    const publicKey = await importJWK(key, 'RSA-OAEP-256');
+    const encrypted = await new CompactEncrypt(
+      new TextEncoder().encode(
+        JSON.stringify({
+          desafioId,
+          correo: credentials.email,
+          contrasena: credentials.password,
+        }),
+      ),
+    )
+      .setProtectedHeader({
+        alg: 'RSA-OAEP-256',
+        enc: 'A256GCM',
+        kid: key['kid'],
+        typ: 'solventa-login+jwe',
+      })
+      .encrypt(publicKey);
+    if (expiresAt <= Date.now()) {
+      throw new AuthenticationUnavailableError();
+    }
+    return encrypted;
+  } catch {
+    // Crypto and contract errors must not leak credentials or trigger a plaintext retry.
+    throw new AuthenticationUnavailableError();
   }
 }
 

@@ -65,6 +65,7 @@
       "invalidCredentials": "The username or password is incorrect.",
       "tooManyAttempts": "Too many attempts. Wait a few minutes before trying again.",
       "unavailable": "Sign in is currently unavailable. Please try again.",
+      "encryptionUnavailable": "Open the site over HTTPS (or localhost for development) and use an up-to-date browser with Web Crypto to sign in.",
       "unexpected": "An unexpected error occurred. Please try again."
     }
   },
