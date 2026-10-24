@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AccessDeniedError,
   AuthenticationUnavailableError,
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
@@ -56,6 +57,43 @@ describe('HttpAuthGateway', () => {
   afterEach(() => http.verify());
 
   describe('login', () => {
+    it('accepts the real partner role and preserves authorized organizations', async () => {
+      const result = firstValueFrom(
+        gateway.login({ email: 'socio@example.com', password: 'secret' }),
+      );
+      http.expectOne(SESSIONS).flush({
+        ...TOKEN_RESPONSE,
+        usuario: { ...USER_RESPONSE, rol: 'socio', socios: ['BANCO-001'] },
+      });
+      await expect(result).resolves.toMatchObject({
+        session: { user: { role: 'partner', partnerIds: ['BANCO-001'] } },
+      });
+    });
+
+    it.each([undefined, [], [''], [12], ['BANCO-001', 'BANCO-001']])(
+      'rejects a partner without valid organization membership: %j',
+      async (socios) => {
+        const result = firstValueFrom(
+          gateway.login({ email: 'socio@example.com', password: 'secret' }),
+        );
+        http.expectOne(SESSIONS).flush({
+          ...TOKEN_RESPONSE,
+          usuario: { ...USER_RESPONSE, rol: 'socio', socios },
+        });
+        await expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+      },
+    );
+
+    it('does not treat an advisor as a partner', async () => {
+      const result = firstValueFrom(
+        gateway.login({ email: 'asesor@example.com', password: 'secret' }),
+      );
+      http.expectOne(SESSIONS).flush({
+        ...TOKEN_RESPONSE,
+        usuario: { ...USER_RESPONSE, rol: 'asesor', socios: ['BANCO-001'] },
+      });
+      await expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+    });
     it('rejects unknown roles instead of treating them as clients', async () => {
       const result = firstValueFrom(
         gateway.login({ email: 'cliente@solventa.co', password: 'Solventa123!' }),
@@ -128,6 +166,7 @@ describe('HttpAuthGateway', () => {
 
     it.each([
       [401, InvalidCredentialsError],
+      [403, AccessDeniedError],
       [503, AuthenticationUnavailableError],
       [0, AuthenticationUnavailableError],
     ])('maps HTTP %s', async (status, expected) => {

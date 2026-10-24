@@ -16,6 +16,8 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { homeUrl } from '../../core/auth/auth.guards';
+import { PartnerContextService } from '../../core/partners/partner-context.service';
 import { BrandComponent } from '../../shared/brand/brand.component';
 import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
 import { ThemeToggleComponent } from '../../shared/theme-toggle/theme-toggle.component';
@@ -47,6 +49,9 @@ export class AuthenticatedLayoutComponent {
   private readonly sidenav = viewChild(MatSidenav);
 
   readonly user = this.auth.user;
+  readonly partners = inject(PartnerContextService);
+  readonly isPartner = computed(() => this.user()?.role === 'partner');
+  readonly homeUrl = computed(() => homeUrl(this.user()));
   readonly language = signal(this.transloco.getActiveLang() || 'es');
   readonly userInitials = computed(() => {
     const name = this.user()?.name.trim() ?? '';
