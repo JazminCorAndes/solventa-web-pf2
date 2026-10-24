@@ -87,14 +87,20 @@ export interface RiskProfile {
   calculadoEn: string;
   vigenteHasta: string;
   fuentes: {
-    nombre: 'open_finance' | 'open_data';
+    nombre: string;
     version: string;
     consultadaEn: string;
     vigenteHasta: string;
     simulada: true;
     indicadorRiesgo: string;
   }[];
-  fallbackUsed: false;
+  estadoFuentes?: {
+    fuente: string;
+    estado: 'disponible' | 'cache' | 'fallida';
+    intentos: number;
+    motivo: string | null;
+  }[];
+  fallbackUsed: boolean;
 }
 
 export function consentIsReadable(consent: ProfilingConsent | null): boolean {
@@ -154,7 +160,7 @@ export function profileIsCurrent(
     profile.solicitudId === requestId &&
     profile.consentimientoId === consent?.consentimientoId &&
     profile.consentimientoVersion === consent?.version &&
-    profile.fallbackUsed === false &&
+    typeof profile.fallbackUsed === 'boolean' &&
     typeof profile.score === 'string' &&
     /^(0|1|0\.\d+|1\.0+)$/.test(profile.score) &&
     ['A', 'B', 'C'].includes(profile.nivel) &&
@@ -167,20 +173,47 @@ export function profileIsCurrent(
     Date.parse(profile.calculadoEn) <= now &&
     Date.parse(profile.vigenteHasta) > now &&
     Array.isArray(profile.fuentes) &&
-    profile.fuentes.length === 2 &&
+    profile.fuentes.length >= 2 &&
+    profile.fuentes.every(
+      (source) =>
+        !!source &&
+        typeof source.nombre === 'string' &&
+        !!source.nombre.trim() &&
+        source.simulada === true &&
+        typeof source.version === 'string' &&
+        !!source.version &&
+        typeof source.indicadorRiesgo === 'string' &&
+        /^(0|1|0\.\d+|1\.0+)$/.test(source.indicadorRiesgo) &&
+        Date.parse(source.consultadaEn) <= now &&
+        Date.parse(source.vigenteHasta) > now,
+    ) &&
+    new Set(profile.fuentes.map((source) => source.nombre)).size === profile.fuentes.length &&
     ['open_finance', 'open_data'].every((name) =>
-      profile.fuentes.some(
-        (source) =>
-          !!source &&
-          source.nombre === name &&
-          source.simulada === true &&
-          typeof source.version === 'string' &&
-          !!source.version &&
-          typeof source.indicadorRiesgo === 'string' &&
-          /^(0|1|0\.\d+|1\.0+)$/.test(source.indicadorRiesgo) &&
-          Date.parse(source.consultadaEn) <= now &&
-          Date.parse(source.vigenteHasta) > now,
-      ),
-    )
+      profile.fuentes.some((source) => source.nombre === name),
+    ) &&
+    profileSourceStatesMatch(profile)
+  );
+}
+
+function profileSourceStatesMatch(profile: RiskProfile): boolean {
+  const states = profile.estadoFuentes;
+  if (states === undefined || (Array.isArray(states) && states.length === 0)) {
+    return !profile.fallbackUsed;
+  }
+  return (
+    Array.isArray(states) &&
+    states.length === profile.fuentes.length &&
+    new Set(states.map((state) => state?.fuente)).size === states.length &&
+    states.every(
+      (state) =>
+        !!state &&
+        profile.fuentes.some((source) => source.nombre === state.fuente) &&
+        (state.estado === 'disponible' || state.estado === 'cache') &&
+        Number.isInteger(state.intentos) &&
+        state.intentos >= 0 &&
+        state.intentos <= 2 &&
+        (state.motivo === null || typeof state.motivo === 'string'),
+    ) &&
+    profile.fallbackUsed === states.some((state) => state.estado === 'cache')
   );
 }

@@ -45,6 +45,7 @@ import { InputFilterDirective } from '../../shared/input-filter/input-filter.dir
 import { LocalizedDateAdapter } from '../../shared/dates/localized-date-adapter';
 import { profilingErrorKey } from '../../core/profiling/profiling.errors';
 import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.component';
+import { PartnerQuotePanelComponent } from '../partners/partner-quote-panel.component';
 
 @Component({
   selector: 'app-quote-request-page',
@@ -53,6 +54,7 @@ import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.
     InputFilterDirective,
     MatAutocompleteModule,
     ProfilingPanelComponent,
+    PartnerQuotePanelComponent,
     MatButtonModule,
     MatCardModule,
     MatDatepickerModule,
@@ -84,6 +86,16 @@ export class QuoteRequestPageComponent implements OnInit {
 
   readonly quotes = inject(QuoteRequestService);
   readonly user = inject(AuthService).user;
+  readonly partnerMode = this.route.snapshot.data['partnerMode'] === true;
+  readonly partnerPanel = viewChild(PartnerQuotePanelComponent);
+  readonly partnerLocked = signal(false);
+  readonly products = computed(() =>
+    this.partnerMode
+      ? this.quotes
+          .products()
+          .filter((product) => this.partnerPanel()?.allowedProductIds().includes(product.id))
+      : this.quotes.products(),
+  );
   readonly today = startOfToday();
   readonly tomorrow = new Date(
     this.today.getFullYear(),
@@ -133,7 +145,7 @@ export class QuoteRequestPageComponent implements OnInit {
     initialValue: this.form.controls.destination.value,
   });
   readonly selectedProduct = computed(
-    () => this.quotes.products().find((product) => product.id === this.productId()) ?? null,
+    () => this.products().find((product) => product.id === this.productId()) ?? null,
   );
   readonly documentTypeLabelKey = computed(() =>
     this.user()?.documentType
@@ -175,7 +187,7 @@ export class QuoteRequestPageComponent implements OnInit {
   }
 
   submit(): void {
-    if (this.submitting() || this.submittedRequest()) {
+    if (this.submitting() || this.submittedRequest() || this.partnerLocked()) {
       return;
     }
 
@@ -186,6 +198,13 @@ export class QuoteRequestPageComponent implements OnInit {
     }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+    if (this.partnerMode) {
+      this.partnerPanel()?.submit({
+        productId: this.form.getRawValue().productId,
+        productData: this.buildProductData(this.form.getRawValue().productId),
+      });
       return;
     }
     if (!this.profilingReady()) {
@@ -229,6 +248,12 @@ export class QuoteRequestPageComponent implements OnInit {
           }
         },
       });
+  }
+
+  setPartnerLocked(locked: boolean): void {
+    this.partnerLocked.set(locked);
+    if (locked) this.form.disable();
+    else this.form.enable();
   }
 
   showError(controlName: FormControlName): boolean {
