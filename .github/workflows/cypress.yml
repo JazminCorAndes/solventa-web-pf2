@@ -1,0 +1,42 @@
+name: Cypress · UI determinista
+
+on:
+  pull_request:
+  push:
+    branches: [develop, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cypress-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cypress-ui:
+    name: Cypress UI (no acredita E2E integrado)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node --test tests/cypress/runner.test.cjs
+      - run: pnpm test:cypress:types
+      - run: pnpm test:cypress:ui
+      - name: Conservar resultados UI sin capturas ni credenciales
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cypress-ui-results
+          path: reports/cypress/ui/*.xml
+          if-no-files-found: warn
+          retention-days: 14

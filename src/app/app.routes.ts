@@ -109,6 +109,25 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
   },
+  {
+    path: 'asesor',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./layout/advisor-layout/advisor-layout.component').then(
+        (component) => component.AdvisorLayoutComponent,
+      ),
+    children: [
+      {
+        path: 'perfilamientos/nuevo',
+        loadComponent: () =>
+          import('./features/advisor/mortgage-profiling-start-page.component').then(
+            (component) => component.MortgageProfilingStartPageComponent,
+          ),
+        title: 'Iniciar perfilamiento hipotecario | Solventa',
+      },
+      { path: '', pathMatch: 'full', redirectTo: 'perfilamientos/nuevo' },
+    ],
+  },
   { path: '', pathMatch: 'full', redirectTo: 'iniciar-sesion' },
   { path: '**', redirectTo: 'iniciar-sesion' },
 ];

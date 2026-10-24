@@ -478,5 +478,66 @@
       "notAllowed": "Simulated payment is not allowed for the current request status. Refresh the status.",
       "unavailable": "The simulated payment could not be loaded or confirmed. Refresh the status or retry confirmation."
     }
+  },
+  "advisorNavigation": {
+    "portal": "Advisor portal",
+    "portalType": "Distribution partners",
+    "title": "Advisor portal",
+    "clients": "Customers"
+  },
+  "mortgageProfiling": {
+    "eyebrow": "Mortgage origination",
+    "title": "Start profiling",
+    "subtitle": "Enter the customer and credit details to request their assessment.",
+    "partner": "Distribution partner",
+    "partnerName": "Solventa Partner Bank",
+    "partnerId": "Partner identifier",
+    "customerSection": "Customer details",
+    "creditSection": "Credit details",
+    "consentSection": "Customer consent",
+    "documentType": "Document type",
+    "documentNumber": "Document number",
+    "fullName": "Full name",
+    "email": "Email",
+    "phone": "Phone",
+    "creditReference": "Credit reference",
+    "creditAmount": "Credit amount",
+    "termMonths": "Term in months",
+    "consentId": "Consent identifier",
+    "consentVersion": "Consent version",
+    "consentNotice": "The customer must have made an explicit decision in the corresponding consent channel. This form only verifies and references that decision; it does not replace it.",
+    "consentVerified": "I verified that the customer gave explicit consent and that the reference is current.",
+    "submit": "Start profiling",
+    "processing": "Starting profiling",
+    "retry": "Retry the same operation",
+    "idempotencyNotice": "Do not close this page while submitting. Retries keep the same operation identifier.",
+    "resultTitle": "Profiling started",
+    "resultBody": "The service confirmed receipt. You can check the result after processing is complete.",
+    "profilingReference": "Profiling reference",
+    "operationId": "Operation identifier",
+    "startAnother": "Start another profiling request",
+    "status": {
+      "processing": "Processing"
+    },
+    "validation": {
+      "documentNumber": "Enter a valid document containing 6 to 15 characters.",
+      "fullName": "Enter the customer's full name.",
+      "email": "Enter a valid email.",
+      "phone": "Enter a valid phone containing 10 to 15 digits.",
+      "creditReference": "Enter a valid credit reference.",
+      "creditAmount": "The amount must be at least COP 1,000,000.",
+      "termMonths": "The term must be between 12 and 360 months.",
+      "consentId": "Enter the UUID of the consent recorded by the customer.",
+      "consentVersion": "Enter a valid consent version.",
+      "consentVerified": "You must verify explicit consent before continuing."
+    },
+    "errors": {
+      "incomplete_data": "The service rejected the request because required details are missing. Review the information.",
+      "invalid_consent": "Consent is invalid or no longer current. Verify the reference with the customer.",
+      "unauthorized_partner": "Your session is not authorized to start operations for this partner.",
+      "idempotency_conflict": "The operation identifier was already used with different data. Start a new operation.",
+      "service_unavailable": "The profiling service is unavailable. You can retry without creating another operation.",
+      "unexpected": "Profiling could not be started. You can retry without creating another operation."
+    }
   }
 }

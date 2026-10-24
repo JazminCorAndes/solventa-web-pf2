@@ -75,6 +75,14 @@ recomendado del 80 %. Los indicadores 🟢/🟠/⚪/🔴 llevan texto y distingu
 mejora pendiente, métrica no aplicable e informe inválido. Los enlaces HTML/JUnit y la
 revisión compilada completan el detalle, sin crear otro check ni cambiar el principal de Jenkins.
 
+El resumen de **Cobertura** identifica Jenkins, el número de build, su resultado observado
+y el SHA obtenido del checkout de esa ejecución. Los enlaces HTML/JUnit se identifican
+como privados y requieren el túnel autorizado; `localhost` no es un destino público para
+un evaluador. Los conteos y la cobertura quedan legibles en el check de GitHub sin abrir
+Jenkins. Los artefactos de Actions pertenecen a Actions, no sustituyen un reporte de Jenkins.
+El `detailsURL` del check principal **CI / Validación (Jenkins)** lo publica el controlador:
+un cambio en este repositorio no corrige ese enlace global ni abre Jenkins a Internet.
+
 Etapas: Código → Herramientas → Dependencias → Lint → Pruebas y cobertura → Compilación.
 La etapa roja identifica el fallo. Los reportes disponibles se conservan incluso si falla
 una prueba o compilación.

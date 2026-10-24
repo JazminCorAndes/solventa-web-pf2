@@ -21,6 +21,7 @@ import { ACTIVE_MARKET } from '../../core/market/market.config';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
 import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
 import { SubscriptionService } from '../../core/subscriptions/subscription.service';
+import { profilingErrorKey } from '../../core/profiling/profiling.errors';
 
 @Component({
   selector: 'app-offer-acceptance-page',
@@ -49,6 +50,11 @@ export class OfferAcceptancePageComponent implements OnInit {
   readonly accepted = signal(false);
   readonly confirming = signal(false);
   readonly errorKey = signal<string | null>(null);
+  readonly flowInvalidated = computed(
+    () =>
+      this.errorKey() === 'profiling.errors.expired' ||
+      this.errorKey() === 'profiling.errors.consent',
+  );
   readonly request = this.quotes.latestRequest;
   readonly selectedOffer = this.offers.selectedOffer;
   readonly confirmed = computed(
@@ -84,11 +90,13 @@ export class OfferAcceptancePageComponent implements OnInit {
 
   updateConsent(event: MatCheckboxChange): void {
     this.accepted.set(event.checked);
-    this.errorKey.set(null);
+    if (!this.flowInvalidated()) {
+      this.errorKey.set(null);
+    }
   }
 
   confirm(): void {
-    if (!this.accepted() || this.confirming() || this.confirmed()) {
+    if (!this.accepted() || this.confirming() || this.confirmed() || this.flowInvalidated()) {
       return;
     }
 
@@ -104,16 +112,17 @@ export class OfferAcceptancePageComponent implements OnInit {
         next: () => void this.router.navigate(['/app/cotizaciones/suscripcion']),
         error: (error: unknown) => {
           this.errorKey.set(
-            error instanceof OfferUnavailableError
-              ? 'acceptance.errors.unavailable'
-              : 'acceptance.errors.subscription',
+            profilingErrorKey(error) ??
+              (error instanceof OfferUnavailableError
+                ? 'acceptance.errors.unavailable'
+                : 'acceptance.errors.subscription'),
           );
         },
       });
   }
 
   continueWithSubscription(): void {
-    if (!this.confirmed() || this.confirming()) {
+    if (!this.confirmed() || this.confirming() || this.flowInvalidated()) {
       return;
     }
     this.confirming.set(true);
@@ -125,7 +134,8 @@ export class OfferAcceptancePageComponent implements OnInit {
       )
       .subscribe({
         next: () => void this.router.navigate(['/app/cotizaciones/suscripcion']),
-        error: () => this.errorKey.set('acceptance.errors.subscription'),
+        error: (error: unknown) =>
+          this.errorKey.set(profilingErrorKey(error) ?? 'acceptance.errors.subscription'),
       });
   }
 }
