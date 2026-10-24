@@ -104,7 +104,14 @@
     }
 
     @if (errorKey(); as error) {
-      <div class="confirmation-error" role="alert">{{ error | transloco }}</div>
+      <div class="confirmation-error" role="alert">
+        {{ error | transloco }}
+        @if (flowInvalidated()) {
+          <a mat-button routerLink="/app/cotizaciones/solicitar">
+            {{ 'quoteSummary.newQuote' | transloco }}
+          </a>
+        }
+      </div>
     }
 
     <div class="actions">
@@ -115,7 +122,7 @@
         <button
           mat-flat-button
           type="button"
-          [disabled]="!accepted() || confirming()"
+          [disabled]="!accepted() || confirming() || flowInvalidated()"
           (click)="confirm()"
         >
           @if (confirming()) {
@@ -129,7 +136,7 @@
         <button
           mat-flat-button
           type="button"
-          [disabled]="confirming()"
+          [disabled]="confirming() || flowInvalidated()"
           (click)="continueWithSubscription()"
         >
           @if (confirming()) {
@@ -138,6 +145,18 @@
           {{ 'acceptance.continueAction' | transloco }} →
         </button>
       }
+    </div>
+  } @else if (offers.status() === 'error') {
+    <div class="confirmation-error" role="alert">
+      <p>{{ offers.errorKey() ?? 'offers.errors.loadBody' | transloco }}</p>
+      @if (offers.errorKey() !== 'profiling.errors.expired') {
+        <button mat-stroked-button type="button" (click)="offers.load()">
+          {{ 'common.retry' | transloco }}
+        </button>
+      }
+      <a mat-button routerLink="/app/cotizaciones/solicitar">
+        {{ 'quoteSummary.newQuote' | transloco }}
+      </a>
     </div>
   } @else {
     <mat-card appearance="outlined" class="loading-card">

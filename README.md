@@ -155,6 +155,12 @@ El build de producción (`pnpm build`) y `pnpm start:aws` usan el API Gateway di
 (`src/environments/environment.ts`, `apiBaseUrl: https://65qgzhody9.execute-api.us-east-2.amazonaws.com`).
 No hay proxy ni cookies: la autenticación usa tokens JWT.
 
+DevTools muestra la contraseña en el cuerpo de la petición antes del transporte TLS;
+esa vista no demuestra que viaje sin cifrar. Las configuraciones públicas usan HTTPS.
+La contraseña no se guarda en el estado de sesión ni se registra en consola; no se
+añade cifrado o hashing propio en el navegador ni se cambia el contrato de identidad.
+Esto no acredita el transporte entre servicios internos del backend.
+
 ### Tablero integrado
 
 El inicio consume `GET /v1/clientes/me/dashboard` del BFF principal con el interceptor
@@ -209,10 +215,21 @@ guarda solicitud y cotización atómicamente; el dashboard incluye todas esas so
 
 Cada tarjeta continúa su propia solicitud (`?solicitud={id}`): ofertas cuando no hay
 selección, aceptación cuando falta crear la suscripción, pago para suscripciones
-aprobadas pendientes y detalle para las pagadas. La guarda recupera solicitud, selección
-y suscripción del propietario antes de habilitar el destino; una recuperación fallida
-se informa explícitamente. Consultar el listado no cambia la solicitud activa ni
-confirma ofertas o pagos.
+aprobadas pendientes y detalle para las pagadas. Sin selección aceptada, el enlace a
+ofertas solo se habilita cuando el panel confirma consentimiento y perfil vigentes, y se
+retira al vencer. La guarda vuelve a comprobarlos al entrar, incluso con un enlace directo.
+Un perfil vencido indica crear una nueva cotización; no renueva consentimiento, fechas
+ni crea solicitudes o pagos automáticamente. Los errores de ofertas y aceptación se
+muestran con una salida explícita, sin mantener una selección anterior o un spinner indefinido.
+
+La guarda recupera primero solicitud y suscripción del propietario. Si existe suscripción,
+su estado y detalle se pueden consultar sin exigir nuevamente el perfil; la confirmación
+del pago sigue requiriendo selección aceptada y coincidente del backend. Actualmente
+el backend revalida el perfil al consultar una selección ya aceptada: si ha vencido,
+el estado de suscripción sigue accesible, pero su importe y pago no se pueden recuperar
+hasta que el backend permita esa lectura histórica. No se reconstruye una selección
+desde el dashboard ni se omite la validación para evitar ese error.
+Consultar el listado no cambia la solicitud activa ni confirma ofertas o pagos.
 
 Los estados superiores son «Solicitud en proceso», «Activa» y «Vencida». El vencimiento
 usa exclusivamente `vigenteHasta` de la suscripción (fin exclusivo), nunca `validaHasta`

@@ -11,6 +11,7 @@ export function quoteProgress(requestId: string, snapshot: DashboardSnapshot, no
       ));
   const expired = paid && !!subscription?.validUntil && Date.parse(subscription.validUntil) <= now;
   return {
+    requiresProfile: !subscription && !quote?.selection,
     status: paid ? (expired ? 'expired' : 'active') : 'inProgress',
     action: paid
       ? 'viewSubscription'

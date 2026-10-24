@@ -36,6 +36,31 @@ export const consent = (): ProfilingConsent => ({
   efectivaEn: new Date(Date.now() - 10000).toISOString(),
   vigenteHasta: new Date(Date.now() + 86400000).toISOString(),
 });
+export const profile = (current = consent()) => {
+  const time = new Date(Date.now() - 1000).toISOString();
+  const until = new Date(Date.now() + 15 * 60000).toISOString();
+  return {
+    solicitudId: quoteId,
+    perfilId: 'profile-ui',
+    version: 1,
+    modeloVersion: 'model-ui',
+    score: '0.250000',
+    nivel: 'A',
+    consentimientoId: current.consentimientoId,
+    consentimientoVersion: current.version,
+    calculadoEn: time,
+    vigenteHasta: until,
+    fuentes: ['open_finance', 'open_data'].map((nombre) => ({
+      nombre,
+      version: 'source-ui',
+      consultadaEn: time,
+      vigenteHasta: until,
+      simulada: true,
+      indicadorRiesgo: '0.250000',
+    })),
+    fallbackUsed: false,
+  };
+};
 export const grant = () => ({
   usuario: syntheticUser,
   tokenType: 'Bearer',
@@ -119,4 +144,11 @@ export function mockBackend() {
     'offers',
   );
   cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion`, { statusCode: 404 });
+  cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/perfilamiento`, (request) => {
+    request.reply(
+      savedConsent?.estado === 'autorizado'
+        ? { body: profile(savedConsent), headers: { Date: new Date().toUTCString() } }
+        : { statusCode: 403, body: { code: 'consentimiento_no_vigente' } },
+    );
+  }).as('profile');
 }

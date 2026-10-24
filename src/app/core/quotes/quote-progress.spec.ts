@@ -6,6 +6,26 @@ describe('quoteProgress', () => {
 
   it('does not confuse an expired quote with an expired subscription', () => {
     expect(quoteProgress('request-001', DASHBOARD_SNAPSHOT, now).status).toBe('active');
+    expect(quoteProgress('request-001', DASHBOARD_SNAPSHOT, now).requiresProfile).toBe(false);
+  });
+
+  it('requires a profile only before acceptance, not to consult an accepted flow', () => {
+    const selected = {
+      ...DASHBOARD_SNAPSHOT,
+      subscriptions: [],
+      payments: [],
+    };
+    expect(quoteProgress('request-001', selected, now).requiresProfile).toBe(false);
+    expect(
+      quoteProgress(
+        'request-001',
+        {
+          ...selected,
+          quotes: selected.quotes.map((quote) => ({ ...quote, selection: null })),
+        },
+        now,
+      ).requiresProfile,
+    ).toBe(true);
   });
 
   it.each([

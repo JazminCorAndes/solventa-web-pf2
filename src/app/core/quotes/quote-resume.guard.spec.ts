@@ -22,6 +22,9 @@ import { QUOTE_REQUEST_GATEWAY } from './quote-request.gateway';
 import { BrowserQuoteRequestStorage, QUOTE_REQUEST_STORAGE } from './quote-request-storage.service';
 import { QuoteRequestService } from './quote-request.service';
 import { quoteResumeGuard } from './quote-resume.guard';
+import { PROFILING_GATEWAY } from '../profiling/profiling.gateway';
+import { createConsent, createProfile } from '../profiling/profiling.fixtures';
+import { of } from 'rxjs';
 
 @Component({ template: '' })
 class FlowPage {}
@@ -71,8 +74,14 @@ describe('historical quote route integration', () => {
   let harness: RouterTestingHarness;
   let http: HttpTestingController;
   const base = `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}`;
+  const profiling = {
+    loadConsent: vi.fn(() => of(createConsent())),
+    loadProfile: vi.fn(() => of(createProfile(REQUEST.id))),
+  };
 
   beforeEach(async () => {
+    profiling.loadConsent.mockReset().mockImplementation(() => of(createConsent()));
+    profiling.loadProfile.mockReset().mockImplementation(() => of(createProfile(REQUEST.id)));
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
@@ -91,6 +100,7 @@ describe('historical quote route integration', () => {
         { provide: QUOTE_REQUEST_STORAGE, useClass: BrowserQuoteRequestStorage },
         { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
         { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
+        { provide: PROFILING_GATEWAY, useValue: profiling },
       ],
     });
     TestBed.inject(QUOTE_REQUEST_STORAGE).clear();
@@ -112,19 +122,21 @@ describe('historical quote route integration', () => {
     const request = await vi.waitFor(() => http.expectOne(base));
     expect(request.request.method).toBe('GET');
     request.flush(REQUEST);
-    const selection = http.expectOne(`${base}/seleccion`);
-    expect(selection.request.method).toBe('GET');
-    if (selected) {
-      selection.flush(SELECTION);
-    } else {
-      selection.flush({}, { status: 404, statusText: 'Not Found' });
-    }
     const subscription = http.expectOne(`${base}/suscripcion`);
     expect(subscription.request.method).toBe('GET');
     if (subscribed) {
       subscription.flush(SUBSCRIPTION);
     } else {
       subscription.flush({}, { status: 404, statusText: 'Not Found' });
+    }
+    if (!(subscribed && step.includes('suscripcion'))) {
+      const selection = http.expectOne(`${base}/seleccion`);
+      expect(selection.request.method).toBe('GET');
+      if (selected) {
+        selection.flush(SELECTION);
+      } else {
+        selection.flush({}, { status: 404, statusText: 'Not Found' });
+      }
     }
     await navigation;
   }
@@ -144,7 +156,7 @@ describe('historical quote route integration', () => {
         REQUEST.datosProducto,
       );
       expect(TestBed.inject(OFFER_SELECTION_STORAGE).read()?.offerId ?? null).toBe(
-        selected ? SELECTION.ofertaId : null,
+        selected && !subscribed ? SELECTION.ofertaId : null,
       );
       expect(TestBed.inject(SUBSCRIPTION_STORAGE).read()?.validUntil ?? null).toBe(
         subscribed ? SUBSCRIPTION.vigenteHasta : null,
@@ -164,5 +176,64 @@ describe('historical quote route integration', () => {
     await navigation;
     expect(TestBed.inject(Router).url).toBe('/app/cotizaciones?error=resume');
     expect(TestBed.inject(QUOTE_REQUEST_STORAGE).read()).toBeNull();
+  });
+
+  it.each(['aprobada', 'revision', 'rechazada'] as const)(
+    'recovers %s subscription status without requiring an expired profile or selection',
+    async (status) => {
+      const navigation = harness.navigateByUrl(
+        `/app/cotizaciones/suscripcion?solicitud=${REQUEST.id}`,
+      );
+      const request = await vi.waitFor(() => http.expectOne(base));
+      request.flush(REQUEST);
+      http.expectOne(`${base}/suscripcion`).flush({
+        ...SUBSCRIPTION,
+        estado: status,
+        decision: { ...SUBSCRIPTION.decision, resultado: status },
+      });
+      http.expectNone(`${base}/seleccion`);
+      await navigation;
+      expect(TestBed.inject(Router).url).toContain('/app/cotizaciones/suscripcion?');
+      expect(profiling.loadProfile).not.toHaveBeenCalled();
+      expect(TestBed.inject(OFFER_SELECTION_STORAGE).read()).toBeNull();
+    },
+  );
+
+  it('redirects an expired selection to explicit recovery, never acceptance', async () => {
+    const navigation = harness.navigateByUrl(
+      `/app/cotizaciones/aceptacion?solicitud=${REQUEST.id}`,
+    );
+    const request = await vi.waitFor(() => http.expectOne(base));
+    request.flush(REQUEST);
+    http.expectOne(`${base}/suscripcion`).flush({}, { status: 404, statusText: 'Not Found' });
+    http
+      .expectOne(`${base}/seleccion`)
+      .flush({ code: 'perfil_vencido' }, { status: 422, statusText: 'Unprocessable Entity' });
+    await navigation;
+
+    expect(TestBed.inject(Router).url).toBe('/app/cotizaciones?error=expired');
+    expect(TestBed.inject(OFFER_SELECTION_STORAGE).read()).toBeNull();
+  });
+
+  it('validates the profile before entering offers without an accepted selection', async () => {
+    const profile = createProfile(REQUEST.id);
+    profiling.loadProfile.mockReturnValueOnce(
+      of({ ...profile, vigenteHasta: new Date(Date.now() - 1).toISOString() }),
+    );
+    await recover('ofertas', false, false);
+
+    expect(profiling.loadProfile).toHaveBeenCalledWith(REQUEST.id);
+    expect(TestBed.inject(Router).url).toBe('/app/cotizaciones?error=expired');
+  });
+
+  it('does not reject an accepted selection merely because its profile later expired', async () => {
+    const profile = createProfile(REQUEST.id);
+    profiling.loadProfile.mockReturnValueOnce(
+      of({ ...profile, vigenteHasta: new Date(Date.now() - 1).toISOString() }),
+    );
+    await recover('aceptacion', true, false);
+
+    expect(TestBed.inject(Router).url).toBe(`/app/cotizaciones/aceptacion?solicitud=${REQUEST.id}`);
+    expect(profiling.loadProfile).not.toHaveBeenCalled();
   });
 });

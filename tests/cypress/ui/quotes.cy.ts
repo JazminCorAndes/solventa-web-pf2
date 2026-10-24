@@ -1,5 +1,5 @@
 import { fillProduct, futureDate, login, openQuote, products } from '../support/products';
-import { consent, mockBackend, password, syntheticUser } from '../support/ui-backend';
+import { consent, mockBackend, password, quoteId, syntheticUser } from '../support/ui-backend';
 
 describe('UI determinista: productos y consentimiento (sin persistencia real)', () => {
   beforeEach(() => {
@@ -188,5 +188,64 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
       .should('deep.eq', { ofertaId: 'offer-0', version: 1 });
     cy.contains('[role=alert]', 'La oferta cambió o venció').should('be.visible');
     cy.location('pathname').should('eq', '/app/cotizaciones/aceptacion');
+  });
+
+  it('detiene la seleccion si el perfil vence y ofrece una nueva cotizacion sin crear suscripcion', () => {
+    openQuote(products[1]);
+    fillProduct(products[1]);
+    cy.get('button[type=submit]').click();
+    cy.contains('button', 'Seleccionar oferta').click();
+    cy.get('mat-checkbox input').check();
+    cy.intercept('POST', '/api/v1/solicitudes-cotizacion/*/suscripcion', {
+      statusCode: 503,
+    }).as('subscription');
+    cy.intercept('PUT', '/api/v1/solicitudes-cotizacion/*/seleccion', {
+      statusCode: 422,
+      body: { code: 'perfil_vencido', detail: 'El perfil venció. Crea una nueva cotización.' },
+    }).as('expiredSelection');
+    cy.contains('button', 'Confirmar selección').click();
+    cy.wait('@expiredSelection');
+    cy.contains('[role=alert]', 'El perfil venció').should('be.visible');
+    cy.contains('[role=alert] a', 'Cotizar seguro').should(
+      'have.attr',
+      'href',
+      '/app/cotizaciones/solicitar',
+    );
+    cy.contains('button', 'Confirmar selección').should('be.disabled');
+    cy.get('mat-checkbox input').uncheck().check();
+    cy.contains('[role=alert]', 'El perfil venció').should('be.visible');
+    cy.contains('button', 'Confirmar selección').should('be.disabled');
+    cy.get('@expiredSelection.all').should('have.length', 1);
+    cy.get('@subscription.all').should('have.length', 0);
+    cy.get('@consent.all').should('have.length', 1);
+    cy.get('@quote.all').should('have.length', 1);
+  });
+
+  it('no abre planes de una solicitud cuyo perfil ya vencio al recuperarla', () => {
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}`, {
+      id: quoteId,
+      productoId: 'travel',
+      tipoCliente: 'persona_natural',
+      tipoDocumento: 'cc',
+      identificacion: syntheticUser.identificacion,
+      datosProducto: products[1].data,
+      correo: syntheticUser.correo,
+      telefono: syntheticUser.telefono,
+      estado: 'recibida',
+      creadaEn: new Date(Date.now() - 3600000).toISOString(),
+    });
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/suscripcion`, {
+      statusCode: 404,
+    });
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion`, {
+      statusCode: 422,
+      body: { code: 'perfil_vencido' },
+    });
+    cy.visit(`/app/cotizaciones/ofertas?solicitud=${quoteId}`);
+    cy.location('pathname').should('eq', '/app/cotizaciones');
+    cy.contains('[role=alert]', 'El perfil venció').should('be.visible');
+    cy.get('@offers.all').should('have.length', 0);
+    cy.get('@quote.all').should('have.length', 0);
+    cy.get('@consent.all').should('have.length', 0);
   });
 });
