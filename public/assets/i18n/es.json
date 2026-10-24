@@ -461,5 +461,66 @@
       "notAllowed": "El pago simulado no está permitido para el estado actual de esta solicitud. Actualiza el estado.",
       "unavailable": "No fue posible consultar o confirmar el pago simulado. Actualiza el estado o reintenta la confirmación."
     }
+  },
+  "advisorNavigation": {
+    "portal": "Portal del asesor",
+    "portalType": "Socios distribuidores",
+    "title": "Portal del asesor",
+    "clients": "Clientes"
+  },
+  "mortgageProfiling": {
+    "eyebrow": "Originación hipotecaria",
+    "title": "Iniciar perfilamiento",
+    "subtitle": "Registra los datos del cliente y del crédito para solicitar su evaluación.",
+    "partner": "Socio distribuidor",
+    "partnerName": "Banco Aliado Solventa",
+    "partnerId": "Identificador del socio",
+    "customerSection": "Datos del cliente",
+    "creditSection": "Información del crédito",
+    "consentSection": "Consentimiento del cliente",
+    "documentType": "Tipo de documento",
+    "documentNumber": "Número de documento",
+    "fullName": "Nombre completo",
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "creditReference": "Referencia del crédito",
+    "creditAmount": "Monto del crédito",
+    "termMonths": "Plazo en meses",
+    "consentId": "Identificador del consentimiento",
+    "consentVersion": "Versión del consentimiento",
+    "consentNotice": "El cliente debe haber tomado una decisión explícita en el canal de consentimiento correspondiente. Este formulario solo verifica y referencia esa decisión; no la sustituye.",
+    "consentVerified": "Verifiqué que el cliente otorgó el consentimiento explícito y que la referencia está vigente.",
+    "submit": "Iniciar perfilamiento",
+    "processing": "Iniciando perfilamiento",
+    "retry": "Reintentar con la misma operación",
+    "idempotencyNotice": "No cierres esta página durante el envío. Los reintentos conservan el identificador de operación.",
+    "resultTitle": "Perfilamiento iniciado",
+    "resultBody": "El servicio confirmó la recepción. Puedes consultar el resultado cuando finalice el procesamiento.",
+    "profilingReference": "Referencia de perfilamiento",
+    "operationId": "Identificador de operación",
+    "startAnother": "Iniciar otro perfilamiento",
+    "status": {
+      "processing": "Procesando"
+    },
+    "validation": {
+      "documentNumber": "Ingresa un documento válido de 6 a 15 caracteres.",
+      "fullName": "Ingresa el nombre completo del cliente.",
+      "email": "Ingresa un correo válido.",
+      "phone": "Ingresa un teléfono válido con 10 a 15 dígitos.",
+      "creditReference": "Ingresa una referencia de crédito válida.",
+      "creditAmount": "El monto debe ser de al menos COP 1.000.000.",
+      "termMonths": "El plazo debe estar entre 12 y 360 meses.",
+      "consentId": "Ingresa el UUID del consentimiento registrado por el cliente.",
+      "consentVersion": "Ingresa una versión de consentimiento válida.",
+      "consentVerified": "Debes verificar el consentimiento explícito antes de continuar."
+    },
+    "errors": {
+      "incomplete_data": "El servicio rechazó la solicitud porque faltan datos obligatorios. Revisa la información.",
+      "invalid_consent": "El consentimiento no es válido o no está vigente. Verifica la referencia con el cliente.",
+      "unauthorized_partner": "Tu sesión no está autorizada para iniciar operaciones de este socio.",
+      "idempotency_conflict": "El identificador de operación ya fue utilizado con datos diferentes. Inicia una nueva operación.",
+      "service_unavailable": "El servicio de perfilamiento no está disponible. Puedes reintentar sin crear otra operación.",
+      "unexpected": "No fue posible iniciar el perfilamiento. Puedes reintentar sin crear otra operación."
+    }
   }
 }
