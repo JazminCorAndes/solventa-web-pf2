@@ -1,8 +1,17 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/auth/auth.guards';
+import { authGuard, guestGuard, portalGuard } from './core/auth/auth.guards';
+import { partnerGuard } from './core/partners/partner.guard';
 import { quoteResumeGuard } from './core/quotes/quote-resume.guard';
 
 export const routes: Routes = [
+  {
+    path: 'acceso-no-disponible',
+    loadComponent: () =>
+      import('./features/auth/access-unavailable-page.component').then(
+        (component) => component.AccessUnavailablePageComponent,
+      ),
+    title: 'Acceso no disponible | Solventa',
+  },
   {
     path: 'iniciar-sesion',
     canActivate: [guestGuard],
@@ -15,11 +24,22 @@ export const routes: Routes = [
   {
     path: 'app',
     canActivate: [authGuard],
+    canActivateChild: [portalGuard],
     loadComponent: () =>
       import('./layout/authenticated-layout/authenticated-layout.component').then(
         (component) => component.AuthenticatedLayoutComponent,
       ),
     children: [
+      {
+        path: 'socios',
+        canActivate: [partnerGuard],
+        runGuardsAndResolvers: 'always',
+        loadComponent: () =>
+          import('./features/partners/partner-home-page.component').then(
+            (component) => component.PartnerHomePageComponent,
+          ),
+        title: 'Portal de socios | Solventa',
+      },
       {
         path: 'dashboard',
         loadComponent: () =>

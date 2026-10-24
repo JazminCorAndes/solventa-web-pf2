@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AccessDeniedError,
   AuthenticationUnavailableError,
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
@@ -23,7 +24,8 @@ interface UserResponse {
   id: string;
   nombre: string;
   correo: string;
-  rol: 'cliente';
+  rol: 'cliente' | 'socio';
+  socios?: string[];
   tipoDocumento?: DocumentType;
   identificacion?: string;
   telefono?: string;
@@ -130,6 +132,9 @@ export class HttpAuthGateway implements AuthGateway {
 
   private mapCommonError(error: unknown): Observable<never> {
     if (error instanceof HttpErrorResponse) {
+      if (error.status === 403) {
+        return throwError(() => new AccessDeniedError());
+      }
       if (error.status === 429) {
         return throwError(() => new TooManyAttemptsError(parseRetryAfter(error)));
       }
@@ -149,10 +154,19 @@ function parseRetryAfter(error: HttpErrorResponse): number | null {
 function toUser(user: UserResponse): AuthUser {
   if (
     !user ||
-    user.rol !== 'cliente' ||
+    (user.rol !== 'cliente' && user.rol !== 'socio') ||
     typeof user.id !== 'string' ||
     typeof user.nombre !== 'string' ||
     typeof user.correo !== 'string'
+  ) {
+    throw new AuthenticationUnavailableError();
+  }
+  if (
+    user.rol === 'socio' &&
+    (!Array.isArray(user.socios) ||
+      user.socios.length === 0 ||
+      !user.socios.every((id) => typeof id === 'string' && id.trim().length > 0) ||
+      new Set(user.socios).size !== user.socios.length)
   ) {
     throw new AuthenticationUnavailableError();
   }
@@ -160,7 +174,8 @@ function toUser(user: UserResponse): AuthUser {
     id: user.id,
     name: user.nombre,
     email: user.correo,
-    role: 'client',
+    role: user.rol === 'socio' ? 'partner' : 'client',
+    ...(user.rol === 'socio' ? { partnerIds: [...user.socios!] } : {}),
     documentType: user.tipoDocumento,
     nationalId: user.identificacion,
     phone: user.telefono,

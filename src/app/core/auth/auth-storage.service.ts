@@ -69,7 +69,11 @@ function isStoredAuth(value: unknown): value is StoredAuth {
     typeof user.id === 'string' &&
     typeof user.name === 'string' &&
     typeof user.email === 'string' &&
-    user.role === 'client' &&
+    (user.role === 'client' ||
+      (user.role === 'partner' &&
+        Array.isArray(user.partnerIds) &&
+        user.partnerIds.length > 0 &&
+        user.partnerIds.every((id) => typeof id === 'string' && id.trim().length > 0))) &&
     (user.documentType === undefined ||
       user.documentType === 'cc' ||
       user.documentType === 'ce' ||
