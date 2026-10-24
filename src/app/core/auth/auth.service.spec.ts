@@ -53,6 +53,27 @@ describe('AuthService', () => {
     await expect(firstValueFrom(service.getAccessToken())).resolves.toBe('access-1');
   });
 
+  it('does not persist or log the login password on success or failure', async () => {
+    const logs = ['log', 'info', 'warn', 'error', 'debug'] as const;
+    const spies = logs.map((method) => vi.spyOn(console, method));
+    try {
+      const service = createService();
+      await firstValueFrom(service.login(CREDENTIALS));
+      expect(JSON.stringify(storage.stored)).not.toContain(CREDENTIALS.password);
+      expect(JSON.stringify(service.session())).not.toContain(CREDENTIALS.password);
+      gateway.loginResult = () => throwError(() => new AuthenticationUnavailableError());
+      await expect(firstValueFrom(service.login(CREDENTIALS))).rejects.toBeInstanceOf(
+        AuthenticationUnavailableError,
+      );
+      expect(JSON.stringify(storage.stored)).not.toContain(CREDENTIALS.password);
+      for (const spy of spies) {
+        expect(JSON.stringify(spy.mock.calls)).not.toContain(CREDENTIALS.password);
+      }
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
+    }
+  });
+
   it('restores the session from a stored refresh token without an access token', async () => {
     storage.stored = storedAuth();
 

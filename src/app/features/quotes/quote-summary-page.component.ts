@@ -40,7 +40,16 @@ export class QuoteSummaryPageComponent implements OnInit {
   private readonly gateway = inject(QUOTE_REQUEST_GATEWAY);
   private readonly dashboard = inject(DASHBOARD_GATEWAY);
   private readonly destroyRef = inject(DestroyRef);
-  readonly resumeError = inject(ActivatedRoute).snapshot.queryParamMap.get('error') === 'resume';
+  private readonly resumeError = inject(ActivatedRoute).snapshot.queryParamMap.get('error');
+  readonly resumeErrorKey =
+    this.resumeError === 'expired'
+      ? 'profiling.errors.expired'
+      : this.resumeError === 'consent'
+        ? 'profiling.errors.consent'
+        : this.resumeError === 'resume'
+          ? 'quoteSummary.resumeError'
+          : null;
+  readonly profileAvailability = signal<Record<string, boolean>>({});
   readonly loading = signal(true);
   readonly error = signal(false);
   readonly cards = signal<
@@ -81,6 +90,7 @@ export class QuoteSummaryPageComponent implements OnInit {
     this.loading.set(true);
     this.error.set(false);
     this.cards.set([]);
+    this.profileAvailability.set({});
     this.dashboard
       .load()
       .pipe(
@@ -119,5 +129,9 @@ export class QuoteSummaryPageComponent implements OnInit {
           this.loading.set(false);
         },
       });
+  }
+
+  setProfileAvailability(id: string, available: boolean): void {
+    this.profileAvailability.update((current) => ({ ...current, [id]: available }));
   }
 }

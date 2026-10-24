@@ -59,6 +59,10 @@ export class OfferSelectionService {
 
     this.statusState.set('loading');
     this.errorKey.set(null);
+    this.calculationState.set(null);
+    this.selectedOfferIdState.set(null);
+    this.confirmedSelectionState.set(null);
+    this.expandedOfferIdState.set(null);
     this.gateway
       .loadOffers()
       .pipe(

@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { registerLocaleData } from '@angular/common';
 import localeEsCo from '@angular/common/locales/es-CO';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -73,12 +74,18 @@ const SUBSCRIPTION: SubscriptionRecord = {
 describe('OfferAcceptancePageComponent', () => {
   let fixture: ComponentFixture<OfferAcceptancePageComponent>;
   const confirmedSelection = signal<SelectedOfferRecord | null>(null);
+  const selectedOffer = signal<InsuranceOffer | null>(OFFER);
+  const offersStatus = signal<'ready' | 'error'>('ready');
+  const offersError = signal<string | null>(null);
   const confirmSelected = vi.fn(() => of(CONFIRMED_SELECTION));
   const startSubscription = vi.fn(() => of(SUBSCRIPTION));
   let navigate: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     confirmedSelection.set(null);
+    selectedOffer.set(OFFER);
+    offersStatus.set('ready');
+    offersError.set(null);
     confirmSelected
       .mockReset()
       .mockImplementation(() =>
@@ -98,8 +105,10 @@ describe('OfferAcceptancePageComponent', () => {
         {
           provide: OfferSelectionService,
           useValue: {
-            selectedOffer: signal(OFFER),
+            selectedOffer,
             confirmedSelection,
+            status: offersStatus,
+            errorKey: offersError,
             load: vi.fn(),
             confirmSelected,
           },
@@ -299,6 +308,129 @@ describe('OfferAcceptancePageComponent', () => {
     expect(confirmedSelection()).toBeNull();
     expect(startSubscription).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('shows expired profile recovery instead of a generic subscription error', () => {
+    confirmSelected.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'perfil_vencido' } })),
+    );
+
+    acceptAndConfirm();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      es.profiling.errors.expired,
+    );
+    expect(
+      fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
+    ).not.toBeNull();
+    expect(startSubscription).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { code: 'perfil_vencido', status: 422, key: 'profiling.errors.expired' },
+    { code: 'consentimiento_no_vigente', status: 403, key: 'profiling.errors.consent' },
+  ])(
+    'preserves terminal selection error $code after toggling acceptance',
+    ({ code, status, key }) => {
+      confirmSelected.mockReturnValueOnce(
+        throwError(() => new HttpErrorResponse({ status, error: { code } })),
+      );
+      acceptAndConfirm();
+      const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('mat-checkbox input');
+
+      checkbox.click();
+      fixture.detectChanges();
+      checkbox.click();
+      fixture.detectChanges();
+      actionButton().click();
+      fixture.componentInstance.confirm();
+
+      expect(fixture.componentInstance.accepted()).toBe(true);
+      expect(fixture.componentInstance.errorKey()).toBe(key);
+      expect(actionButton().disabled).toBe(true);
+      expect(confirmSelected).toHaveBeenCalledOnce();
+      expect(startSubscription).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { code: 'perfil_vencido', status: 422, key: 'profiling.errors.expired' },
+    { code: 'consentimiento_no_vigente', status: 403, key: 'profiling.errors.consent' },
+  ])(
+    'does not restart subscription after acceptance returns terminal $code',
+    ({ code, status, key }) => {
+      startSubscription.mockReturnValueOnce(
+        throwError(() => new HttpErrorResponse({ status, error: { code } })),
+      );
+      acceptAndConfirm();
+
+      actionButton().click();
+      fixture.componentInstance.continueWithSubscription();
+      fixture.detectChanges();
+
+      expect(confirmedSelection()).toEqual(CONFIRMED_SELECTION);
+      expect(fixture.componentInstance.errorKey()).toBe(key);
+      expect(actionButton().disabled).toBe(true);
+      expect(confirmSelected).toHaveBeenCalledOnce();
+      expect(startSubscription).toHaveBeenCalledOnce();
+      expect(navigate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { code: 'perfil_vencido', status: 422, key: 'profiling.errors.expired' },
+    { code: 'consentimiento_no_vigente', status: 403, key: 'profiling.errors.consent' },
+  ])('does not retry restored subscription after terminal $code', ({ code, status, key }) => {
+    confirmedSelection.set(CONFIRMED_SELECTION);
+    startSubscription.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status, error: { code } })),
+    );
+    fixture.detectChanges();
+    actionButton().click();
+    fixture.detectChanges();
+
+    actionButton().click();
+    fixture.componentInstance.continueWithSubscription();
+
+    expect(fixture.componentInstance.errorKey()).toBe(key);
+    expect(actionButton().disabled).toBe(true);
+    expect(confirmSelected).not.toHaveBeenCalled();
+    expect(startSubscription).toHaveBeenCalledOnce();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('permits retrying a transient selection error after toggling acceptance', () => {
+    confirmSelected.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })));
+    acceptAndConfirm();
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('mat-checkbox input');
+
+    checkbox.click();
+    fixture.detectChanges();
+    checkbox.click();
+    fixture.detectChanges();
+    expect(actionButton().disabled).toBe(false);
+    actionButton().click();
+
+    expect(confirmSelected).toHaveBeenCalledTimes(2);
+    expect(startSubscription).toHaveBeenCalledOnce();
+    expect(navigate).toHaveBeenCalledOnce();
+  });
+
+  it('shows an explicit load error instead of an endless acceptance spinner', () => {
+    selectedOffer.set(null);
+    offersStatus.set('error');
+    offersError.set('profiling.errors.expired');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      es.profiling.errors.expired,
+    );
+    expect(fixture.nativeElement.querySelector('mat-spinner')).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
+    ).not.toBeNull();
   });
 
   it.each(['approved', 'review', 'rejected'] as const)(

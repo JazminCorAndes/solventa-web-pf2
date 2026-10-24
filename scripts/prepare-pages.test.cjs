@@ -16,6 +16,22 @@ const { test } = require('node:test');
 
 const script = join(__dirname, 'prepare-pages.cjs');
 
+test('production and AWS backend configurations use HTTPS without a production replacement', () => {
+  const root = join(__dirname, '..');
+  const build = JSON.parse(readFileSync(join(root, 'angular.json'), 'utf8')).projects[
+    'solventa-web-pf2'
+  ].architect.build;
+  assert.equal(build.defaultConfiguration, 'production');
+  assert.deepEqual(build.configurations.production.fileReplacements ?? [], []);
+  for (const file of ['environment.ts', 'environment.backend.ts']) {
+    const source = readFileSync(join(root, 'src', 'environments', file), 'utf8');
+    const url = source.match(/apiBaseUrl:\s*'([^']+)'/);
+    assert.ok(url, `Missing API URL in ${file}`);
+    assert.equal(new URL(url[1]).protocol, 'https:', file);
+    assert.match(source, /dataAccessMode:\s*'backend'/);
+  }
+});
+
 function withBuild(html, check) {
   const root = mkdtempSync(join(tmpdir(), 'solventa-pages-test-'));
   const output = join(root, 'dist', 'solventa-web-pf2', 'browser');

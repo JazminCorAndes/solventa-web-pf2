@@ -17,6 +17,14 @@
       <button mat-stroked-button type="button" (click)="offers.load()">
         {{ 'common.retry' | transloco }}
       </button>
+      @if (
+        offers.errorKey() === 'profiling.errors.expired' ||
+        offers.errorKey() === 'profiling.errors.consent'
+      ) {
+        <a mat-button routerLink="/app/cotizaciones/solicitar">
+          {{ 'quoteSummary.newQuote' | transloco }}
+        </a>
+      }
     </div>
   } @else if (offers.status() === 'empty') {
     <div class="state-panel empty-state" role="status">

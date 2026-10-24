@@ -60,15 +60,19 @@ pipeline {
                     if (fileExists('reports/unit-tests.xml')) {
                         junit testResults: 'reports/unit-tests.xml', allowEmptyResults: false, skipPublishingChecks: true
                     }
-                    def result = sh(returnStatus: true, script: '''python3 scripts/coverage_summary.py \
-                        --coverage 'Web=coverage/solventa-web-pf2/cobertura-coverage.xml' \
-                        --tests 'reports/unit-tests.xml' \
-                        --scope 'Código instrumentado por Angular/Vitest V8. No incluye pruebas E2E ni servicios externos.'
-                    ''')
+                    def result
+                    withEnv(["JENKINS_OBSERVED_RESULT=${currentBuild.currentResult}"]) {
+                        result = sh(returnStatus: true, script: '''python3 scripts/coverage_summary.py \
+                            --coverage 'Web=coverage/solventa-web-pf2/cobertura-coverage.xml' \
+                            --tests 'reports/unit-tests.xml' \
+                            --scope 'Código instrumentado por Angular/Vitest V8. No incluye pruebas E2E ni servicios externos.' \
+                            --revision "$(git rev-parse HEAD)" \
+                            --build-number "$BUILD_NUMBER" \
+                            --build-result "$JENKINS_OBSERVED_RESULT" \
+                            --build-url "$BUILD_URL"
+                        ''')
+                    }
                     def summary = readFile(file: 'reports/coverage-summary.md', encoding: 'UTF-8')
-                    def revision = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-                    summary += "\n**Revisión compilada:** [`${revision}`](https://github.com/JazminCorAndes/solventa-web-pf2/commit/${revision}).\n"
-                    summary += "\n[Informe HTML de cobertura](${env.BUILD_URL}artifact/coverage/solventa-web-pf2/index.html) · [Pruebas JUnit](${env.BUILD_URL}testReport/)\n"
                     publishChecks name: 'Cobertura', title: summary.readLines()[0], summary: summary,
                         detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks",
                         conclusion: result == 0 ? 'SUCCESS' : (currentBuild.currentResult == 'SUCCESS' ? 'FAILURE' : 'NEUTRAL')
