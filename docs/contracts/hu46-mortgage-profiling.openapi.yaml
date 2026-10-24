@@ -1,0 +1,240 @@
+openapi: 3.1.0
+info:
+  title: Inicio de perfilamiento hipotecario
+  version: 1.0.0
+  description: Contrato requerido por HU46-FE. HU47 y HU48 quedan fuera de este endpoint.
+servers:
+  - url: https://api.solventa.example
+paths:
+  /v1/perfilamientos-hipotecarios:
+    post:
+      operationId: iniciarPerfilamientoHipotecario
+      summary: Inicia el perfilamiento hipotecario en el contexto del socio autenticado
+      description: |
+        Requiere un JWT de asesor. El Backend debe obtener los socios autorizados
+        desde la sesión y comprobar que socioId pertenece al asesor; no debe confiar
+        únicamente en el valor recibido.
+
+        Idempotencia:
+        - Idempotency-Key y operationId deben contener el mismo UUID.
+        - La primera solicitud válida responde 202.
+        - Un reintento con el mismo UUID y el mismo cuerpo devuelve la misma respuesta,
+          incluyendo perfilamientoReferencia y recibidaEn, sin iniciar otro proceso.
+        - El mismo UUID con un cuerpo diferente responde 409 idempotencia_conflicto.
+
+        Este endpoint solo confirma el inicio. No devuelve el resultado del perfil,
+        señales ni ofertas, porque corresponden a HU47 y HU48.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: UUID estable durante todos los reintentos de la operación.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IniciarPerfilamientoHipotecario'
+            examples:
+              solicitud:
+                value:
+                  operationId: 11111111-1111-4111-8111-111111111111
+                  socioId: SOC-CO-001
+                  cliente:
+                    tipoDocumento: cc
+                    numeroDocumento: '1023456789'
+                    nombreCompleto: Valentina Gómez
+                    correo: valentina@example.com
+                    telefono: '+573001234567'
+                  credito:
+                    referencia: HIP-2026-001
+                    monto: 310000000
+                    plazoMeses: 240
+                  consentimientoId: 22222222-2222-4222-8222-222222222222
+                  consentimientoVersion: 2
+      responses:
+        '202':
+          description: Solicitud aceptada o repetición idempotente de una solicitud aceptada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilamientoHipotecarioIniciado'
+              examples:
+                procesando:
+                  value:
+                    operationId: 11111111-1111-4111-8111-111111111111
+                    perfilamientoReferencia: PRF-HIP-11111111
+                    estado: procesando
+                    recibidaEn: '2026-10-20T21:30:00Z'
+        '400':
+          $ref: '#/components/responses/DatosIncompletos'
+        '401':
+          description: Token ausente, inválido o vencido.
+        '403':
+          description: Consentimiento inválido o asesor sin acceso al socio.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                consentimiento:
+                  value:
+                    code: consentimiento_invalido
+                    message: El consentimiento no existe, fue revocado o no está vigente.
+                    operationId: 11111111-1111-4111-8111-111111111111
+                socio:
+                  value:
+                    code: socio_no_autorizado
+                    message: El asesor no está autorizado para operar en este socio.
+                    operationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: El operationId ya existe con datos diferentes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: idempotencia_conflicto
+                message: La operación ya fue registrada con otros datos.
+                operationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          $ref: '#/components/responses/DatosIncompletos'
+        '503':
+          description: El servicio no pudo iniciar el procesamiento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: servicio_no_disponible
+                message: El perfilamiento no está disponible temporalmente.
+                operationId: 11111111-1111-4111-8111-111111111111
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    IniciarPerfilamientoHipotecario:
+      type: object
+      additionalProperties: false
+      required:
+        - operationId
+        - socioId
+        - cliente
+        - credito
+        - consentimientoId
+        - consentimientoVersion
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        socioId:
+          type: string
+          minLength: 1
+          maxLength: 50
+        cliente:
+          $ref: '#/components/schemas/Cliente'
+        credito:
+          $ref: '#/components/schemas/CreditoHipotecario'
+        consentimientoId:
+          type: string
+          format: uuid
+          description: Identificador de la decisión explícita registrada por HU-OF-01.
+        consentimientoVersion:
+          type: integer
+          minimum: 1
+          description: Versión autoritativa que debe continuar vigente y autorizada.
+    Cliente:
+      type: object
+      additionalProperties: false
+      required:
+        - tipoDocumento
+        - numeroDocumento
+        - nombreCompleto
+        - correo
+        - telefono
+      properties:
+        tipoDocumento:
+          type: string
+          enum: [cc, ce, passport, ppt]
+        numeroDocumento:
+          type: string
+          pattern: ^[A-Za-z0-9]{6,15}$
+        nombreCompleto:
+          type: string
+          minLength: 3
+          maxLength: 100
+        correo:
+          type: string
+          format: email
+        telefono:
+          type: string
+          pattern: ^\+?[0-9]{10,15}$
+    CreditoHipotecario:
+      type: object
+      additionalProperties: false
+      required: [referencia, monto, plazoMeses]
+      properties:
+        referencia:
+          type: string
+          pattern: ^[A-Za-z0-9-]{4,30}$
+        monto:
+          type: integer
+          minimum: 1000000
+          description: Monto en pesos colombianos, sin decimales.
+        plazoMeses:
+          type: integer
+          minimum: 12
+          maximum: 360
+    PerfilamientoHipotecarioIniciado:
+      type: object
+      additionalProperties: false
+      required: [operationId, perfilamientoReferencia, estado, recibidaEn]
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        perfilamientoReferencia:
+          type: string
+        estado:
+          type: string
+          const: procesando
+        recibidaEn:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - datos_incompletos
+            - consentimiento_invalido
+            - socio_no_autorizado
+            - idempotencia_conflicto
+            - servicio_no_disponible
+        message:
+          type: string
+        operationId:
+          type: string
+          format: uuid
+  responses:
+    DatosIncompletos:
+      description: Faltan datos o alguno no cumple el formato requerido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: datos_incompletos
+            message: La solicitud contiene datos incompletos o inválidos.
+            operationId: 11111111-1111-4111-8111-111111111111

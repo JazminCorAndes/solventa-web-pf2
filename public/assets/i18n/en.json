@@ -212,14 +212,42 @@
     "title": "Profiling information",
     "detail": "Profile and source details",
     "simulated": "Simulated data. This is not a real financial inquiry.",
-    "purpose": "Authorize Open Finance and Open Data for your insurance quote. Authorization lasts 30 days and can be revoked here. Profiles last 15 minutes.",
+    "purpose": "You may authorize Open Finance and Open Data for your quote until the displayed date (up to 30 days) and revoke here. Profiles last 15 minutes.",
     "loading": "Checking consent and profile",
     "noConsent": "No authorization is registered.",
     "authorize": "Authorize profiling",
+    "reject": "Reject profiling",
+    "incompleteEvidence": "Previous evidence is incomplete or does not include both permissions. It does not enable profiling. Review the terms and record a new decision.",
+    "decision": {
+      "title": "Your consent decision",
+      "purpose": "Purpose: calculate a risk profile for your insurance quote.",
+      "permissions": "The model requires Open Finance and Open Data permissions; otherwise no source is queried and no profile is generated. Review this request's scopes and sources.",
+      "data": "Only the data listed in this request will be used. All sources are simulated; no real providers are connected.",
+      "fields": {
+        "purpose": "Purpose",
+        "scopes": "Scopes",
+        "sources": "Sources",
+        "data": "Requested data",
+        "terms": "Terms version",
+        "validity": "Future expiry with timezone (up to 30 days)"
+      },
+      "terms": "Terms of this authorization, version",
+      "rights": "By authorizing, you accept the described use until the displayed date. You can reject it or revoke it later from this panel. Viewing this panel does not renew authorization."
+    },
     "revoke": "Revoke authorization",
+    "revocation": {
+      "title": "Confirm revocation?",
+      "body": "Your current authorization will be submitted for revocation. The profile will no longer be available. We will only show a recorded revocation after the service confirms it.",
+      "cancel": "Keep authorization",
+      "confirm": "Confirm revocation"
+    },
+    "purposes": { "cotizacion": "Calculate a risk profile for your insurance quote" },
+    "data": { "indicador_riesgo": "Risk indicator" },
     "consentStatus": {
       "autorizado": "Authorization registered",
-      "revocado": "Authorization revoked"
+      "revocado": "Authorization revoked",
+      "rechazado": "Authorization rejected",
+      "vencido": "Authorization expired"
     },
     "beforeRequest": "A profile will be obtained when you submit the request and will be linked to that quote.",
     "request": "Linked request",
@@ -240,6 +268,8 @@
     "indicator": "Risk indicator",
     "consultedAt": "Consulted at",
     "errors": {
+      "decisionExpired": "The displayed date has expired. Reload and review the new date before deciding.",
+      "incompleteRequest": "The consent request is incomplete or contains invalid information. The decision will not be sent. Review the listed fields and reload.",
       "consent": "A current authorization is required. Authorize profiling and create a new request if the previous one used another version.",
       "conflict": "Authorization changed in another session. Reload before changing it.",
       "expired": "The profile expired. Create a new request to obtain a current profile.",
@@ -430,6 +460,67 @@
       "conflict": "This simulated payment attempt could not be reconciled. Refresh the status before continuing.",
       "notAllowed": "Simulated payment is not allowed for the current request status. Refresh the status.",
       "unavailable": "The simulated payment could not be loaded or confirmed. Refresh the status or retry confirmation."
+    }
+  },
+  "advisorNavigation": {
+    "portal": "Advisor portal",
+    "portalType": "Distribution partners",
+    "title": "Advisor portal",
+    "clients": "Customers"
+  },
+  "mortgageProfiling": {
+    "eyebrow": "Mortgage origination",
+    "title": "Start profiling",
+    "subtitle": "Enter the customer and credit details to request their assessment.",
+    "partner": "Distribution partner",
+    "partnerName": "Solventa Partner Bank",
+    "partnerId": "Partner identifier",
+    "customerSection": "Customer details",
+    "creditSection": "Credit details",
+    "consentSection": "Customer consent",
+    "documentType": "Document type",
+    "documentNumber": "Document number",
+    "fullName": "Full name",
+    "email": "Email",
+    "phone": "Phone",
+    "creditReference": "Credit reference",
+    "creditAmount": "Credit amount",
+    "termMonths": "Term in months",
+    "consentId": "Consent identifier",
+    "consentVersion": "Consent version",
+    "consentNotice": "The customer must have made an explicit decision in the corresponding consent channel. This form only verifies and references that decision; it does not replace it.",
+    "consentVerified": "I verified that the customer gave explicit consent and that the reference is current.",
+    "submit": "Start profiling",
+    "processing": "Starting profiling",
+    "retry": "Retry the same operation",
+    "idempotencyNotice": "Do not close this page while submitting. Retries keep the same operation identifier.",
+    "resultTitle": "Profiling started",
+    "resultBody": "The service confirmed receipt. You can check the result after processing is complete.",
+    "profilingReference": "Profiling reference",
+    "operationId": "Operation identifier",
+    "startAnother": "Start another profiling request",
+    "status": {
+      "processing": "Processing"
+    },
+    "validation": {
+      "documentNumber": "Enter a valid document containing 6 to 15 characters.",
+      "fullName": "Enter the customer's full name.",
+      "email": "Enter a valid email.",
+      "phone": "Enter a valid phone containing 10 to 15 digits.",
+      "creditReference": "Enter a valid credit reference.",
+      "creditAmount": "The amount must be at least COP 1,000,000.",
+      "termMonths": "The term must be between 12 and 360 months.",
+      "consentId": "Enter the UUID of the consent recorded by the customer.",
+      "consentVersion": "Enter a valid consent version.",
+      "consentVerified": "You must verify explicit consent before continuing."
+    },
+    "errors": {
+      "incomplete_data": "The service rejected the request because required details are missing. Review the information.",
+      "invalid_consent": "Consent is invalid or no longer current. Verify the reference with the customer.",
+      "unauthorized_partner": "Your session is not authorized to start operations for this partner.",
+      "idempotency_conflict": "The operation identifier was already used with different data. Start a new operation.",
+      "service_unavailable": "The profiling service is unavailable. You can retry without creating another operation.",
+      "unexpected": "Profiling could not be started. You can retry without creating another operation."
     }
   }
 }

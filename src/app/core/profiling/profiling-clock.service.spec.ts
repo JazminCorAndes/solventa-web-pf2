@@ -12,9 +12,11 @@ describe('ProfilingClock', () => {
     const serverTime = Date.parse('2026-10-16T04:34:12Z');
     clock.synchronize('Fri, 16 Oct 2026 04:34:12 GMT', 100);
     expect(clock.now()).toBe(serverTime + 1100);
+    expect(clock.earliestNow()).toBe(serverTime);
     vi.spyOn(Date, 'now').mockReturnValue(0);
     now.mockReturnValue(300);
     expect(clock.now()).toBe(serverTime + 1200);
+    expect(clock.earliestNow()).toBe(serverTime + 100);
   });
 
   it('acepta datos recien creados por AWS sin extender su vencimiento', () => {

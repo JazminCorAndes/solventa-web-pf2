@@ -49,6 +49,12 @@ import { HttpProfilingGateway } from './data-access/profiling/http-profiling.gat
 import { MockProfilingGateway } from './data-access/profiling/mock-profiling.gateway';
 import { SIMULATED_PAYMENT_GATEWAY } from './core/payments/simulated-payment.gateway';
 import { HttpSimulatedPaymentGateway } from './data-access/payments/http-simulated-payment.gateway';
+import { ADVISOR_PROFILING_GATEWAY } from './core/advisor-profiling/advisor-profiling.gateway';
+import {
+  ADVISOR_PROFILING_STORAGE,
+  BrowserAdvisorProfilingStorage,
+} from './core/advisor-profiling/advisor-profiling-storage.service';
+import { MockAdvisorProfilingGateway } from './data-access/advisor-profiling/mock-advisor-profiling.gateway';
 
 registerLocaleData(localeEsCo);
 
@@ -71,6 +77,8 @@ export const appConfig: ApplicationConfig = {
     },
     { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
     { provide: SIMULATED_PAYMENT_GATEWAY, useClass: HttpSimulatedPaymentGateway },
+    { provide: ADVISOR_PROFILING_GATEWAY, useClass: MockAdvisorProfilingGateway },
+    { provide: ADVISOR_PROFILING_STORAGE, useClass: BrowserAdvisorProfilingStorage },
     {
       provide: QUOTE_REQUEST_GATEWAY,
       useClass: backendMode ? HttpQuoteRequestGateway : MockQuoteRequestGateway,

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { Observable, of, throwError } from 'rxjs';
@@ -95,6 +96,10 @@ describe('QuoteSummaryPageComponent', () => {
   let storage: TestQuoteRequestStorage;
   let snapshot: DashboardSnapshot;
   const dashboard = { load: vi.fn() };
+  const profiling = {
+    loadConsent: vi.fn(() => of(createConsent())),
+    loadProfile: vi.fn((id: string) => of(createProfile(id))),
+  };
 
   beforeEach(async () => {
     snapshot = {
@@ -107,6 +112,8 @@ describe('QuoteSummaryPageComponent', () => {
       })),
     };
     dashboard.load.mockReset().mockImplementation(() => of(snapshot));
+    profiling.loadConsent.mockReset().mockImplementation(() => of(createConsent()));
+    profiling.loadProfile.mockReset().mockImplementation((id: string) => of(createProfile(id)));
     await TestBed.configureTestingModule({
       imports: [
         QuoteSummaryPageComponent,
@@ -123,10 +130,7 @@ describe('QuoteSummaryPageComponent', () => {
         { provide: OFFER_SELECTION_STORAGE, useClass: TestOfferSelectionStorage },
         {
           provide: PROFILING_GATEWAY,
-          useValue: {
-            loadConsent: () => of(createConsent()),
-            loadProfile: () => of(createProfile(RECORD.id)),
-          },
+          useValue: profiling,
         },
       ],
     }).compileComponents();
@@ -160,6 +164,75 @@ describe('QuoteSummaryPageComponent', () => {
     expect(
       fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
     ).not.toBeNull();
+  });
+
+  it('does not link an expired unselected profile to offers or renew consent', () => {
+    snapshot = {
+      ...snapshot,
+      quotes: snapshot.quotes.map((quote) => ({ ...quote, selection: null })),
+      subscriptions: [],
+      payments: [],
+    };
+    profiling.loadProfile.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'perfil_vencido' } })),
+    );
+    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(es.profiling.errors.expired);
+    expect(
+      fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
+    ).not.toBeNull();
+  });
+
+  it('removes continuation at the profile deadline without creating another request', () => {
+    vi.useFakeTimers();
+    try {
+      snapshot = {
+        ...snapshot,
+        quotes: snapshot.quotes.map((quote) => ({ ...quote, selection: null })),
+        subscriptions: [],
+        payments: [],
+      };
+      fixture = TestBed.createComponent(QuoteSummaryPageComponent);
+      fixture.detectChanges();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).not.toBeNull();
+
+      vi.advanceTimersByTime(15 * 60000);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain(es.profiling.errors.expired);
+      expect(profiling.loadProfile).toHaveBeenCalledOnce();
+    } finally {
+      fixture.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('recovers the continuation only after a failed profile read succeeds', () => {
+    snapshot = {
+      ...snapshot,
+      quotes: snapshot.quotes.map((quote) => ({ ...quote, selection: null })),
+      subscriptions: [],
+      payments: [],
+    };
+    profiling.loadProfile.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 503 })),
+    );
+    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).toBeNull();
+
+    (
+      fixture.nativeElement.querySelector('app-profiling-panel button') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).not.toBeNull();
+    expect(profiling.loadProfile).toHaveBeenCalledTimes(2);
   });
 
   it.each<QuoteProductData>([{ coverageType: 'missed-connection' }, { weatherEvent: 'drought' }])(

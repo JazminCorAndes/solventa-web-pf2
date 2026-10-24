@@ -10,8 +10,8 @@
     </a>
   </header>
 
-  @if (resumeError) {
-    <p role="alert">{{ 'quoteSummary.resumeError' | transloco }}</p>
+  @if (resumeErrorKey) {
+    <p role="alert">{{ resumeErrorKey | transloco }}</p>
   }
   @if (loading()) {
     <p role="status">{{ 'quoteSummary.loading' | transloco }}</p>
@@ -60,17 +60,26 @@
         </mat-card-content>
 
         <mat-card-actions align="end">
-          <a
-            mat-flat-button
-            [routerLink]="card.progress.path"
-            [queryParams]="{ solicitud: quote.id }"
-          >
-            {{ 'quoteSummary.' + card.progress.action | transloco }}
-          </a>
+          @if (!card.progress.requiresProfile || profileAvailability()[quote.id]) {
+            <a
+              mat-flat-button
+              [routerLink]="card.progress.path"
+              [queryParams]="{ solicitud: quote.id }"
+            >
+              {{ 'quoteSummary.' + card.progress.action | transloco }}
+            </a>
+          } @else {
+            <button mat-flat-button type="button" disabled>
+              {{ 'quoteSummary.' + card.progress.action | transloco }}
+            </button>
+          }
         </mat-card-actions>
       </mat-card>
-      @if (card.progress.action === 'viewOffers') {
-        <app-profiling-panel [requestId]="quote.id" />
+      @if (card.progress.requiresProfile) {
+        <app-profiling-panel
+          [requestId]="quote.id"
+          (availabilityChange)="setProfileAvailability(quote.id, $event)"
+        />
       }
     } @empty {
       <mat-card appearance="outlined" class="empty-card">

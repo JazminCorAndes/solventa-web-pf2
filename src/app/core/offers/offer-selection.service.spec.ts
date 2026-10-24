@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom, Observable, of } from 'rxjs';
+import { firstValueFrom, Observable, of, throwError } from 'rxjs';
 import { OFFER_GATEWAY, OfferGateway } from './offer.gateway';
 import {
   InsuranceOffer,
@@ -173,6 +173,21 @@ describe('OfferSelectionService', () => {
     expect(service.selectOffer(EXPIRED_OFFER)).toBe(false);
     expect(service.selectedOfferId()).toBeNull();
     expect(service.canContinue()).toBe(false);
+  });
+
+  it('does not expose a previous selection after loading another request fails', () => {
+    service.load();
+    service.selectOffer(AVAILABLE_OFFER);
+    vi.spyOn(gateway, 'loadOffers').mockReturnValueOnce(throwError(() => new Error('offline')));
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    service.load();
+
+    expect(service.status()).toBe('error');
+    expect(service.selectedOffer()).toBeNull();
+    expect(service.canContinue()).toBe(false);
+    expect(service.calculation()).toBeNull();
+    log.mockRestore();
   });
 
   it('clears the selection when the offer version changes', () => {

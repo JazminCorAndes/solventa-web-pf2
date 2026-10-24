@@ -135,6 +135,20 @@ describe('SimulatedPaymentService', () => {
     expect(service.loading()).toBe(false);
   });
 
+  it('does not permit payment when an accepted selection is blocked by an expired profile', async () => {
+    offers.loadSelection.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'perfil_vencido' } })),
+    );
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    await firstValueFrom(service.confirm());
+
+    expect(service.selection()).toBeNull();
+    expect(service.canConfirm()).toBe(false);
+    expect(service.payment()).toBeNull();
+    expect(service.errorKey()).toBe('payment.errors.notAllowed');
+    expect(gateway.confirm).not.toHaveBeenCalled();
+  });
+
   it.each(['review', 'rejected'] as const)(
     'never loads or confirms a %s decision',
     async (status) => {

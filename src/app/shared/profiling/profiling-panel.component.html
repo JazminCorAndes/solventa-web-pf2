@@ -26,8 +26,11 @@
       }
       @if (consentLoaded()) {
         @if (consent(); as current) {
-          <p>
-            {{ 'profiling.consentStatus.' + current.estado | transloco }}
+          <p role="status">
+            {{
+              'profiling.consentStatus.' + (consentExpired() ? 'vencido' : current.estado)
+                | transloco
+            }}
             · {{ 'profiling.version' | transloco }} {{ current.version }} ·
             {{ current.vigenteHasta | date: 'medium' }}
           </p>
@@ -35,19 +38,124 @@
           <p>{{ 'profiling.noConsent' | transloco }}</p>
         }
         @if (consent()?.estado === 'autorizado') {
-          <button mat-button type="button" (click)="save(false)">
+          <button
+            #revokeButton
+            mat-button
+            type="button"
+            [attr.aria-expanded]="confirmingRevocation()"
+            (click)="revoke()"
+          >
             {{ 'profiling.revoke' | transloco }}
           </button>
+          @if (confirmingRevocation()) {
+            <section role="group" [attr.aria-label]="'profiling.revocation.title' | transloco">
+              <h3>{{ 'profiling.revocation.title' | transloco }}</h3>
+              <p>{{ 'profiling.revocation.body' | transloco }}</p>
+              <button
+                mat-stroked-button
+                type="button"
+                (click)="cancelRevocation(); revokeButton.focus()"
+              >
+                {{ 'profiling.revocation.cancel' | transloco }}
+              </button>
+              <button mat-flat-button type="button" (click)="confirmRevocation()">
+                {{ 'profiling.revocation.confirm' | transloco }}
+              </button>
+            </section>
+          }
         }
-        @if (
-          !authorized() &&
-          (!consent() ||
-            consent()?.estado === 'revocado' ||
-            errorKey() === 'profiling.errors.consent')
-        ) {
-          <button mat-flat-button type="button" (click)="save(true)">
-            {{ 'profiling.authorize' | transloco }}
-          </button>
+        @if (incompleteEvidence()) {
+          <p role="status">{{ 'profiling.incompleteEvidence' | transloco }}</p>
+        }
+        @if (!authorized()) {
+          @if (requestIssues().length) {
+            <div class="error" role="alert" [id]="'consent-request-issues-' + (requestId ?? 'new')">
+              <p>{{ 'profiling.errors.incompleteRequest' | transloco }}</p>
+              <ul>
+                @for (field of requestIssues(); track field) {
+                  <li>{{ 'profiling.decision.fields.' + field | transloco }}</li>
+                }
+              </ul>
+              @if (!errorKey()) {
+                <button mat-stroked-button type="button" (click)="reload()">
+                  {{ 'common.retry' | transloco }}
+                </button>
+              }
+            </div>
+          }
+          @if (consentRequest(); as request) {
+            <section [attr.aria-labelledby]="'consent-decision-title-' + (requestId ?? 'new')">
+              <h3 [id]="'consent-decision-title-' + (requestId ?? 'new')">
+                {{ 'profiling.decision.title' | transloco }}
+              </h3>
+              <p>{{ 'profiling.decision.purpose' | transloco }}</p>
+              <p>{{ 'profiling.decision.permissions' | transloco }}</p>
+              <p>{{ 'profiling.decision.data' | transloco }}</p>
+              <dl>
+                <div>
+                  <dt>{{ 'profiling.decision.fields.purpose' | transloco }}</dt>
+                  <dd>{{ 'profiling.purposes.' + request.finalidad | transloco }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'profiling.decision.fields.scopes' | transloco }}</dt>
+                  <dd>
+                    @for (scope of request.alcances; track $index) {
+                      {{ 'profiling.source.' + scope | transloco }}{{ $last ? '' : ', ' }}
+                    }
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ 'profiling.decision.fields.sources' | transloco }}</dt>
+                  <dd>
+                    @for (source of request.fuentes; track $index) {
+                      {{ 'profiling.source.' + source | transloco }}{{ $last ? '' : ', ' }}
+                    }
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ 'profiling.decision.fields.data' | transloco }}</dt>
+                  <dd>
+                    @for (data of request.datos; track $index) {
+                      {{ 'profiling.data.' + data | transloco }}{{ $last ? '' : ', ' }}
+                    }
+                  </dd>
+                </div>
+              </dl>
+              <p>
+                {{ 'profiling.decision.terms' | transloco }} {{ request.versionTerminos }}.
+                {{ 'profiling.decision.rights' | transloco }}
+              </p>
+              <p>
+                {{ 'profiling.validUntil' | transloco }}:
+                @if (!requestIssues().includes('validity')) {
+                  <time [attr.datetime]="request.vigenteHasta">
+                    {{ request.vigenteHasta | date: 'medium' }} ({{
+                      request.vigenteHasta | date: 'ZZZZZ'
+                    }})
+                  </time>
+                }
+              </p>
+              <button
+                mat-flat-button
+                type="button"
+                [disabled]="requestIssues().length > 0"
+                [attr.aria-describedby]="
+                  requestIssues().length ? 'consent-request-issues-' + (requestId ?? 'new') : null
+                "
+                (click)="save(true)"
+              >
+                {{ 'profiling.authorize' | transloco }}
+              </button>
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="requestIssues().length > 0"
+                (click)="save(false)"
+              >
+                {{ 'profiling.reject' | transloco }}
+              </button>
+            </section>
+          }
         }
       }
       @if (profile(); as profile) {
