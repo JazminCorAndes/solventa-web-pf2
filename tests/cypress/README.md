@@ -56,11 +56,11 @@ El helper compatible activa ambas configuraciones mediante `--encrypted-login`;
 el workflow integrado ya pasa ese argumento.
 El workflow fija `jobs.integrated.env.BACKEND_REVISION` en
 `.github/workflows/cypress-integrated.yml` al commit
-`e78bf87c1983a9dc4463802a6c81a54bb4b3bfcd`, que incluye socios y login cifrado.
+`7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1`, que incluye socios y login cifrado.
 Es una referencia del entorno de pruebas, no un destino de despliegue productivo.
 
 Revisión reproducible del backend público:
-[`e78bf87c1983a9dc4463802a6c81a54bb4b3bfcd`](https://github.com/Migue765/backend-solventa/commit/e78bf87c1983a9dc4463802a6c81a54bb4b3bfcd).
+[`7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1`](https://github.com/Migue765/backend-solventa/commit/7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1).
 El workflow usa ese SHA inmutable, no `develop` ni una rama que pueda cambiar.
 Esta revisión deja JMeter exclusivamente manual en el backend; el workflow web
 solo utiliza su helper de servicios y no ejecuta JMeter.
