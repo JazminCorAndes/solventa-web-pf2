@@ -84,6 +84,14 @@
       "expired": "Your session expired or is no longer valid. Verify access again.",
       "quota": "The request limit has been reached. Wait before trying again.",
       "unavailable": "Access could not be verified. Try again when the service is available."
+    },
+    "eyebrow": "Partners",
+    "enabledServices": "Enabled services",
+    "newQuote": "New quote",
+    "metrics": {
+      "organizations": "Authorized organizations",
+      "products": "Authorized products",
+      "operations": "Authorized operations"
     }
   },
   "clientInformation": {
@@ -343,8 +351,12 @@
       "cancel": "Keep authorization",
       "confirm": "Confirm revocation"
     },
-    "purposes": { "cotizacion": "Calculate a risk profile for your insurance quote" },
-    "data": { "indicador_riesgo": "Risk indicator" },
+    "purposes": {
+      "cotizacion": "Calculate a risk profile for your insurance quote"
+    },
+    "data": {
+      "indicador_riesgo": "Risk indicator"
+    },
     "consentStatus": {
       "autorizado": "Authorization registered",
       "revocado": "Authorization revoked",

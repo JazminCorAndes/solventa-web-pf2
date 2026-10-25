@@ -84,6 +84,14 @@
       "expired": "La sesión venció o dejó de ser válida. Verifica el acceso nuevamente.",
       "quota": "Se alcanzó el límite de solicitudes. Espera antes de volver a intentarlo.",
       "unavailable": "No fue posible verificar el acceso. Inténtalo nuevamente cuando el servicio esté disponible."
+    },
+    "eyebrow": "Socios",
+    "enabledServices": "Servicios habilitados",
+    "newQuote": "Nueva cotización",
+    "metrics": {
+      "organizations": "Organizaciones habilitadas",
+      "products": "Productos autorizados",
+      "operations": "Operaciones autorizadas"
     }
   },
   "clientInformation": {
@@ -343,8 +351,12 @@
       "cancel": "Conservar autorización",
       "confirm": "Confirmar revocación"
     },
-    "purposes": { "cotizacion": "Calcular el perfil de riesgo para tu cotización de seguro" },
-    "data": { "indicador_riesgo": "Indicador de riesgo" },
+    "purposes": {
+      "cotizacion": "Calcular el perfil de riesgo para tu cotización de seguro"
+    },
+    "data": {
+      "indicador_riesgo": "Indicador de riesgo"
+    },
     "consentStatus": {
       "autorizado": "Autorización registrada",
       "revocado": "Autorización revocada",
