@@ -1,40 +1,34 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
+
+const CREATE_QUOTE_SCOPE = 'perfilamientos:crear';
+const QUERY_CLIENTS_SCOPE = 'clientes:consultar';
 
 @Component({
   selector: 'app-partner-home-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe],
-  template: `
-    @if (partners.context(); as context) {
-      <h1>{{ 'partners.title' | transloco }}</h1>
-      <p>{{ 'partners.subtitle' | transloco }}</p>
-      @for (partner of context.socios; track partner.socioId) {
-        <section [attr.aria-label]="partner.socioId">
-          <h2>{{ partner.socioId }}</h2>
-          <p>{{ 'partners.products' | transloco }}</p>
-          <ul>
-            @for (product of partner.productos; track product) {
-              <li>{{ product }}</li>
-            } @empty {
-              <li>{{ 'partners.noProducts' | transloco }}</li>
-            }
-          </ul>
-          @if (partner.productos.length && context.alcances.includes('perfilamientos:crear')) {
-            <a
-              routerLink="/app/socios/cotizaciones/solicitar"
-              [queryParams]="{ socio: partner.socioId }"
-              >{{ 'quoteRequest.submit' | transloco }}</a
-            >
-          }
-        </section>
-      }
-      <p>{{ 'partners.scopeNotice' | transloco }}</p>
-    }
-  `,
+  imports: [MatButtonModule, MatCardModule, RouterLink, TranslocoPipe],
+  templateUrl: './partner-home-page.component.html',
+  styleUrl: './partner-home-page.component.scss',
 })
 export class PartnerHomePageComponent {
   readonly partners = inject(PartnerContextService);
+
+  /** Solo se resumen datos del contrato autenticado; no hay métricas de actividad simuladas. */
+  readonly summary = computed(() => {
+    const context = this.partners.context();
+    if (!context) return null;
+    const products = new Set(context.socios.flatMap((partner) => partner.productos));
+    return {
+      organizations: context.socios.length,
+      products: products.size,
+      scopes: context.alcances.length,
+      canCreateQuote: context.alcances.includes(CREATE_QUOTE_SCOPE),
+      canQueryClients: context.alcances.includes(QUERY_CLIENTS_SCOPE),
+    };
+  });
 }

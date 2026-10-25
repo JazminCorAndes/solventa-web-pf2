@@ -84,6 +84,54 @@
       "expired": "Your session expired or is no longer valid. Verify access again.",
       "quota": "The request limit has been reached. Wait before trying again.",
       "unavailable": "Access could not be verified. Try again when the service is available."
+    },
+    "eyebrow": "Partners",
+    "enabledServices": "Enabled services",
+    "newQuote": "New quote",
+    "metrics": {
+      "organizations": "Authorized organizations",
+      "products": "Authorized products",
+      "operations": "Authorized operations"
+    }
+  },
+  "clientInformation": {
+    "eyebrow": "Authorized query",
+    "title": "Client information",
+    "subtitle": "Query only the minimum data covered by current consent.",
+    "open": "Query client information",
+    "search": "Search by document or identifier",
+    "searchPlaceholder": "Enter the client identifier",
+    "searchHint": "The registered client's UUID is currently required.",
+    "basicData": "Authorized basic data",
+    "profilingStatus": "Profiling status",
+    "currentConsents": "Current consents",
+    "pendingValue": "Enter a client to query",
+    "consentVersion": "Current consent · version {{ version }}",
+    "viewDetail": "View detail",
+    "partner": "Partner",
+    "clientId": "Client identifier",
+    "product": "Product",
+    "purpose": "Purpose",
+    "purposeQuote": "Quotation",
+    "minimumDataNotice": "Only the authorized risk indicator will be requested. If a source fails, partial information will not be shown.",
+    "submit": "Query information",
+    "loading": "Querying…",
+    "completed": "Query completed",
+    "resultTitle": "Authorized data",
+    "operationId": "Operation identifier",
+    "consultedAt": "Query date",
+    "evidence": "Consulted sources",
+    "newConsultation": "New query",
+    "data": {
+      "indicadorRiesgo": "Risk indicator"
+    },
+    "errors": {
+      "invalid": "Complete the required fields with valid values.",
+      "consent": "The client does not have current consent covering this query.",
+      "client": "The selected client is not registered.",
+      "forbidden": "The partner, product, or purpose is not authorized.",
+      "conflict": "The operation identifier was already used with different data.",
+      "unavailable": "Not all sources could be queried. Partial data is not shown."
     }
   },
   "navigation": {
@@ -99,7 +147,10 @@
     "secureSession": "Secure session",
     "menu": "Menu",
     "dashboard": "Home",
+    "clients": "Clients",
     "quotes": "Quotes",
+    "requests": "Requests",
+    "settings": "Settings",
     "policies": "My insurance",
     "claims": "Claims",
     "notifications": "Notifications"
@@ -300,8 +351,12 @@
       "cancel": "Keep authorization",
       "confirm": "Confirm revocation"
     },
-    "purposes": { "cotizacion": "Calculate a risk profile for your insurance quote" },
-    "data": { "indicador_riesgo": "Risk indicator" },
+    "purposes": {
+      "cotizacion": "Calculate a risk profile for your insurance quote"
+    },
+    "data": {
+      "indicador_riesgo": "Risk indicator"
+    },
     "consentStatus": {
       "autorizado": "Authorization registered",
       "revocado": "Authorization revoked",
