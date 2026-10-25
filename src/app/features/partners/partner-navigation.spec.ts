@@ -176,6 +176,16 @@ describe('Partner navigation through production routes', () => {
     http.expectNone(`${API}/v1/clientes/me/dashboard`);
   });
 
+  it('no concede al socio acceso al portal asesor ni envía operaciones hipotecarias', async () => {
+    await login();
+    const navigation = harness.navigateByUrl('/asesor/perfilamientos/nuevo');
+    const request = await vi.waitFor(() => http.expectOne(`${API}/v1/socios/actual`));
+    request.flush(CONTEXT);
+    await navigation;
+    expect(TestBed.inject(Router).url).toBe('/app/socios');
+    http.expectNone(`${API}/v1/perfilamientos-hipotecarios`);
+  });
+
   it('uses the renewed role rather than stored identity when authorizing a child route', async () => {
     storage.stored = {
       user: { id: USER.id, name: USER.nombre, email: USER.correo, role: 'client' },

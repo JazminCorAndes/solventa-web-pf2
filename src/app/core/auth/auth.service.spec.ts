@@ -102,6 +102,25 @@ describe('AuthService', () => {
     expect(storage.stored).toBeNull();
   });
 
+  it('restaura al asesor y reemplaza sus socios con la respuesta de renovación', async () => {
+    storage.stored = storedAuth({
+      user: { ...TEST_USER, role: 'advisor', partnerIds: ['SOCIO-ANTERIOR'] },
+    });
+    const grant = grantFor('advisor-access', 'advisor-refresh');
+    grant.session.user = {
+      ...TEST_USER,
+      role: 'advisor',
+      partnerIds: ['BANCO-001', 'BANCO-002'],
+    };
+    gateway.refreshResult = () => of(grant);
+    const service = createService();
+    expect(service.user()?.role).toBe('advisor');
+    await firstValueFrom(service.synchronizeSession());
+    expect(service.user()?.partnerIds).toEqual(['BANCO-001', 'BANCO-002']);
+    expect(storage.stored?.user).toEqual(grant.session.user);
+    expect(service.hasActiveSession()).toBe(true);
+  });
+
   it('silently becomes unauthenticated when the stored refresh token is rejected', async () => {
     storage.stored = storedAuth();
     gateway.refreshResult = () => throwError(() => new InvalidRefreshTokenError());

@@ -5,6 +5,7 @@ import {
   MortgageProfilingError,
   MortgageProfilingRecord,
   MortgageProfilingRequest,
+  MORTGAGE_UUID_PATTERN,
 } from '../../core/advisor-profiling/advisor-profiling.models';
 
 @Injectable()
@@ -19,7 +20,7 @@ export class MockAdvisorProfilingGateway implements AdvisorProfilingGateway {
       return throwError(() => new MortgageProfilingError('incomplete_data'));
     }
     if (
-      !UUID_PATTERN.test(request.consent.id) ||
+      !MORTGAGE_UUID_PATTERN.test(request.consent.id) ||
       request.consent.id === '00000000-0000-0000-0000-000000000000' ||
       request.consent.version < 1
     ) {
@@ -37,8 +38,13 @@ export class MockAdvisorProfilingGateway implements AdvisorProfilingGateway {
 
     const record: MortgageProfilingRecord = {
       operationId: request.operationId,
+      partnerId: request.partnerId,
+      customerId: request.customer.id,
+      productId: 'mortgage-life',
       profilingReference: `PRF-HIP-${request.operationId.slice(0, 8).toUpperCase()}`,
-      status: 'processing',
+      quoteRequestId: `AQT-${request.operationId.slice(0, 8).toUpperCase()}`,
+      quoteId: crypto.randomUUID(),
+      status: 'completed',
       receivedAt: new Date().toISOString(),
     };
     this.operations.set(request.operationId, { fingerprint, record });
@@ -50,10 +56,10 @@ function hasRequiredData(request: MortgageProfilingRequest): boolean {
   return Boolean(
     request.operationId &&
     request.partnerId &&
+    MORTGAGE_UUID_PATTERN.test(request.customer.id) &&
     request.customer.documentNumber &&
-    request.customer.fullName &&
-    request.customer.email &&
     request.customer.phone &&
+    /^\d{4}-\d{2}-\d{2}$/.test(request.customer.birthDate) &&
     request.credit.reference &&
     request.credit.amount > 0 &&
     request.credit.termMonths > 0 &&
@@ -61,5 +67,3 @@ function hasRequiredData(request: MortgageProfilingRequest): boolean {
     request.consent.version > 0,
   );
 }
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

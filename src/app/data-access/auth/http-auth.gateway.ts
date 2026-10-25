@@ -20,13 +20,14 @@ import {
   DocumentType,
   LoginCredentials,
   RegistrationData,
+  isPartnerIds,
 } from '../../core/auth/auth.models';
 
 interface UserResponse {
   id: string;
   nombre: string;
   correo: string;
-  rol: 'cliente' | 'socio';
+  rol: 'cliente' | 'socio' | 'asesor';
   socios?: string[];
   tipoDocumento?: DocumentType;
   identificacion?: string;
@@ -223,7 +224,7 @@ function parseRetryAfter(error: HttpErrorResponse): number | null {
 function toUser(user: UserResponse): AuthUser {
   if (
     !user ||
-    (user.rol !== 'cliente' && user.rol !== 'socio') ||
+    (user.rol !== 'cliente' && user.rol !== 'socio' && user.rol !== 'asesor') ||
     typeof user.id !== 'string' ||
     typeof user.nombre !== 'string' ||
     typeof user.correo !== 'string'
@@ -231,11 +232,8 @@ function toUser(user: UserResponse): AuthUser {
     throw new AuthenticationUnavailableError();
   }
   if (
-    user.rol === 'socio' &&
-    (!Array.isArray(user.socios) ||
-      user.socios.length === 0 ||
-      !user.socios.every((id) => typeof id === 'string' && id.trim().length > 0) ||
-      new Set(user.socios).size !== user.socios.length)
+    user.rol !== 'cliente' &&
+    (!isPartnerIds(user.socios) || (user.rol === 'socio' && user.socios.length === 0))
   ) {
     throw new AuthenticationUnavailableError();
   }
@@ -243,8 +241,8 @@ function toUser(user: UserResponse): AuthUser {
     id: user.id,
     name: user.nombre,
     email: user.correo,
-    role: user.rol === 'socio' ? 'partner' : 'client',
-    ...(user.rol === 'socio' ? { partnerIds: [...user.socios!] } : {}),
+    role: user.rol === 'socio' ? 'partner' : user.rol === 'asesor' ? 'advisor' : 'client',
+    ...(user.rol !== 'cliente' ? { partnerIds: [...user.socios!] } : {}),
     documentType: user.tipoDocumento,
     nationalId: user.identificacion,
     phone: user.telefono,

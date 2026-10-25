@@ -183,4 +183,14 @@ describe('LoginPageComponent', () => {
 
     expect(navigate).toHaveBeenCalledWith('/app/socios');
   });
+
+  it('navega al portal asesor con el rol autenticado', () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const grant = grantFor('advisor-access', 'advisor-refresh');
+    grant.session.user = { ...grant.session.user, role: 'advisor', partnerIds: ['BANCO-001'] };
+    gateway.loginResult = () => of(grant);
+    component.form.setValue({ email: 'asesor@example.com', password: 'test-secret' });
+    component.submit();
+    expect(navigate).toHaveBeenCalledWith('/asesor/perfilamientos/nuevo');
+  });
 });

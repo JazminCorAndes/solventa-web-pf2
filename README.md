@@ -254,6 +254,57 @@ identidad, BFF, cotización, perfilamiento y bases migradas. Contiene únicament
 sintética `BANK-E2E`, sin tokens ni credenciales, y se importa solo en pruebas. Coteja el
 consumidor con una respuesta real del contrato; no sustituye la verificación en AWS/Pages.
 
+### Perfilamiento hipotecario del asesor (HU46)
+
+La ruta `/asesor/perfilamientos/nuevo` requiere una sesión con `usuario.rol: "asesor"`.
+Login, renovación y `GET /v1/sesiones/actual` conservan `usuario.socios`; Angular lo
+mapea a `advisor` y `partnerIds` sin leer claims del JWT ni crear un alcance público.
+El asesor no entra en las rutas de cliente o socio. Un único socio se muestra como
+contexto de la operación; con varios se exige selección explícita. Sin socios válidos
+se bloquea el formulario y no se envía una operación. La renovación vuelve a validar
+rol, identidad y pertenencia antes del envío. El backend autoriza cada petición.
+
+En modo `backend`, el adaptador usa `POST /v1/perfilamientos-hipotecarios`, con
+`API-Version: 1` y el mismo UUID en `operationId` e `Idempotency-Key`. El cuerpo incluye
+`socioId`, `productoId: "mortgage-life"`, `cliente: { clienteId, tipoDocumento,
+numeroDocumento, telefono, fechaNacimiento }`, `credito: { referencia, monto, plazoMeses }`,
+`consentimientoId` y `consentimientoVersion`. El identificador corresponde a un cliente
+registrado; el backend obtiene su nombre/correo y valida el consentimiento. El formulario
+no concede consentimiento ni crea cuentas.
+
+La respuesta 201 tiene `estado: "completada"`, `operationId`, `socioId`, `clienteId`,
+`productoId`, `perfilamientoReferencia`, `solicitudId`, `cotizacionId` y `recibidaEn`.
+Angular valida sus identificadores/contexto y muestra un comprobante con referencias.
+Los reintentos con los mismos datos conservan operación y cuerpo; un replay repite el
+POST y recupera el resultado persistido. No existe un GET de recuperación del asesor
+en este consumidor.
+
+El cuerpo y su comparación permanecen en memoria. En `sessionStorage` solo quedan
+UUID de operación, identificador del asesor y socio; no se guardan datos del cliente,
+crédito, consentimiento ni su fingerprint. Se descartan registros del formato anterior.
+Logout, invalidez de sesión, cambio de actor/rol o retirada del socio borran la operación;
+renovar la sesión del mismo asesor no la borra si el socio sigue autorizado, aunque
+añada otros socios. Al perder ese contexto, la pantalla cancela su petición pendiente,
+borra los datos del formulario y desmarca la verificación del consentimiento; una
+respuesta tardía no restaura esos datos ni modifica el estado de un envío nuevo.
+Esto no cancela una operación ya recibida por el backend.
+Cambiar datos o socio requiere iniciar otra operación de forma
+explícita; un conflicto o una respuesta incierta no cambian el UUID. Tras recarga se reintroducen los datos
+exactos para repetir el POST con el UUID guardado: el backend verifica la idempotencia
+y puede responder conflicto si los datos difieren. Angular no puede cotejar un cuerpo
+que no conserva. La acción explícita «Iniciar otro perfilamiento» descarta el UUID
+pendiente; no debe usarse como reintento de una operación cuyo resultado se desconoce.
+
+Solo el modo explícito `mock` usa `MockAdvisorProfilingGateway`, con operaciones en
+memoria; las pruebas usan dobles de sesión/HTTP. No existe fallback del modo backend.
+El contrato de referencia es el BFF integrado en `af676d0` de `backend-solventa`.
+Las pruebas controladas no acreditan un despliegue ni una ejecución productiva.
+
+Esta integración HU46 no cierra SOL-205/HU49: no muestra una oferta hipotecaria
+personalizada, no calcula primas ni inventa explicación/factores. Tampoco consulta
+ofertas del cliente con un token asesor. La oferta persistida por operación y su
+explicación dependen de SOL-327/HU48 (SOL-202).
+
 ### Tablero integrado
 
 El inicio consume `GET /v1/clientes/me/dashboard` del BFF principal con el interceptor
