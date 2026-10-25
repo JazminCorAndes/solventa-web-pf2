@@ -59,6 +59,37 @@
             <app-icon matListItemIcon name="claim" />
             <span matListItemTitle>{{ 'navigation.claims' | transloco }}</span>
           </button>
+        } @else {
+          @if (partners.context()?.alcances?.includes('clientes:consultar')) {
+            <a
+              mat-list-item
+              routerLink="/app/socios/clientes/consultar"
+              routerLinkActive="active-link"
+              (click)="closeMobileMenu()"
+            >
+              <app-icon matListItemIcon name="policy" />
+              <span matListItemTitle>{{ 'navigation.clients' | transloco }}</span>
+            </a>
+          }
+          @if (partners.context()?.alcances?.includes('perfilamientos:crear')) {
+            <a
+              mat-list-item
+              routerLink="/app/socios/cotizaciones/solicitar"
+              routerLinkActive="active-link"
+              (click)="closeMobileMenu()"
+            >
+              <app-icon matListItemIcon name="claim" />
+              <span matListItemTitle>{{ 'navigation.quotes' | transloco }}</span>
+            </a>
+          }
+          <button mat-list-item type="button" disabled>
+            <app-icon matListItemIcon name="policy" />
+            <span matListItemTitle>{{ 'navigation.requests' | transloco }}</span>
+          </button>
+          <button mat-list-item type="button" disabled>
+            <app-icon matListItemIcon name="shield" />
+            <span matListItemTitle>{{ 'navigation.settings' | transloco }}</span>
+          </button>
         }
       </mat-nav-list>
 

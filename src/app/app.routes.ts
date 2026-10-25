@@ -31,6 +31,16 @@ export const routes: Routes = [
       ),
     children: [
       {
+        path: 'socios/clientes/consultar',
+        canActivate: [partnerGuard],
+        data: { partnerScope: 'clientes:consultar', partnerMode: true },
+        loadComponent: () =>
+          import('./features/partners/client-information-page.component').then(
+            (component) => component.ClientInformationPageComponent,
+          ),
+        title: 'Consultar información del cliente | Solventa',
+      },
+      {
         path: 'socios/cotizaciones/solicitar',
         canActivate: [partnerGuard],
         data: { partnerScope: 'perfilamientos:crear', partnerMode: true },

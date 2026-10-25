@@ -118,6 +118,11 @@ describe('Partner navigation through production routes', () => {
         `a[href="/app/socios/cotizaciones/solicitar?socio=${CONTEXT.socios[0].socioId}"]`,
       ),
     ).not.toBeNull();
+    expect(
+      harness.routeNativeElement?.querySelector(
+        `a[href="/app/socios/clientes/consultar?socio=${CONTEXT.socios[0].socioId}"]`,
+      ),
+    ).not.toBeNull();
     expect(harness.routeNativeElement?.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
     expect(JSON.stringify(storage.stored)).not.toContain('secret');
     expect(JSON.stringify(storage.stored)).not.toContain('partner-access');

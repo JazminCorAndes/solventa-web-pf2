@@ -29,6 +29,13 @@ import { PartnerContextService } from '../../core/partners/partner-context.servi
               >{{ 'quoteRequest.submit' | transloco }}</a
             >
           }
+          @if (partner.productos.length && context.alcances.includes('clientes:consultar')) {
+            <a
+              routerLink="/app/socios/clientes/consultar"
+              [queryParams]="{ socio: partner.socioId }"
+              >{{ 'clientInformation.open' | transloco }}</a
+            >
+          }
         </section>
       }
       <p>{{ 'partners.scopeNotice' | transloco }}</p>
