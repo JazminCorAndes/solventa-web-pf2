@@ -124,6 +124,9 @@ describe('Partner navigation through production routes', () => {
       ),
     ).not.toBeNull();
     expect(harness.routeNativeElement?.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
+    const menu = document.querySelector('mat-sidenav') ?? harness.fixture.nativeElement;
+    expect(menu.querySelector('a[href="/app/socios/cotizaciones/solicitar"]')).not.toBeNull();
+    expect(menu.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
     expect(JSON.stringify(storage.stored)).not.toContain('secret');
     expect(JSON.stringify(storage.stored)).not.toContain('partner-access');
   });
