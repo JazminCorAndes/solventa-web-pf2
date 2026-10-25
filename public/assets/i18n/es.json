@@ -86,6 +86,46 @@
       "unavailable": "No fue posible verificar el acceso. Inténtalo nuevamente cuando el servicio esté disponible."
     }
   },
+  "clientInformation": {
+    "eyebrow": "Consulta autorizada",
+    "title": "Información del cliente",
+    "subtitle": "Consulta únicamente los datos mínimos cubiertos por el consentimiento vigente.",
+    "open": "Consultar información del cliente",
+    "search": "Buscar por documento o identificador",
+    "searchPlaceholder": "Ingresa el identificador del cliente",
+    "searchHint": "Actualmente se requiere el identificador UUID del cliente registrado.",
+    "basicData": "Datos básicos autorizados",
+    "profilingStatus": "Estado de perfilamiento",
+    "currentConsents": "Consentimientos vigentes",
+    "pendingValue": "Ingresa un cliente para consultar",
+    "consentVersion": "Consentimiento vigente · versión {{ version }}",
+    "viewDetail": "Ver detalle",
+    "partner": "Socio",
+    "clientId": "Identificador del cliente",
+    "product": "Producto",
+    "purpose": "Finalidad",
+    "purposeQuote": "Cotización",
+    "minimumDataNotice": "Se solicitará únicamente el indicador de riesgo autorizado. Si una fuente falla, no se mostrará información parcial.",
+    "submit": "Consultar información",
+    "loading": "Consultando…",
+    "completed": "Consulta completada",
+    "resultTitle": "Datos autorizados",
+    "operationId": "Identificador de operación",
+    "consultedAt": "Fecha de consulta",
+    "evidence": "Fuentes consultadas",
+    "newConsultation": "Nueva consulta",
+    "data": {
+      "indicadorRiesgo": "Indicador de riesgo"
+    },
+    "errors": {
+      "invalid": "Completa los datos obligatorios con valores válidos.",
+      "consent": "El cliente no tiene un consentimiento vigente que cubra esta consulta.",
+      "client": "El cliente seleccionado no está registrado.",
+      "forbidden": "El socio, producto o finalidad no están autorizados.",
+      "conflict": "El identificador de operación ya fue utilizado con otros datos.",
+      "unavailable": "No fue posible consultar todas las fuentes. No se muestran datos parciales."
+    }
+  },
   "navigation": {
     "skipToContent": "Saltar al contenido principal",
     "primary": "Navegación principal",
@@ -99,7 +139,10 @@
     "secureSession": "Sesión segura",
     "menu": "Menú",
     "dashboard": "Inicio",
+    "clients": "Clientes",
     "quotes": "Cotizaciones",
+    "requests": "Solicitudes",
+    "settings": "Configuración",
     "policies": "Mis seguros",
     "claims": "Siniestros",
     "notifications": "Notificaciones"

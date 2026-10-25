@@ -1,5 +1,5 @@
 {
-  "alcances": ["perfilamientos:crear"],
+  "alcances": ["perfilamientos:crear", "clientes:consultar"],
   "apiVersion": "1",
   "socios": [
     {
