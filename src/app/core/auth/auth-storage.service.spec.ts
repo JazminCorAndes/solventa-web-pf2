@@ -51,6 +51,25 @@ describe('BrowserAuthStorage', () => {
     expect(sessionStorage.getItem('solventa.auth.refresh')).toBeNull();
   });
 
+  it.each([[], ['BANCO-001'], ['BANCO-001', 'BANCO-002']].map((partnerIds) => ({ partnerIds })))(
+    'restaura el rol asesor con socios %j sin convertirlo en cliente',
+    ({ partnerIds }) => {
+      const user = { ...TEST_USER, role: 'advisor' as const, partnerIds };
+      storage.write({ ...STORED, user });
+      expect(storage.read()?.user).toEqual(user);
+    },
+  );
+
+  it.each(
+    [undefined, null, [''], [12], ['BANCO-001', 'BANCO-001']].map((partnerIds) => ({ partnerIds })),
+  )('descarta un contexto asesor malformado %j', ({ partnerIds }) => {
+    sessionStorage.setItem(
+      'solventa.auth.refresh',
+      JSON.stringify({ ...STORED, user: { ...TEST_USER, role: 'advisor', partnerIds } }),
+    );
+    expect(storage.read()).toBeNull();
+  });
+
   it('clears the legacy session entry', () => {
     sessionStorage.setItem('solventa.auth.session', '{}');
 

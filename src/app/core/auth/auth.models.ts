@@ -14,7 +14,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: 'client' | 'partner';
+  role: 'client' | 'partner' | 'advisor';
   partnerIds?: string[];
   documentType?: DocumentType;
   nationalId?: string;
@@ -36,4 +36,12 @@ export interface AuthTokens {
 export interface AuthGrant {
   session: AuthSession;
   tokens: AuthTokens;
+}
+
+export function isPartnerIds(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every((id) => typeof id === 'string' && id.trim().length > 0) &&
+    new Set(value).size === value.length
+  );
 }

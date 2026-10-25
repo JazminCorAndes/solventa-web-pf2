@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, portalGuard } from './core/auth/auth.guards';
+import { advisorGuard, authGuard, guestGuard, portalGuard } from './core/auth/auth.guards';
 import { partnerGuard } from './core/partners/partner.guard';
 import { quoteResumeGuard } from './core/quotes/quote-resume.guard';
 
@@ -121,7 +121,8 @@ export const routes: Routes = [
   },
   {
     path: 'asesor',
-    canActivate: [authGuard],
+    canActivate: [authGuard, advisorGuard],
+    canActivateChild: [advisorGuard],
     loadComponent: () =>
       import('./layout/advisor-layout/advisor-layout.component').then(
         (component) => component.AdvisorLayoutComponent,
