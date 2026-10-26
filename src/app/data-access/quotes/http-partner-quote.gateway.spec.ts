@@ -25,7 +25,6 @@ export function partnerRequest(productId = 'automotive'): PartnerQuoteRequest {
       tipoCliente: 'persona_natural',
       tipoDocumento: 'cc',
       numeroDocumento: '1023456789',
-      telefono: '+573001234567',
     },
   };
 }
@@ -41,6 +40,19 @@ export function partnerResult(request = partnerRequest()): PartnerQuoteResult {
     solicitudId: 'AQT-2026-123456',
     cotizacionId: quoteId,
     recibidaEn: '2026-10-23T05:00:00Z',
+    oferta: {
+      id: '55555555-5555-4555-8555-555555555555',
+      nombre: 'Plan recomendado',
+      descripcion: 'Protección para el saldo hipotecario.',
+      prima: { monto: '99000.00', moneda: 'COP' },
+      periodicidad: 'mensual',
+      coberturaPrincipal: 'Saldo hipotecario',
+      deducible: 'Sin deducible',
+      vigencia: '12 meses',
+      coberturas: ['Fallecimiento'],
+      beneficiosAdicionales: [],
+      vigenteHasta: '2026-11-23T05:00:00Z',
+    },
   };
 }
 

@@ -15,7 +15,6 @@ export interface PartnerQuoteRequest {
     tipoCliente: 'persona_natural';
     tipoDocumento: DocumentType;
     numeroDocumento: string;
-    telefono: string;
   };
 }
 
@@ -36,6 +35,21 @@ export interface PartnerQuoteResult {
   solicitudId: string;
   cotizacionId: string;
   recibidaEn: string;
+  oferta: PartnerRecommendedOffer;
+}
+
+export interface PartnerRecommendedOffer {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  prima: { monto: string; moneda: string };
+  periodicidad: 'mensual' | 'por_viaje' | 'por_vuelo' | 'por_periodo';
+  coberturaPrincipal: string;
+  deducible: string;
+  vigencia: string;
+  coberturas: string[];
+  beneficiosAdicionales: string[];
+  vigenteHasta: string;
 }
 
 export class InvalidPartnerQuoteResponse extends Error {
@@ -137,10 +151,12 @@ function parseResult(body: unknown, operationId: string, socioId: string): Partn
     !UUID_PATTERN.test(body.cotizacionId) ||
     !('recibidaEn' in body) ||
     typeof body.recibidaEn !== 'string' ||
-    !Number.isFinite(Date.parse(body.recibidaEn))
+    !Number.isFinite(Date.parse(body.recibidaEn)) ||
+    !('oferta' in body)
   ) {
     throw new InvalidPartnerQuoteResponse();
   }
+  const oferta = parseOffer(body.oferta);
   return {
     operationId,
     socioId,
@@ -151,7 +167,41 @@ function parseResult(body: unknown, operationId: string, socioId: string): Partn
     solicitudId: body.solicitudId,
     cotizacionId: body.cotizacionId,
     recibidaEn: body.recibidaEn,
+    oferta,
   };
+}
+
+function parseOffer(value: unknown): PartnerRecommendedOffer {
+  if (!value || typeof value !== 'object') throw new InvalidPartnerQuoteResponse();
+  const offer = value as Record<string, unknown>;
+  const premium = offer['prima'];
+  if (
+    typeof offer['id'] !== 'string' ||
+    !UUID_PATTERN.test(offer['id']) ||
+    typeof offer['nombre'] !== 'string' ||
+    !offer['nombre'] ||
+    typeof offer['descripcion'] !== 'string' ||
+    !offer['descripcion'] ||
+    !premium ||
+    typeof premium !== 'object' ||
+    typeof (premium as Record<string, unknown>)['monto'] !== 'string' ||
+    typeof (premium as Record<string, unknown>)['moneda'] !== 'string' ||
+    !['mensual', 'por_viaje', 'por_vuelo', 'por_periodo'].includes(
+      String(offer['periodicidad']),
+    ) ||
+    typeof offer['coberturaPrincipal'] !== 'string' ||
+    typeof offer['deducible'] !== 'string' ||
+    typeof offer['vigencia'] !== 'string' ||
+    !Array.isArray(offer['coberturas']) ||
+    !offer['coberturas'].every((item) => typeof item === 'string') ||
+    !Array.isArray(offer['beneficiosAdicionales']) ||
+    !offer['beneficiosAdicionales'].every((item) => typeof item === 'string') ||
+    typeof offer['vigenteHasta'] !== 'string' ||
+    !Number.isFinite(Date.parse(offer['vigenteHasta']))
+  ) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  return offer as unknown as PartnerRecommendedOffer;
 }
 
 export function partnerQuoteErrorCode(error: unknown): string | null {

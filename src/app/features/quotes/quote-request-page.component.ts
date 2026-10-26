@@ -365,7 +365,9 @@ export class QuoteRequestPageComponent implements OnInit {
         this.form.controls.monthlyPayment.setValidators([required, positiveInteger]);
         break;
       case 'mortgage-life':
-        this.form.controls.birthDate.setValidators(required);
+        if (!this.partnerMode) {
+          this.form.controls.birthDate.setValidators(required);
+        }
         this.form.controls.mortgageBalance.setValidators([required, positiveInteger]);
         break;
     }
@@ -418,10 +420,12 @@ export class QuoteRequestPageComponent implements OnInit {
           monthlyPayment: value.monthlyPayment,
         };
       case 'mortgage-life':
-        return {
-          birthDate: toIsoDate(value.birthDate),
-          mortgageBalance: value.mortgageBalance,
-        };
+        return this.partnerMode
+          ? { mortgageBalance: value.mortgageBalance }
+          : {
+              birthDate: toIsoDate(value.birthDate),
+              mortgageBalance: value.mortgageBalance,
+            };
       default:
         return {};
     }

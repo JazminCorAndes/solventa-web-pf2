@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -37,6 +37,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    CurrencyPipe,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -103,7 +104,6 @@ export class PartnerQuotePanelComponent implements OnInit {
     socioId: ['', Validators.required],
     tipoDocumento: this.builder.nonNullable.control<DocumentType>('cc'),
     numeroDocumento: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{6,15}$/)]],
-    telefono: ['', [Validators.required, Validators.pattern(/^\+57[0-9]{10}$/)]],
   });
   private readonly selectedPartner = toSignal(this.form.controls.socioId.valueChanges, {
     initialValue: '',
@@ -175,7 +175,6 @@ export class PartnerQuotePanelComponent implements OnInit {
         tipoCliente: 'persona_natural',
         tipoDocumento: values.tipoDocumento,
         numeroDocumento: values.numeroDocumento,
-        telefono: values.telefono,
       },
     };
     this.pendingRequest = request;

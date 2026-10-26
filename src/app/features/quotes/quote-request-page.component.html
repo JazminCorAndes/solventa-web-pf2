@@ -467,25 +467,27 @@
               }
               @case ('mortgage-life') {
                 <div class="field-grid">
-                  <div>
-                    <label for="mortgage-birth-date">{{
-                      'quoteRequest.fields.birthDate' | transloco
-                    }}</label>
-                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                      <input
-                        matInput
-                        id="mortgage-birth-date"
-                        formControlName="birthDate"
-                        [matDatepicker]="mortgageBirthDatePicker"
-                        [max]="today"
-                      />
-                      <mat-datepicker-toggle matIconSuffix [for]="mortgageBirthDatePicker" />
-                      <mat-datepicker #mortgageBirthDatePicker startView="multi-year" />
-                      @if (showError('birthDate')) {
-                        <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
-                      }
-                    </mat-form-field>
-                  </div>
+                  @if (!partnerMode) {
+                    <div>
+                      <label for="mortgage-birth-date">{{
+                        'quoteRequest.fields.birthDate' | transloco
+                      }}</label>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <input
+                          matInput
+                          id="mortgage-birth-date"
+                          formControlName="birthDate"
+                          [matDatepicker]="mortgageBirthDatePicker"
+                          [max]="today"
+                        />
+                        <mat-datepicker-toggle matIconSuffix [for]="mortgageBirthDatePicker" />
+                        <mat-datepicker #mortgageBirthDatePicker startView="multi-year" />
+                        @if (showError('birthDate')) {
+                          <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                        }
+                      </mat-form-field>
+                    </div>
+                  }
                   <div>
                     <label for="mortgage-balance">{{
                       'quoteRequest.fields.mortgageBalance' | transloco

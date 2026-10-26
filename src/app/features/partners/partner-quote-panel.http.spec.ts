@@ -128,7 +128,6 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     panel.form.patchValue({
       tipoDocumento: 'cc',
       numeroDocumento: '1023456789',
-      telefono: '+573001234567',
     });
     panel.clientLookup.set({
       nombre: 'Ana Cliente',
@@ -138,7 +137,6 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     });
     page.form.patchValue({
       productId: 'mortgage-life',
-      birthDate: new Date(1985, 1, 10),
       mortgageBalance: '310000000',
     });
   }
@@ -154,6 +152,19 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
       solicitudId: 'AQT-2026-123456',
       cotizacionId: quoteId,
       recibidaEn: '2026-10-23T05:00:00Z',
+      oferta: {
+        id: '55555555-5555-4555-8555-555555555555',
+        nombre: 'Plan recomendado',
+        descripcion: 'Protección para el saldo hipotecario.',
+        prima: { monto: '99000.00', moneda: 'COP' },
+        periodicidad: 'mensual',
+        coberturaPrincipal: 'Saldo hipotecario',
+        deducible: 'Sin deducible',
+        vigencia: '12 meses',
+        coberturas: ['Fallecimiento'],
+        beneficiosAdicionales: [],
+        vigenteHasta: '2026-11-23T05:00:00Z',
+      },
     };
   }
 
@@ -178,12 +189,11 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
       operationId: panel.operationId(),
       socioId: 'BANCO-001',
       productoId: 'mortgage-life',
-      datosProducto: { birthDate: '1985-02-10', mortgageBalance: '310000000' },
+      datosProducto: { mortgageBalance: '310000000' },
       cliente: {
         tipoCliente: 'persona_natural',
         tipoDocumento: 'cc',
         numeroDocumento: '1023456789',
-        telefono: '+573001234567',
       },
     });
     expect(navigate).toHaveBeenCalledWith(
@@ -211,7 +221,6 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
 
   it('bloquea cliente incompleto, datos producto invalidos y productos ajenos a la organizacion', () => {
     page.form.patchValue({
-      birthDate: new Date(1985, 1, 10),
       mortgageBalance: '310000000',
     });
     page.submit();
