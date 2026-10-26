@@ -13,7 +13,6 @@ import {
 
 const operationId = '11111111-1111-4111-8111-111111111111';
 const customerId = '22222222-2222-4222-8222-222222222222';
-const consentId = '33333333-3333-4333-8333-333333333333';
 const quoteId = '44444444-4444-4444-8444-444444444444';
 
 export function partnerRequest(productId = 'automotive'): PartnerQuoteRequest {
@@ -23,14 +22,11 @@ export function partnerRequest(productId = 'automotive'): PartnerQuoteRequest {
     productoId: productId,
     datosProducto: { vehiclePlate: 'ABC123' },
     cliente: {
-      clienteId: customerId,
       tipoCliente: 'persona_natural',
       tipoDocumento: 'cc',
       numeroDocumento: '1023456789',
       telefono: '+573001234567',
     },
-    consentimientoId: consentId,
-    consentimientoVersion: 1,
   };
 }
 
@@ -38,7 +34,7 @@ export function partnerResult(request = partnerRequest()): PartnerQuoteResult {
   return {
     operationId: request.operationId,
     socioId: request.socioId,
-    clienteId: request.cliente.clienteId,
+    clienteId: customerId,
     productoId: request.productoId,
     estado: 'completada',
     perfilamientoReferencia: 'profile-reference',
@@ -98,11 +94,31 @@ describe('HttpPartnerQuoteGateway', () => {
     expect(received).toHaveBeenCalledWith(partnerResult());
   });
 
+  it('busca al cliente sin exponer UUID ni version del consentimiento', () => {
+    const received = vi.fn();
+    gateway.lookupClient('BANCO-001', 'cc', '1023456789').subscribe(received);
+    const request = http.expectOne(
+      `${environment.apiBaseUrl}/v1/socios/clientes/por-documento?socioId=BANCO-001&tipoDocumento=cc&numeroDocumento=1023456789`,
+    );
+    request.flush({
+      nombre: 'Ana Cliente',
+      tipoDocumento: 'cc',
+      numeroDocumentoEnmascarado: '******6789',
+      consentimientoEstado: 'vigente',
+    });
+
+    expect(received).toHaveBeenCalledWith({
+      nombre: 'Ana Cliente',
+      tipoDocumento: 'cc',
+      numeroDocumentoEnmascarado: '******6789',
+      consentimientoEstado: 'vigente',
+    });
+  });
+
   it.each([
     null,
     { ...partnerResult(), operationId: quoteId },
     { ...partnerResult(), socioId: 'OTRO-SOCIO' },
-    { ...partnerResult(), clienteId: quoteId },
     { ...partnerResult(), productoId: 'life' },
     { ...partnerResult(), estado: 'procesando' },
     { ...partnerResult(), solicitudId: '' },

@@ -12,14 +12,18 @@ export interface PartnerQuoteRequest {
   productoId: string;
   datosProducto: QuoteProductData;
   cliente: {
-    clienteId: string;
     tipoCliente: 'persona_natural';
     tipoDocumento: DocumentType;
     numeroDocumento: string;
     telefono: string;
   };
-  consentimientoId: string;
-  consentimientoVersion: number;
+}
+
+export interface PartnerClientLookup {
+  nombre: string;
+  tipoDocumento: DocumentType;
+  numeroDocumentoEnmascarado: string;
+  consentimientoEstado: 'vigente' | 'vencido' | 'revocado' | 'rechazado' | 'ausente';
 }
 
 export interface PartnerQuoteResult {
@@ -53,15 +57,25 @@ export class HttpPartnerQuoteGateway {
       .pipe(
         map((body) => {
           const result = parseResult(body, request.operationId, request.socioId);
-          if (
-            result.clienteId !== request.cliente.clienteId ||
-            result.productoId !== request.productoId
-          ) {
+          if (result.productoId !== request.productoId) {
             throw new InvalidPartnerQuoteResponse();
           }
           return result;
         }),
       );
+  }
+
+  lookupClient(
+    socioId: string,
+    tipoDocumento: DocumentType,
+    numeroDocumento: string,
+  ): Observable<PartnerClientLookup> {
+    return this.http
+      .get<unknown>(`${environment.apiBaseUrl}/v1/socios/clientes/por-documento`, {
+        params: { socioId, tipoDocumento, numeroDocumento },
+        headers: { 'API-Version': '1' },
+      })
+      .pipe(map(parseClientLookup));
   }
 
   load(operationId: string, socioId: string): Observable<PartnerQuoteResult> {
@@ -72,6 +86,28 @@ export class HttpPartnerQuoteGateway {
       })
       .pipe(map((body) => parseResult(body, operationId, socioId)));
   }
+}
+
+function parseClientLookup(body: unknown): PartnerClientLookup {
+  if (
+    !body ||
+    typeof body !== 'object' ||
+    !('nombre' in body) ||
+    typeof body.nombre !== 'string' ||
+    !body.nombre ||
+    !('tipoDocumento' in body) ||
+    !['cc', 'ce', 'passport', 'ppt'].includes(String(body.tipoDocumento)) ||
+    !('numeroDocumentoEnmascarado' in body) ||
+    typeof body.numeroDocumentoEnmascarado !== 'string' ||
+    !body.numeroDocumentoEnmascarado ||
+    !('consentimientoEstado' in body) ||
+    !['vigente', 'vencido', 'revocado', 'rechazado', 'ausente'].includes(
+      String(body.consentimientoEstado),
+    )
+  ) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  return body as PartnerClientLookup;
 }
 
 function parseResult(body: unknown, operationId: string, socioId: string): PartnerQuoteResult {

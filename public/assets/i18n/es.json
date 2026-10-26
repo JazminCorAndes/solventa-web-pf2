@@ -1,10 +1,20 @@
 {
   "partnerQuote": {
     "title": "Cliente y autorización para cotizar",
-    "instructions": "Selecciona tu organización e ingresa los datos facilitados por el cliente registrado. Su consentimiento vigente se valida en el servidor antes del perfilamiento. No puedes autorizar en su nombre.",
+    "instructions": "Busca al cliente por su documento. El sistema identifica su registro y verifica automáticamente si el consentimiento está vigente.",
     "partner": "Organización del socio",
     "customerId": "Identificador del cliente",
     "document": "Número de documento",
+    "searchClient": "Buscar cliente",
+    "searchingClient": "Buscando cliente…",
+    "consentStatus": "Consentimiento",
+    "consentStates": {
+      "vigente": "Vigente",
+      "vencido": "Vencido",
+      "revocado": "Revocado",
+      "rechazado": "No autorizado",
+      "ausente": "No autorizado"
+    },
     "consentId": "Identificador del consentimiento",
     "consentVersion": "Versión del consentimiento",
     "required": "Selecciona una organización autorizada.",
@@ -25,7 +35,7 @@
     "shareConsent": "Datos para una cotización con un socio",
     "shareInstructions": "Puedes facilitar estos identificadores al socio que hayas elegido. No compartas tu contraseña ni tu sesión. El socio no puede autorizar ni revocar por ti.",
     "errors": {
-      "consent": "El consentimiento del cliente no está vigente o no corresponde a la versión indicada. El cliente debe revisarlo en su propia sesión.",
+      "consent": "El consentimiento del cliente está vencido, revocado o no autorizado. El cliente debe renovarlo en su propia sesión.",
       "identity": "Los datos no corresponden al cliente registrado. Verifícalos con su titular.",
       "processing": "La operación sigue en curso. Consulta su resultado o reintenta con el mismo identificador.",
       "retryable": "La operación no tiene un resultado confirmado. Reenvía exactamente los mismos datos con el mismo identificador.",

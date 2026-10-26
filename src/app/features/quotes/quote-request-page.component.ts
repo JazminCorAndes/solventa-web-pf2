@@ -93,7 +93,11 @@ export class QuoteRequestPageComponent implements OnInit {
     this.partnerMode
       ? this.quotes
           .products()
-          .filter((product) => this.partnerPanel()?.allowedProductIds().includes(product.id))
+          .filter(
+            (product) =>
+              product.id === 'mortgage-life' &&
+              this.partnerPanel()?.allowedProductIds().includes(product.id),
+          )
       : this.quotes.products(),
   );
   readonly today = startOfToday();
@@ -172,7 +176,9 @@ export class QuoteRequestPageComponent implements OnInit {
         this.calendarLabels.changes.next();
       });
     const requestedProduct = this.route.snapshot.queryParamMap.get('producto');
-    if (requestedProduct) {
+    if (this.partnerMode) {
+      this.form.controls.productId.setValue('mortgage-life');
+    } else if (requestedProduct) {
       this.form.controls.productId.setValue(requestedProduct);
     }
     this.quotes.loadProducts();

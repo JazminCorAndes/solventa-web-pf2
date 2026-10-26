@@ -23,6 +23,7 @@ import { PartnerContextService } from '../../core/partners/partner-context.servi
 import { DocumentType, QuoteRequestDraft } from '../../core/quotes/quote-request.models';
 import {
   HttpPartnerQuoteGateway,
+  PartnerClientLookup,
   PartnerQuoteRequest,
   PartnerQuoteResult,
   partnerQuoteErrorCode,
@@ -65,6 +66,17 @@ import {
     .error {
       color: var(--mat-sys-error);
     }
+    .client-summary {
+      display: grid;
+      gap: var(--solventa-space-1);
+      padding: var(--solventa-space-3);
+      border: 1px solid var(--solventa-color-border);
+      border-radius: var(--solventa-radius-sm);
+      background: var(--solventa-color-background);
+    }
+    .client-summary span {
+      color: var(--solventa-color-text-secondary);
+    }
   `,
 })
 export class PartnerQuotePanelComponent implements OnInit {
@@ -85,17 +97,13 @@ export class PartnerQuotePanelComponent implements OnInit {
   readonly loading = signal(false);
   readonly retrySeconds = signal(0);
   readonly locked = signal(false);
+  readonly clientLookup = signal<PartnerClientLookup | null>(null);
+  readonly lookupLoading = signal(false);
   readonly form = this.builder.nonNullable.group({
     socioId: ['', Validators.required],
-    clienteId: ['', [Validators.required, Validators.pattern(UUID_PATTERN)]],
     tipoDocumento: this.builder.nonNullable.control<DocumentType>('cc'),
     numeroDocumento: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{6,15}$/)]],
     telefono: ['', [Validators.required, Validators.pattern(/^\+57[0-9]{10}$/)]],
-    consentimientoId: ['', [Validators.required, Validators.pattern(UUID_PATTERN)]],
-    consentimientoVersion: [
-      1,
-      [Validators.required, Validators.min(1), Validators.pattern(/^[1-9][0-9]*$/)],
-    ],
   });
   private readonly selectedPartner = toSignal(this.form.controls.socioId.valueChanges, {
     initialValue: '',
@@ -108,6 +116,15 @@ export class PartnerQuotePanelComponent implements OnInit {
 
   constructor() {
     this.destroyRef.onDestroy(() => clearTimeout(this.retryTimer));
+    this.form.controls.socioId.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.clearClientLookup());
+    this.form.controls.tipoDocumento.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.clearClientLookup());
+    this.form.controls.numeroDocumento.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.clearClientLookup());
   }
 
   ngOnInit(): void {
@@ -139,6 +156,7 @@ export class PartnerQuotePanelComponent implements OnInit {
     this.errorKey.set(null);
     if (
       this.form.invalid ||
+      this.clientLookup()?.consentimientoEstado !== 'vigente' ||
       !this.context()?.alcances.includes('perfilamientos:crear') ||
       !this.allowedProductIds().includes(draft.productId)
     ) {
@@ -154,14 +172,11 @@ export class PartnerQuotePanelComponent implements OnInit {
       productoId: draft.productId,
       datosProducto: { ...draft.productData },
       cliente: {
-        clienteId: values.clienteId,
         tipoCliente: 'persona_natural',
         tipoDocumento: values.tipoDocumento,
         numeroDocumento: values.numeroDocumento,
         telefono: values.telefono,
       },
-      consentimientoId: values.consentimientoId,
-      consentimientoVersion: values.consentimientoVersion,
     };
     this.pendingRequest = request;
     this.operationId.set(operationId);
@@ -188,6 +203,38 @@ export class PartnerQuotePanelComponent implements OnInit {
           this.setLoading(false);
           this.errorKey.set('partnerQuote.errors.unavailable');
         }
+      });
+  }
+
+  lookupClient(): void {
+    if (
+      this.lookupLoading() ||
+      this.locked() ||
+      this.form.controls.socioId.invalid ||
+      this.form.controls.tipoDocumento.invalid ||
+      this.form.controls.numeroDocumento.invalid
+    ) {
+      this.form.controls.numeroDocumento.markAsTouched();
+      return;
+    }
+    this.errorKey.set(null);
+    this.lookupLoading.set(true);
+    const { socioId, tipoDocumento, numeroDocumento } = this.form.getRawValue();
+    this.gateway
+      .lookupClient(socioId, tipoDocumento, numeroDocumento.trim().toUpperCase())
+      .pipe(
+        take(1),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.lookupLoading.set(false)),
+      )
+      .subscribe({
+        next: (client) => {
+          this.clientLookup.set(client);
+          if (client.consentimientoEstado !== 'vigente') {
+            this.errorKey.set('partnerQuote.errors.consent');
+          }
+        },
+        error: (error: unknown) => this.errorKey.set(partnerQuoteErrorKey(error)),
       });
   }
 
@@ -226,6 +273,7 @@ export class PartnerQuotePanelComponent implements OnInit {
         this.pendingRequest = null;
         this.operationId.set(null);
         this.result.set(null);
+        this.clientLookup.set(null);
         this.errorKey.set(null);
         this.setLocked(false);
       })
@@ -293,5 +341,10 @@ export class PartnerQuotePanelComponent implements OnInit {
   private setLoading(loading: boolean): void {
     this.loading.set(loading);
     this.loadingChange.emit(loading);
+  }
+
+  private clearClientLookup(): void {
+    this.clientLookup.set(null);
+    if (!this.operationId()) this.errorKey.set(null);
   }
 }

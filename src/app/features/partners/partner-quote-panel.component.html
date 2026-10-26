@@ -2,20 +2,17 @@
   <h2 id="partner-customer-title">{{ 'partnerQuote.title' | transloco }}</h2>
   <p>{{ 'partnerQuote.instructions' | transloco }}</p>
   <div class="fields" [formGroup]="form">
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'partnerQuote.partner' | transloco }}</mat-label>
-      <mat-select formControlName="socioId">
-        @for (partner of context()?.socios ?? []; track partner.socioId) {
-          <mat-option [value]="partner.socioId">{{ partner.socioId }}</mat-option>
-        }
-      </mat-select>
-      <mat-error>{{ 'partnerQuote.required' | transloco }}</mat-error>
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'partnerQuote.customerId' | transloco }}</mat-label>
-      <input matInput formControlName="clienteId" autocomplete="off" />
-      <mat-error>{{ 'partnerQuote.uuid' | transloco }}</mat-error>
-    </mat-form-field>
+    @if ((context()?.socios?.length ?? 0) > 1) {
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'partnerQuote.partner' | transloco }}</mat-label>
+        <mat-select formControlName="socioId">
+          @for (partner of context()?.socios ?? []; track partner.socioId) {
+            <mat-option [value]="partner.socioId">{{ partner.socioId }}</mat-option>
+          }
+        </mat-select>
+        <mat-error>{{ 'partnerQuote.required' | transloco }}</mat-error>
+      </mat-form-field>
+    }
     <mat-form-field appearance="outline">
       <mat-label>{{ 'quoteRequest.documentType' | transloco }}</mat-label>
       <mat-select formControlName="tipoDocumento">
@@ -31,6 +28,26 @@
       <input matInput formControlName="numeroDocumento" autocomplete="off" maxlength="15" />
       <mat-error>{{ 'partnerQuote.documentInvalid' | transloco }}</mat-error>
     </mat-form-field>
+    <button
+      mat-stroked-button
+      type="button"
+      [disabled]="lookupLoading() || locked()"
+      (click)="lookupClient()"
+    >
+      {{
+        (lookupLoading() ? 'partnerQuote.searchingClient' : 'partnerQuote.searchClient') | transloco
+      }}
+    </button>
+    @if (clientLookup(); as client) {
+      <section class="client-summary" aria-live="polite">
+        <strong>{{ client.nombre }}</strong>
+        <span>{{ client.numeroDocumentoEnmascarado }}</span>
+        <span>
+          {{ 'partnerQuote.consentStatus' | transloco }}:
+          {{ 'partnerQuote.consentStates.' + client.consentimientoEstado | transloco }}
+        </span>
+      </section>
+    }
     <mat-form-field appearance="outline">
       <mat-label>{{ 'quoteRequest.phone' | transloco }}</mat-label>
       <input
@@ -41,16 +58,6 @@
         placeholder="+573001234567"
       />
       <mat-error>{{ 'partnerQuote.phoneInvalid' | transloco }}</mat-error>
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'partnerQuote.consentId' | transloco }}</mat-label>
-      <input matInput formControlName="consentimientoId" autocomplete="off" />
-      <mat-error>{{ 'partnerQuote.uuid' | transloco }}</mat-error>
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'partnerQuote.consentVersion' | transloco }}</mat-label>
-      <input matInput formControlName="consentimientoVersion" type="number" min="1" step="1" />
-      <mat-error>{{ 'partnerQuote.versionInvalid' | transloco }}</mat-error>
     </mat-form-field>
   </div>
   @if (operationId(); as id) {
