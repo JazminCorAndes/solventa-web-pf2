@@ -5,181 +5,236 @@
     <p>{{ 'mortgageProfiling.subtitle' | transloco }}</p>
   </header>
 
-  <mat-card appearance="outlined" class="partner-card">
-    <mat-card-content>
-      <div>
-        <span>{{ 'mortgageProfiling.partner' | transloco }}</span>
-        <strong>{{ 'mortgageProfiling.partnerName' | transloco }}</strong>
-      </div>
-      <div>
-        <span>{{ 'mortgageProfiling.partnerId' | transloco }}</span>
-        <strong>{{ partnerId }}</strong>
-      </div>
-    </mat-card-content>
-  </mat-card>
-
-  @if (result(); as profiling) {
-    <mat-card appearance="outlined" class="result-card" role="status" aria-live="polite">
-      <mat-card-content>
-        <span class="status-badge">{{ 'mortgageProfiling.status.processing' | transloco }}</span>
-        <h2>{{ 'mortgageProfiling.resultTitle' | transloco }}</h2>
-        <p>{{ 'mortgageProfiling.resultBody' | transloco }}</p>
-        <dl>
-          <div>
-            <dt>{{ 'mortgageProfiling.profilingReference' | transloco }}</dt>
-            <dd>{{ profiling.profilingReference }}</dd>
-          </div>
-          <div>
-            <dt>{{ 'mortgageProfiling.operationId' | transloco }}</dt>
-            <dd>{{ profiling.operationId }}</dd>
-          </div>
-        </dl>
-        <button mat-flat-button type="button" (click)="startAnother()">
-          {{ 'mortgageProfiling.startAnother' | transloco }}
-        </button>
-      </mat-card-content>
-    </mat-card>
+  @if (!authorizedPartnerIds().length) {
+    <div class="inline-alert" role="alert">
+      {{ 'mortgageProfiling.errors.advisor_context_unavailable' | transloco }}
+    </div>
   } @else {
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <mat-card appearance="outlined">
-        <mat-card-content>
-          <h2>{{ 'mortgageProfiling.customerSection' | transloco }}</h2>
-          <div class="form-grid">
+    <mat-card appearance="outlined" class="partner-card">
+      <mat-card-content>
+        <div>
+          <span>{{ 'mortgageProfiling.partner' | transloco }}</span>
+          @if (authorizedPartnerIds().length > 1) {
             <mat-form-field appearance="outline">
-              <mat-label>{{ 'mortgageProfiling.documentType' | transloco }}</mat-label>
-              <mat-select formControlName="documentType">
-                <mat-option value="cc">{{
-                  'quoteRequest.documentTypes.cc' | transloco
-                }}</mat-option>
-                <mat-option value="ce">{{
-                  'quoteRequest.documentTypes.ce' | transloco
-                }}</mat-option>
-                <mat-option value="passport">
-                  {{ 'quoteRequest.documentTypes.passport' | transloco }}
-                </mat-option>
-                <mat-option value="ppt">
-                  {{ 'quoteRequest.documentTypes.ppt' | transloco }}
-                </mat-option>
+              <mat-label>{{ 'mortgageProfiling.partnerId' | transloco }}</mat-label>
+              <mat-select
+                [value]="partnerId()"
+                [disabled]="processing() || !!result() || !!pendingOperation()"
+                (selectionChange)="selectPartner($event.value)"
+              >
+                @for (id of authorizedPartnerIds(); track id) {
+                  <mat-option [value]="id">{{ id }}</mat-option>
+                }
               </mat-select>
             </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'mortgageProfiling.documentNumber' | transloco }}</mat-label>
-              <input matInput formControlName="documentNumber" autocomplete="off" />
-              @if (showError('documentNumber')) {
-                <mat-error>{{
-                  'mortgageProfiling.validation.documentNumber' | transloco
-                }}</mat-error>
-              }
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="wide-field">
-              <mat-label>{{ 'mortgageProfiling.fullName' | transloco }}</mat-label>
-              <input matInput formControlName="fullName" autocomplete="name" />
-              @if (showError('fullName')) {
-                <mat-error>{{ 'mortgageProfiling.validation.fullName' | transloco }}</mat-error>
-              }
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'mortgageProfiling.email' | transloco }}</mat-label>
-              <input matInput type="email" formControlName="email" autocomplete="email" />
-              @if (showError('email')) {
-                <mat-error>{{ 'mortgageProfiling.validation.email' | transloco }}</mat-error>
-              }
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'mortgageProfiling.phone' | transloco }}</mat-label>
-              <input matInput type="tel" formControlName="phone" autocomplete="tel" />
-              @if (showError('phone')) {
-                <mat-error>{{ 'mortgageProfiling.validation.phone' | transloco }}</mat-error>
-              }
-            </mat-form-field>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card appearance="outlined">
-        <mat-card-content>
-          <h2>{{ 'mortgageProfiling.creditSection' | transloco }}</h2>
-          <div class="form-grid">
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'mortgageProfiling.creditReference' | transloco }}</mat-label>
-              <input matInput formControlName="creditReference" autocomplete="off" />
-              @if (showError('creditReference')) {
-                <mat-error>{{
-                  'mortgageProfiling.validation.creditReference' | transloco
-                }}</mat-error>
-              }
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'mortgageProfiling.creditAmount' | transloco }}</mat-label>
-              <input matInput type="number" min="1000000" formControlName="creditAmount" />
-              <span matTextPrefix>COP&nbsp;</span>
-              @if (showError('creditAmount')) {
-                <mat-error>{{ 'mortgageProfiling.validation.creditAmount' | transloco }}</mat-error>
-              }
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'mortgageProfiling.termMonths' | transloco }}</mat-label>
-              <input matInput type="number" min="12" max="360" formControlName="termMonths" />
-              @if (showError('termMonths')) {
-                <mat-error>{{ 'mortgageProfiling.validation.termMonths' | transloco }}</mat-error>
-              }
-            </mat-form-field>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card appearance="outlined" class="consent-card">
-        <mat-card-content>
-          <h2>{{ 'mortgageProfiling.consentSection' | transloco }}</h2>
-          <p>{{ 'mortgageProfiling.consentNotice' | transloco }}</p>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'mortgageProfiling.consentId' | transloco }}</mat-label>
-            <input
-              matInput
-              formControlName="consentId"
-              placeholder="11111111-1111-4111-8111-111111111111"
-            />
-            @if (showError('consentId')) {
-              <mat-error>{{ 'mortgageProfiling.validation.consentId' | transloco }}</mat-error>
-            }
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'mortgageProfiling.consentVersion' | transloco }}</mat-label>
-            <input matInput type="number" min="1" formControlName="consentVersion" />
-            @if (showError('consentVersion')) {
-              <mat-error>{{ 'mortgageProfiling.validation.consentVersion' | transloco }}</mat-error>
-            }
-          </mat-form-field>
-          <mat-checkbox formControlName="consentVerified">
-            {{ 'mortgageProfiling.consentVerified' | transloco }}
-          </mat-checkbox>
-          @if (showError('consentVerified')) {
-            <span class="checkbox-error" role="alert">
-              {{ 'mortgageProfiling.validation.consentVerified' | transloco }}
-            </span>
-          }
-        </mat-card-content>
-      </mat-card>
-
-      @if (errorCode(); as code) {
-        <div class="inline-alert" role="alert">
-          {{ 'mortgageProfiling.errors.' + code | transloco }}
-        </div>
-      }
-
-      <div class="actions">
-        <button mat-flat-button type="submit" [disabled]="processing()">
-          @if (processing()) {
-            <mat-spinner diameter="20" />
-            {{ 'mortgageProfiling.processing' | transloco }}
-          } @else if (errorCode()) {
-            {{ 'mortgageProfiling.retry' | transloco }}
           } @else {
-            {{ 'mortgageProfiling.submit' | transloco }}
+            <strong>{{ partnerId() }}</strong>
           }
-        </button>
-        <span>{{ 'mortgageProfiling.idempotencyNotice' | transloco }}</span>
-      </div>
-    </form>
+        </div>
+        <div>
+          <span>{{ 'mortgageProfiling.partnerId' | transloco }}</span>
+          <strong>{{ partnerId() ?? ('mortgageProfiling.selectPartner' | transloco) }}</strong>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    @if (pendingOperation(); as operation) {
+      @if (!result()) {
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <p role="status">
+              {{ 'mortgageProfiling.operationId' | transloco }}:
+              <code>{{ operation.operationId }}</code>
+            </p>
+            <p>{{ 'mortgageProfiling.recoveryNotice' | transloco }}</p>
+            <p>{{ 'mortgageProfiling.newOperationWarning' | transloco }}</p>
+            <button mat-button type="button" [disabled]="processing()" (click)="startAnother()">
+              {{ 'mortgageProfiling.startAnother' | transloco }}
+            </button>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+
+    @if (result(); as profiling) {
+      <mat-card appearance="outlined" class="result-card" role="status" aria-live="polite">
+        <mat-card-content>
+          <span class="status-badge">{{ 'mortgageProfiling.status.completed' | transloco }}</span>
+          <h2>{{ 'mortgageProfiling.resultTitle' | transloco }}</h2>
+          <p>{{ 'mortgageProfiling.resultBody' | transloco }}</p>
+          <dl>
+            <div>
+              <dt>{{ 'mortgageProfiling.profilingReference' | transloco }}</dt>
+              <dd>{{ profiling.profilingReference }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'mortgageProfiling.operationId' | transloco }}</dt>
+              <dd>{{ profiling.operationId }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'mortgageProfiling.customerId' | transloco }}</dt>
+              <dd>{{ profiling.customerId }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'mortgageProfiling.quoteRequestId' | transloco }}</dt>
+              <dd>{{ profiling.quoteRequestId }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'mortgageProfiling.quoteId' | transloco }}</dt>
+              <dd>{{ profiling.quoteId }}</dd>
+            </div>
+          </dl>
+          <button mat-flat-button type="button" (click)="startAnother()">
+            {{ 'mortgageProfiling.startAnother' | transloco }}
+          </button>
+        </mat-card-content>
+      </mat-card>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <h2>{{ 'mortgageProfiling.customerSection' | transloco }}</h2>
+            <div class="form-grid">
+              <mat-form-field appearance="outline" class="wide-field">
+                <mat-label>{{ 'mortgageProfiling.customerId' | transloco }}</mat-label>
+                <input matInput formControlName="customerId" autocomplete="off" />
+                @if (showError('customerId')) {
+                  <mat-error>{{ 'mortgageProfiling.validation.customerId' | transloco }}</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'mortgageProfiling.documentType' | transloco }}</mat-label>
+                <mat-select formControlName="documentType">
+                  <mat-option value="cc">{{
+                    'quoteRequest.documentTypes.cc' | transloco
+                  }}</mat-option>
+                  <mat-option value="ce">{{
+                    'quoteRequest.documentTypes.ce' | transloco
+                  }}</mat-option>
+                  <mat-option value="passport">
+                    {{ 'quoteRequest.documentTypes.passport' | transloco }}
+                  </mat-option>
+                  <mat-option value="ppt">
+                    {{ 'quoteRequest.documentTypes.ppt' | transloco }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'mortgageProfiling.documentNumber' | transloco }}</mat-label>
+                <input matInput formControlName="documentNumber" autocomplete="off" />
+                @if (showError('documentNumber')) {
+                  <mat-error>{{
+                    'mortgageProfiling.validation.documentNumber' | transloco
+                  }}</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'mortgageProfiling.birthDate' | transloco }}</mat-label>
+                <input matInput type="date" formControlName="birthDate" autocomplete="bday" />
+                @if (showError('birthDate')) {
+                  <mat-error>{{ 'mortgageProfiling.validation.birthDate' | transloco }}</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'mortgageProfiling.phone' | transloco }}</mat-label>
+                <input matInput type="tel" formControlName="phone" autocomplete="tel" />
+                @if (showError('phone')) {
+                  <mat-error>{{ 'mortgageProfiling.validation.phone' | transloco }}</mat-error>
+                }
+              </mat-form-field>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <h2>{{ 'mortgageProfiling.creditSection' | transloco }}</h2>
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'mortgageProfiling.creditReference' | transloco }}</mat-label>
+                <input matInput formControlName="creditReference" autocomplete="off" />
+                @if (showError('creditReference')) {
+                  <mat-error>{{
+                    'mortgageProfiling.validation.creditReference' | transloco
+                  }}</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'mortgageProfiling.creditAmount' | transloco }}</mat-label>
+                <input matInput type="number" min="1000000" formControlName="creditAmount" />
+                <span matTextPrefix>COP&nbsp;</span>
+                @if (showError('creditAmount')) {
+                  <mat-error>{{
+                    'mortgageProfiling.validation.creditAmount' | transloco
+                  }}</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'mortgageProfiling.termMonths' | transloco }}</mat-label>
+                <input matInput type="number" min="12" max="360" formControlName="termMonths" />
+                @if (showError('termMonths')) {
+                  <mat-error>{{ 'mortgageProfiling.validation.termMonths' | transloco }}</mat-error>
+                }
+              </mat-form-field>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined" class="consent-card">
+          <mat-card-content>
+            <h2>{{ 'mortgageProfiling.consentSection' | transloco }}</h2>
+            <p>{{ 'mortgageProfiling.consentNotice' | transloco }}</p>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'mortgageProfiling.consentId' | transloco }}</mat-label>
+              <input
+                matInput
+                formControlName="consentId"
+                placeholder="11111111-1111-4111-8111-111111111111"
+              />
+              @if (showError('consentId')) {
+                <mat-error>{{ 'mortgageProfiling.validation.consentId' | transloco }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'mortgageProfiling.consentVersion' | transloco }}</mat-label>
+              <input matInput type="number" min="1" formControlName="consentVersion" />
+              @if (showError('consentVersion')) {
+                <mat-error>{{
+                  'mortgageProfiling.validation.consentVersion' | transloco
+                }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-checkbox formControlName="consentVerified">
+              {{ 'mortgageProfiling.consentVerified' | transloco }}
+            </mat-checkbox>
+            @if (showError('consentVerified')) {
+              <span class="checkbox-error" role="alert">
+                {{ 'mortgageProfiling.validation.consentVerified' | transloco }}
+              </span>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        @if (errorCode(); as code) {
+          <div class="inline-alert" role="alert">
+            {{ 'mortgageProfiling.errors.' + code | transloco }}
+          </div>
+        }
+
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="processing() || !partnerId()">
+            @if (processing()) {
+              <mat-spinner diameter="20" />
+              {{ 'mortgageProfiling.processing' | transloco }}
+            } @else if (errorCode()) {
+              {{ 'mortgageProfiling.retry' | transloco }}
+            } @else {
+              {{ 'mortgageProfiling.submit' | transloco }}
+            }
+          </button>
+          <span>{{ 'mortgageProfiling.idempotencyNotice' | transloco }}</span>
+        </div>
+      </form>
+    }
   }
 </section>

@@ -55,6 +55,7 @@ import {
   BrowserAdvisorProfilingStorage,
 } from './core/advisor-profiling/advisor-profiling-storage.service';
 import { MockAdvisorProfilingGateway } from './data-access/advisor-profiling/mock-advisor-profiling.gateway';
+import { HttpAdvisorProfilingGateway } from './data-access/advisor-profiling/http-advisor-profiling.gateway';
 
 registerLocaleData(localeEsCo);
 
@@ -77,7 +78,10 @@ export const appConfig: ApplicationConfig = {
     },
     { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
     { provide: SIMULATED_PAYMENT_GATEWAY, useClass: HttpSimulatedPaymentGateway },
-    { provide: ADVISOR_PROFILING_GATEWAY, useClass: MockAdvisorProfilingGateway },
+    {
+      provide: ADVISOR_PROFILING_GATEWAY,
+      useClass: backendMode ? HttpAdvisorProfilingGateway : MockAdvisorProfilingGateway,
+    },
     { provide: ADVISOR_PROFILING_STORAGE, useClass: BrowserAdvisorProfilingStorage },
     {
       provide: QUOTE_REQUEST_GATEWAY,

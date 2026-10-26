@@ -1,0 +1,85 @@
+@if (partners.context(); as context) {
+  @if (summary(); as totals) {
+    <section class="partner-home" aria-labelledby="partner-home-title">
+      <header class="partner-heading">
+        <div>
+          <span class="eyebrow">{{ 'partners.eyebrow' | transloco }}</span>
+          <h1 id="partner-home-title">{{ 'partners.title' | transloco }}</h1>
+          <p>{{ 'partners.subtitle' | transloco }}</p>
+        </div>
+        @if (
+          totals.canCreateQuote && context.socios.length === 1 && context.socios[0].productos.length
+        ) {
+          <a
+            mat-flat-button
+            routerLink="/app/socios/cotizaciones/solicitar"
+            [queryParams]="{ socio: context.socios[0].socioId }"
+            >{{ 'partners.newQuote' | transloco }}</a
+          >
+        }
+      </header>
+
+      <div class="metric-grid" role="list">
+        <mat-card appearance="raised" role="listitem">
+          <mat-card-content>
+            <span>{{ 'partners.metrics.organizations' | transloco }}</span>
+            <strong data-testid="metric-organizations">{{ totals.organizations }}</strong>
+          </mat-card-content>
+        </mat-card>
+        <mat-card appearance="raised" role="listitem">
+          <mat-card-content>
+            <span>{{ 'partners.metrics.products' | transloco }}</span>
+            <strong data-testid="metric-products">{{ totals.products }}</strong>
+          </mat-card-content>
+        </mat-card>
+        <mat-card appearance="raised" role="listitem">
+          <mat-card-content>
+            <span>{{ 'partners.metrics.operations' | transloco }}</span>
+            <strong data-testid="metric-operations">{{ totals.scopes }}</strong>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <h2 class="section-title">{{ 'partners.enabledServices' | transloco }}</h2>
+      @for (partner of context.socios; track partner.socioId) {
+        <mat-card appearance="outlined" class="partner-card" [attr.aria-label]="partner.socioId">
+          <mat-card-header>
+            <mat-card-title>{{ partner.socioId }}</mat-card-title>
+            <mat-card-subtitle>{{ 'partners.products' | transloco }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <ul class="product-list">
+              @for (product of partner.productos; track product) {
+                <li>{{ product }}</li>
+              } @empty {
+                <li class="empty">{{ 'partners.noProducts' | transloco }}</li>
+              }
+            </ul>
+          </mat-card-content>
+          @if (partner.productos.length && (totals.canCreateQuote || totals.canQueryClients)) {
+            <mat-card-actions>
+              @if (totals.canCreateQuote) {
+                <a
+                  mat-stroked-button
+                  routerLink="/app/socios/cotizaciones/solicitar"
+                  [queryParams]="{ socio: partner.socioId }"
+                  >{{ 'quoteRequest.submit' | transloco }}</a
+                >
+              }
+              @if (totals.canQueryClients) {
+                <a
+                  mat-stroked-button
+                  routerLink="/app/socios/clientes/consultar"
+                  [queryParams]="{ socio: partner.socioId }"
+                  >{{ 'clientInformation.open' | transloco }}</a
+                >
+              }
+            </mat-card-actions>
+          }
+        </mat-card>
+      }
+
+      <p class="scope-notice">{{ 'partners.scopeNotice' | transloco }}</p>
+    </section>
+  }
+}

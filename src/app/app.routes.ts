@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, portalGuard } from './core/auth/auth.guards';
+import { advisorGuard, authGuard, guestGuard, portalGuard } from './core/auth/auth.guards';
 import { partnerGuard } from './core/partners/partner.guard';
 import { quoteResumeGuard } from './core/quotes/quote-resume.guard';
 
@@ -30,6 +30,16 @@ export const routes: Routes = [
         (component) => component.AuthenticatedLayoutComponent,
       ),
     children: [
+      {
+        path: 'socios/clientes/consultar',
+        canActivate: [partnerGuard],
+        data: { partnerScope: 'clientes:consultar', partnerMode: true },
+        loadComponent: () =>
+          import('./features/partners/client-information-page.component').then(
+            (component) => component.ClientInformationPageComponent,
+          ),
+        title: 'Consultar información del cliente | Solventa',
+      },
       {
         path: 'socios/cotizaciones/solicitar',
         canActivate: [partnerGuard],
@@ -121,7 +131,8 @@ export const routes: Routes = [
   },
   {
     path: 'asesor',
-    canActivate: [authGuard],
+    canActivate: [authGuard, advisorGuard],
+    canActivateChild: [advisorGuard],
     loadComponent: () =>
       import('./layout/advisor-layout/advisor-layout.component').then(
         (component) => component.AdvisorLayoutComponent,

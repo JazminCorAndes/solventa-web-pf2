@@ -118,7 +118,15 @@ describe('Partner navigation through production routes', () => {
         `a[href="/app/socios/cotizaciones/solicitar?socio=${CONTEXT.socios[0].socioId}"]`,
       ),
     ).not.toBeNull();
+    expect(
+      harness.routeNativeElement?.querySelector(
+        `a[href="/app/socios/clientes/consultar?socio=${CONTEXT.socios[0].socioId}"]`,
+      ),
+    ).not.toBeNull();
     expect(harness.routeNativeElement?.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
+    const menu = document.querySelector('mat-sidenav') ?? harness.fixture.nativeElement;
+    expect(menu.querySelector('a[href="/app/socios/cotizaciones/solicitar"]')).not.toBeNull();
+    expect(menu.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
     expect(JSON.stringify(storage.stored)).not.toContain('secret');
     expect(JSON.stringify(storage.stored)).not.toContain('partner-access');
   });
@@ -166,6 +174,16 @@ describe('Partner navigation through production routes', () => {
     await navigation;
     expect(TestBed.inject(Router).url).toBe('/app/socios');
     http.expectNone(`${API}/v1/clientes/me/dashboard`);
+  });
+
+  it('no concede al socio acceso al portal asesor ni envía operaciones hipotecarias', async () => {
+    await login();
+    const navigation = harness.navigateByUrl('/asesor/perfilamientos/nuevo');
+    const request = await vi.waitFor(() => http.expectOne(`${API}/v1/socios/actual`));
+    request.flush(CONTEXT);
+    await navigation;
+    expect(TestBed.inject(Router).url).toBe('/app/socios');
+    http.expectNone(`${API}/v1/perfilamientos-hipotecarios`);
   });
 
   it('uses the renewed role rather than stored identity when authorizing a child route', async () => {

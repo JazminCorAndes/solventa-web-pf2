@@ -7,11 +7,11 @@ describe('MockAdvisorProfilingGateway', () => {
     operationId: '11111111-1111-4111-8111-111111111111',
     partnerId: 'SOC-CO-001',
     customer: {
+      id: '44444444-4444-4444-8444-444444444444',
       documentType: 'cc',
       documentNumber: '1023456789',
-      fullName: 'Valentina Gómez',
-      email: 'valentina@example.com',
       phone: '+573001234567',
+      birthDate: '1985-02-10',
     },
     credit: { reference: 'HIP-001', amount: 310_000_000, termMonths: 240 },
     consent: { id: '11111111-1111-4111-8111-111111111111', version: 1 },
@@ -23,6 +23,12 @@ describe('MockAdvisorProfilingGateway', () => {
     const replay = await firstValueFrom(gateway.start(request));
 
     expect(replay).toEqual(first);
+    expect(first).toMatchObject({
+      customerId: request.customer.id,
+      partnerId: request.partnerId,
+      productId: 'mortgage-life',
+      status: 'completed',
+    });
   });
 
   it('rechaza una colisión del operationId con otros datos', async () => {
@@ -43,9 +49,7 @@ describe('MockAdvisorProfilingGateway', () => {
     const gateway = new MockAdvisorProfilingGateway();
 
     await expect(
-      firstValueFrom(
-        gateway.start({ ...request, customer: { ...request.customer, fullName: '' } }),
-      ),
+      firstValueFrom(gateway.start({ ...request, customer: { ...request.customer, id: '' } })),
     ).rejects.toMatchObject({ code: 'incomplete_data' });
     await expect(
       firstValueFrom(

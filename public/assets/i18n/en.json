@@ -84,6 +84,54 @@
       "expired": "Your session expired or is no longer valid. Verify access again.",
       "quota": "The request limit has been reached. Wait before trying again.",
       "unavailable": "Access could not be verified. Try again when the service is available."
+    },
+    "eyebrow": "Partners",
+    "enabledServices": "Enabled services",
+    "newQuote": "New quote",
+    "metrics": {
+      "organizations": "Authorized organizations",
+      "products": "Authorized products",
+      "operations": "Authorized operations"
+    }
+  },
+  "clientInformation": {
+    "eyebrow": "Authorized query",
+    "title": "Client information",
+    "subtitle": "Query only the minimum data covered by current consent.",
+    "open": "Query client information",
+    "search": "Search by document or identifier",
+    "searchPlaceholder": "Enter the client identifier",
+    "searchHint": "The registered client's UUID is currently required.",
+    "basicData": "Authorized basic data",
+    "profilingStatus": "Profiling status",
+    "currentConsents": "Current consents",
+    "pendingValue": "Enter a client to query",
+    "consentVersion": "Current consent · version {{ version }}",
+    "viewDetail": "View detail",
+    "partner": "Partner",
+    "clientId": "Client identifier",
+    "product": "Product",
+    "purpose": "Purpose",
+    "purposeQuote": "Quotation",
+    "minimumDataNotice": "Only the authorized risk indicator will be requested. If a source fails, partial information will not be shown.",
+    "submit": "Query information",
+    "loading": "Querying…",
+    "completed": "Query completed",
+    "resultTitle": "Authorized data",
+    "operationId": "Operation identifier",
+    "consultedAt": "Query date",
+    "evidence": "Consulted sources",
+    "newConsultation": "New query",
+    "data": {
+      "indicadorRiesgo": "Risk indicator"
+    },
+    "errors": {
+      "invalid": "Complete the required fields with valid values.",
+      "consent": "The client does not have current consent covering this query.",
+      "client": "The selected client is not registered.",
+      "forbidden": "The partner, product, or purpose is not authorized.",
+      "conflict": "The operation identifier was already used with different data.",
+      "unavailable": "Not all sources could be queried. Partial data is not shown."
     }
   },
   "navigation": {
@@ -99,7 +147,10 @@
     "secureSession": "Secure session",
     "menu": "Menu",
     "dashboard": "Home",
+    "clients": "Clients",
     "quotes": "Quotes",
+    "requests": "Requests",
+    "settings": "Settings",
     "policies": "My insurance",
     "claims": "Claims",
     "notifications": "Notifications"
@@ -300,8 +351,12 @@
       "cancel": "Keep authorization",
       "confirm": "Confirm revocation"
     },
-    "purposes": { "cotizacion": "Calculate a risk profile for your insurance quote" },
-    "data": { "indicador_riesgo": "Risk indicator" },
+    "purposes": {
+      "cotizacion": "Calculate a risk profile for your insurance quote"
+    },
+    "data": {
+      "indicador_riesgo": "Risk indicator"
+    },
     "consentStatus": {
       "autorizado": "Authorization registered",
       "revocado": "Authorization revoked",
@@ -532,15 +587,15 @@
     "title": "Start profiling",
     "subtitle": "Enter the customer and credit details to request their assessment.",
     "partner": "Distribution partner",
-    "partnerName": "Solventa Partner Bank",
+    "selectPartner": "Select an authorized partner",
     "partnerId": "Partner identifier",
     "customerSection": "Customer details",
     "creditSection": "Credit details",
     "consentSection": "Customer consent",
     "documentType": "Document type",
     "documentNumber": "Document number",
-    "fullName": "Full name",
-    "email": "Email",
+    "customerId": "Customer identifier",
+    "birthDate": "Date of birth",
     "phone": "Phone",
     "creditReference": "Credit reference",
     "creditAmount": "Credit amount",
@@ -553,19 +608,23 @@
     "processing": "Starting profiling",
     "retry": "Retry the same operation",
     "idempotencyNotice": "Do not close this page while submitting. Retries keep the same operation identifier.",
-    "resultTitle": "Profiling started",
-    "resultBody": "The service confirmed receipt. You can check the result after processing is complete.",
+    "recoveryNotice": "To recover the result, enter the same details and retry this operation. The service will check that they match.",
+    "newOperationWarning": "Starting another profiling request abandons this retry; it does not cancel or delete the previous operation, which may have completed.",
+    "resultTitle": "Profiling completed",
+    "resultBody": "The service confirmed the profile and quote. This receipt does not contain an insurance offer.",
     "profilingReference": "Profiling reference",
     "operationId": "Operation identifier",
+    "quoteRequestId": "Request reference",
+    "quoteId": "Quote identifier",
     "startAnother": "Start another profiling request",
     "status": {
-      "processing": "Processing"
+      "completed": "Completed"
     },
     "validation": {
       "documentNumber": "Enter a valid document containing 6 to 15 characters.",
-      "fullName": "Enter the customer's full name.",
-      "email": "Enter a valid email.",
-      "phone": "Enter a valid phone containing 10 to 15 digits.",
+      "customerId": "Enter the registered customer's UUID.",
+      "birthDate": "Enter a valid date of birth.",
+      "phone": "Enter a Colombian phone number with +57 and 10 digits.",
       "creditReference": "Enter a valid credit reference.",
       "creditAmount": "The amount must be at least COP 1,000,000.",
       "termMonths": "The term must be between 12 and 360 months.",
@@ -577,8 +636,16 @@
       "incomplete_data": "The service rejected the request because required details are missing. Review the information.",
       "invalid_consent": "Consent is invalid or no longer current. Verify the reference with the customer.",
       "unauthorized_partner": "Your session is not authorized to start operations for this partner.",
-      "idempotency_conflict": "The operation identifier was already used with different data. Start a new operation.",
+      "idempotency_conflict": "The details do not match this operation. Check them before retrying. Starting another operation does not cancel the previous one.",
       "service_unavailable": "The profiling service is unavailable. You can retry without creating another operation.",
+      "invalid_response": "The service response does not match this operation or is incomplete. No result was confirmed.",
+      "session_expired": "Your session cannot start this profiling request. Sign in with an authorized advisor account.",
+      "customer_not_found": "The customer is not registered. Check their identifier.",
+      "profiling_failed": "The service could not complete profiling. Review the details and profile validity.",
+      "operation_in_progress": "This operation is still in progress. Retry with the same identifier.",
+      "operation_retryable": "The operation has no confirmed result. Retry with the same identifier.",
+      "rate_limited": "The partner has reached the request limit. Wait before retrying the same operation.",
+      "advisor_context_unavailable": "You cannot submit a profiling request: this web session does not have the authorized advisor and partner context.",
       "unexpected": "Profiling could not be started. You can retry without creating another operation."
     }
   }
