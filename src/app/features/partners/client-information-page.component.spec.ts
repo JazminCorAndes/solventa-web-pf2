@@ -30,7 +30,7 @@ function resultFor(request: ClientInformationRequest): ClientInformationResult {
   return {
     operationId: request.operationId,
     socioId: request.socioId,
-    clienteId: request.clienteId,
+    clienteId: CLIENT_ID,
     productoId: request.productoId,
     finalidad: 'cotizacion',
     estado: 'completada',
@@ -85,7 +85,7 @@ describe('ClientInformationPageComponent', () => {
     gateway.consult.mockImplementation((request: ClientInformationRequest) =>
       of(resultFor(request)),
     );
-    fixture.componentInstance.form.controls.clienteId.setValue(CLIENT_ID);
+    fixture.componentInstance.form.controls.documentNumber.setValue('1012345678');
 
     fixture.componentInstance.submit();
     fixture.detectChanges();
@@ -93,14 +93,15 @@ describe('ClientInformationPageComponent', () => {
     const request = gateway.consult.mock.calls[0][0] as ClientInformationRequest;
     expect(request).toMatchObject({
       socioId: 'BANCO-001',
-      clienteId: CLIENT_ID,
+      tipoDocumento: 'cc',
+      numeroDocumento: '1012345678',
       productoId: 'mortgage-life',
       finalidad: 'cotizacion',
       datosSolicitados: ['indicador_riesgo'],
     });
     expect(fixture.nativeElement.textContent).toContain('Indicador de riesgo: 0.50');
     expect(fixture.nativeElement.textContent).toContain('Consentimiento vigente · versión 2');
-    expect(fixture.nativeElement.querySelector('mat-select')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('mat-select')).toHaveLength(2);
   });
 
   it('keeps the operation identifier when a fail-closed request is retried', () => {
@@ -111,18 +112,28 @@ describe('ClientInformationPageComponent', () => {
         ? throwError(() => new Error('source unavailable'))
         : of(resultFor(request));
     });
-    fixture.componentInstance.form.controls.clienteId.setValue(CLIENT_ID);
+    fixture.componentInstance.form.controls.documentNumber.setValue('1012345678');
 
     fixture.componentInstance.submit();
     const firstRequest = gateway.consult.mock.calls[0][0] as ClientInformationRequest;
     expect(fixture.componentInstance.result()).toBeNull();
-    expect(fixture.componentInstance.errorKey()).toBe(
-      'clientInformation.errors.unavailable',
-    );
+    expect(fixture.componentInstance.errorKey()).toBe('clientInformation.errors.unavailable');
 
     fixture.componentInstance.submit();
     const secondRequest = gateway.consult.mock.calls[1][0] as ClientInformationRequest;
     expect(secondRequest.operationId).toBe(firstRequest.operationId);
     expect(fixture.componentInstance.result()?.estado).toBe('completada');
+  });
+
+  it('keeps UUID lookup available for legacy clients', () => {
+    gateway.consult.mockImplementation((request: ClientInformationRequest) =>
+      of(resultFor(request)),
+    );
+    fixture.componentInstance.form.controls.searchMode.setValue('id');
+    fixture.componentInstance.form.controls.clienteId.setValue(CLIENT_ID);
+
+    fixture.componentInstance.submit();
+
+    expect(gateway.consult.mock.calls[0][0]).toMatchObject({ clienteId: CLIENT_ID });
   });
 });

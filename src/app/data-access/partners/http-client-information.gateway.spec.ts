@@ -69,9 +69,7 @@ describe('HttpClientInformationGateway', () => {
 
   it('rejects a response associated with another operation', async () => {
     const result = firstValueFrom(gateway.consult(request));
-    http.expectOne(
-      `${environment.apiBaseUrl}/v1/socios/consultas-informacion-cliente`,
-    ).flush({
+    http.expectOne(`${environment.apiBaseUrl}/v1/socios/consultas-informacion-cliente`).flush({
       operationId: crypto.randomUUID(),
       socioId: request.socioId,
       clienteId: request.clienteId,
@@ -86,5 +84,40 @@ describe('HttpClientInformationGateway', () => {
     });
 
     await expect(result).rejects.toThrow('Invalid client information response.');
+  });
+
+  it('accepts the resolved client UUID when searching by document', async () => {
+    const documentRequest: ClientInformationRequest = {
+      operationId: request.operationId,
+      socioId: request.socioId,
+      tipoDocumento: 'cc',
+      numeroDocumento: '1012345678',
+      productoId: request.productoId,
+      finalidad: 'cotizacion',
+      datosSolicitados: request.datosSolicitados,
+    };
+    const result = firstValueFrom(gateway.consult(documentRequest));
+    const pending = http.expectOne(
+      `${environment.apiBaseUrl}/v1/socios/consultas-informacion-cliente`,
+    );
+    expect(pending.request.body).toEqual(documentRequest);
+    pending.flush({
+      operationId: documentRequest.operationId,
+      socioId: documentRequest.socioId,
+      actorId: '33333333-3333-4333-8333-333333333333',
+      clienteId: '22222222-2222-4222-8222-222222222222',
+      productoId: documentRequest.productoId,
+      finalidad: 'cotizacion',
+      estado: 'completada',
+      consentimientoId: '44444444-4444-4444-8444-444444444444',
+      consentimientoVersion: 2,
+      datos: { indicadorRiesgo: '0.50' },
+      evidenciaFuentes: [],
+      consultadaEn: '2026-10-24T20:00:00Z',
+    });
+
+    await expect(result).resolves.toMatchObject({
+      clienteId: '22222222-2222-4222-8222-222222222222',
+    });
   });
 });

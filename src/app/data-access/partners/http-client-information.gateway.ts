@@ -2,16 +2,30 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { DocumentType } from '../../core/auth/auth.models';
 import { UUID_PATTERN } from '../quotes/http-partner-quote.gateway';
 
-export interface ClientInformationRequest {
+interface ClientInformationRequestContext {
   operationId: string;
   socioId: string;
-  clienteId: string;
   productoId: string;
   finalidad: 'cotizacion';
   datosSolicitados: string[];
 }
+
+export type ClientInformationRequest = ClientInformationRequestContext &
+  (
+    | {
+        clienteId: string;
+        tipoDocumento?: never;
+        numeroDocumento?: never;
+      }
+    | {
+        clienteId?: never;
+        tipoDocumento: DocumentType;
+        numeroDocumento: string;
+      }
+  );
 
 export interface ClientInformationResult {
   operationId: string;
@@ -46,10 +60,7 @@ export class HttpClientInformationGateway {
   }
 }
 
-function parseResult(
-  body: unknown,
-  request: ClientInformationRequest,
-): ClientInformationResult {
+function parseResult(body: unknown, request: ClientInformationRequest): ClientInformationResult {
   if (
     !body ||
     typeof body !== 'object' ||
@@ -58,7 +69,9 @@ function parseResult(
     !('socioId' in body) ||
     body.socioId !== request.socioId ||
     !('clienteId' in body) ||
-    body.clienteId !== request.clienteId ||
+    typeof body.clienteId !== 'string' ||
+    !UUID_PATTERN.test(body.clienteId) ||
+    ('clienteId' in request && body.clienteId !== request.clienteId) ||
     !('productoId' in body) ||
     body.productoId !== request.productoId ||
     !('finalidad' in body) ||
