@@ -427,34 +427,31 @@ esa validación ni prueban conectividad con AWS.
 
 El portal de socios (SOL194) habilita `/app/socios/cotizaciones/solicitar` solo con
 contexto validado de `GET /v1/socios/actual` y alcance `perfilamientos:crear`. Se reutilizan
-el catálogo, los destinos y los campos/validaciones de la solicitud del cliente para los
-ocho productos existentes. El selector limita los productos a los autorizados para la
-organización seleccionada; el servidor vuelve a comprobar organización, producto y cuota.
+los campos y validaciones de vida hipotecaria, único producto habilitado en este flujo.
+El servidor vuelve a comprobar organización, producto y cuota.
 No se asignan permisos desde el navegador ni se sustituyen errores por mocks.
 
 El cliente registrado decide personalmente su consentimiento (SOL203). Cuando está
-autorizado y vigente, el panel muestra sus identificadores de cliente y consentimiento,
-y la versión que puede facilitar al socio elegido. El socio los ingresa junto con
-documento y teléfono: no hay búsqueda global de clientes, autorización delegada ni
-registro de cuentas desde este formulario.
+autorizado y vigente, el socio lo busca por tipo y número de documento. Identidad resuelve
+el UUID, teléfono y fecha de nacimiento maestros; el BFF resuelve también el consentimiento
+y su versión. Ninguno de esos datos técnicos se escribe desde el formulario.
 
 `POST /v1/socios/solicitudes-cotizacion` usa la sesión Bearer existente, `API-Version: 1`
 e `Idempotency-Key` igual al UUID `operationId` del cuerpo:
 
 ```text
 {
-  operationId, socioId, productoId, datosProducto,
-  cliente: { clienteId, tipoCliente: "persona_natural", tipoDocumento, numeroDocumento, telefono },
-  consentimientoId, consentimientoVersion
+  operationId, socioId, productoId: "mortgage-life",
+  datosProducto: { mortgageBalance },
+  cliente: { tipoCliente: "persona_natural", tipoDocumento, numeroDocumento }
 }
 ```
 
-El correo se resuelve en backend. `datosProducto` conserva el contrato del flujo cliente.
+El correo, teléfono, fecha de nacimiento, UUID y consentimiento se resuelven en backend.
 Solo una respuesta válida del servidor con `estado: "completada"` y asociación coincidente
-operación/socio/cliente/producto confirma el éxito; se muestran `solicitudId`,
-`cotizacionId`, `perfilamientoReferencia` y `recibidaEn`. La solicitud queda en el flujo
-principal del cliente, que continúa desde sus cotizaciones. No se activan solicitudes
-de terceros en el almacenamiento cliente ni se aceptan ofertas en su nombre.
+operación/socio/cliente/producto confirma el éxito. La pantalla presenta la oferta
+recomendada calculada por Cotización, con prima, periodicidad, cobertura, deducible,
+vigencia y fecha límite, sin mostrar referencias técnicas internas.
 
 Antes de enviar se guarda únicamente operación y organización en la URL. Los reintentos
 en la misma página conservan UUID y cuerpo original; `Retry-After` impide reenvíos mientras
@@ -462,7 +459,7 @@ dure la espera. La recarga consulta
 `GET /v1/socios/solicitudes-cotizacion/{operationId}?socioId=...`, sin repetir el POST.
 Si devuelve `operacion_reintentable` o `operacion_no_encontrada`, se pueden reintroducir
 los mismos datos conservando la clave; el servidor detecta cambios mediante su idempotencia.
-Documento, teléfono y cuerpo de la operación no se persisten en el navegador.
+Documento y cuerpo de la operación no se persisten en el navegador.
 Preparar otra operación es una acción explícita, diferente de reintentar, y advierte
 que puede generar otra cotización.
 

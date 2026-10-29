@@ -22,7 +22,6 @@ import { QuoteRequestPageComponent } from '../quotes/quote-request-page.componen
 import { PartnerQuotePanelComponent } from './partner-quote-panel.component';
 
 const customerId = '22222222-2222-4222-8222-222222222222';
-const consentId = '33333333-3333-4333-8333-333333333333';
 const quoteId = '44444444-4444-4444-8444-444444444444';
 const products = [
   'automotive',
@@ -127,27 +126,45 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
 
   function fillCustomer(): void {
     panel.form.patchValue({
-      clienteId: customerId,
       tipoDocumento: 'cc',
       numeroDocumento: '1023456789',
-      telefono: '+573001234567',
-      consentimientoId: consentId,
-      consentimientoVersion: 2,
     });
-    page.form.patchValue({ productId: 'automotive', vehiclePlate: 'abc123' });
+    panel.clientLookup.set({
+      nombre: 'Ana Cliente',
+      tipoDocumento: 'cc',
+      numeroDocumentoEnmascarado: '******6789',
+      consentimientoEstado: 'vigente',
+    });
+    page.form.patchValue({
+      productId: 'mortgage-life',
+      mortgageBalance: '310000000',
+    });
   }
 
   function result(request: PartnerQuoteRequest): PartnerQuoteResult {
     return {
       operationId: request.operationId,
       socioId: request.socioId,
-      clienteId: request.cliente.clienteId,
+      clienteId: customerId,
       productoId: request.productoId,
       estado: 'completada',
       perfilamientoReferencia: 'perfil-real',
       solicitudId: 'AQT-2026-123456',
       cotizacionId: quoteId,
       recibidaEn: '2026-10-23T05:00:00Z',
+      oferta: {
+        id: '55555555-5555-4555-8555-555555555555',
+        nombre: 'Plan recomendado',
+        descripcion: 'Protección para el saldo hipotecario.',
+        prima: { monto: '99000.00', moneda: 'COP' },
+        periodicidad: 'mensual',
+        coberturaPrincipal: 'Saldo hipotecario',
+        deducible: 'Sin deducible',
+        vigencia: '12 meses',
+        coberturas: ['Fallecimiento'],
+        beneficiosAdicionales: [],
+        vigenteHasta: '2026-11-23T05:00:00Z',
+      },
     };
   }
 
@@ -164,24 +181,20 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     vi.useRealTimers();
   });
 
-  it('reutiliza catalogo y formulario sin consultar ni aprobar consentimiento delegado', async () => {
+  it('envia solo documento y datos operativos mientras el backend resuelve identidad y consentimiento', async () => {
     fillCustomer();
     const request = await submit();
     expect(request.request.headers.get('Authorization')).toBe('Bearer synthetic-test-token');
     expect(request.request.body).toEqual({
       operationId: panel.operationId(),
       socioId: 'BANCO-001',
-      productoId: 'automotive',
-      datosProducto: { vehiclePlate: 'ABC123' },
+      productoId: 'mortgage-life',
+      datosProducto: { mortgageBalance: '310000000' },
       cliente: {
-        clienteId: customerId,
         tipoCliente: 'persona_natural',
         tipoDocumento: 'cc',
         numeroDocumento: '1023456789',
-        telefono: '+573001234567',
       },
-      consentimientoId: consentId,
-      consentimientoVersion: 2,
     });
     expect(navigate).toHaveBeenCalledWith(
       [],
@@ -193,7 +206,6 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(panel.result()).toBeNull();
     expect(page.form.disabled).toBe(true);
     expect(fixture.nativeElement.querySelector('app-profiling-panel')).toBeNull();
-    http.expectNone((pending) => pending.url.includes('/consentimientos/'));
     request.flush(result(request.request.body));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.completed);
@@ -201,86 +213,54 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(navigate).not.toHaveBeenCalledWith(['/app/cotizaciones/ofertas']);
   });
 
-  it.each([
-    ['life', { birthDate: new Date(1985, 1, 10) }, { birthDate: '1985-02-10' }],
-    [
-      'mortgage-life',
-      { birthDate: new Date(1985, 1, 10), mortgageBalance: '310000000' },
-      { birthDate: '1985-02-10', mortgageBalance: '310000000' },
-    ],
-    [
-      'device-protection',
-      { deviceType: 'Teléfono', brandModel: 'Modelo QA', purchaseValue: '1200000' },
-      { deviceType: 'Teléfono', brandModel: 'Modelo QA', purchaseValue: '1200000' },
-    ],
-    [
-      'payment-protection',
-      { creditType: 'Consumo', monthlyPayment: '500000' },
-      { creditType: 'Consumo', monthlyPayment: '500000' },
-    ],
-    [
-      'travel',
-      {
-        destination: { code: 'CO', name: 'Colombia' },
-        departureDate: new Date(2099, 0, 2),
-        returnDate: new Date(2099, 0, 3),
-      },
-      { destinationCountryCode: 'CO', departureDate: '2099-01-02', returnDate: '2099-01-03' },
-    ],
-    [
-      'parametric',
-      {
-        airline: 'Avianca',
-        flightNumber: 'av123',
-        flightDate: new Date(2099, 0, 2),
-        coverageType: 'comprehensive',
-      },
-      {
-        airline: 'Avianca',
-        flightNumber: 'AV123',
-        flightDate: '2099-01-02',
-        coverageType: 'comprehensive',
-      },
-    ],
-    [
-      'parametric-weather',
-      {
-        location: 'Bogotá',
-        weatherEvent: 'drought',
-        startDate: new Date(2099, 0, 2),
-        endDate: new Date(2099, 0, 3),
-        insuredAmount: '1000000',
-      },
-      {
-        location: 'Bogotá',
-        weatherEvent: 'drought',
-        startDate: '2099-01-02',
-        endDate: '2099-01-03',
-        insuredAmount: '1000000',
-      },
-    ],
-  ])('conserva datosProducto existentes para %s', async (productId, values, expected) => {
-    fillCustomer();
-    page.form.patchValue({ productId, ...values });
-    const request = await submit();
-    expect(request.request.body.datosProducto).toEqual(expected);
-    request.flush(result(request.request.body));
+  it('muestra y envia exclusivamente vida hipotecaria', () => {
+    expect(page.products().map((product) => product.id)).toEqual(['mortgage-life']);
+    expect(page.form.controls.productId.value).toBe('mortgage-life');
+    expect(fixture.nativeElement.querySelector('.product-card mat-select')).toBeNull();
   });
 
   it('bloquea cliente incompleto, datos producto invalidos y productos ajenos a la organizacion', () => {
-    page.form.patchValue({ productId: 'automotive', vehiclePlate: 'ABC123' });
+    page.form.patchValue({
+      mortgageBalance: '310000000',
+    });
     page.submit();
-    expect(panel.form.controls.clienteId.touched).toBe(true);
+    expect(panel.form.controls.numeroDocumento.touched).toBe(true);
     fillCustomer();
-    page.form.controls.vehiclePlate.setValue('invalida');
+    page.form.controls.mortgageBalance.setValue('0');
     page.submit();
-    expect(page.form.controls.vehiclePlate.invalid).toBe(true);
-    page.form.controls.vehiclePlate.setValue('ABC123');
+    expect(page.form.controls.mortgageBalance.invalid).toBe(true);
+    page.form.controls.mortgageBalance.setValue('310000000');
     panel.form.controls.socioId.setValue('BANCO-002');
-    expect(page.products().map((product) => product.id)).toEqual(['life']);
+    expect(page.products()).toEqual([]);
     page.submit();
     expect(page.form.controls.productId.invalid).toBe(true);
     http.expectNone(endpoint);
+  });
+
+  it('busca el cliente por documento y muestra solo el estado del consentimiento', () => {
+    panel.form.patchValue({ tipoDocumento: 'cc', numeroDocumento: '1023456789' });
+
+    panel.lookupClient();
+
+    const request = http.expectOne(
+      (pending) =>
+        pending.url === `${base}/socios/clientes/por-documento` &&
+        pending.params.get('socioId') === 'BANCO-001' &&
+        pending.params.get('tipoDocumento') === 'cc' &&
+        pending.params.get('numeroDocumento') === '1023456789',
+    );
+    request.flush({
+      nombre: 'Ana Cliente',
+      tipoDocumento: 'cc',
+      numeroDocumentoEnmascarado: '******6789',
+      consentimientoEstado: 'vigente',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Ana Cliente');
+    expect(fixture.nativeElement.textContent).toContain('Consentimiento: Vigente');
+    expect(fixture.nativeElement.textContent).not.toContain('Versión del consentimiento');
+    expect(fixture.nativeElement.textContent).not.toContain('Identificador del cliente');
   });
 
   it.each([

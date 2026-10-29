@@ -93,7 +93,11 @@ export class QuoteRequestPageComponent implements OnInit {
     this.partnerMode
       ? this.quotes
           .products()
-          .filter((product) => this.partnerPanel()?.allowedProductIds().includes(product.id))
+          .filter(
+            (product) =>
+              product.id === 'mortgage-life' &&
+              this.partnerPanel()?.allowedProductIds().includes(product.id),
+          )
       : this.quotes.products(),
   );
   readonly today = startOfToday();
@@ -172,7 +176,9 @@ export class QuoteRequestPageComponent implements OnInit {
         this.calendarLabels.changes.next();
       });
     const requestedProduct = this.route.snapshot.queryParamMap.get('producto');
-    if (requestedProduct) {
+    if (this.partnerMode) {
+      this.form.controls.productId.setValue('mortgage-life');
+    } else if (requestedProduct) {
       this.form.controls.productId.setValue(requestedProduct);
     }
     this.quotes.loadProducts();
@@ -359,7 +365,9 @@ export class QuoteRequestPageComponent implements OnInit {
         this.form.controls.monthlyPayment.setValidators([required, positiveInteger]);
         break;
       case 'mortgage-life':
-        this.form.controls.birthDate.setValidators(required);
+        if (!this.partnerMode) {
+          this.form.controls.birthDate.setValidators(required);
+        }
         this.form.controls.mortgageBalance.setValidators([required, positiveInteger]);
         break;
     }
@@ -412,10 +420,12 @@ export class QuoteRequestPageComponent implements OnInit {
           monthlyPayment: value.monthlyPayment,
         };
       case 'mortgage-life':
-        return {
-          birthDate: toIsoDate(value.birthDate),
-          mortgageBalance: value.mortgageBalance,
-        };
+        return this.partnerMode
+          ? { mortgageBalance: value.mortgageBalance }
+          : {
+              birthDate: toIsoDate(value.birthDate),
+              mortgageBalance: value.mortgageBalance,
+            };
       default:
         return {};
     }

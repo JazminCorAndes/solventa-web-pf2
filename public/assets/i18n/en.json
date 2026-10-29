@@ -1,10 +1,20 @@
 {
   "partnerQuote": {
     "title": "Customer and quote authorization",
-    "instructions": "Select your organization and enter the details provided by the registered customer. The server validates their current consent before profiling. You cannot consent on their behalf.",
+    "instructions": "Find the customer by document. The system identifies their record and automatically verifies whether consent is current.",
     "partner": "Partner organization",
     "customerId": "Customer identifier",
     "document": "Document number",
+    "searchClient": "Find customer",
+    "searchingClient": "Finding customer…",
+    "consentStatus": "Consent",
+    "consentStates": {
+      "vigente": "Current",
+      "vencido": "Expired",
+      "revocado": "Revoked",
+      "rechazado": "Not authorized",
+      "ausente": "Not authorized"
+    },
     "consentId": "Consent identifier",
     "consentVersion": "Consent version",
     "required": "Select an authorized organization.",
@@ -25,7 +35,7 @@
     "shareConsent": "Details for quoting through a partner",
     "shareInstructions": "You may provide these identifiers to your chosen partner. Never share your password or session. The partner cannot authorize or revoke consent for you.",
     "errors": {
-      "consent": "The customer's consent is not current or does not match this version. The customer must review it in their own session.",
+      "consent": "The customer's consent is expired, revoked, or not authorized. The customer must renew it in their own session.",
       "identity": "These details do not match the registered customer. Check them with their owner.",
       "processing": "The operation is still running. Retrieve its result or retry with the same identifier.",
       "retryable": "The operation has no confirmed result. Send exactly the same details with the same identifier.",
