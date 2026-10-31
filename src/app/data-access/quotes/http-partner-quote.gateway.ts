@@ -40,6 +40,7 @@ export interface PartnerQuoteResult {
 
 export interface PartnerRecommendedOffer {
   id: string;
+  version: number;
   nombre: string;
   descripcion: string;
   prima: { monto: string; moneda: string };
@@ -48,8 +49,37 @@ export interface PartnerRecommendedOffer {
   deducible: string;
   vigencia: string;
   coberturas: string[];
+  condiciones: string[];
   beneficiosAdicionales: string[];
   vigenteHasta: string;
+  explicacion: PartnerOfferExplanation;
+  trazabilidad: PartnerOfferTraceability;
+}
+
+export interface PartnerOfferFactor {
+  nombre: string;
+  valor: string;
+  impacto: string;
+}
+
+export interface PartnerOfferExplanation {
+  resumen: string;
+  factoresDeterminantes: PartnerOfferFactor[];
+}
+
+export interface PartnerOfferTraceability {
+  esquemaDecision: number;
+  hashDecision: string;
+  hashContenido: string;
+  perfilId: string;
+  perfilVersion: number;
+  modeloPerfilVersion: string;
+  reglaId: string;
+  reglaVersion: string;
+  fuentes: Array<{
+    nombre: 'open_finance' | 'open_data';
+    version: string;
+  }>;
 }
 
 export class InvalidPartnerQuoteResponse extends Error {
@@ -175,9 +205,13 @@ function parseOffer(value: unknown): PartnerRecommendedOffer {
   if (!value || typeof value !== 'object') throw new InvalidPartnerQuoteResponse();
   const offer = value as Record<string, unknown>;
   const premium = offer['prima'];
+  const explanation = offer['explicacion'];
+  const traceability = offer['trazabilidad'];
   if (
     typeof offer['id'] !== 'string' ||
     !UUID_PATTERN.test(offer['id']) ||
+    !Number.isInteger(offer['version']) ||
+    Number(offer['version']) < 1 ||
     typeof offer['nombre'] !== 'string' ||
     !offer['nombre'] ||
     typeof offer['descripcion'] !== 'string' ||
@@ -186,22 +220,84 @@ function parseOffer(value: unknown): PartnerRecommendedOffer {
     typeof premium !== 'object' ||
     typeof (premium as Record<string, unknown>)['monto'] !== 'string' ||
     typeof (premium as Record<string, unknown>)['moneda'] !== 'string' ||
-    !['mensual', 'por_viaje', 'por_vuelo', 'por_periodo'].includes(
-      String(offer['periodicidad']),
-    ) ||
+    !['mensual', 'por_viaje', 'por_vuelo', 'por_periodo'].includes(String(offer['periodicidad'])) ||
     typeof offer['coberturaPrincipal'] !== 'string' ||
     typeof offer['deducible'] !== 'string' ||
     typeof offer['vigencia'] !== 'string' ||
     !Array.isArray(offer['coberturas']) ||
-    !offer['coberturas'].every((item) => typeof item === 'string') ||
+    !isNonEmptyStringArray(offer['coberturas']) ||
+    !Array.isArray(offer['condiciones']) ||
+    !isNonEmptyStringArray(offer['condiciones']) ||
     !Array.isArray(offer['beneficiosAdicionales']) ||
-    !offer['beneficiosAdicionales'].every((item) => typeof item === 'string') ||
+    !offer['beneficiosAdicionales'].every(isNonEmptyString) ||
     typeof offer['vigenteHasta'] !== 'string' ||
-    !Number.isFinite(Date.parse(offer['vigenteHasta']))
+    !Number.isFinite(Date.parse(offer['vigenteHasta'])) ||
+    !isExplanation(explanation) ||
+    !isTraceability(traceability)
   ) {
     throw new InvalidPartnerQuoteResponse();
   }
   return offer as unknown as PartnerRecommendedOffer;
+}
+
+function isExplanation(value: unknown): value is PartnerOfferExplanation {
+  if (!value || typeof value !== 'object') return false;
+  const explanation = value as Record<string, unknown>;
+  return (
+    isNonEmptyString(explanation['resumen']) &&
+    Array.isArray(explanation['factoresDeterminantes']) &&
+    explanation['factoresDeterminantes'].length > 0 &&
+    explanation['factoresDeterminantes'].every((factor) => {
+      if (!factor || typeof factor !== 'object') return false;
+      const record = factor as Record<string, unknown>;
+      return (
+        isNonEmptyString(record['nombre']) &&
+        isNonEmptyString(record['valor']) &&
+        isNonEmptyString(record['impacto'])
+      );
+    })
+  );
+}
+
+function isTraceability(value: unknown): value is PartnerOfferTraceability {
+  if (!value || typeof value !== 'object') return false;
+  const trace = value as Record<string, unknown>;
+  return (
+    Number.isInteger(trace['esquemaDecision']) &&
+    Number(trace['esquemaDecision']) >= 1 &&
+    isHash(trace['hashDecision']) &&
+    isHash(trace['hashContenido']) &&
+    typeof trace['perfilId'] === 'string' &&
+    UUID_PATTERN.test(trace['perfilId']) &&
+    Number.isInteger(trace['perfilVersion']) &&
+    Number(trace['perfilVersion']) >= 1 &&
+    isNonEmptyString(trace['modeloPerfilVersion']) &&
+    typeof trace['reglaId'] === 'string' &&
+    UUID_PATTERN.test(trace['reglaId']) &&
+    isNonEmptyString(trace['reglaVersion']) &&
+    Array.isArray(trace['fuentes']) &&
+    trace['fuentes'].length > 0 &&
+    trace['fuentes'].every((source) => {
+      if (!source || typeof source !== 'object') return false;
+      const record = source as Record<string, unknown>;
+      return (
+        ['open_finance', 'open_data'].includes(String(record['nombre'])) &&
+        isNonEmptyString(record['version'])
+      );
+    })
+  );
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isNonEmptyStringArray(value: unknown[]): value is string[] {
+  return value.length > 0 && value.every(isNonEmptyString);
+}
+
+function isHash(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
 }
 
 export function partnerQuoteErrorCode(error: unknown): string | null {

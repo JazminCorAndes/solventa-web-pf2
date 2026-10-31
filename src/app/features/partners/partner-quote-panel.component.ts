@@ -78,6 +78,26 @@ import {
     .client-summary span {
       color: var(--solventa-color-text-secondary);
     }
+    .client-summary h4 {
+      margin: var(--solventa-space-2) 0 0;
+    }
+    .offer-explanation {
+      display: grid;
+      gap: var(--solventa-space-2);
+    }
+    .offer-explanation p {
+      margin: 0;
+    }
+    .factor-list {
+      display: grid;
+      gap: var(--solventa-space-2);
+      margin: 0;
+    }
+    .factor-list div,
+    .factor-list dd {
+      display: grid;
+      gap: var(--solventa-space-1);
+    }
   `,
 })
 export class PartnerQuotePanelComponent implements OnInit {

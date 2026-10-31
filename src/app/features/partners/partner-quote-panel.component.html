@@ -95,12 +95,36 @@
       <span>{{ 'offers.deductible' | transloco }}: {{ result.oferta.deducible }}</span>
       <span>{{ 'offers.term' | transloco }}: {{ result.oferta.vigencia }}</span>
       @if (result.oferta.coberturas.length) {
+        <h4>{{ 'partnerQuote.offerCoverages' | transloco }}</h4>
         <ul>
           @for (coverage of result.oferta.coberturas; track coverage) {
             <li>{{ coverage }}</li>
           }
         </ul>
       }
+      <h4>{{ 'partnerQuote.offerConditions' | transloco }}</h4>
+      <ul>
+        @for (condition of result.oferta.condiciones; track condition) {
+          <li>{{ condition }}</li>
+        }
+      </ul>
+      <section class="offer-explanation" aria-labelledby="partner-offer-explanation-title">
+        <h4 id="partner-offer-explanation-title">
+          {{ 'partnerQuote.offerExplanation' | transloco }}
+        </h4>
+        <p>{{ result.oferta.explicacion.resumen }}</p>
+        <dl class="factor-list">
+          @for (factor of result.oferta.explicacion.factoresDeterminantes; track factor.nombre) {
+            <div>
+              <dt>{{ factor.nombre }}</dt>
+              <dd>
+                <strong>{{ factor.valor }}</strong>
+                <span>{{ factor.impacto }}</span>
+              </dd>
+            </div>
+          }
+        </dl>
+      </section>
       <span>
         {{ 'offers.validity' | transloco }}:
         {{ result.oferta.vigenteHasta | date: 'medium' }}
