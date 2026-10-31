@@ -56,6 +56,9 @@ import {
 } from './core/advisor-profiling/advisor-profiling-storage.service';
 import { MockAdvisorProfilingGateway } from './data-access/advisor-profiling/mock-advisor-profiling.gateway';
 import { HttpAdvisorProfilingGateway } from './data-access/advisor-profiling/http-advisor-profiling.gateway';
+import { ADVISOR_EXCEPTIONS_GATEWAY } from './core/advisor-exceptions/advisor-exceptions.gateway';
+import { HttpAdvisorExceptionsGateway } from './data-access/advisor-exceptions/http-advisor-exceptions.gateway';
+import { MockAdvisorExceptionsGateway } from './data-access/advisor-exceptions/mock-advisor-exceptions.gateway';
 
 registerLocaleData(localeEsCo);
 
@@ -81,6 +84,10 @@ export const appConfig: ApplicationConfig = {
     {
       provide: ADVISOR_PROFILING_GATEWAY,
       useClass: backendMode ? HttpAdvisorProfilingGateway : MockAdvisorProfilingGateway,
+    },
+    {
+      provide: ADVISOR_EXCEPTIONS_GATEWAY,
+      useClass: backendMode ? HttpAdvisorExceptionsGateway : MockAdvisorExceptionsGateway,
     },
     { provide: ADVISOR_PROFILING_STORAGE, useClass: BrowserAdvisorProfilingStorage },
     {
