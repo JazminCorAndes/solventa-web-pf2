@@ -58,6 +58,38 @@ export class HttpClientInformationGateway {
       })
       .pipe(map((body) => parseResult(body, request)));
   }
+
+  load(operationId: string, socioId: string): Observable<ClientInformationResult> {
+    return this.http
+      .get<unknown>(`${this.url}/${encodeURIComponent(operationId)}`, {
+        params: { socioId },
+        headers: { 'API-Version': '1' },
+      })
+      .pipe(
+        map((body) =>
+          parseResult(body, {
+            operationId,
+            socioId,
+            clienteId:
+              body &&
+              typeof body === 'object' &&
+              'clienteId' in body &&
+              typeof body.clienteId === 'string'
+                ? body.clienteId
+                : '',
+            productoId:
+              body &&
+              typeof body === 'object' &&
+              'productoId' in body &&
+              typeof body.productoId === 'string'
+                ? body.productoId
+                : '',
+            finalidad: 'cotizacion',
+            datosSolicitados: ['indicador_riesgo'],
+          }),
+        ),
+      );
+  }
 }
 
 function parseResult(body: unknown, request: ClientInformationRequest): ClientInformationResult {

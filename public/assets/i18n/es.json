@@ -10,6 +10,7 @@
     "consentStatus": "Consentimiento",
     "consentStates": {
       "vigente": "Vigente",
+      "insuficiente": "Autorización insuficiente",
       "vencido": "Vencido",
       "revocado": "Revocado",
       "rechazado": "No autorizado",
@@ -290,7 +291,8 @@
       "insuredAmount": "Valor asegurado (COP)",
       "creditType": "Tipo de crédito",
       "monthlyPayment": "Cuota mensual (COP)",
-      "mortgageBalance": "Saldo del crédito hipotecario (COP)"
+      "mortgageBalance": "Saldo del crédito hipotecario (COP)",
+      "creditReference": "Referencia del crédito hipotecario"
     },
     "flightCoverages": {
       "delay-cancellation": "Retraso o cancelación",
@@ -316,6 +318,7 @@
       "destination": "Selecciona un país de la lista.",
       "returnDate": "La fecha de regreso debe ser igual o posterior a la salida.",
       "positiveAmount": "Ingresa un valor mayor que cero.",
+      "creditReference": "Ingresa una referencia de 4 a 30 caracteres alfanuméricos o guiones.",
       "flightNumber": "Ingresa un número de vuelo alfanumérico válido.",
       "futureDate": "Selecciona una fecha válida posterior a hoy.",
       "weatherDates": "La fecha final debe ser igual o posterior al inicio y el periodo no puede superar 366 días, contando ambas fechas.",
