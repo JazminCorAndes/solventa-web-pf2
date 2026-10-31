@@ -467,7 +467,28 @@
               }
               @case ('mortgage-life') {
                 <div class="field-grid">
-                  @if (!partnerMode) {
+                  @if (partnerMode) {
+                    <div>
+                      <label for="credit-reference">{{
+                        'quoteRequest.fields.creditReference' | transloco
+                      }}</label>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <input
+                          matInput
+                          id="credit-reference"
+                          maxlength="30"
+                          formControlName="creditReference"
+                          autocomplete="off"
+                          placeholder="HIP-2026-001"
+                        />
+                        @if (showError('creditReference')) {
+                          <mat-error>{{
+                            'quoteRequest.validation.creditReference' | transloco
+                          }}</mat-error>
+                        }
+                      </mat-form-field>
+                    </div>
+                  } @else {
                     <div>
                       <label for="mortgage-birth-date">{{
                         'quoteRequest.fields.birthDate' | transloco
@@ -483,7 +504,9 @@
                         <mat-datepicker-toggle matIconSuffix [for]="mortgageBirthDatePicker" />
                         <mat-datepicker #mortgageBirthDatePicker startView="multi-year" />
                         @if (showError('birthDate')) {
-                          <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
+                          <mat-error>{{
+                            'quoteRequest.validation.required' | transloco
+                          }}</mat-error>
                         }
                       </mat-form-field>
                     </div>
