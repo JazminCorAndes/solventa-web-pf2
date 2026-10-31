@@ -139,6 +139,7 @@ export class QuoteRequestPageComponent implements OnInit {
       creditType: [''],
       monthlyPayment: [''],
       mortgageBalance: [''],
+      creditReference: [''],
     },
     { validators: productDateRangeValidator },
   );
@@ -367,6 +368,11 @@ export class QuoteRequestPageComponent implements OnInit {
       case 'mortgage-life':
         if (!this.partnerMode) {
           this.form.controls.birthDate.setValidators(required);
+        } else {
+          this.form.controls.creditReference.setValidators([
+            required,
+            Validators.pattern(/^[A-Za-z0-9-]{4,30}$/),
+          ]);
         }
         this.form.controls.mortgageBalance.setValidators([required, positiveInteger]);
         break;
@@ -421,7 +427,10 @@ export class QuoteRequestPageComponent implements OnInit {
         };
       case 'mortgage-life':
         return this.partnerMode
-          ? { mortgageBalance: value.mortgageBalance }
+          ? {
+              mortgageBalance: value.mortgageBalance,
+              referenciaCredito: value.creditReference.trim().toUpperCase(),
+            }
           : {
               birthDate: toIsoDate(value.birthDate),
               mortgageBalance: value.mortgageBalance,
@@ -455,6 +464,7 @@ const PRODUCT_CONTROL_NAMES = [
   'creditType',
   'monthlyPayment',
   'mortgageBalance',
+  'creditReference',
 ] as const;
 
 const SUPPORTED_PRODUCTS: readonly string[] = [

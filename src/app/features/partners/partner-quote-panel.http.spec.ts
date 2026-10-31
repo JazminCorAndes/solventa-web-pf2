@@ -138,6 +138,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     page.form.patchValue({
       productId: 'mortgage-life',
       mortgageBalance: '310000000',
+      creditReference: 'HIP-2026-001',
     });
   }
 
@@ -223,7 +224,10 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
       operationId: panel.operationId(),
       socioId: 'BANCO-001',
       productoId: 'mortgage-life',
-      datosProducto: { mortgageBalance: '310000000' },
+      datosProducto: {
+        mortgageBalance: '310000000',
+        referenciaCredito: 'HIP-2026-001',
+      },
       cliente: {
         tipoCliente: 'persona_natural',
         tipoDocumento: 'cc',
@@ -271,11 +275,30 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
         },
       },
     });
+
     fixture.detectChanges();
 
     expect(panel.result()).toBeNull();
     expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.errors.response);
     expect(fixture.nativeElement.textContent).not.toContain(response.oferta.nombre);
+  });
+
+  it('muestra la degradacion trazable enviada por el backend', async () => {
+    fillCustomer();
+    const request = await submit();
+    const response = result(request.request.body);
+    response.oferta.explicacion.factoresDeterminantes.push({
+      nombre: 'Disponibilidad de datos',
+      valor: 'open_finance: política default',
+      impacto:
+        'Se aplicó una degradación trazable por fuente_no_disponible; la oferta conserva esta condición para su revisión.',
+    });
+    request.flush(response);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Disponibilidad de datos');
+    expect(fixture.nativeElement.textContent).toContain('open_finance: política default');
+    expect(fixture.nativeElement.textContent).toContain('fuente_no_disponible');
   });
 
   it('muestra y envia exclusivamente vida hipotecaria', () => {
@@ -287,6 +310,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
   it('bloquea cliente incompleto, datos producto invalidos y productos ajenos a la organizacion', () => {
     page.form.patchValue({
       mortgageBalance: '310000000',
+      creditReference: 'HIP-2026-001',
     });
     page.submit();
     expect(panel.form.controls.numeroDocumento.touched).toBe(true);
@@ -326,6 +350,27 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(fixture.nativeElement.textContent).toContain('Consentimiento: Vigente');
     expect(fixture.nativeElement.textContent).not.toContain('Versión del consentimiento');
     expect(fixture.nativeElement.textContent).not.toContain('Identificador del cliente');
+  });
+
+  it('distingue una autorizacion insuficiente para el perfil hipotecario', () => {
+    panel.form.patchValue({ tipoDocumento: 'cc', numeroDocumento: '1023456789' });
+
+    panel.lookupClient();
+    http
+      .expectOne(
+        (pending) =>
+          pending.url === `${base}/socios/clientes/por-documento` &&
+          pending.params.get('socioId') === 'BANCO-001',
+      )
+      .flush({
+        nombre: 'Ana Cliente',
+        tipoDocumento: 'cc',
+        numeroDocumentoEnmascarado: '******6789',
+        consentimientoEstado: 'insuficiente',
+      });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Autorización insuficiente');
   });
 
   it.each([

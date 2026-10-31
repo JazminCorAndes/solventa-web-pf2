@@ -120,4 +120,29 @@ describe('HttpClientInformationGateway', () => {
       clienteId: '22222222-2222-4222-8222-222222222222',
     });
   });
+
+  it('recovers a consultation without repeating the POST', async () => {
+    const result = firstValueFrom(gateway.load(request.operationId, request.socioId));
+    const pending = http.expectOne(
+      `${environment.apiBaseUrl}/v1/socios/consultas-informacion-cliente/${request.operationId}?socioId=BANCO-001`,
+    );
+    expect(pending.request.method).toBe('GET');
+    expect(pending.request.headers.get('API-Version')).toBe('1');
+    pending.flush({
+      operationId: request.operationId,
+      socioId: request.socioId,
+      actorId: '33333333-3333-4333-8333-333333333333',
+      clienteId: request.clienteId,
+      productoId: request.productoId,
+      finalidad: 'cotizacion',
+      estado: 'completada',
+      consentimientoId: '44444444-4444-4444-8444-444444444444',
+      consentimientoVersion: 2,
+      datos: { indicadorRiesgo: '0.50' },
+      evidenciaFuentes: [],
+      consultadaEn: '2026-10-24T20:00:00Z',
+    });
+
+    await expect(result).resolves.toMatchObject({ operationId: request.operationId });
+  });
 });

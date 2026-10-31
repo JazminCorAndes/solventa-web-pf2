@@ -22,7 +22,8 @@ export interface PartnerClientLookup {
   nombre: string;
   tipoDocumento: DocumentType;
   numeroDocumentoEnmascarado: string;
-  consentimientoEstado: 'vigente' | 'vencido' | 'revocado' | 'rechazado' | 'ausente';
+  consentimientoEstado:
+    'vigente' | 'insuficiente' | 'vencido' | 'revocado' | 'rechazado' | 'ausente';
 }
 
 export interface PartnerQuoteResult {
@@ -145,7 +146,7 @@ function parseClientLookup(body: unknown): PartnerClientLookup {
     typeof body.numeroDocumentoEnmascarado !== 'string' ||
     !body.numeroDocumentoEnmascarado ||
     !('consentimientoEstado' in body) ||
-    !['vigente', 'vencido', 'revocado', 'rechazado', 'ausente'].includes(
+    !['vigente', 'insuficiente', 'vencido', 'revocado', 'rechazado', 'ausente'].includes(
       String(body.consentimientoEstado),
     )
   ) {

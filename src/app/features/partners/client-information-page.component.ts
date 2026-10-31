@@ -1,5 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,13 +15,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { finalize, take } from 'rxjs';
+import { finalize, Observable, take } from 'rxjs';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
 import { DocumentType } from '../../core/auth/auth.models';
 import {
   clientInformationErrorKey,
+  ClientInformationRequest,
   ClientInformationResult,
   HttpClientInformationGateway,
 } from '../../data-access/partners/http-client-information.gateway';
@@ -227,10 +235,11 @@ import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gatewa
     }
   `,
 })
-export class ClientInformationPageComponent {
+export class ClientInformationPageComponent implements OnInit {
   private readonly builder = inject(FormBuilder);
   private readonly gateway = inject(HttpClientInformationGateway);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   readonly context = inject(PartnerContextService).context;
   readonly loading = signal(false);
   readonly errorKey = signal<string | null>(null);
@@ -262,6 +271,19 @@ export class ClientInformationPageComponent {
     this.configureValidators('document');
   }
 
+  ngOnInit(): void {
+    const operationId = this.route.snapshot.queryParamMap.get('operacion');
+    const partner = this.partner();
+    if (!operationId) return;
+    if (!UUID_PATTERN.test(operationId) || !partner) {
+      this.errorKey.set('clientInformation.errors.invalid');
+      return;
+    }
+    this.operationId.set(operationId);
+    this.form.disable();
+    this.run(this.gateway.load(operationId, partner.socioId));
+  }
+
   submit(): void {
     if (this.loading() || this.result()) return;
     this.errorKey.set(null);
@@ -286,17 +308,38 @@ export class ClientInformationPageComponent {
         : { clienteId: values.clienteId.trim() };
     const operationId = this.operationId() ?? crypto.randomUUID();
     this.operationId.set(operationId);
-    this.loading.set(true);
     this.form.disable();
-    this.gateway
-      .consult({
-        operationId,
-        socioId: partner.socioId,
-        ...identifier,
-        productoId: productId,
-        finalidad: 'cotizacion',
-        datosSolicitados: ['indicador_riesgo'],
+    const request: ClientInformationRequest = {
+      operationId,
+      socioId: partner.socioId,
+      ...identifier,
+      productoId: productId,
+      finalidad: 'cotizacion',
+      datosSolicitados: ['indicador_riesgo'],
+    };
+    void this.router
+      .navigate([], {
+        relativeTo: this.route,
+        queryParams: { operacion: operationId, socio: partner.socioId },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
       })
+      .then((navigated) => {
+        if (navigated) this.run(this.gateway.consult(request));
+        else {
+          this.form.enable();
+          this.errorKey.set('clientInformation.errors.unavailable');
+        }
+      })
+      .catch(() => {
+        this.form.enable();
+        this.errorKey.set('clientInformation.errors.unavailable');
+      });
+  }
+
+  private run(operation: Observable<ClientInformationResult>): void {
+    this.loading.set(true);
+    operation
       .pipe(
         take(1),
         finalize(() => {
@@ -322,6 +365,12 @@ export class ClientInformationPageComponent {
     });
     this.configureValidators('document');
     this.form.enable();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { operacion: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private configureValidators(mode: 'document' | 'id'): void {

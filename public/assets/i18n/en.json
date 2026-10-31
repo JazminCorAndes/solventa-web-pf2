@@ -10,6 +10,7 @@
     "consentStatus": "Consent",
     "consentStates": {
       "vigente": "Current",
+      "insuficiente": "Insufficient authorization",
       "vencido": "Expired",
       "revocado": "Revoked",
       "rechazado": "Not authorized",
@@ -290,7 +291,8 @@
       "insuredAmount": "Insured amount (COP)",
       "creditType": "Credit type",
       "monthlyPayment": "Monthly payment (COP)",
-      "mortgageBalance": "Outstanding mortgage balance (COP)"
+      "mortgageBalance": "Outstanding mortgage balance (COP)",
+      "creditReference": "Mortgage credit reference"
     },
     "flightCoverages": {
       "delay-cancellation": "Delay or cancellation",
@@ -316,6 +318,7 @@
       "destination": "Select a country from the list.",
       "returnDate": "The return date must be on or after departure.",
       "positiveAmount": "Enter an amount greater than zero.",
+      "creditReference": "Enter a 4 to 30 character alphanumeric or hyphenated reference.",
       "flightNumber": "Enter a valid alphanumeric flight number.",
       "futureDate": "Select a valid date after today.",
       "weatherDates": "The end date must be on or after the start date and the period cannot exceed 366 days, including both dates.",
