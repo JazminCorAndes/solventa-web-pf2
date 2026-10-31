@@ -154,6 +154,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
       recibidaEn: '2026-10-23T05:00:00Z',
       oferta: {
         id: '55555555-5555-4555-8555-555555555555',
+        version: 1,
         nombre: 'Plan recomendado',
         descripcion: 'Protección para el saldo hipotecario.',
         prima: { monto: '99000.00', moneda: 'COP' },
@@ -162,8 +163,41 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
         deducible: 'Sin deducible',
         vigencia: '12 meses',
         coberturas: ['Fallecimiento'],
+        condiciones: [
+          'El crédito debe permanecer vigente.',
+          'La suma asegurada corresponde al saldo informado.',
+        ],
         beneficiosAdicionales: [],
         vigenteHasta: '2026-11-23T05:00:00Z',
+        explicacion: {
+          resumen: 'La prima protege el saldo hipotecario usando el perfil autorizado.',
+          factoresDeterminantes: [
+            {
+              nombre: 'Saldo hipotecario',
+              valor: '$310.000.000 COP',
+              impacto: 'Define la suma asegurada y la base del cálculo.',
+            },
+            {
+              nombre: 'Perfil de riesgo autorizado',
+              valor: 'Nivel A, score 0.35',
+              impacto: 'Ajusta la prima con la regla vigente.',
+            },
+          ],
+        },
+        trazabilidad: {
+          esquemaDecision: 1,
+          hashDecision: 'a'.repeat(64),
+          hashContenido: 'b'.repeat(64),
+          perfilId: '66666666-6666-4666-8666-666666666666',
+          perfilVersion: 1,
+          modeloPerfilVersion: 'perfil-v1',
+          reglaId: '77777777-7777-4777-8777-777777777777',
+          reglaVersion: 'academico-v1',
+          fuentes: [
+            { nombre: 'open_finance', version: 'v1' },
+            { nombre: 'open_data', version: 'v1' },
+          ],
+        },
       },
     };
   }
@@ -208,9 +242,40 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(fixture.nativeElement.querySelector('app-profiling-panel')).toBeNull();
     request.flush(result(request.request.body));
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.completed);
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain(es.partnerQuote.completed);
+    expect(text).toContain(es.partnerQuote.offerConditions);
+    expect(text).toContain('El crédito debe permanecer vigente.');
+    expect(text).toContain(es.partnerQuote.offerExplanation);
+    expect(text).toContain('La prima protege el saldo hipotecario usando el perfil autorizado.');
+    expect(text).toContain('Saldo hipotecario');
+    expect(text).toContain('$310.000.000 COP');
+    expect(text).toContain('Define la suma asegurada y la base del cálculo.');
+    expect(text).not.toContain('academico-v1');
+    expect(text).not.toContain('a'.repeat(64));
     expect(TestBed.inject(QUOTE_REQUEST_STORAGE).write).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalledWith(['/app/cotizaciones/ofertas']);
+  });
+
+  it('rechaza una explicacion incompleta sin mostrar una oferta parcial', async () => {
+    fillCustomer();
+    const request = await submit();
+    const response = result(request.request.body);
+    request.flush({
+      ...response,
+      oferta: {
+        ...response.oferta,
+        explicacion: {
+          ...response.oferta.explicacion,
+          factoresDeterminantes: [],
+        },
+      },
+    });
+    fixture.detectChanges();
+
+    expect(panel.result()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.errors.response);
+    expect(fixture.nativeElement.textContent).not.toContain(response.oferta.nombre);
   });
 
   it('muestra y envia exclusivamente vida hipotecaria', () => {

@@ -42,6 +42,7 @@ export function partnerResult(request = partnerRequest()): PartnerQuoteResult {
     recibidaEn: '2026-10-23T05:00:00Z',
     oferta: {
       id: '55555555-5555-4555-8555-555555555555',
+      version: 1,
       nombre: 'Plan recomendado',
       descripcion: 'Protección para el saldo hipotecario.',
       prima: { monto: '99000.00', moneda: 'COP' },
@@ -50,8 +51,38 @@ export function partnerResult(request = partnerRequest()): PartnerQuoteResult {
       deducible: 'Sin deducible',
       vigencia: '12 meses',
       coberturas: ['Fallecimiento'],
+      condiciones: ['El crédito debe permanecer vigente.'],
       beneficiosAdicionales: [],
       vigenteHasta: '2026-11-23T05:00:00Z',
+      explicacion: {
+        resumen: 'La prima protege el saldo hipotecario usando el perfil autorizado.',
+        factoresDeterminantes: [
+          {
+            nombre: 'Saldo hipotecario',
+            valor: '$180.000.000 COP',
+            impacto: 'Define la suma asegurada.',
+          },
+          {
+            nombre: 'Perfil de riesgo autorizado',
+            valor: 'Nivel A, score 0.35',
+            impacto: 'Ajusta la prima con la regla vigente.',
+          },
+        ],
+      },
+      trazabilidad: {
+        esquemaDecision: 1,
+        hashDecision: 'a'.repeat(64),
+        hashContenido: 'b'.repeat(64),
+        perfilId: '66666666-6666-4666-8666-666666666666',
+        perfilVersion: 1,
+        modeloPerfilVersion: 'perfil-v1',
+        reglaId: '77777777-7777-4777-8777-777777777777',
+        reglaVersion: 'academico-v1',
+        fuentes: [
+          { nombre: 'open_finance', version: 'v1' },
+          { nombre: 'open_data', version: 'v1' },
+        ],
+      },
     },
   };
 }
@@ -137,6 +168,30 @@ describe('HttpPartnerQuoteGateway', () => {
     { ...partnerResult(), perfilamientoReferencia: null },
     { ...partnerResult(), cotizacionId: 'invalido' },
     { ...partnerResult(), recibidaEn: 'ayer' },
+    {
+      ...partnerResult(),
+      oferta: { ...partnerResult().oferta, condiciones: [] },
+    },
+    {
+      ...partnerResult(),
+      oferta: {
+        ...partnerResult().oferta,
+        explicacion: {
+          ...partnerResult().oferta.explicacion,
+          factoresDeterminantes: [],
+        },
+      },
+    },
+    {
+      ...partnerResult(),
+      oferta: {
+        ...partnerResult().oferta,
+        trazabilidad: {
+          ...partnerResult().oferta.trazabilidad,
+          hashDecision: 'invalido',
+        },
+      },
+    },
   ])('no presenta una respuesta incompatible como exitosa: %j', (body) => {
     const failed = vi.fn();
     gateway.submit(partnerRequest()).subscribe({ error: failed });

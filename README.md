@@ -451,7 +451,11 @@ El correo, teléfono, fecha de nacimiento, UUID y consentimiento se resuelven en
 Solo una respuesta válida del servidor con `estado: "completada"` y asociación coincidente
 operación/socio/cliente/producto confirma el éxito. La pantalla presenta la oferta
 recomendada calculada por Cotización, con prima, periodicidad, cobertura, deducible,
-vigencia y fecha límite, sin mostrar referencias técnicas internas.
+vigencia, fecha límite, condiciones y explicación de los factores determinantes,
+sin recalcular rating o riesgo ni mostrar hashes y referencias técnicas internas.
+El cliente valida también la trazabilidad recibida; si faltan la explicación, sus
+factores, las condiciones o las versiones requeridas, no presenta una oferta parcial
+como válida.
 
 Antes de enviar se guarda únicamente operación y organización en la URL. Los reintentos
 en la misma página conservan UUID y cuerpo original; `Retry-After` impide reenvíos mientras
