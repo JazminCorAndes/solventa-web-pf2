@@ -121,7 +121,16 @@
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'mortgageProfiling.documentNumber' | transloco }}</mat-label>
-                <input matInput formControlName="documentNumber" autocomplete="off" />
+                <input
+                  matInput
+                  formControlName="documentNumber"
+                  autocomplete="off"
+                  maxlength="16"
+                  [appInputFilter]="documentNumberFilter(form.controls.documentType.value)"
+                  [attr.inputmode]="
+                    form.controls.documentType.value === 'passport' ? 'text' : 'numeric'
+                  "
+                />
                 @if (showError('documentNumber')) {
                   <mat-error>{{
                     'mortgageProfiling.validation.documentNumber' | transloco
@@ -136,8 +145,26 @@
                 }
               </mat-form-field>
               <mat-form-field appearance="outline">
+                <mat-label>{{ 'mortgageProfiling.phoneCountry' | transloco }}</mat-label>
+                <mat-select formControlName="phoneCountry">
+                  @for (option of callingCodes; track option.country) {
+                    <mat-option [value]="option.country">
+                      {{ option.name }} ({{ option.callingCode }})
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
                 <mat-label>{{ 'mortgageProfiling.phone' | transloco }}</mat-label>
-                <input matInput type="tel" formControlName="phone" autocomplete="tel" />
+                <input
+                  matInput
+                  type="tel"
+                  inputmode="numeric"
+                  formControlName="phone"
+                  autocomplete="tel-national"
+                  appInputFilter="digits"
+                  [maxlength]="phoneMaxLength(form.controls.phoneCountry.value)"
+                />
                 @if (showError('phone')) {
                   <mat-error>{{ 'mortgageProfiling.validation.phone' | transloco }}</mat-error>
                 }

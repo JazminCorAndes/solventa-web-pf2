@@ -19,6 +19,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { finalize, Observable, take } from 'rxjs';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
+import { documentNumberFilter, documentNumberPattern } from '../../core/market/document-number';
 import { DocumentType } from '../../core/auth/auth.models';
 import {
   clientInformationErrorKey,
@@ -27,12 +28,14 @@ import {
   HttpClientInformationGateway,
 } from '../../data-access/partners/http-client-information.gateway';
 import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gateway';
+import { InputFilterDirective } from '../../shared/input-filter/input-filter.directive';
 
 @Component({
   selector: 'app-client-information-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    InputFilterDirective,
     MatButtonModule,
     MatCardModule,
     MatFormFieldModule,
@@ -78,7 +81,16 @@ import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gatewa
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'clientInformation.documentNumber' | transloco }}</mat-label>
-                  <input matInput formControlName="documentNumber" autocomplete="off" />
+                  <input
+                    matInput
+                    formControlName="documentNumber"
+                    autocomplete="off"
+                    maxlength="16"
+                    [appInputFilter]="documentNumberFilter(form.controls.documentType.value)"
+                    [attr.inputmode]="
+                      form.controls.documentType.value === 'passport' ? 'text' : 'numeric'
+                    "
+                  />
                   <mat-hint>{{ 'clientInformation.documentHint' | transloco }}</mat-hint>
                   @if (
                     form.controls.documentNumber.touched && form.controls.documentNumber.invalid
@@ -246,6 +258,7 @@ export class ClientInformationPageComponent implements OnInit {
   readonly result = signal<ClientInformationResult | null>(null);
   readonly operationId = signal<string | null>(null);
   readonly documentTypes: readonly DocumentType[] = ['cc', 'ce', 'passport', 'ppt'];
+  readonly documentNumberFilter = documentNumberFilter;
   readonly form = this.builder.nonNullable.group({
     searchMode: this.builder.nonNullable.control<'document' | 'id'>('document'),
     documentType: this.builder.nonNullable.control<DocumentType>('cc'),
@@ -380,7 +393,7 @@ export class ClientInformationPageComponent implements OnInit {
       clientId.clearValidators();
       documentNumber.setValidators([
         Validators.required,
-        Validators.pattern(documentPattern(this.form.controls.documentType.value)),
+        Validators.pattern(documentNumberPattern(this.form.controls.documentType.value)),
       ]);
     } else {
       documentNumber.clearValidators();
@@ -389,14 +402,4 @@ export class ClientInformationPageComponent implements OnInit {
     clientId.updateValueAndValidity({ emitEvent: false });
     documentNumber.updateValueAndValidity({ emitEvent: false });
   }
-}
-
-function documentPattern(type: DocumentType): RegExp {
-  const patterns: Record<DocumentType, RegExp> = {
-    cc: /^[0-9]{6,10}$/,
-    ce: /^[0-9]{6,12}$/,
-    passport: /^[A-Za-z0-9]{5,16}$/,
-    ppt: /^[0-9]{7,10}$/,
-  };
-  return patterns[type];
 }

@@ -45,3 +45,7 @@ __screenshots__/
 # Archivos del sistema
 .DS_Store
 Thumbs.db
+
+# Configuracion local del agente de IA (skills, notas, MCP)
+/.claude/
+/.mcp.json

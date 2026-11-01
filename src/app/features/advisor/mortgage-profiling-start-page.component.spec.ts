@@ -45,7 +45,8 @@ describe('MortgageProfilingStartPageComponent', () => {
     documentType: 'cc' as const,
     documentNumber: '1023456789',
     birthDate: '1985-02-10',
-    phone: '+573001234567',
+    phoneCountry: 'CO',
+    phone: '3001234567',
     creditReference: 'HIP-001',
     creditAmount: 310_000_000,
     termMonths: 240,
@@ -111,8 +112,36 @@ describe('MortgageProfilingStartPageComponent', () => {
     expect(text).toContain(es.mortgageProfiling.resultBody);
     expect(start.mock.calls[0][0]).toMatchObject({
       partnerId: 'BANCO-001',
-      customer: { id: completed.customerId, birthDate: '1985-02-10' },
+      customer: {
+        id: completed.customerId,
+        birthDate: '1985-02-10',
+        documentNumber: '1023456789',
+        phone: '+573001234567',
+      },
     });
+  });
+
+  it('exige solo dígitos en documentos colombianos y admite letras en pasaporte', () => {
+    component.form.setValue({ ...validValue, documentNumber: 'AB123456' });
+    expect(component.form.controls.documentNumber.hasError('pattern')).toBe(true);
+
+    component.form.controls.documentType.setValue('passport');
+    expect(component.form.controls.documentNumber.valid).toBe(true);
+  });
+
+  it('une el indicativo elegido con el número nacional', () => {
+    component.form.setValue({ ...validValue, phoneCountry: 'MX', phone: '5512345678' });
+    component.submit();
+
+    expect(start.mock.calls[0][0]).toMatchObject({ customer: { phone: '+525512345678' } });
+  });
+
+  it('valida la longitud del número según el indicativo', () => {
+    component.form.setValue({ ...validValue, phone: '300123456' });
+    expect(component.form.controls.phone.hasError('pattern')).toBe(true);
+
+    component.form.controls.phoneCountry.setValue('ES');
+    expect(component.form.controls.phone.valid).toBe(true);
   });
 
   it('muestra un error identificable y permite reintentar sin marcar éxito', () => {
