@@ -24,13 +24,13 @@ export class BrowserOfferSelectionStorage implements OfferSelectionStorage {
   private readonly storage = inject(DOCUMENT).defaultView?.sessionStorage;
 
   read(): SelectedOfferRecord | null {
-    const value = this.storage?.getItem(SELECTION_KEY);
-    if (!value) {
+    const storedJson = this.storage?.getItem(SELECTION_KEY);
+    if (!storedJson) {
       return null;
     }
 
     try {
-      const parsed: unknown = JSON.parse(value);
+      const parsed: unknown = JSON.parse(storedJson);
       const selection = toSelectionRecord(parsed);
       if (selection) {
         return selection;

@@ -466,7 +466,7 @@ export class MockOfferGateway implements OfferGateway {
           throw new OfferUnavailableError();
         }
         const offer = offersFor(request.productId, request.productData).find(
-          (item) => item.id === offerId,
+          (candidateOffer) => candidateOffer.id === offerId,
         );
         if (
           !offer ||
