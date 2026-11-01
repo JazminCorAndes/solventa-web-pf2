@@ -58,15 +58,24 @@ habilitado tanto en identidad como en BFF web del entorno desechable.
 con login cifrado y crea un socio sintético mediante el CLI oficial de Identidad.
 El workflow fija `jobs.integrated.env.BACKEND_REVISION` en
 `.github/workflows/cypress-integrated.yml` al commit
-`4fbe81798962dea6780ddc3e56d00490d5a68796`, que incluye la oferta hipotecaria del
-socio, el consentimiento informado y la prioridad de imports del checkout de pruebas.
+`6a9aa08ab579c2321513e2d56204c4847d3464e6`, que conserva la oferta hipotecaria del
+socio, el consentimiento informado y la prioridad de imports del checkout de pruebas,
+y completa los clientes de JMeter por Identidad con documento, teléfono y nacimiento.
 Es una referencia del entorno de pruebas, no un destino de despliegue productivo.
 
 Revisión reproducible del backend público:
-[`4fbe81798962dea6780ddc3e56d00490d5a68796`](https://github.com/Migue765/backend-solventa/commit/4fbe81798962dea6780ddc3e56d00490d5a68796).
+[`6a9aa08ab579c2321513e2d56204c4847d3464e6`](https://github.com/Migue765/backend-solventa/commit/6a9aa08ab579c2321513e2d56204c4847d3464e6).
 El workflow usa ese SHA inmutable, no `develop` ni una rama que pueda cambiar.
 Esta revisión deja JMeter exclusivamente manual en el backend; el workflow web
 solo utiliza su helper de servicios y no ejecuta JMeter.
+
+El checkout del backend, la instalación de servicios y `partner_backend.py` usan
+el mismo directorio `.angular/cypress-backend`. El runner conserva los XML de esta
+suite en `reports/cypress/integrated/`, que publica el artefacto
+`cypress-integrated-results`. Los XML no incorporan el SHA del backend: su
+trazabilidad depende del SHA del workflow web y del checkout fijado en ese run.
+Cambiar el pin no acredita una nueva ejecución Linux; los resultados históricos
+de revisiones anteriores conservan su atribución original.
 
 ```powershell
 # Desde el repositorio web, con el Python que tenga las dependencias del backend:
