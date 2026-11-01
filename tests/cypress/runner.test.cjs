@@ -2,9 +2,29 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
-const { localUrl } = require('./run.cjs');
+const { localUrl, selectedSpec } = require('./run.cjs');
 const config = require('./cypress.config.cjs');
 const fs = require('node:fs');
+
+test('selecciona solo un spec sin ampliar su alcance ni mezclar suites', () => {
+  assert.equal(
+    selectedSpec('integrated', 'catalog.cy.ts'),
+    'tests/cypress/integrated/catalog.cy.ts',
+  );
+  assert.equal(selectedSpec('ui', 'payments.cy.ts'), 'tests/cypress/ui/payments.cy.ts');
+  assert.equal(selectedSpec('integrated'), 'tests/cypress/integrated/**/*.cy.ts');
+  for (const file of [
+    '',
+    '*.cy.ts',
+    '../ui/payments.cy.ts',
+    '..\\ui\\payments.cy.ts',
+    'catalog.cy.ts,journeys.cy.ts',
+    'C:\\catalog.cy.ts',
+  ]) {
+    assert.throws(() => selectedSpec('integrated', file), /un solo archivo/);
+  }
+  assert.throws(() => selectedSpec('../ui', 'catalog.cy.ts'), /ui\|integrated/);
+});
 
 test('solo registra la preparación de clientes en la suite integrada', () => {
   let registered = false;

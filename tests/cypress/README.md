@@ -106,6 +106,14 @@ El runner inicia Angular y un proxy temporal propio en `.angular/cypress`, verif
 respuesta HTTP y los cierra al terminar. No modifica `proxy.conf.json` (el desarrollo
 habitual conserva puerto 5001). `CYPRESS_WEB_PORT` permite otro puerto libre; por
 defecto 4300. Cada suite debe tener un puerto diferente si se ejecutan en paralelo.
+Para ejecutar solo el recorrido de catálogo, usar `node tests/cypress/run.cjs integrated catalog.cy.ts`
+con `CYPRESS_WEB_PORT` en un puerto libre propio. El tercer argumento acepta un único nombre
+`.cy.ts` de la suite, sin rutas ni comodines; no ejecuta los demás specs.
+Sus XML y evidencia JSON saneada quedan en `reports/cypress/integrated/catalog/`, separados
+de los informes de la suite completa. El caso usa login JWE, resumen/detalle reales y un único
+POST de cotización desde la UI hasta ofertas; no acepta ofertas ni realiza pagos.
+Exige los contratos exactos de los GET 404 iniciales por consentimiento y selección
+ausentes; cualquier otro fallo HTTP o diagnóstico inesperado hace fallar el caso.
 Al cerrar el helper backend se eliminan sus bases temporales: no se borran cuentas
 reales ni se presupone una API de limpieza inexistente.
 El helper escribe solo las URLs locales en `.angular/cypress/partner-backend.json`.

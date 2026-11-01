@@ -1,5 +1,5 @@
 const { spawn, spawnSync } = require('node:child_process');
-const { mkdir, writeFile, rm } = require('node:fs/promises');
+const { access, mkdir, writeFile, rm } = require('node:fs/promises');
 const path = require('node:path');
 const net = require('node:net');
 const { setTimeout: delay } = require('node:timers/promises');
@@ -20,11 +20,21 @@ function localUrl(value) {
   return url.origin;
 }
 
+function selectedSpec(mode, file) {
+  if (!['ui', 'integrated'].includes(mode)) throw new Error('Usa run.cjs ui|integrated');
+  if (file === undefined) return `tests/cypress/${mode}/**/*.cy.ts`;
+  if (!/^[a-z0-9][a-z0-9-]*\.cy\.ts$/i.test(file)) {
+    throw new Error('Selecciona un solo archivo .cy.ts de la suite, sin rutas ni comodines.');
+  }
+  return `tests/cypress/${mode}/${file}`;
+}
+
 async function main() {
   const mode = process.argv[2];
-  if (!['ui', 'integrated'].includes(mode)) {
-    throw new Error('Usa run.cjs ui|integrated');
-  }
+  const file = process.argv[3];
+  const specPattern = selectedSpec(mode, file);
+  if (process.argv.length > 4) throw new Error('Solo se permite seleccionar un spec.');
+  if (file !== undefined) await access(path.resolve(specPattern));
   const backend = localUrl(process.env.CYPRESS_BACKEND_URL || 'http://127.0.0.1:5000');
   if (mode === 'integrated') {
     if (process.env.CYPRESS_DISPOSABLE_BACKEND !== '1') {
@@ -106,13 +116,19 @@ async function main() {
       await delay(250);
     }
     if (!ready) throw new Error(`Angular no respondió en 120s:\n${output}`);
+    console.log(`Angular Cypress listo: PID ${server.pid}; puerto ${port}.`);
     // Electron must start as a browser, not inherit a desktop host's Node mode.
     delete process.env.ELECTRON_RUN_AS_NODE;
-    const reports = path.resolve('reports', 'cypress', mode);
+    const reports = path.resolve(
+      'reports',
+      'cypress',
+      mode,
+      ...(file ? [file.replace(/\.cy\.ts$/, '')] : []),
+    );
     await rm(reports, { recursive: true, force: true });
     const result = await require('cypress').run({
       configFile: 'tests/cypress/cypress.config.cjs',
-      config: { baseUrl, specPattern: `tests/cypress/${mode}/**/*.cy.ts` },
+      config: { baseUrl, specPattern },
       reporterOptions: { mochaFile: path.join(reports, 'results-[hash].xml'), toConsole: false },
       env: { suite: mode },
     });
@@ -129,7 +145,7 @@ async function main() {
   }
 }
 
-module.exports = { localUrl };
+module.exports = { localUrl, selectedSpec };
 if (require.main === module) {
   main().catch((error) => {
     console.error(error.message);
