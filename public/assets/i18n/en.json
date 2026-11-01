@@ -145,6 +145,14 @@
     "consultedAt": "Query date",
     "evidence": "Consulted sources",
     "newConsultation": "New query",
+    "review": {
+      "title": "Query review status",
+      "decision": "Backoffice decision",
+      "noData": "No authorized result retrieved",
+      "awaitingRead": "Waiting to recover the current status",
+      "refresh": "Read current status",
+      "readOnly": "Reading status does not repeat the operation. Data is retrieved only after application completes and current consent is checked."
+    },
     "data": {
       "indicadorRiesgo": "Risk indicator"
     },
@@ -153,6 +161,7 @@
       "document": "The number does not match the selected document type.",
       "consent": "The client does not have current consent covering this query.",
       "client": "The selected client is not registered.",
+      "operation": "No available result was found for this operation.",
       "forbidden": "The partner, product, or purpose is not authorized.",
       "conflict": "The operation identifier was already used with different data.",
       "unavailable": "Not all sources could be queried. Partial data is not shown."
@@ -703,6 +712,33 @@
     "resolutionSaved": "The service confirmed the decision.",
     "actor": "Responsible advisor",
     "resolvedAt": "Resolved",
+    "application": {
+      "title": "Application to the requesting process",
+      "filter": "Filter by application status",
+      "pendingDecisions": "Pending decisions",
+      "requester": "Requester identifier",
+      "product": "Product",
+      "updatedAt": "Application updated",
+      "attempts": "Confirmed applications",
+      "code": "Result code",
+      "ack": "Application acknowledgment",
+      "ackNotice": "This acknowledgment confirms durable application, not receipt by the requester.",
+      "noAck": "No confirmed application acknowledgment.",
+      "apply": "Recover pending application",
+      "refresh": "Refresh case status",
+      "legacy": "Historical case without a verified linked process. It cannot resume an operation.",
+      "uncertain": "The response could not be verified. Read the saved status; do not record another decision.",
+      "decisionNotice": "The decision does not confirm a successful query or extend consent.",
+      "emptyTitle": "No cases with this application status",
+      "emptyBody": "Try another filter to find pending decisions or applications.",
+      "status": {
+        "esperando_decision": "Query blocked: waiting for a decision",
+        "pendiente": "Decision saved: application pending",
+        "completada": "Application completed: result subject to current consent",
+        "bloqueada": "Application blocked: no result available; no reapplication",
+        "detenida": "Operation stopped after rejection: no sources are queried"
+      }
+    },
     "validation": {
       "reason": "Enter a non-empty reason containing 3 to 500 characters."
     },
@@ -710,14 +746,19 @@
       "advisor_context_unavailable": "This page is available only to advisors with authorized partners in their session.",
       "sesion_invalida": "Your session is invalid. Sign in again.",
       "socio_no_autorizado": "You are not authorized to view or resolve exceptions for this partner.",
+      "actor_no_autorizado": "The actor is no longer authorized for this operation.",
       "alcance_insuficiente": "Your session does not have the required scope for this action.",
       "excepcion_no_encontrada": "The requested exception was not found for this partner.",
       "excepcion_ya_resuelta": "This exception has already been resolved. Refresh before continuing.",
+      "decision_pendiente": "The decision is still pending. Refresh the case before applying it.",
+      "excepcion_sin_operacion": "This case has no linked operation that can be resumed.",
+      "conflicto_idempotencia": "The service has an operation with different data. Read its status before continuing.",
+      "version_no_soportada": "The service does not support this contract version.",
       "solicitud_invalida": "The request is invalid. Check the decision reason and try again.",
-      "servicio_no_disponible": "The service is unavailable. You can retry the request or decision.",
+      "servicio_no_disponible": "The response could not be confirmed. Read the saved status before continuing.",
       "consentimiento_ausente": "There is no current consent associated with this operation. The exception was not approved.",
       "consentimiento_no_vigente": "The consent is no longer current. The exception was not approved.",
-      "respuesta_invalida": "The service returned an incomplete or invalid response. The decision was not confirmed."
+      "respuesta_invalida": "The service response could not be verified. Read the saved status before continuing."
     }
   },
   "mortgageProfiling": {

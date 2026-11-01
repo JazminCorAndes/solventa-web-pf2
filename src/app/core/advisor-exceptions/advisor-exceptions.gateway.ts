@@ -3,11 +3,15 @@ import { Observable } from 'rxjs';
 import {
   AdvisorException,
   AdvisorExceptionDecision,
+  ExceptionApplicationFilter,
   ResolvedAdvisorException,
 } from './advisor-exceptions.models';
 
 export interface AdvisorExceptionsGateway {
-  list(socioId: string): Observable<AdvisorException[]>;
+  list(
+    socioId: string,
+    estadoAplicacion?: ExceptionApplicationFilter,
+  ): Observable<AdvisorException[]>;
   get(excepcionId: string, socioId: string): Observable<AdvisorException>;
   resolve(
     excepcionId: string,
@@ -15,6 +19,7 @@ export interface AdvisorExceptionsGateway {
     decision: AdvisorExceptionDecision,
     motivo: string,
   ): Observable<ResolvedAdvisorException>;
+  apply(excepcionId: string, socioId: string): Observable<ResolvedAdvisorException>;
 }
 
 export const ADVISOR_EXCEPTIONS_GATEWAY = new InjectionToken<AdvisorExceptionsGateway>(

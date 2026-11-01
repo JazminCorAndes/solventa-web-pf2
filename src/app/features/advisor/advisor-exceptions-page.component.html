@@ -39,6 +39,26 @@
       </mat-card-content>
     </mat-card>
 
+    @if (!exceptionId()) {
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'advisorExceptions.application.filter' | transloco }}</mat-label>
+        <mat-select
+          id="exception-application-filter"
+          [value]="applicationFilter() ?? ''"
+          (selectionChange)="selectApplication($event.value)"
+        >
+          <mat-option value="">{{
+            'advisorExceptions.application.pendingDecisions' | transloco
+          }}</mat-option>
+          @for (state of ['pendiente', 'completada', 'bloqueada', 'detenida']; track state) {
+            <mat-option [value]="state">{{
+              'advisorExceptions.application.status.' + state | transloco
+            }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+
     @if (unauthorizedRequestedSocio()) {
       <div class="inline-alert" role="alert">
         {{ 'advisorExceptions.errors.socio_no_autorizado' | transloco }}
@@ -64,10 +84,19 @@
         <a
           class="back-link"
           routerLink="/asesor/excepciones"
-          [queryParams]="{ socioId: item.socioId }"
+          [queryParams]="{ socioId: item.socioId, estadoAplicacion: applicationFilter() }"
         >
           {{ 'advisorExceptions.backToList' | transloco }}
         </a>
+        <button
+          mat-stroked-button
+          type="button"
+          class="refresh-exception"
+          [disabled]="resolving() || applying()"
+          (click)="retryLoad()"
+        >
+          {{ 'advisorExceptions.application.refresh' | transloco }}
+        </button>
         <mat-card appearance="outlined" class="exception-card">
           <mat-card-content>
             <div class="status-row">
@@ -159,6 +188,78 @@
           </mat-card-content>
         </mat-card>
 
+        @if (item.proceso; as process) {
+          <mat-card appearance="outlined" class="application-card">
+            <mat-card-content>
+              <h2>{{ 'advisorExceptions.application.title' | transloco }}</h2>
+              <p>
+                {{ 'advisorExceptions.application.requester' | transloco }}:
+                {{ process.actorSolicitanteId }}
+              </p>
+              <p>
+                {{ 'advisorExceptions.application.product' | transloco }}: {{ process.productoId }}
+              </p>
+              <p>{{ 'advisorExceptions.purpose' | transloco }}: {{ process.finalidad }}</p>
+              <p>
+                {{ 'advisorExceptions.data' | transloco }}:
+                {{ process.datosSolicitados.join(', ') }}
+              </p>
+              @if (item.aplicacion; as application) {
+                <p class="application-status" role="status">
+                  {{ 'advisorExceptions.application.status.' + application.estado | transloco }}
+                </p>
+                <p>
+                  {{ 'advisorExceptions.application.updatedAt' | transloco }}:
+                  {{ application.actualizadaEn }}
+                </p>
+                <p>
+                  {{ 'advisorExceptions.application.attempts' | transloco }}:
+                  {{ application.intentos }}
+                </p>
+                @if (application.codigo) {
+                  <p>
+                    {{ 'advisorExceptions.application.code' | transloco }}: {{ application.codigo }}
+                  </p>
+                }
+                @if (application.acuseId) {
+                  <p class="application-ack">
+                    {{ 'advisorExceptions.application.ack' | transloco }}: {{ application.acuseId }}
+                  </p>
+                  <p>{{ 'advisorExceptions.application.ackNotice' | transloco }}</p>
+                } @else {
+                  <p>{{ 'advisorExceptions.application.noAck' | transloco }}</p>
+                }
+                @if (canApply() || applying()) {
+                  <button
+                    mat-flat-button
+                    type="button"
+                    class="apply-operation"
+                    [disabled]="applying()"
+                    (click)="apply()"
+                  >
+                    {{ 'advisorExceptions.application.apply' | transloco }}
+                  </button>
+                }
+              }
+            </mat-card-content>
+          </mat-card>
+        } @else {
+          <p class="legacy-notice">{{ 'advisorExceptions.application.legacy' | transloco }}</p>
+        }
+        @if (mutationUncertain()) {
+          <div class="inline-alert" role="alert">
+            <p>{{ 'advisorExceptions.application.uncertain' | transloco }}</p>
+            <button mat-stroked-button type="button" (click)="retryLoad()">
+              {{ 'advisorExceptions.retry' | transloco }}
+            </button>
+          </div>
+        }
+        @if (resolveErrorCode(); as error) {
+          <div class="inline-alert" role="alert">
+            {{ 'advisorExceptions.errors.' + error | transloco }}
+          </div>
+        }
+
         @if (item.estado === 'pendiente' && !resolved()) {
           <mat-card appearance="outlined" class="resolution-card">
             <mat-card-content>
@@ -166,18 +267,23 @@
               <form [formGroup]="reasonForm" (ngSubmit)="resolve('aprobar')" novalidate>
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'advisorExceptions.resolutionReason' | transloco }}</mat-label>
-                  <textarea matInput rows="4" maxlength="500" formControlName="motivo"></textarea>
+                  <textarea
+                    matInput
+                    rows="4"
+                    maxlength="500"
+                    formControlName="motivo"
+                    [readonly]="resolving() || mutationUncertain()"
+                  ></textarea>
                   @if (showReasonError()) {
                     <mat-error>{{ 'advisorExceptions.validation.reason' | transloco }}</mat-error>
                   }
                 </mat-form-field>
-                @if (resolveErrorCode(); as error) {
-                  <div class="inline-alert" role="alert">
-                    {{ 'advisorExceptions.errors.' + error | transloco }}
-                  </div>
-                }
                 <div class="actions">
-                  <button mat-flat-button type="submit" [disabled]="resolving()">
+                  <button
+                    mat-flat-button
+                    type="submit"
+                    [disabled]="resolving() || mutationUncertain()"
+                  >
                     @if (resolving()) {
                       <mat-spinner diameter="20" />
                     }
@@ -186,7 +292,7 @@
                   <button
                     mat-stroked-button
                     type="button"
-                    [disabled]="resolving()"
+                    [disabled]="resolving() || mutationUncertain()"
                     (click)="resolve('rechazar')"
                   >
                     {{ 'advisorExceptions.reject' | transloco }}
@@ -200,6 +306,7 @@
         @if (resolved(); as resolution) {
           <div class="success-alert" role="status" aria-live="polite">
             <strong>{{ 'advisorExceptions.resolutionSaved' | transloco }}</strong>
+            <span>{{ 'advisorExceptions.application.decisionNotice' | transloco }}</span>
             <span>{{ 'advisorExceptions.status.' + resolution.estado | transloco }}</span>
             <span>{{ 'advisorExceptions.actor' | transloco }}: {{ resolution.actorId }}</span>
             <span
@@ -218,8 +325,22 @@
     } @else if (exceptions().length === 0) {
       <mat-card appearance="outlined" class="empty-state" role="status">
         <mat-card-content>
-          <h2>{{ 'advisorExceptions.emptyTitle' | transloco }}</h2>
-          <p>{{ 'advisorExceptions.emptyBody' | transloco }}</p>
+          <h2>
+            {{
+              (applicationFilter()
+                ? 'advisorExceptions.application.emptyTitle'
+                : 'advisorExceptions.emptyTitle'
+              ) | transloco
+            }}
+          </h2>
+          <p>
+            {{
+              (applicationFilter()
+                ? 'advisorExceptions.application.emptyBody'
+                : 'advisorExceptions.emptyBody'
+              ) | transloco
+            }}
+          </p>
         </mat-card-content>
       </mat-card>
     } @else {
@@ -239,10 +360,15 @@
                 {{ item.estadoAnterior ?? ('advisorExceptions.notAvailable' | transloco) }}
               </p>
               <p>{{ item.creadoEn }}</p>
+              @if (item.aplicacion; as application) {
+                <p>
+                  {{ 'advisorExceptions.application.status.' + application.estado | transloco }}
+                </p>
+              }
               <a
                 mat-flat-button
                 [routerLink]="['/asesor/excepciones', item.excepcionId]"
-                [queryParams]="{ socioId: item.socioId }"
+                [queryParams]="{ socioId: item.socioId, estadoAplicacion: applicationFilter() }"
               >
                 {{ 'advisorExceptions.viewDetail' | transloco }}
               </a>

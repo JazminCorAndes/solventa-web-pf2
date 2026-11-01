@@ -5,12 +5,13 @@ No hay otra aplicación demo, servidor de negocio simulado ni adaptación del pr
 para hacer pasar pruebas. Las pruebas unitarias Vitest siguen cubriendo lógica,
 adaptadores y casos de borde; Cypress añade interacción real del navegador.
 
-## Dos suites con evidencia distinta
+## Suites con evidencia distinta
 
 | Suite         | Qué demuestra                                                                                                              | Qué no demuestra                                                                      |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `ui/`         | Formularios, rutas, consentimiento, errores, reintentos y presentación bajo respuestas HTTP controladas con `cy.intercept` | Autenticación, persistencia o integridad de servicios reales                          |
 | `integrated/` | Navegador → BFF web → identidad, perfilamiento, cotización y pólizas reales, con bases temporales migradas                 | Producción, Open Finance real, pasarela bancaria, firma legal, rendimiento bajo carga |
+| `controlled/` | Escenario explícito HU44 con servicios reales y un fallo HTTP de despacho controlado por el propietario del backend        | No acredita caída TCP, reinicio, worker automático, fuentes financieras reales ni AWS |
 
 `integrated/` no importa fixtures de `ui/` ni reemplaza respuestas de negocio.
 Los interceptores de esa suite observan peticiones para correlacionar sus resultados.
@@ -58,14 +59,13 @@ habilitado tanto en identidad como en BFF web del entorno desechable.
 con login cifrado y crea un socio sintético mediante el CLI oficial de Identidad.
 El workflow fija `jobs.integrated.env.BACKEND_REVISION` en
 `.github/workflows/cypress-integrated.yml` al commit
-`95a487c83618f983db81c9994588ddb50b7043f6`, que añade preselección durable,
-recuperación canónica y aceptación con revisión, conservando los contratos anteriores.
-Requiere aplicar `upgrade head`, incluida la migración `0017` de
-`selecciones_provisionales` sobre `conciliacion_emision`, antes de iniciar la web.
+`d0a3145918c019b1cfb347faa1a8d0d5d05dac8d`, que incorpora la operación HU44 vinculada,
+decisión y aplicación durables, conservando preselección y aceptación con revisión.
+Requiere aplicar todas sus migraciones mediante `upgrade head` antes de iniciar la web.
 Es una referencia del entorno de pruebas, no un destino de despliegue productivo.
 
 Revisión reproducible del backend público:
-[`95a487c83618f983db81c9994588ddb50b7043f6`](https://github.com/Migue765/backend-solventa/commit/95a487c83618f983db81c9994588ddb50b7043f6).
+[`d0a3145918c019b1cfb347faa1a8d0d5d05dac8d`](https://github.com/Migue765/backend-solventa/commit/d0a3145918c019b1cfb347faa1a8d0d5d05dac8d).
 El workflow usa ese SHA inmutable, no `develop` ni una rama que pueda cambiar.
 Esta revisión deja JMeter exclusivamente manual en el backend; el workflow web
 solo utiliza su helper de servicios y no ejecuta JMeter.
@@ -130,6 +130,54 @@ La tarea Node de Cypress comprueba que Identidad y el navegador pertenezcan al
 mismo entorno desechable antes de registrar clientes; no sigue redirecciones.
 No arrancar dos helpers en el mismo checkout. Para cerrarlo, usar Ctrl+C o eliminar
 ese manifiesto temporal y esperar su salida; no matar solo el proceso padre de Python.
+
+### Muestra HU44 con fallo de despacho controlado
+
+`controlled/open-finance-review.cy.ts` exige una selección explícita; no pertenece
+al glob habitual de `integrated/` ni al workflow manual anterior. No se omite si
+faltan sus prerrequisitos: el runner falla antes de iniciar la web o enviar HTTP.
+El propietario del backend prepara un único entorno d0 con socio/asesor legítimos
+por CLI de Identidad, tres clientes sintéticos consentidos y ninguna excepción
+insertada. Orden: completada por recuperación explícita, detenida por rechazo,
+bloqueada por fuente. El formulario real genera las tres operaciones.
+
+El primer despacho de aplicación responde una sola HTTP503, después de persistir
+la decisión y antes del handler de aplicación. La muestra exige GET canónico
+aprobado/pendiente/sin acuse, recarga, filtro pendiente y POST explícito `/aplicar`
+con `{}`; no vuelve a decidir. Luego comprueba los tres filtros terminales,
+sus recibos recargados, el mismo ACK leído por el socio y datos solo para completada.
+La disponibilidad de `open_finance` y ese fallo de entrega son controles de la
+muestra backend, no mocks de autenticación/BFF ni nuevas reglas de producto.
+
+Antes del arranque se fija el SHA web publicado y el SHA256 de los bytes exactos
+del spec. El runner exige árbol limpio, coincidencia de SHA/spec/run_id, estado
+`ready`, readiness vigente, wiring permanente verificado, recuperación automática
+deshabilitada y `delivery_fault.enabled=true, consumed=false`. El status contiene
+las URLs y la ruta privada de credenciales; la fixture pública contiene los IDs
+y documentos sintéticos. Los tres archivos deben pertenecer al mismo run.
+
+Con los valores entregados por el propietario, no placeholders:
+
+```powershell
+$env:CYPRESS_DISPOSABLE_BACKEND='1'
+$env:CYPRESS_BACKEND_URL=$bffUrl
+$env:CYPRESS_WEB_PORT=$puertoWebPropio
+$env:CYPRESS_HU44_STATUS_FILE=$rutaAbsolutaStatus
+$env:CYPRESS_HU44_FIXTURE_FILE=$rutaAbsolutaFixture
+$env:CYPRESS_HU44_RUN_ID=$runId
+node tests\cypress\run.cjs controlled open-finance-review.cy.ts
+```
+
+El puerto web es obligatorio y distinto de 4200/4300. El preflight anónimo de
+productos registra su status y hora de finalización fuera de la ventana UI.
+Las credenciales solo se leen para login JWE de esos actores, sin copiarlas al
+repositorio ni informes. No hay nuevas altas, capturas, grabaciones ni cambios
+AWS. XML y evidencia saneada quedan en
+`reports/cypress/controlled/open-finance-review/`; el XML posterior a las guardas
+de consola determina el resultado. Después de no más solicitudes, el propietario
+realiza el cotejo SQL y cierra su backend mediante el protocolo de ACK del run;
+este runner solo cierra Angular y su proxy propios. Preparar o compilar el spec
+no acredita haber ejecutado la muestra.
 
 ## Cobertura funcional
 

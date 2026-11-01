@@ -145,6 +145,14 @@
     "consultedAt": "Fecha de consulta",
     "evidence": "Fuentes consultadas",
     "newConsultation": "Nueva consulta",
+    "review": {
+      "title": "Estado de la consulta en revisión",
+      "decision": "Decisión del backoffice",
+      "noData": "Sin resultado autorizado consultado",
+      "awaitingRead": "Pendiente de recuperar el estado",
+      "refresh": "Consultar estado actual",
+      "readOnly": "Consultar el estado no repite la operación. Los datos se recuperan solo tras completar la aplicación y validar el consentimiento vigente."
+    },
     "data": {
       "indicadorRiesgo": "Indicador de riesgo"
     },
@@ -153,6 +161,7 @@
       "document": "El número no corresponde al tipo de documento seleccionado.",
       "consent": "El cliente no tiene un consentimiento vigente que cubra esta consulta.",
       "client": "El cliente seleccionado no está registrado.",
+      "operation": "No se encontró un resultado disponible para esta operación.",
       "forbidden": "El socio, producto o finalidad no están autorizados.",
       "conflict": "El identificador de operación ya fue utilizado con otros datos.",
       "unavailable": "No fue posible consultar todas las fuentes. No se muestran datos parciales."
@@ -703,6 +712,33 @@
     "resolutionSaved": "La decisión fue confirmada por el servicio.",
     "actor": "Asesor responsable",
     "resolvedAt": "Resuelta",
+    "application": {
+      "title": "Aplicación al proceso solicitante",
+      "filter": "Consultar por estado de aplicación",
+      "pendingDecisions": "Decisiones pendientes",
+      "requester": "Identificador del solicitante",
+      "product": "Producto",
+      "updatedAt": "Aplicación actualizada",
+      "attempts": "Aplicaciones confirmadas",
+      "code": "Código del resultado",
+      "ack": "Acuse de aplicación",
+      "ackNotice": "Este acuse confirma la aplicación durable, no la recepción por el solicitante.",
+      "noAck": "Sin acuse de aplicación confirmado.",
+      "apply": "Recuperar aplicación pendiente",
+      "refresh": "Actualizar estado del caso",
+      "legacy": "Caso histórico sin proceso vinculado verificado. No permite reanudar una operación.",
+      "uncertain": "La respuesta no pudo verificarse. Consulta el estado guardado; no registres otra decisión.",
+      "decisionNotice": "La decisión no confirma una consulta exitosa ni amplía el consentimiento.",
+      "emptyTitle": "No hay casos con este estado de aplicación",
+      "emptyBody": "Prueba otro filtro para consultar decisiones o aplicaciones pendientes.",
+      "status": {
+        "esperando_decision": "Consulta bloqueada: pendiente de decisión",
+        "pendiente": "Decisión guardada: aplicación pendiente",
+        "completada": "Aplicación completada: resultado sujeto al consentimiento actual",
+        "bloqueada": "Aplicación bloqueada: sin resultado disponible; no se reaplica",
+        "detenida": "Operación detenida por rechazo: no se consultan fuentes"
+      }
+    },
     "validation": {
       "reason": "Ingresa un motivo no vacío de 3 a 500 caracteres."
     },
@@ -710,14 +746,19 @@
       "advisor_context_unavailable": "Esta pantalla está disponible únicamente para asesores con socios autorizados en su sesión.",
       "sesion_invalida": "Tu sesión no es válida. Inicia sesión nuevamente.",
       "socio_no_autorizado": "No tienes autorización para consultar o resolver excepciones de este socio.",
+      "actor_no_autorizado": "El actor ya no tiene autorización para esta operación.",
       "alcance_insuficiente": "Tu sesión no cuenta con el alcance necesario para esta acción.",
       "excepcion_no_encontrada": "No se encontró la excepción solicitada para este socio.",
       "excepcion_ya_resuelta": "Esta excepción ya fue resuelta. Actualiza la información antes de continuar.",
+      "decision_pendiente": "La decisión aún está pendiente. Actualiza el caso antes de aplicar.",
+      "excepcion_sin_operacion": "Este caso no tiene una operación vinculada que pueda reanudarse.",
+      "conflicto_idempotencia": "El servicio conserva una operación con otros datos. Consulta su estado antes de continuar.",
+      "version_no_soportada": "La versión del contrato no está soportada por el servicio.",
       "solicitud_invalida": "La solicitud no es válida. Revisa el motivo de la decisión e inténtalo nuevamente.",
-      "servicio_no_disponible": "El servicio no está disponible. Puedes reintentar la consulta o decisión.",
+      "servicio_no_disponible": "No se pudo confirmar la respuesta. Consulta el estado guardado antes de continuar.",
       "consentimiento_ausente": "No existe un consentimiento vigente asociado a esta operación. No se aprobó la excepción.",
       "consentimiento_no_vigente": "El consentimiento ya no está vigente. No se aprobó la excepción.",
-      "respuesta_invalida": "El servicio devolvió una respuesta incompleta o inválida. No se confirmó la decisión."
+      "respuesta_invalida": "No se pudo verificar la respuesta del servicio. Consulta el estado guardado antes de continuar."
     }
   },
   "mortgageProfiling": {

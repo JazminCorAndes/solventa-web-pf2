@@ -19,14 +19,29 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { finalize, Observable, Subject, take, takeUntil } from 'rxjs';
+import {
+  catchError,
+  EMPTY,
+  finalize,
+  map,
+  Observable,
+  of,
+  Subject,
+  switchMap,
+  take,
+  takeUntil,
+  throwError,
+} from 'rxjs';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
 import { documentNumberFilter, documentNumberPattern } from '../../core/market/document-number';
 import { DocumentType } from '../../core/auth/auth.models';
 import {
   clientInformationErrorKey,
+  clientInformationStatusMissing,
   ClientInformationRequest,
   ClientInformationResult,
+  ClientInformationReview,
+  ClientInformationReviewRequired,
   HttpClientInformationGateway,
 } from '../../data-access/partners/http-client-information.gateway';
 import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gateway';
@@ -128,7 +143,10 @@ interface ConsultationScope {
                     ? ('clientInformation.data.indicadorRiesgo' | transloco) +
                       ': ' +
                       result()!.datos['indicadorRiesgo']
-                    : ('clientInformation.pendingValue' | transloco)
+                    : ((recoveringOperation()
+                        ? 'clientInformation.review.noData'
+                        : 'clientInformation.pendingValue'
+                      ) | transloco)
                 }}</strong>
               </div>
               <div class="summary-field">
@@ -136,7 +154,13 @@ interface ConsultationScope {
                 <strong>{{
                   result()
                     ? ('clientInformation.completed' | transloco)
-                    : ('clientInformation.pendingValue' | transloco)
+                    : review()
+                      ? ('advisorExceptions.application.status.' + review()!.aplicacion.estado
+                        | transloco)
+                      : ((recoveringOperation()
+                          ? 'clientInformation.review.awaitingRead'
+                          : 'clientInformation.pendingValue'
+                        ) | transloco)
                 }}</strong>
               </div>
               <div class="summary-field">
@@ -145,7 +169,10 @@ interface ConsultationScope {
                   result()
                     ? ('clientInformation.consentVersion'
                       | transloco: { version: result()!.consentimientoVersion })
-                    : ('clientInformation.pendingValue' | transloco)
+                    : ((recoveringOperation()
+                        ? 'clientInformation.review.noData'
+                        : 'clientInformation.pendingValue'
+                      ) | transloco)
                 }}</strong>
               </div>
             </div>
@@ -169,6 +196,43 @@ interface ConsultationScope {
               </section>
             }
 
+            @if (review(); as pending) {
+              <section class="review-state" aria-live="polite">
+                <h2>{{ 'clientInformation.review.title' | transloco }}</h2>
+                <p>{{ 'advisorExceptions.application.decisionNotice' | transloco }}</p>
+                <p class="review-decision">
+                  {{ 'clientInformation.review.decision' | transloco }}:
+                  {{ 'advisorExceptions.status.' + pending.estadoDecision | transloco }}
+                </p>
+                <p class="review-application" role="status">
+                  {{
+                    'advisorExceptions.application.status.' + pending.aplicacion.estado | transloco
+                  }}
+                </p>
+                <p>{{ 'clientInformation.operationId' | transloco }}: {{ pending.operationId }}</p>
+                <p>{{ 'advisorExceptions.exceptionId' | transloco }}: {{ pending.excepcionId }}</p>
+                <p>{{ 'clientInformation.clientId' | transloco }}: {{ pending.clienteId }}</p>
+                <p>{{ 'clientInformation.partner' | transloco }}: {{ pending.socioId }}</p>
+                <p>{{ 'clientInformation.product' | transloco }}: {{ pending.productoId }}</p>
+                @if (pending.aplicacion.codigo) {
+                  <p>
+                    {{ 'advisorExceptions.application.code' | transloco }}:
+                    {{ pending.aplicacion.codigo }}
+                  </p>
+                }
+                @if (pending.aplicacion.acuseId) {
+                  <p class="review-ack">
+                    {{ 'advisorExceptions.application.ack' | transloco }}:
+                    {{ pending.aplicacion.acuseId }}
+                  </p>
+                  <p>{{ 'advisorExceptions.application.ackNotice' | transloco }}</p>
+                } @else {
+                  <p>{{ 'advisorExceptions.application.noAck' | transloco }}</p>
+                }
+                <p>{{ 'clientInformation.review.readOnly' | transloco }}</p>
+              </section>
+            }
+
             <p class="notice">{{ 'clientInformation.minimumDataNotice' | transloco }}</p>
             @if (errorKey(); as key) {
               <p class="error" role="alert">{{ key | transloco }}</p>
@@ -177,7 +241,7 @@ interface ConsultationScope {
               <button mat-flat-button type="button" (click)="newConsultation()">
                 {{ 'clientInformation.newConsultation' | transloco }}
               </button>
-            } @else {
+            } @else if (!recoveringOperation()) {
               <button mat-flat-button type="submit" [disabled]="loading()">
                 @if (loading()) {
                   <mat-spinner diameter="20" />
@@ -185,6 +249,17 @@ interface ConsultationScope {
                 } @else {
                   {{ 'clientInformation.viewDetail' | transloco }}
                 }
+              </button>
+            }
+            @if (recoveringOperation()) {
+              <button
+                mat-stroked-button
+                type="button"
+                class="refresh-review"
+                [disabled]="loading()"
+                (click)="refreshStatus()"
+              >
+                {{ 'clientInformation.review.refresh' | transloco }}
               </button>
             }
           </form>
@@ -272,6 +347,8 @@ export class ClientInformationPageComponent {
   readonly loading = signal(false);
   readonly errorKey = signal<string | null>(null);
   readonly result = signal<ClientInformationResult | null>(null);
+  readonly review = signal<ClientInformationReview | null>(null);
+  readonly recoveringOperation = signal(false);
   readonly operationId = signal<string | null>(null);
   readonly documentTypes: readonly DocumentType[] = ['cc', 'ce', 'passport', 'ppt'];
   readonly documentNumberFilter = documentNumberFilter;
@@ -334,11 +411,11 @@ export class ClientInformationPageComponent {
     }
     this.operationId.set(operationId);
     this.form.disable({ emitEvent: false });
-    this.run(this.gateway.load(operationId, partnerId), this.requestScope(operationId));
+    this.recoverOperation(operationId, partnerId);
   }
 
   submit(): void {
-    if (this.loading() || this.result()) return;
+    if (this.loading() || this.result() || this.review() || this.recoveringOperation()) return;
     this.errorKey.set(null);
     if (
       !this.context() ||
@@ -404,7 +481,53 @@ export class ClientInformationPageComponent {
       });
   }
 
-  private run(operation: Observable<ClientInformationResult>, scope: ConsultationScope): void {
+  refreshStatus(): void {
+    if (this.loading()) return;
+    const operationId = this.operationId();
+    const partner = this.partner();
+    if (!operationId || !partner || this.activeContext !== this.contextKey()) {
+      this.errorKey.set('clientInformation.errors.forbidden');
+      return;
+    }
+    this.requestGeneration++;
+    this.contextInvalidated.next();
+    this.recoverOperation(operationId, partner.socioId);
+  }
+
+  private recoverOperation(operationId: string, socioId: string): void {
+    const scope = this.requestScope(operationId);
+    this.result.set(null);
+    this.review.set(null);
+    this.errorKey.set(null);
+    this.recoveringOperation.set(true);
+    this.form.disable({ emitEvent: false });
+    const operation = this.gateway.loadStatus(operationId, socioId).pipe(
+      catchError((error: unknown) =>
+        clientInformationStatusMissing(error) ? of(null) : throwError(() => error),
+      ),
+      switchMap((review) => {
+        if (!this.isCurrentRequest(scope)) return EMPTY;
+        this.review.set(review);
+        if (review && review.aplicacion.estado !== 'completada') return of(null);
+        return this.gateway.load(operationId, socioId).pipe(
+          map((result) => {
+            if (
+              review &&
+              (result.clienteId !== review.clienteId || result.productoId !== review.productoId)
+            )
+              throw new Error('Client information does not match the reviewed operation.');
+            return result;
+          }),
+        );
+      }),
+    );
+    this.run(operation, scope);
+  }
+
+  private run(
+    operation: Observable<ClientInformationResult | null>,
+    scope: ConsultationScope,
+  ): void {
     this.loading.set(true);
     operation
       .pipe(
@@ -414,7 +537,8 @@ export class ClientInformationPageComponent {
         finalize(() => {
           if (!this.isCurrentRequest(scope)) return;
           this.loading.set(false);
-          if (!this.result()) this.form.enable({ emitEvent: false });
+          if (!this.result() && !this.review() && !this.recoveringOperation())
+            this.form.enable({ emitEvent: false });
         }),
       )
       .subscribe({
@@ -422,7 +546,15 @@ export class ClientInformationPageComponent {
           if (this.isCurrentRequest(scope)) this.result.set(result);
         },
         error: (error: unknown) => {
-          if (this.isCurrentRequest(scope)) this.errorKey.set(clientInformationErrorKey(error));
+          if (!this.isCurrentRequest(scope)) return;
+          this.result.set(null);
+          if (error instanceof ClientInformationReviewRequired) {
+            this.review.set(error.review);
+            this.recoveringOperation.set(true);
+          } else {
+            this.review.set(null);
+            this.errorKey.set(clientInformationErrorKey(error, this.recoveringOperation()));
+          }
         },
       });
   }
@@ -442,6 +574,8 @@ export class ClientInformationPageComponent {
     this.contextInvalidated.next();
     this.loading.set(false);
     this.result.set(null);
+    this.review.set(null);
+    this.recoveringOperation.set(false);
     this.errorKey.set(null);
     this.operationId.set(null);
     this.form.reset(

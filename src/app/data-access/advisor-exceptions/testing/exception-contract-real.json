@@ -1,0 +1,426 @@
+{
+  "backendRevision": "d0a3145918c019b1cfb347faa1a8d0d5d05dac8d",
+  "sourceSha256": "6a6af512702587febf5c9935a8828002fb37bb54b9fa3c43ff84bcfaf2da1b30",
+  "cases": [
+    {
+      "blockedProblem": {
+        "code": "consulta_bloqueada",
+        "correlationId": "a84eea23-b873-4542-a4c5-b232f8a3ee59",
+        "detail": "No fue posible consultar informacion autorizada del cliente.",
+        "operacion": {
+          "aplicacion": {
+            "actualizadaEn": "2026-11-01T23:00:18.889525Z",
+            "acuseId": null,
+            "codigo": null,
+            "estado": "esperando_decision",
+            "intentos": 0
+          },
+          "clienteId": "087e7da0-f3b1-46b0-a909-a3992db5b77c",
+          "estadoDecision": "pendiente",
+          "excepcionId": "fc0c1d59-7eae-4783-8aa1-7328fa477181",
+          "operationId": "c4c7fbbf-d74c-4023-92d2-10a858024d1a",
+          "productoId": "mortgage-life",
+          "socioId": "HU44-HTTP"
+        },
+        "status": 503,
+        "title": "Consulta no disponible",
+        "type": "https://api.solventa.co/problems/consulta_bloqueada"
+      },
+      "pending": {
+        "actorId": null,
+        "alcance": "open_finance",
+        "aplicacion": {
+          "actualizadaEn": "2026-11-01T23:00:18.889525Z",
+          "acuseId": null,
+          "codigo": null,
+          "estado": "esperando_decision",
+          "intentos": 0
+        },
+        "clienteId": "087e7da0-f3b1-46b0-a909-a3992db5b77c",
+        "codigo": "fuente_no_disponible",
+        "consentimiento": {
+          "datos": ["indicador_riesgo"],
+          "estado": "autorizado",
+          "finalidad": "cotizacion",
+          "fuentes": ["open_finance", "open_data"],
+          "id": "9f685704-bebc-4a6b-8af1-ac97e1857ed3",
+          "version": 1,
+          "vigenteHasta": "2026-11-02T23:00:18.718926Z"
+        },
+        "correlationId": "a84eea23-b873-4542-a4c5-b232f8a3ee59",
+        "creadoEn": "2026-11-01T23:00:18.889525Z",
+        "datos": ["indicador_riesgo"],
+        "decision": null,
+        "estado": "pendiente",
+        "estadoAnterior": "procesamiento_automatico_bloqueado",
+        "excepcionId": "fc0c1d59-7eae-4783-8aa1-7328fa477181",
+        "finalidad": "cotizacion",
+        "idempotente": false,
+        "motivo": null,
+        "motivoBloqueo": "HU44: open_finance sin respuesta ni cache integra, vigente y autorizada.",
+        "operationId": "c4c7fbbf-d74c-4023-92d2-10a858024d1a",
+        "proceso": {
+          "actorSolicitanteId": "3d940c6e-3373-4f0e-8b06-a6f18f639166",
+          "datosSolicitados": ["indicador_riesgo"],
+          "finalidad": "cotizacion",
+          "productoId": "mortgage-life",
+          "tipo": "consulta_informacion_cliente"
+        },
+        "resueltaEn": null,
+        "socioId": "HU44-HTTP",
+        "trazabilidad": {
+          "alcance": "open_finance",
+          "correlationId": "a84eea23-b873-4542-a4c5-b232f8a3ee59",
+          "creadoEn": "2026-11-01T23:00:18.889525+00:00",
+          "estadoActual": "pendiente",
+          "estadoAnterior": "procesamiento_automatico_bloqueado"
+        }
+      },
+      "applied": {
+        "actorId": "5f6bf45b-c3f6-47e2-987a-1bbced514481",
+        "alcance": "open_finance",
+        "aplicacion": {
+          "actualizadaEn": "2026-11-01T23:00:19.295151Z",
+          "acuseId": "6947211e-3324-41d1-942f-8661eba12681",
+          "codigo": "consulta_disponible",
+          "estado": "completada",
+          "intentos": 1
+        },
+        "clienteId": "087e7da0-f3b1-46b0-a909-a3992db5b77c",
+        "codigo": "fuente_no_disponible",
+        "consentimiento": {
+          "datos": ["indicador_riesgo"],
+          "estado": "autorizado",
+          "finalidad": "cotizacion",
+          "fuentes": ["open_finance", "open_data"],
+          "id": "9f685704-bebc-4a6b-8af1-ac97e1857ed3",
+          "version": 1,
+          "vigenteHasta": "2026-11-02T23:00:18.718926Z"
+        },
+        "correlationId": "f789548f-20da-434f-9947-13d7235507f6",
+        "creadoEn": "2026-11-01T23:00:18.889525Z",
+        "datos": ["indicador_riesgo"],
+        "decision": "aprobar",
+        "estado": "aprobada",
+        "estadoAnterior": "pendiente",
+        "excepcionId": "fc0c1d59-7eae-4783-8aa1-7328fa477181",
+        "finalidad": "cotizacion",
+        "idempotente": false,
+        "motivo": "Revision de la operacion sintetica bloqueada",
+        "motivoBloqueo": "HU44: open_finance sin respuesta ni cache integra, vigente y autorizada.",
+        "operationId": "c4c7fbbf-d74c-4023-92d2-10a858024d1a",
+        "proceso": {
+          "actorSolicitanteId": "3d940c6e-3373-4f0e-8b06-a6f18f639166",
+          "datosSolicitados": ["indicador_riesgo"],
+          "finalidad": "cotizacion",
+          "productoId": "mortgage-life",
+          "tipo": "consulta_informacion_cliente"
+        },
+        "resueltaEn": "2026-11-01T23:00:18.984418Z",
+        "socioId": "HU44-HTTP",
+        "trazabilidad": {
+          "alcance": "open_finance",
+          "correlationId": "f789548f-20da-434f-9947-13d7235507f6",
+          "creadoEn": "2026-11-01T23:00:18.889525+00:00",
+          "estadoActual": "aprobada",
+          "estadoAnterior": "pendiente"
+        }
+      },
+      "requester": {
+        "aplicacion": {
+          "actualizadaEn": "2026-11-01T23:00:19.295151Z",
+          "acuseId": "6947211e-3324-41d1-942f-8661eba12681",
+          "codigo": "consulta_disponible",
+          "estado": "completada",
+          "intentos": 1
+        },
+        "clienteId": "087e7da0-f3b1-46b0-a909-a3992db5b77c",
+        "estadoDecision": "aprobada",
+        "excepcionId": "fc0c1d59-7eae-4783-8aa1-7328fa477181",
+        "operationId": "c4c7fbbf-d74c-4023-92d2-10a858024d1a",
+        "productoId": "mortgage-life",
+        "socioId": "HU44-HTTP"
+      }
+    },
+    {
+      "blockedProblem": {
+        "code": "consulta_bloqueada",
+        "correlationId": "dae8cf3f-4a84-47f6-9c98-6f3a570fe468",
+        "detail": "No fue posible consultar informacion autorizada del cliente.",
+        "operacion": {
+          "aplicacion": {
+            "actualizadaEn": "2026-11-01T23:00:20.490082Z",
+            "acuseId": null,
+            "codigo": null,
+            "estado": "esperando_decision",
+            "intentos": 0
+          },
+          "clienteId": "510ab775-ca83-4663-a434-8e3872871c7b",
+          "estadoDecision": "pendiente",
+          "excepcionId": "66d7f9b1-74bd-4f16-84ce-66419157ec01",
+          "operationId": "5ddc8ddc-dff6-4bed-8a1d-02fd4b285c44",
+          "productoId": "mortgage-life",
+          "socioId": "HU44-HTTP"
+        },
+        "status": 503,
+        "title": "Consulta no disponible",
+        "type": "https://api.solventa.co/problems/consulta_bloqueada"
+      },
+      "pending": {
+        "actorId": null,
+        "alcance": "open_finance",
+        "aplicacion": {
+          "actualizadaEn": "2026-11-01T23:00:20.490082Z",
+          "acuseId": null,
+          "codigo": null,
+          "estado": "esperando_decision",
+          "intentos": 0
+        },
+        "clienteId": "510ab775-ca83-4663-a434-8e3872871c7b",
+        "codigo": "fuente_no_disponible",
+        "consentimiento": {
+          "datos": ["indicador_riesgo"],
+          "estado": "autorizado",
+          "finalidad": "cotizacion",
+          "fuentes": ["open_finance", "open_data"],
+          "id": "a899961f-4e15-459a-8504-014784916f8e",
+          "version": 1,
+          "vigenteHasta": "2026-11-02T23:00:20.431032Z"
+        },
+        "correlationId": "dae8cf3f-4a84-47f6-9c98-6f3a570fe468",
+        "creadoEn": "2026-11-01T23:00:20.490082Z",
+        "datos": ["indicador_riesgo"],
+        "decision": null,
+        "estado": "pendiente",
+        "estadoAnterior": "procesamiento_automatico_bloqueado",
+        "excepcionId": "66d7f9b1-74bd-4f16-84ce-66419157ec01",
+        "finalidad": "cotizacion",
+        "idempotente": false,
+        "motivo": null,
+        "motivoBloqueo": "HU44: open_finance sin respuesta ni cache integra, vigente y autorizada.",
+        "operationId": "5ddc8ddc-dff6-4bed-8a1d-02fd4b285c44",
+        "proceso": {
+          "actorSolicitanteId": "3d940c6e-3373-4f0e-8b06-a6f18f639166",
+          "datosSolicitados": ["indicador_riesgo"],
+          "finalidad": "cotizacion",
+          "productoId": "mortgage-life",
+          "tipo": "consulta_informacion_cliente"
+        },
+        "resueltaEn": null,
+        "socioId": "HU44-HTTP",
+        "trazabilidad": {
+          "alcance": "open_finance",
+          "correlationId": "dae8cf3f-4a84-47f6-9c98-6f3a570fe468",
+          "creadoEn": "2026-11-01T23:00:20.490082+00:00",
+          "estadoActual": "pendiente",
+          "estadoAnterior": "procesamiento_automatico_bloqueado"
+        }
+      },
+      "applied": {
+        "actorId": "5f6bf45b-c3f6-47e2-987a-1bbced514481",
+        "alcance": "open_finance",
+        "aplicacion": {
+          "actualizadaEn": "2026-11-01T23:00:20.622751Z",
+          "acuseId": "b7672859-2035-4ce0-b8eb-fadb6412d67b",
+          "codigo": "operacion_rechazada",
+          "estado": "detenida",
+          "intentos": 0
+        },
+        "clienteId": "510ab775-ca83-4663-a434-8e3872871c7b",
+        "codigo": "fuente_no_disponible",
+        "consentimiento": {
+          "datos": ["indicador_riesgo"],
+          "estado": "autorizado",
+          "finalidad": "cotizacion",
+          "fuentes": ["open_finance", "open_data"],
+          "id": "a899961f-4e15-459a-8504-014784916f8e",
+          "version": 1,
+          "vigenteHasta": "2026-11-02T23:00:20.431032Z"
+        },
+        "correlationId": "8b5e95d4-532f-47e3-a55b-4b0c27419f79",
+        "creadoEn": "2026-11-01T23:00:20.490082Z",
+        "datos": ["indicador_riesgo"],
+        "decision": "rechazar",
+        "estado": "rechazada",
+        "estadoAnterior": "pendiente",
+        "excepcionId": "66d7f9b1-74bd-4f16-84ce-66419157ec01",
+        "finalidad": "cotizacion",
+        "idempotente": false,
+        "motivo": "Revision de la operacion sintetica bloqueada",
+        "motivoBloqueo": "HU44: open_finance sin respuesta ni cache integra, vigente y autorizada.",
+        "operationId": "5ddc8ddc-dff6-4bed-8a1d-02fd4b285c44",
+        "proceso": {
+          "actorSolicitanteId": "3d940c6e-3373-4f0e-8b06-a6f18f639166",
+          "datosSolicitados": ["indicador_riesgo"],
+          "finalidad": "cotizacion",
+          "productoId": "mortgage-life",
+          "tipo": "consulta_informacion_cliente"
+        },
+        "resueltaEn": "2026-11-01T23:00:20.576173Z",
+        "socioId": "HU44-HTTP",
+        "trazabilidad": {
+          "alcance": "open_finance",
+          "correlationId": "8b5e95d4-532f-47e3-a55b-4b0c27419f79",
+          "creadoEn": "2026-11-01T23:00:20.490082+00:00",
+          "estadoActual": "rechazada",
+          "estadoAnterior": "pendiente"
+        }
+      },
+      "requester": {
+        "aplicacion": {
+          "actualizadaEn": "2026-11-01T23:00:20.622751Z",
+          "acuseId": "b7672859-2035-4ce0-b8eb-fadb6412d67b",
+          "codigo": "operacion_rechazada",
+          "estado": "detenida",
+          "intentos": 0
+        },
+        "clienteId": "510ab775-ca83-4663-a434-8e3872871c7b",
+        "estadoDecision": "rechazada",
+        "excepcionId": "66d7f9b1-74bd-4f16-84ce-66419157ec01",
+        "operationId": "5ddc8ddc-dff6-4bed-8a1d-02fd4b285c44",
+        "productoId": "mortgage-life",
+        "socioId": "HU44-HTTP"
+      }
+    },
+    {
+      "blockedProblem": {
+        "code": "consulta_bloqueada",
+        "correlationId": "e15b6099-c0d4-4979-a361-bdcd0bd31a9e",
+        "detail": "No fue posible consultar informacion autorizada del cliente.",
+        "operacion": {
+          "aplicacion": {
+            "actualizadaEn": "2026-11-01T23:00:21.751261Z",
+            "acuseId": null,
+            "codigo": null,
+            "estado": "esperando_decision",
+            "intentos": 0
+          },
+          "clienteId": "b8d8ed74-2174-4a2c-907b-8ff268a0ac5b",
+          "estadoDecision": "pendiente",
+          "excepcionId": "a42eaa43-cceb-4a38-86b1-cfa5c289312a",
+          "operationId": "9cf92e76-0b5a-44be-9f11-ce9fbf558dd1",
+          "productoId": "mortgage-life",
+          "socioId": "HU44-HTTP"
+        },
+        "status": 503,
+        "title": "Consulta no disponible",
+        "type": "https://api.solventa.co/problems/consulta_bloqueada"
+      },
+      "pending": {
+        "actorId": null,
+        "alcance": "open_finance",
+        "aplicacion": {
+          "actualizadaEn": "2026-11-01T23:00:21.751261Z",
+          "acuseId": null,
+          "codigo": null,
+          "estado": "esperando_decision",
+          "intentos": 0
+        },
+        "clienteId": "b8d8ed74-2174-4a2c-907b-8ff268a0ac5b",
+        "codigo": "fuente_no_disponible",
+        "consentimiento": {
+          "datos": ["indicador_riesgo"],
+          "estado": "autorizado",
+          "finalidad": "cotizacion",
+          "fuentes": ["open_finance", "open_data"],
+          "id": "4942d04c-750f-4b3f-a128-92a9f642e2f8",
+          "version": 1,
+          "vigenteHasta": "2026-11-02T23:00:21.587115Z"
+        },
+        "correlationId": "e15b6099-c0d4-4979-a361-bdcd0bd31a9e",
+        "creadoEn": "2026-11-01T23:00:21.751261Z",
+        "datos": ["indicador_riesgo"],
+        "decision": null,
+        "estado": "pendiente",
+        "estadoAnterior": "procesamiento_automatico_bloqueado",
+        "excepcionId": "a42eaa43-cceb-4a38-86b1-cfa5c289312a",
+        "finalidad": "cotizacion",
+        "idempotente": false,
+        "motivo": null,
+        "motivoBloqueo": "HU44: open_finance sin respuesta ni cache integra, vigente y autorizada.",
+        "operationId": "9cf92e76-0b5a-44be-9f11-ce9fbf558dd1",
+        "proceso": {
+          "actorSolicitanteId": "3d940c6e-3373-4f0e-8b06-a6f18f639166",
+          "datosSolicitados": ["indicador_riesgo"],
+          "finalidad": "cotizacion",
+          "productoId": "mortgage-life",
+          "tipo": "consulta_informacion_cliente"
+        },
+        "resueltaEn": null,
+        "socioId": "HU44-HTTP",
+        "trazabilidad": {
+          "alcance": "open_finance",
+          "correlationId": "e15b6099-c0d4-4979-a361-bdcd0bd31a9e",
+          "creadoEn": "2026-11-01T23:00:21.751261+00:00",
+          "estadoActual": "pendiente",
+          "estadoAnterior": "procesamiento_automatico_bloqueado"
+        }
+      },
+      "applied": {
+        "actorId": "5f6bf45b-c3f6-47e2-987a-1bbced514481",
+        "alcance": "open_finance",
+        "aplicacion": {
+          "actualizadaEn": "2026-11-01T23:00:21.980646Z",
+          "acuseId": "909ef8c9-fa3d-46de-b4d6-013056f27222",
+          "codigo": "fuente_no_disponible",
+          "estado": "bloqueada",
+          "intentos": 1
+        },
+        "clienteId": "b8d8ed74-2174-4a2c-907b-8ff268a0ac5b",
+        "codigo": "fuente_no_disponible",
+        "consentimiento": {
+          "datos": ["indicador_riesgo"],
+          "estado": "autorizado",
+          "finalidad": "cotizacion",
+          "fuentes": ["open_finance", "open_data"],
+          "id": "4942d04c-750f-4b3f-a128-92a9f642e2f8",
+          "version": 1,
+          "vigenteHasta": "2026-11-02T23:00:21.587115Z"
+        },
+        "correlationId": "6559f37d-bd45-46a7-9849-7713c1b0d5a5",
+        "creadoEn": "2026-11-01T23:00:21.751261Z",
+        "datos": ["indicador_riesgo"],
+        "decision": "aprobar",
+        "estado": "aprobada",
+        "estadoAnterior": "pendiente",
+        "excepcionId": "a42eaa43-cceb-4a38-86b1-cfa5c289312a",
+        "finalidad": "cotizacion",
+        "idempotente": false,
+        "motivo": "Revision de la operacion sintetica bloqueada",
+        "motivoBloqueo": "HU44: open_finance sin respuesta ni cache integra, vigente y autorizada.",
+        "operationId": "9cf92e76-0b5a-44be-9f11-ce9fbf558dd1",
+        "proceso": {
+          "actorSolicitanteId": "3d940c6e-3373-4f0e-8b06-a6f18f639166",
+          "datosSolicitados": ["indicador_riesgo"],
+          "finalidad": "cotizacion",
+          "productoId": "mortgage-life",
+          "tipo": "consulta_informacion_cliente"
+        },
+        "resueltaEn": "2026-11-01T23:00:21.859157Z",
+        "socioId": "HU44-HTTP",
+        "trazabilidad": {
+          "alcance": "open_finance",
+          "correlationId": "6559f37d-bd45-46a7-9849-7713c1b0d5a5",
+          "creadoEn": "2026-11-01T23:00:21.751261+00:00",
+          "estadoActual": "aprobada",
+          "estadoAnterior": "pendiente"
+        }
+      },
+      "requester": {
+        "aplicacion": {
+          "actualizadaEn": "2026-11-01T23:00:21.980646Z",
+          "acuseId": "909ef8c9-fa3d-46de-b4d6-013056f27222",
+          "codigo": "fuente_no_disponible",
+          "estado": "bloqueada",
+          "intentos": 1
+        },
+        "clienteId": "b8d8ed74-2174-4a2c-907b-8ff268a0ac5b",
+        "estadoDecision": "aprobada",
+        "excepcionId": "a42eaa43-cceb-4a38-86b1-cfa5c289312a",
+        "operationId": "9cf92e76-0b5a-44be-9f11-ce9fbf558dd1",
+        "productoId": "mortgage-life",
+        "socioId": "HU44-HTTP"
+      }
+    }
+  ]
+}

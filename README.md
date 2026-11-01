@@ -265,6 +265,49 @@ al cambiar de contexto, pero lo conserva al reintentar la lectura del mismo caso
 Estas comprobaciones de UI no sustituyen la autorización del backend ni deshacen una
 operación que el servicio ya haya recibido.
 
+### Revisión de consultas HU44 y backoffice (SOL-204/331)
+
+Este consumo requiere backend `d0a3145918c019b1cfb347faa1a8d0d5d05dac8d` o una
+revisión compatible, con sus migraciones. No se debe desplegar contra el contrato
+anterior. El productor es exclusivamente el formulario de consulta del socio:
+`POST /v1/socios/consultas-informacion-cliente`. Solo un `503` problem+json con
+`code: consulta_bloqueada` y una operación válida, del mismo contexto, abre la
+revisión. Un `503` genérico no crea un caso local. No cambia HU48 ni se convierte
+el fallback hipotecario en una excepción.
+
+La bandeja `/asesor/excepciones` mantiene las decisiones pendientes por defecto.
+El filtro `estadoAplicacion=pendiente|completada|bloqueada|detenida`, conservado en
+la URL, permite recuperar también decisiones ya guardadas. El detalle muestra
+por separado la decisión (`estado`, actor, motivo y fecha), el proceso vinculado
+informado por backend y su aplicación. Nunca se inventa el solicitante.
+Los históricos con `proceso: null` y `aplicacion: null` no ofrecen reanudación.
+
+`POST .../{id}/resolver?socioId=...` mantiene `{ decision, motivo }`. Un `200` no
+demuestra éxito de la consulta: una decisión aprobada puede tener aplicación
+bloqueada. Ante un error ambiguo de entrega se vuelve a leer el caso; no se decide
+automáticamente otra vez ni se presenta el error como prueba de rollback.
+Solo una aplicación pendiente, sin acuse y con decisión persistida permite
+«Aplicar operación», mediante `POST .../{id}/aplicar?socioId=...` con `{}`.
+La acción es explícita; GET y recargas no aplican nada.
+
+`completada` indica un resultado persistido; `bloqueada` es un fallo terminal con
+causa explícita, y `detenida` conserva el rechazo sin consultar fuentes.
+Las aplicaciones terminales con `acuseId` no ofrecen reaplicar. El código de
+aplicación es abierto, no un catálogo cerrado. El acuse acredita persistencia
+del resultado de aplicación, **no recepción del solicitante ni autorización
+ampliada**.
+
+El socio conserva el identificador original en la URL y recupera
+`GET /v1/socios/consultas-informacion-cliente/{operationId}/estado?socioId=...`.
+Esa proyección no contiene datos financieros. Solo si está completada lee el
+GET de datos existente, cotejando operación, socio, cliente y producto; el backend
+revalida el consentimiento actual. El único fallback permitido es el
+`404` problem+json contractual `consulta_no_encontrada` de `/estado`, porque las
+consultas normales o históricas sin excepción no tienen esa proyección: entonces
+se intenta solo GET de datos. No hay fallback ni POST ante 401/403/503 de recuperación.
+Un error de lectura retira el resultado anterior; recuperar una operación no
+habilita otra consulta ni genera un UUID nuevo.
+
 ### Perfilamiento hipotecario del asesor (HU46)
 
 La ruta `/asesor/perfilamientos/nuevo` requiere una sesión con `usuario.rol: "asesor"`.

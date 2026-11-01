@@ -12,6 +12,7 @@ import {
 import {
   AdvisorException,
   AdvisorExceptionError,
+  PendingAdvisorException,
   ResolvedAdvisorException,
 } from '../../core/advisor-exceptions/advisor-exceptions.models';
 import { AuthUser } from '../../core/auth/auth.models';
@@ -28,6 +29,7 @@ describe('AdvisorExceptionsPageComponent', () => {
     list: ReturnType<typeof vi.fn<AdvisorExceptionsGateway['list']>>;
     get: ReturnType<typeof vi.fn<AdvisorExceptionsGateway['get']>>;
     resolve: ReturnType<typeof vi.fn<AdvisorExceptionsGateway['resolve']>>;
+    apply: ReturnType<typeof vi.fn<AdvisorExceptionsGateway['apply']>>;
   };
   const advisor: AuthUser = {
     id: 'advisor-123',
@@ -36,7 +38,7 @@ describe('AdvisorExceptionsPageComponent', () => {
     role: 'advisor',
     partnerIds: ['BANCO-001', 'BANCO-002'],
   };
-  const exception: AdvisorException = {
+  const exception: PendingAdvisorException = {
     excepcionId: 'exception-123',
     operationId: 'operation-123',
     socioId: 'BANCO-001',
@@ -56,6 +58,12 @@ describe('AdvisorExceptionsPageComponent', () => {
       vigenteHasta: '2027-01-01T00:00:00Z',
     },
     estado: 'pendiente',
+    decision: null,
+    actorId: null,
+    resueltaEn: null,
+    motivo: null,
+    proceso: null,
+    aplicacion: null,
     estadoAnterior: 'bloqueada',
     creadoEn: '2026-10-20T12:00:00Z',
     correlationId: 'correlation-123',
@@ -76,6 +84,44 @@ describe('AdvisorExceptionsPageComponent', () => {
     resueltaEn: '2026-10-21T12:00:00Z',
     motivo: 'Aprobación justificada.',
   };
+  const linked: PendingAdvisorException = {
+    ...exception,
+    proceso: {
+      tipo: 'consulta_informacion_cliente',
+      actorSolicitanteId: '33333333-3333-4333-8333-333333333333',
+      productoId: 'mortgage-life',
+      finalidad: 'cotizacion',
+      datosSolicitados: ['indicador_riesgo'],
+    },
+    aplicacion: {
+      estado: 'esperando_decision',
+      intentos: 0,
+      codigo: null,
+      actualizadaEn: '2026-10-20T12:00:00Z',
+      acuseId: null,
+    },
+  };
+  const awaitingApplication: ResolvedAdvisorException = {
+    ...resolved,
+    proceso: linked.proceso,
+    aplicacion: {
+      estado: 'pendiente',
+      intentos: 0,
+      codigo: null,
+      actualizadaEn: resolved.resueltaEn,
+      acuseId: null,
+    },
+  };
+  const applied: ResolvedAdvisorException = {
+    ...awaitingApplication,
+    aplicacion: {
+      estado: 'completada',
+      intentos: 1,
+      codigo: 'consulta_disponible',
+      actualizadaEn: resolved.resueltaEn,
+      acuseId: '77777777-7777-4777-8777-777777777777',
+    },
+  };
 
   beforeEach(async () => {
     params = new BehaviorSubject(convertToParamMap({}));
@@ -85,6 +131,7 @@ describe('AdvisorExceptionsPageComponent', () => {
       list: vi.fn().mockReturnValue(of([])),
       get: vi.fn().mockReturnValue(of(exception)),
       resolve: vi.fn().mockReturnValue(of(resolved)),
+      apply: vi.fn(),
     };
     await TestBed.configureTestingModule({
       imports: [
@@ -385,6 +432,144 @@ describe('AdvisorExceptionsPageComponent', () => {
       expect(gateway.resolve).toHaveBeenCalledTimes(1);
     },
   );
+
+  it('WEB-F6 recupera decisión durable después de 503 y aplica solo por acción explícita tras recarga', async () => {
+    gateway.get.mockReturnValueOnce(of(linked)).mockReturnValue(of(awaitingApplication));
+    gateway.resolve.mockReturnValue(
+      throwError(() => new AdvisorExceptionError('servicio_no_disponible')),
+    );
+    params.next(convertToParamMap({ exceptionId: linked.excepcionId }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.reasonForm.controls.motivo.setValue(resolved.motivo);
+    component.resolve('aprobar');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(gateway.resolve).toHaveBeenCalledTimes(1);
+    expect(gateway.get).toHaveBeenCalledTimes(2);
+    expect(component.resolved()).toEqual(awaitingApplication);
+    expect(component.resolved()?.aplicacion?.acuseId).toBeNull();
+    expect(gateway.apply).not.toHaveBeenCalled();
+
+    fixture.destroy();
+    fixture = TestBed.createComponent(AdvisorExceptionsPageComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('.success-alert')?.textContent).toContain(resolved.actorId);
+    expect(root.querySelector('.application-status')?.textContent).toContain(
+      es.advisorExceptions.application.status.pendiente,
+    );
+    expect(root.querySelector('.resolution-card')).toBeNull();
+
+    const delivery = new Subject<ResolvedAdvisorException>();
+    gateway.apply.mockReturnValue(delivery.asObservable());
+    const apply = root.querySelector<HTMLButtonElement>('.apply-operation');
+    expect(apply).not.toBeNull();
+    apply?.click();
+    fixture.detectChanges();
+    expect(component.applying()).toBe(true);
+    expect(component.resolved()?.aplicacion?.acuseId).toBeNull();
+    expect(apply?.disabled).toBe(true);
+    delivery.next(applied);
+    delivery.complete();
+    fixture.detectChanges();
+
+    expect(gateway.apply).toHaveBeenCalledExactlyOnceWith(linked.excepcionId, linked.socioId);
+    expect(gateway.resolve).toHaveBeenCalledTimes(1);
+    expect(component.resolved()).toEqual(applied);
+    expect(root.querySelector('.application-ack')?.textContent).toContain(
+      applied.aplicacion?.acuseId,
+    );
+    expect(root.querySelector('.apply-operation')).toBeNull();
+  });
+
+  it.each(['bloqueada', 'detenida', 'historica'] as const)(
+    'WEB-F6 muestra decisión recargada %s sin ofrecer reaplicar ni simular resultado',
+    async (outcome) => {
+      const state = outcome === 'detenida' ? 'rechazada' : 'aprobada';
+      const receipt: ResolvedAdvisorException = {
+        ...awaitingApplication,
+        estado: state,
+        decision: outcome === 'detenida' ? 'rechazar' : 'aprobar',
+        trazabilidad: { ...resolved.trazabilidad, estadoActual: state },
+        proceso: outcome === 'historica' ? null : linked.proceso,
+        aplicacion:
+          outcome === 'historica'
+            ? null
+            : {
+                estado: outcome,
+                intentos: outcome === 'detenida' ? 0 : 1,
+                codigo:
+                  outcome === 'detenida' ? 'operacion_rechazada' : 'consentimiento_no_vigente',
+                actualizadaEn: resolved.resueltaEn,
+                acuseId: '77777777-7777-4777-8777-777777777777',
+              },
+      };
+      gateway.get.mockReturnValue(of(receipt));
+      params.next(convertToParamMap({ exceptionId: exception.excepcionId }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const root: HTMLElement = fixture.nativeElement;
+      expect(component.resolved()).toEqual(receipt);
+      expect(root.querySelector('.success-alert')?.textContent).toContain(
+        es.advisorExceptions.application.decisionNotice,
+      );
+      expect(root.querySelector('.apply-operation')).toBeNull();
+      expect(root.querySelector('.resolution-card')).toBeNull();
+      if (outcome === 'historica') {
+        expect(root.querySelector('.legacy-notice')?.textContent).toContain(
+          es.advisorExceptions.application.legacy,
+        );
+      } else {
+        expect(root.querySelector('.application-status')?.textContent).toContain(
+          es.advisorExceptions.application.status[outcome],
+        );
+        expect(root.textContent).toContain(receipt.aplicacion?.codigo);
+      }
+      expect(gateway.apply).not.toHaveBeenCalled();
+      expect(gateway.resolve).not.toHaveBeenCalled();
+    },
+  );
+
+  it('WEB-F6 recupera la bandeja filtrada sin resolver ni aplicar', async () => {
+    gateway.list.mockReturnValue(of([awaitingApplication]));
+    query.next(convertToParamMap({ socioId: exception.socioId, estadoAplicacion: 'pendiente' }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(gateway.list).toHaveBeenLastCalledWith(exception.socioId, 'pendiente');
+    expect(component.exceptions()).toEqual([awaitingApplication]);
+    expect(fixture.nativeElement.textContent).toContain(
+      es.advisorExceptions.application.status.pendiente,
+    );
+    expect(gateway.apply).not.toHaveBeenCalled();
+    expect(gateway.resolve).not.toHaveBeenCalled();
+  });
+
+  it('WEB-F6 descarta el ACK tardío de aplicación después de cambiar de asesor', async () => {
+    const delivery = new Subject<ResolvedAdvisorException>();
+    gateway.get
+      .mockReturnValueOnce(of(awaitingApplication))
+      .mockReturnValue(throwError(() => new AdvisorExceptionError('actor_no_autorizado')));
+    gateway.apply.mockReturnValue(delivery.asObservable());
+    params.next(convertToParamMap({ exceptionId: exception.excepcionId }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.apply();
+    user.set({ ...advisor, id: 'another-advisor' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    delivery.next(applied);
+    delivery.complete();
+    fixture.detectChanges();
+    expect(component.resolved()).toBeNull();
+    expect(component.exception()).toBeNull();
+    expect(component.loadErrorCode()).toBe('actor_no_autorizado');
+    expect(component.applying()).toBe(false);
+    expect(gateway.apply).toHaveBeenCalledTimes(1);
+  });
 
   it.each([
     null,

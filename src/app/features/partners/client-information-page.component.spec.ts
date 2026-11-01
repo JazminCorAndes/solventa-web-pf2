@@ -1,5 +1,6 @@
 import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of, startWith, Subject, throwError } from 'rxjs';
@@ -8,11 +9,28 @@ import { PartnerContext, PartnerContextService } from '../../core/partners/partn
 import {
   ClientInformationRequest,
   ClientInformationResult,
+  ClientInformationReview,
+  ClientInformationReviewRequired,
   HttpClientInformationGateway,
 } from '../../data-access/partners/http-client-information.gateway';
 import { ClientInformationPageComponent } from './client-information-page.component';
 
 const CLIENT_ID = '22222222-2222-4222-8222-222222222222';
+const REVIEW: ClientInformationReview = {
+  operationId: '55555555-5555-4555-8555-555555555555',
+  socioId: 'BANCO-001',
+  clienteId: CLIENT_ID,
+  productoId: 'mortgage-life',
+  excepcionId: '88888888-8888-4888-8888-888888888888',
+  estadoDecision: 'pendiente',
+  aplicacion: {
+    estado: 'esperando_decision',
+    intentos: 0,
+    codigo: null,
+    actualizadaEn: '2026-10-24T20:00:00Z',
+    acuseId: null,
+  },
+};
 const CONTEXT: PartnerContext = {
   apiVersion: '1',
   usuario: {
@@ -51,7 +69,11 @@ function resultFor(request: ClientInformationRequest): ClientInformationResult {
 
 describe('ClientInformationPageComponent', () => {
   let fixture: ComponentFixture<ClientInformationPageComponent>;
-  let gateway: { consult: ReturnType<typeof vi.fn>; load: ReturnType<typeof vi.fn> };
+  let gateway: {
+    consult: ReturnType<typeof vi.fn>;
+    load: ReturnType<typeof vi.fn>;
+    loadStatus: ReturnType<typeof vi.fn>;
+  };
   let query: Record<string, string>;
   let queryChanges: Subject<ReturnType<typeof convertToParamMap>>;
   let context: WritableSignal<PartnerContext | null>;
@@ -60,7 +82,27 @@ describe('ClientInformationPageComponent', () => {
     query = { socio: 'BANCO-001' };
     queryChanges = new Subject();
     context = signal<PartnerContext | null>(CONTEXT);
-    gateway = { consult: vi.fn(), load: vi.fn() };
+    gateway = {
+      consult: vi.fn(),
+      load: vi.fn(),
+      loadStatus: vi.fn().mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 404,
+              headers: new HttpHeaders({ 'Content-Type': 'application/problem+json' }),
+              error: {
+                type: 'https://api.solventa.co/problems/consulta_no_encontrada',
+                title: 'Consulta no encontrada',
+                detail: 'Sin operación vinculada.',
+                status: 404,
+                code: 'consulta_no_encontrada',
+                correlationId: '66666666-6666-4666-8666-666666666666',
+              },
+            }),
+        ),
+      ),
+    };
     await TestBed.configureTestingModule({
       imports: [
         ClientInformationPageComponent,
@@ -322,5 +364,182 @@ describe('ClientInformationPageComponent', () => {
     expect(gateway.load).not.toHaveBeenCalled();
     expect(fixture.componentInstance.result()?.operationId).toBe(query['operacion']);
     expect(fixture.componentInstance.loading()).toBe(false);
+  });
+
+  it('WEB-F6 conserva el bloqueo revisable sin otro POST y obtiene ACK y datos solo al completar', async () => {
+    let request!: ClientInformationRequest;
+    gateway.consult.mockImplementation((body: ClientInformationRequest) => {
+      request = body;
+      return throwError(
+        () => new ClientInformationReviewRequired({ ...REVIEW, operationId: body.operationId }),
+      );
+    });
+    const component = fixture.componentInstance;
+    component.form.controls.documentNumber.setValue('1012345678');
+    component.submit();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(component.result()).toBeNull();
+    expect(component.review()?.operationId).toBe(request.operationId);
+    expect(component.errorKey()).toBeNull();
+    expect(component.form.disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('button[type=submit]')).toBeNull();
+    component.submit();
+    expect(gateway.consult).toHaveBeenCalledTimes(1);
+
+    const waiting = { ...REVIEW, operationId: request.operationId };
+    gateway.loadStatus.mockReturnValueOnce(of(waiting));
+    component.refreshStatus();
+    expect(gateway.load).not.toHaveBeenCalled();
+    expect(component.result()).toBeNull();
+
+    const completed: ClientInformationReview = {
+      ...waiting,
+      estadoDecision: 'aprobada',
+      aplicacion: {
+        ...REVIEW.aplicacion,
+        estado: 'completada',
+        intentos: 1,
+        codigo: 'consulta_disponible',
+        acuseId: '77777777-7777-4777-8777-777777777777',
+      },
+    };
+    gateway.loadStatus.mockReturnValueOnce(of(completed));
+    gateway.load.mockReturnValue(of(resultFor(request)));
+    component.refreshStatus();
+    fixture.detectChanges();
+    expect(component.result()).toEqual(resultFor(request));
+    expect(component.review()).toEqual(completed);
+    expect(fixture.nativeElement.querySelector('.review-ack')?.textContent).toContain(
+      completed.aplicacion.acuseId,
+    );
+    expect(gateway.load).toHaveBeenCalledExactlyOnceWith(request.operationId, request.socioId);
+    expect(gateway.consult).toHaveBeenCalledTimes(1);
+
+    gateway.loadStatus.mockReturnValueOnce(
+      throwError(
+        () => new HttpErrorResponse({ status: 403, error: { code: 'consentimiento_invalido' } }),
+      ),
+    );
+    component.refreshStatus();
+    fixture.detectChanges();
+    expect(component.result()).toBeNull();
+    expect(component.review()).toBeNull();
+    expect(component.errorKey()).toBe('clientInformation.errors.consent');
+    expect(gateway.load).toHaveBeenCalledTimes(1);
+    expect(gateway.consult).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['bloqueada', 'detenida'] as const)(
+    'WEB-F6 recupera %s con ACK pero sin datos, POST ni reaplicación',
+    (state) => {
+      const review: ClientInformationReview = {
+        ...REVIEW,
+        estadoDecision: state === 'detenida' ? 'rechazada' : 'aprobada',
+        aplicacion: {
+          ...REVIEW.aplicacion,
+          estado: state,
+          intentos: state === 'detenida' ? 0 : 1,
+          codigo: state === 'detenida' ? 'operacion_rechazada' : 'consentimiento_no_vigente',
+          acuseId: '77777777-7777-4777-8777-777777777777',
+        },
+      };
+      query = { socio: REVIEW.socioId, operacion: REVIEW.operationId };
+      gateway.loadStatus.mockReturnValue(of(review));
+      fixture.destroy();
+      fixture = TestBed.createComponent(ClientInformationPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.submit();
+
+      expect(component.review()).toEqual(review);
+      expect(component.result()).toBeNull();
+      expect(component.form.disabled).toBe(true);
+      expect(fixture.nativeElement.querySelector('.review-application')?.textContent).toContain(
+        es.advisorExceptions.application.status[state],
+      );
+      expect(gateway.loadStatus).toHaveBeenCalledTimes(1);
+      expect(gateway.load).not.toHaveBeenCalled();
+      expect(gateway.consult).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([401, 403, 503, 404])(
+    'WEB-F6 no hace fallback ni POST ante estado HTTP %s no recuperable',
+    (status) => {
+      query = { socio: REVIEW.socioId, operacion: REVIEW.operationId };
+      gateway.loadStatus.mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status,
+              error: { code: 'error_no_recuperable' },
+            }),
+        ),
+      );
+      fixture.destroy();
+      fixture = TestBed.createComponent(ClientInformationPageComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.submit();
+
+      expect(fixture.componentInstance.result()).toBeNull();
+      expect(fixture.componentInstance.review()).toBeNull();
+      expect(fixture.componentInstance.errorKey()).not.toBeNull();
+      expect(fixture.componentInstance.form.disabled).toBe(true);
+      expect(gateway.load).not.toHaveBeenCalled();
+      expect(gateway.consult).not.toHaveBeenCalled();
+    },
+  );
+
+  it('WEB-F6 el 404 contractual de estado permite solo GET de consulta normal o histórica', () => {
+    query = { socio: REVIEW.socioId, operacion: REVIEW.operationId };
+    gateway.load.mockReturnValue(
+      of(
+        resultFor({
+          operationId: REVIEW.operationId,
+          socioId: REVIEW.socioId,
+          productoId: REVIEW.productoId,
+          clienteId: CLIENT_ID,
+          finalidad: 'cotizacion',
+          datosSolicitados: ['indicador_riesgo'],
+        }),
+      ),
+    );
+    fixture.destroy();
+    fixture = TestBed.createComponent(ClientInformationPageComponent);
+    fixture.detectChanges();
+    expect(gateway.loadStatus).toHaveBeenCalledExactlyOnceWith(REVIEW.operationId, REVIEW.socioId);
+    expect(gateway.load).toHaveBeenCalledExactlyOnceWith(REVIEW.operationId, REVIEW.socioId);
+    expect(gateway.consult).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.review()).toBeNull();
+    expect(fixture.componentInstance.result()?.operationId).toBe(REVIEW.operationId);
+  });
+
+  it('WEB-F6 no conserva proyección tardía al cambiar de usuario durante lectura de estado', async () => {
+    const oldStatus = new Subject<ClientInformationReview>();
+    query = { socio: REVIEW.socioId, operacion: REVIEW.operationId };
+    gateway.loadStatus
+      .mockReturnValueOnce(oldStatus.asObservable())
+      .mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+    fixture.destroy();
+    fixture = TestBed.createComponent(ClientInformationPageComponent);
+    fixture.detectChanges();
+    context.set({
+      ...CONTEXT,
+      usuario: { ...CONTEXT.usuario, id: '99999999-9999-4999-8999-999999999999' },
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    oldStatus.next(REVIEW);
+    oldStatus.complete();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.review()).toBeNull();
+    expect(fixture.componentInstance.result()).toBeNull();
+    expect(fixture.componentInstance.errorKey()).toBe('clientInformation.errors.forbidden');
+    expect(gateway.loadStatus).toHaveBeenCalledTimes(2);
+    expect(gateway.load).not.toHaveBeenCalled();
+    expect(gateway.consult).not.toHaveBeenCalled();
   });
 });
