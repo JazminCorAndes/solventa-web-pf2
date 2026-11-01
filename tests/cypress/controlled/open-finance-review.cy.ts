@@ -229,7 +229,14 @@ describe('HU44 real con recuperación explícita de despacho HTTP y tres resulta
         });
         if (index === 0) loginAs('socio');
         else cy.visit('/app/socios');
-        cy.get('a[href^="/app/socios/clientes/consultar"]').should('have.length', 1).click();
+        cy.get(`.partner-card[aria-label="${fixture.socioId}"]`)
+          .should('have.length', 1)
+          .find('a[href^="/app/socios/clientes/consultar"]')
+          .should('have.length', 1)
+          .click();
+        cy.location('search').should((search) =>
+          expect(new URLSearchParams(search).get('socio')).to.eq(fixture.socioId),
+        );
         cy.get('mat-select[formcontrolname=documentType]').click();
         cy.contains('mat-option', es.quoteRequest.documentTypes.passport).click();
         cy.get('input[formcontrolname=documentNumber]').type(client.numeroDocumento);
