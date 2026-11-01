@@ -118,7 +118,7 @@ ese manifiesto temporal y esperar su salida; no matar solo el proceso padre de P
 | Pago simulado             | Fallo y reintento con misma clave; importe discordante no muestra éxito                                                  | Importe igual a oferta, misma referencia en replay de clave, un pago y una póliza                                           |
 | Recuperación              | Error de dashboard y solicitud con reintento                                                                             | Recarga, logout, borrado de storage, login nuevo, dashboard y deep link a suscripción recuperados del backend               |
 | Ownership                 | No se presenta oferta tras fallo de recuperación                                                                         | Segundo usuario recibe 404 en solicitud/ofertas/selección/suscripción/perfil/pago y dashboard vacío                         |
-| Socio hipotecario SOL-205 | Regresiones HTTP del panel: oferta vencida al recuperar o mientras está abierta, errores y reintentos sin éxito anterior | Contexto socio/cliente/crédito, prima, explicación, GET idéntico persistido, aviso histórico y ausencia de POST duplicados  |
+| Socio hipotecario SOL-198/205 | Navegador: portal → formulario → oferta y factores → GET; autorización insuficiente, fallos y mismo operationId. Regresiones HTTP del panel para vencimiento | Contexto socio/cliente/crédito, prima, explicación, GET idéntico persistido, aviso histórico y ausencia de POST duplicados |
 
 El caso del socio adelanta solo el reloj del navegador al recibir la oferta
 recuperada, después de autenticar. No altera el GET, el snapshot persistido, el TTL
@@ -133,7 +133,10 @@ observación HTTP y assertions reintentables de Cypress. La emisión se consulta
 con polling de estado real, backoff 100–1000 ms y límite total de 60 segundos.
 Ese límite detecta falta de convergencia funcional; **no mide p95/p99**.
 
-La suite UI incluye 35 casos. El consentimiento informado comprueba el payload
+La suite UI incluye 40 casos. Cinco recorren el formulario/panel socio con HTTP
+controlado y sin crear cuentas, consentimiento ni cotizaciones reales. No conectan
+el circuito de asesor con el de socio ni acreditan percentiles o persistencia AWS.
+El consentimiento informado comprueba el payload
 completo de la decisión (incluida la vigencia mostrada), rechazo y posterior
 autorización versionada, cancelación/confirmación de revocación y lectura tras
 recargar. Los mocks conservan el estado solo durante cada caso; no acreditan
@@ -168,6 +171,12 @@ desactivarlos. Los resultados JUnit se guardan separados en
 `reports/cypress/ui/` y `reports/cypress/integrated/` (ignorados por Git); el runner
 limpia únicamente el directorio de informes de la suite que ejecuta para no mezclar
 éxitos antiguos con fallos recientes.
+
+Jenkins reutiliza `pnpm test:cypress:ui` como etapa obligatoria de integración del
+Frontend, precedida por el typecheck. Conserva su JUnit y bloquea la entrega ante
+fallos o informes ausentes; no la presenta como la suite `integrated/` ni como AWS.
+Solo después de las validaciones conserva el compilado con SHA y fingerprint
+según `docs/ci.md`. No cambia el disparador `/test-jenkins` ni prepara infraestructura.
 
 Vídeos y capturas están deshabilitados. Contraseñas, tokens, peticiones de setup y
 observaciones autenticadas no se registran en el command log. No se suben logs

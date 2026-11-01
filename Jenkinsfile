@@ -43,7 +43,19 @@ pipeline {
             steps {
                 publishChecks name: 'Cobertura', status: 'IN_PROGRESS', conclusion: 'NONE', title: 'Analizando cobertura web', summary: 'Objetivo recomendado: 80 % en líneas y ramas. Medición Angular/Vitest V8.', detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks"
                 sh "python3 -m unittest discover -s scripts -p 'test_*summary.py'"
+                sh 'node --test scripts/*.test.cjs tests/cypress/runner.test.cjs'
                 sh 'mkdir -p reports && pnpm test:coverage'
+            }
+        }
+        stage('Pruebas integrales Frontend') {
+            steps {
+                sh 'pnpm test:cypress:types'
+                sh 'pnpm test:cypress:ui'
+            }
+            post {
+                always {
+                    junit testResults: 'reports/cypress/ui/*.xml', allowEmptyResults: false, skipPublishingChecks: true
+                }
             }
         }
         stage('Compilación') {
@@ -80,8 +92,14 @@ pipeline {
                         error('Faltan reportes válidos de cobertura o pruebas')
                     }
                 } finally {
-                    archiveArtifacts artifacts: 'reports/unit-tests.xml,reports/coverage-summary.md,coverage/**', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'reports/unit-tests.xml,reports/coverage-summary.md,reports/cypress/ui/*.xml,coverage/**', allowEmptyArchive: true
                 }
+            }
+        }
+        success {
+            script {
+                def artifact = sh(returnStdout: true, script: 'node scripts/prepare-frontend-artifact.cjs').trim()
+                archiveArtifacts artifacts: "${artifact}/**", allowEmptyArchive: false, fingerprint: true
             }
         }
         cleanup {

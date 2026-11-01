@@ -55,7 +55,7 @@ Integrar el PR no cambia automáticamente el controlador, la App ni las protecci
 | Proceso                              | Cuándo                                             | Qué comprueba                             |
 | ------------------------------------ | -------------------------------------------------- | ----------------------------------------- |
 | Actions: `Calidad`                   | Cada PR y push a develop/master                    | Lint, pruebas y compilación               |
-| Jenkins: `CI / Validación (Jenkins)` | Comentario nuevo `/test-jenkins` de un colaborador | Lint, pruebas con cobertura y compilación |
+| Jenkins: `CI / Validación (Jenkins)` | Comentario nuevo `/test-jenkins` de un colaborador | Lint, unitarias/cobertura, Cypress Frontend controlado, compilación y artefacto por revisión |
 
 Después de nuevos commits, solicitar Jenkins otra vez. La aprobación del equipo es
 independiente. No repetir comentarios si ya hay un build en cola para el mismo commit.
@@ -83,11 +83,15 @@ Jenkins. Los artefactos de Actions pertenecen a Actions, no sustituyen un report
 El `detailsURL` del check principal **CI / Validación (Jenkins)** lo publica el controlador:
 un cambio en este repositorio no corrige ese enlace global ni abre Jenkins a Internet.
 
-Etapas: Código → Herramientas → Dependencias → Lint → Pruebas y cobertura → Compilación.
+Etapas: Código → Herramientas → Dependencias → Lint → Pruebas y cobertura →
+Pruebas integrales Frontend → Compilación.
 La etapa roja identifica el fallo. Los reportes disponibles se conservan incluso si falla
 una prueba o compilación.
 
 - **Tests**: resultados JUnit de Vitest.
+- **Tests / reports/cypress/ui/**: integración de la interfaz con `pnpm test:cypress:ui`.
+  La etapa comprueba antes los tipos Cypress; un fallo del comando o un JUnit ausente
+  bloquea la entrega. Reutiliza el navegador/runner existentes, sin omitir casos.
 - **Artifacts → coverage/solventa-web-pf2/**: HTML y `cobertura-coverage.xml`.
   Descargar el directorio completo para abrir `index.html` si Jenkins restringe scripts.
 - La consola muestra porcentajes de líneas, sentencias, funciones y ramas. La tabla de GitHub
@@ -96,6 +100,24 @@ una prueba o compilación.
   y reportes adicionales. No introduce un segundo conjunto de pruebas.
 - La cobertura corresponde al código instrumentado por Angular/Vitest y no demuestra
   integración AWS, navegación E2E o cumplimiento completo de las historias.
+
+Solo un pipeline exitoso conserva **Artifacts → dist/artifacts/frontend-\<SHA\>/**,
+con todo el compilado de `pnpm build`, incluido `browser/`, sus recursos y licencias.
+`revision.json` y el nombre del directorio contienen el SHA completo obtenido del checkout;
+Jenkins registra además el fingerprint de los archivos. La preparación falla si falta
+el índice compilado o ya existe el destino, sin entregar un build vacío o reutilizar uno
+anterior. El artefacto se conserva antes de limpiar el workspace, con la retención de
+artefactos ya configurada. No despliega ni modifica Pages.
+
+Estas pruebas Cypress integran componentes, rutas y flujos del Frontend con HTTP
+controlado; **no acreditan AWS ni persistencia de servicios**. La suite
+`test:cypress:integrated`, contra el backend local desechable y real, conserva su workflow
+manual y sus evidencias separadas. El agente `web-ci` debe tener las dependencias Linux
+de Cypress/Xvfb indicadas en `tests/cypress/README.md`: el pipeline no instala paquetes
+del sistema ni cambia el agente o los disparadores, y falla si el navegador no arranca.
+Las regresiones locales del contrato Jenkins y del artefacto se ejecutan con
+`node --test scripts/*.test.cjs tests/cypress/runner.test.cjs`; no sustituyen una ejecución
+del Jenkins vivo.
 
 Actions valida también `pnpm test:pages` y `pnpm build:pages` en los PRs, sin publicar.
 El workflow separado `pages.yml` publica después del CI exitoso de un push a `master`, usando
