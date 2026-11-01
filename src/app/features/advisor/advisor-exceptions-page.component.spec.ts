@@ -257,6 +257,135 @@ describe('AdvisorExceptionsPageComponent', () => {
     expect(gateway.resolve).not.toHaveBeenCalled();
   });
 
+  it.each(['bandeja', 'detalle'] as const)(
+    'WEB-F6-CA recupera %s tras error de lectura sin mostrar vacío ni resolver',
+    async (view) => {
+      const listRead = new Subject<AdvisorException[]>();
+      const detailRead = new Subject<AdvisorException>();
+      if (view === 'bandeja') {
+        gateway.list
+          .mockReturnValueOnce(listRead.asObservable())
+          .mockReturnValueOnce(of([exception]));
+        component.retryLoad();
+      } else {
+        gateway.get
+          .mockReturnValueOnce(detailRead.asObservable())
+          .mockReturnValueOnce(of(exception));
+        params.next(convertToParamMap({ exceptionId: exception.excepcionId }));
+      }
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const root: HTMLElement = fixture.nativeElement;
+
+      expect(component.loading()).toBe(true);
+      expect(root.querySelector('.loading-state')?.textContent).toContain(
+        es.advisorExceptions.loading,
+      );
+      expect(root.querySelector('.empty-state')).toBeNull();
+      expect(root.querySelector('[role=alert]')).toBeNull();
+
+      const failure = new AdvisorExceptionError('servicio_no_disponible');
+      if (view === 'bandeja') listRead.error(failure);
+      else detailRead.error(failure);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component.loading()).toBe(false);
+      expect(root.querySelector('[role=alert]')?.textContent).toContain(
+        es.advisorExceptions.errors.servicio_no_disponible,
+      );
+      expect(root.querySelector('.empty-state')).toBeNull();
+      const retry = root.querySelector<HTMLButtonElement>('.inline-alert button');
+      expect(retry?.textContent).toContain(es.advisorExceptions.retry);
+      retry?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component.loadErrorCode()).toBeNull();
+      expect(root.querySelector('[role=alert]')).toBeNull();
+      expect(root.querySelector('.exception-card')?.textContent).toContain(exception.motivoBloqueo);
+      expect(root.querySelector('.empty-state')).toBeNull();
+      if (view === 'bandeja') {
+        expect(gateway.list).toHaveBeenCalledTimes(3);
+        expect(gateway.get).not.toHaveBeenCalled();
+        expect(component.exceptions()).toEqual([exception]);
+      } else {
+        expect(gateway.get).toHaveBeenCalledTimes(2);
+        expect(component.exception()).toEqual(exception);
+      }
+      expect(gateway.resolve).not.toHaveBeenCalled();
+      expect(component.resolved()).toBeNull();
+    },
+  );
+
+  it.each([
+    { decision: 'aprobar', estado: 'aprobada', buttonType: 'submit' },
+    { decision: 'rechazar', estado: 'rechazada', buttonType: 'button' },
+  ] as const)(
+    'WEB-F6-CA exige motivo y espera la confirmación al $decision desde el formulario',
+    async ({ decision, estado, buttonType }) => {
+      const response = new Subject<ResolvedAdvisorException>();
+      gateway.resolve.mockReturnValue(response.asObservable());
+      params.next(convertToParamMap({ exceptionId: exception.excepcionId }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const root: HTMLElement = fixture.nativeElement;
+      const button = root.querySelector<HTMLButtonElement>(`.actions button[type=${buttonType}]`);
+      expect(button).not.toBeNull();
+      component.reasonForm.controls.motivo.setValue('   ');
+      button?.click();
+      fixture.detectChanges();
+
+      expect(gateway.resolve).not.toHaveBeenCalled();
+      expect(component.resolved()).toBeNull();
+      expect(root.textContent).toContain(es.advisorExceptions.validation.reason);
+
+      const motivo = 'Decisión justificada para este caso.';
+      component.reasonForm.controls.motivo.setValue(` ${motivo} `);
+      button?.click();
+      fixture.detectChanges();
+
+      expect(gateway.resolve).toHaveBeenCalledExactlyOnceWith(
+        exception.excepcionId,
+        exception.socioId,
+        decision,
+        motivo,
+      );
+      expect(component.resolving()).toBe(true);
+      expect(component.exception()?.estado).toBe('pendiente');
+      expect(component.resolved()).toBeNull();
+      expect(root.textContent).not.toContain(es.advisorExceptions.resolutionSaved);
+      for (const action of root.querySelectorAll<HTMLButtonElement>('.actions button')) {
+        expect(action.disabled).toBe(true);
+        action.click();
+      }
+      expect(gateway.resolve).toHaveBeenCalledTimes(1);
+
+      const receipt: ResolvedAdvisorException = {
+        ...resolved,
+        decision,
+        estado,
+        motivo,
+        trazabilidad: { ...resolved.trazabilidad, estadoActual: estado },
+      };
+      response.next(receipt);
+      response.complete();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component.resolving()).toBe(false);
+      expect(component.resolved()).toEqual(receipt);
+      expect(component.exception()).toEqual(receipt);
+      expect(root.querySelector('.resolution-card')).toBeNull();
+      expect(root.querySelector('.success-alert')?.textContent).toContain(
+        es.advisorExceptions.status[estado],
+      );
+      expect(root.querySelector('.success-alert')?.textContent).toContain(receipt.actorId);
+      expect(root.querySelector('.success-alert')?.textContent).toContain(receipt.motivo);
+      expect(gateway.resolve).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it.each([
     null,
     { ...advisor, role: 'client' as const },
