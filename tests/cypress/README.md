@@ -141,7 +141,7 @@ mensaje literal, estado HTTP y, cuando corresponde, código del diagnóstico esp
 debe observarlo exactamente una vez. No se desactiva el logging de la aplicación ni se
 guardan argumentos de consola o credenciales. Los HTTP negativos no se ocultan como éxitos.
 
-La suite UI incluye 42 casos. Cinco recorren el formulario/panel socio con HTTP
+La suite UI incluye 43 casos. Cinco recorren el formulario/panel socio con HTTP
 controlado y sin crear cuentas, consentimiento ni cotizaciones reales. No conectan
 el circuito de asesor con el de socio ni acreditan percentiles o persistencia AWS.
 Verifican operación y referencia de perfil confirmadas después de POST, recuperación
@@ -150,6 +150,11 @@ El caso de acuse perdido reproduce 503 con pago confirmado y póliza existente:
 la UI consulta la saga actual, reintenta explícitamente con la misma clave desde
 el detalle y no anuncia emisión hasta recibir `emitida`. Es HTTP controlado,
 no una prueba de persistencia o conciliación real ni una grabación nueva.
+Otro caso observa `emitida/v3` al actualizar y recargar después del 503, sin un
+segundo POST de pago: conserva la clave original y el snapshot `pago_confirmado/v2`,
+y deja de ofrecer confirmación o reintentos. El 503 se acota a la ruta de pago,
+su código y el mensaje visible; no se permiten diagnósticos inesperados de consola.
+Este caso HTTP controlado no acredita un worker real de recuperación automática.
 Otro caso recorre rechazo HTTP 200 sin fecha de confirmación, dashboard, detalle y
 cancelación/confirmación explícita de un nuevo intento. Tras un 503 de esa nueva clave
 y una recarga, GET aún devuelve el rechazo anterior: la UI no ofrece otra evaluación,

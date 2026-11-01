@@ -216,6 +216,70 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     cy.get('@retryIssuance.all').should('have.length', 1);
   });
 
+  it('observa emisión recuperada al consultar y recargar sin otro POST de pago', () => {
+    const { payment, subscription } = reachSubscription();
+    const paymentPath = `/api/v1/solicitudes-cotizacion/${quoteId}/pago-simulado`;
+    const issuedSaga = {
+      estado: 'emitida',
+      version: 3,
+      actualizadaEn: new Date(Date.parse(payment.saga.actualizadaEn) + 1).toISOString(),
+    };
+    let originalKey: string;
+    cy.get('.confirm-payment').should('be.enabled');
+    cy.intercept(
+      { method: 'POST', pathname: paymentPath },
+      { statusCode: 503, body: { code: 'servicio_no_disponible' } },
+    ).as('lostAcknowledgementWithoutRetry');
+    cy.get('.confirm-payment').click();
+    cy.wait('@lostAcknowledgementWithoutRetry').then(({ request, response }) => {
+      expect(new URL(request.url).pathname).to.eq(paymentPath);
+      expect(request.body).to.deep.eq({});
+      expect(response?.statusCode).to.eq(503);
+      expect(response?.body).to.deep.eq({ code: 'servicio_no_disponible' });
+      originalKey = String(request.headers['idempotency-key']);
+      expect(originalKey).to.match(/^[0-9a-f-]{36}$/i);
+    });
+    cy.get('.payment-section [role=alert]')
+      .should('be.visible')
+      .and(
+        'have.text',
+        'No fue posible consultar o confirmar el pago simulado. Actualiza el estado o reintenta la confirmación.',
+      );
+    cy.contains('Póliza emitida').should('not.exist');
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/suscripcion`, {
+      ...subscription,
+      saga: issuedSaga,
+    }).as('automaticallyIssuedSubscription');
+    cy.intercept('GET', paymentPath, payment).as('unchangedConfirmedPayment');
+
+    for (const action of ['refresh', 'reload']) {
+      if (action === 'reload') cy.reload();
+      else cy.contains('button', 'Actualizar estado').click();
+      cy.wait('@automaticallyIssuedSubscription').then(({ response }) => {
+        expect(response?.statusCode).to.eq(200);
+        expect(response?.body.saga).to.deep.eq(issuedSaga);
+      });
+      cy.wait('@unchangedConfirmedPayment').then(({ response }) => {
+        expect(response?.statusCode).to.eq(200);
+        expect(response?.body).to.deep.eq(payment);
+        expect(response?.body.saga).to.include({ estado: 'pago_confirmado', version: 2 });
+      });
+      cy.contains('dd', 'Póliza emitida').should('be.visible');
+      cy.get('.payment-confirmation').should('contain.text', 'Pago simulado confirmado');
+      cy.get('.payment-section [role=alert]').should('not.exist');
+      cy.get(
+        '.issuance-pending, .confirm-payment, .retry-issuance, .recover-payment, .request-new-payment',
+      ).should('not.exist');
+      cy.window({ log: false }).should((win) => {
+        expect(
+          win.sessionStorage.getItem(`solventa.payment.attempt.${subscription.id}`),
+          `same payment key after ${action}`,
+        ).to.eq(originalKey);
+      });
+      cy.get('@lostAcknowledgementWithoutRetry.all').should('have.length', 1);
+    }
+  });
+
   it('distingue rechazo definitivo de un nuevo intento ambiguo, también después de recargar', () => {
     const { payment, subscription } = reachSubscription();
     const rejected = rejection(payment, subscription);
