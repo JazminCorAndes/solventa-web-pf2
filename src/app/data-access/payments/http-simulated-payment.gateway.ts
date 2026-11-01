@@ -6,20 +6,32 @@ import { isPremiumPeriodicity } from '../../core/offers/offer.models';
 import { SimulatedPaymentGateway } from '../../core/payments/simulated-payment.gateway';
 import { SimulatedPaymentRecord } from '../../core/payments/simulated-payment.models';
 
-interface PaymentResponse {
+interface PaymentResponseBase {
   id: string;
   solicitudId: string;
   suscripcionId: string;
   ofertaId: string;
   ofertaVersion: number;
-  estado: 'confirmado';
   simulada: true;
   referenciaInterna: string;
   importe: { monto: string; moneda: string };
   periodicidad: string;
-  confirmadaEn: string;
-  saga: { estado: 'pago_confirmado'; version: number; actualizadaEn: string };
 }
+
+type PaymentResponse = PaymentResponseBase &
+  (
+    | {
+        estado: 'confirmado';
+        confirmadaEn: string;
+        saga: { estado: 'pago_confirmado'; version: number; actualizadaEn: string };
+      }
+    | {
+        estado: 'rechazado';
+        rechazadaEn: string;
+        motivo: 'rechazo_simulado';
+        saga: { estado: 'pago_pendiente'; version: number; actualizadaEn: string };
+      }
+  );
 
 @Injectable()
 export class HttpSimulatedPaymentGateway implements SimulatedPaymentGateway {
@@ -63,7 +75,7 @@ function toPayment(response: PaymentResponse): SimulatedPaymentRecord {
   const amount = response?.importe?.monto;
   const currency = response?.importe?.moneda;
   if (
-    response?.estado !== 'confirmado' ||
+    !['confirmado', 'rechazado'].includes(response?.estado) ||
     response.simulada !== true ||
     typeof response.id !== 'string' ||
     !response.id ||
@@ -83,27 +95,54 @@ function toPayment(response: PaymentResponse): SimulatedPaymentRecord {
     Number(amount) <= 0 ||
     typeof currency !== 'string' ||
     !/^[A-Z]{3}$/.test(currency) ||
-    typeof response.confirmadaEn !== 'string' ||
-    !Number.isFinite(Date.parse(response.confirmadaEn)) ||
-    response.saga?.estado !== 'pago_confirmado' ||
-    !Number.isInteger(response.saga.version) ||
-    response.saga.version < 2 ||
-    typeof response.saga.actualizadaEn !== 'string' ||
-    !Number.isFinite(Date.parse(response.saga.actualizadaEn))
+    !Number.isInteger(response.saga?.version) ||
+    typeof response.saga?.actualizadaEn !== 'string' ||
+    !Number.isFinite(Date.parse(response.saga.actualizadaEn)) ||
+    (response.estado === 'confirmado'
+      ? typeof response.confirmadaEn !== 'string' ||
+        !Number.isFinite(Date.parse(response.confirmadaEn)) ||
+        response.saga.estado !== 'pago_confirmado' ||
+        response.saga.version < 2
+      : typeof response.rechazadaEn !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(
+          response.rechazadaEn,
+        ) ||
+        !Number.isFinite(Date.parse(response.rechazadaEn)) ||
+        response.motivo !== 'rechazo_simulado' ||
+        'confirmadaEn' in response ||
+        response.saga.estado !== 'pago_pendiente' ||
+        response.saga.version !== 1)
   ) {
     throw new Error('The simulated payment response is invalid.');
   }
-  return {
+  const common = {
     id: response.id,
     quoteId: response.solicitudId,
     subscriptionId: response.suscripcionId,
     offerId: response.ofertaId,
     offerVersion: response.ofertaVersion,
-    status: 'confirmed',
-    simulated: true,
     reference: response.referenciaInterna,
     premium: { amount: Number(amount), currency },
     periodicity: response.periodicidad,
+  };
+  if (response.estado === 'rechazado') {
+    return {
+      ...common,
+      status: 'rejected',
+      simulated: true,
+      rejectedAt: response.rechazadaEn,
+      reason: response.motivo,
+      saga: {
+        status: 'payment_pending',
+        version: response.saga.version,
+        updatedAt: response.saga.actualizadaEn,
+      },
+    };
+  }
+  return {
+    ...common,
+    status: 'confirmed',
+    simulated: true,
     confirmedAt: response.confirmadaEn,
     saga: {
       status: 'payment_confirmed',

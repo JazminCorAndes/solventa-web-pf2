@@ -1,4 +1,4 @@
-import { DASHBOARD_SNAPSHOT } from '../dashboard/dashboard.testing';
+import { DASHBOARD_SNAPSHOT, REJECTED_DASHBOARD_PAYMENT } from '../dashboard/dashboard.testing';
 import { quoteProgress } from './quote-progress';
 
 describe('quoteProgress', () => {
@@ -55,6 +55,24 @@ describe('quoteProgress', () => {
     expect(quoteProgress('request-001', snapshot, now)).toMatchObject({
       status: 'inProgress',
       action: 'proceedToPayment',
+    });
+  });
+
+  it('does not treat a rejected attempt as an active paid subscription', () => {
+    const snapshot = {
+      ...DASHBOARD_SNAPSHOT,
+      policies: [],
+      payments: [REJECTED_DASHBOARD_PAYMENT],
+      subscriptions: DASHBOARD_SNAPSHOT.subscriptions.map((item) => ({
+        ...item,
+        saga: { ...item.saga, status: 'pago_pendiente' },
+      })),
+    };
+    expect(quoteProgress('request-001', snapshot, now)).toMatchObject({
+      status: 'inProgress',
+      action: 'proceedToPayment',
+      path: '/app/cotizaciones/suscripcion',
+      requiresProfile: false,
     });
   });
 

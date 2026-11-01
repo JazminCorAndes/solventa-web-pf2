@@ -35,16 +35,20 @@ export interface DashboardSubscription {
   saga: { status: string; version: number; updatedAt: string };
 }
 
-export interface DashboardPayment {
+interface DashboardPaymentBase {
   id: string;
   requestId: string;
   subscriptionId: string;
-  status: 'confirmado';
   simulated: true;
   amount: DashboardMoney;
   periodicity: PremiumPeriodicity;
-  confirmedAt: string;
 }
+
+export type DashboardPayment = DashboardPaymentBase &
+  (
+    | { status: 'confirmado'; confirmedAt: string }
+    | { status: 'rechazado'; rejectedAt: string; reason: 'rechazo_simulado' }
+  );
 
 export interface DashboardPolicy {
   id: string;

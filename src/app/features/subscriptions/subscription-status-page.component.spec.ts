@@ -14,6 +14,7 @@ import { SimulatedPaymentRecord } from '../../core/payments/simulated-payment.mo
 import {
   CONFIRMED_PAYMENT,
   PAYMENT_SELECTION,
+  REJECTED_PAYMENT,
 } from '../../core/payments/simulated-payment.testing';
 import { SubscriptionRecord } from '../../core/subscriptions/subscription.models';
 import { SubscriptionService } from '../../core/subscriptions/subscription.service';
@@ -88,6 +89,7 @@ describe('SubscriptionStatusPageComponent', () => {
   afterEach(() => {
     environment.dataAccessMode = originalMode;
     window.sessionStorage.removeItem(`solventa.payment.attempt.${SUBSCRIPTION.id}`);
+    window.sessionStorage.removeItem(`solventa.payment.receipt.${SUBSCRIPTION.id}`);
   });
 
   it('shows the approved decision and operation identifier', () => {
@@ -299,6 +301,65 @@ describe('SubscriptionStatusPageComponent', () => {
     fixture.nativeElement.querySelector('.payment-section button').click();
     expect(load).toHaveBeenCalledTimes(2);
     expect(paymentGateway.confirm).not.toHaveBeenCalled();
+  });
+
+  it('requires preparation and explicit confirmation before rotating a rejected attempt key', () => {
+    paymentGateway.confirm.mockReturnValueOnce(of(REJECTED_PAYMENT));
+    fixture.nativeElement.querySelector('.confirm-payment').click();
+    fixture.detectChanges();
+    const originalKey = paymentGateway.confirm.mock.calls[0][1];
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain(es.payment.rejected);
+    expect(text).toContain(es.payment.rejectedAt);
+    expect(text).not.toContain(es.payment.confirmedAt);
+    expect(text).not.toContain(es.payment.pending);
+    expect(fixture.nativeElement.querySelector('.payment-confirmation')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.retry-issuance')).toBeNull();
+    fixture.componentInstance.confirmNewAttempt();
+    expect(paymentGateway.confirm).toHaveBeenCalledOnce();
+    fixture.nativeElement.querySelector('.request-new-payment').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(es.payment.newAttemptBody);
+    fixture.nativeElement.querySelector('.cancel-new-payment').click();
+    fixture.detectChanges();
+    expect(paymentGateway.confirm).toHaveBeenCalledOnce();
+    expect(window.sessionStorage.getItem(`solventa.payment.attempt.${SUBSCRIPTION.id}`)).toBe(
+      originalKey,
+    );
+    fixture.nativeElement.querySelector('.request-new-payment').click();
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('.confirm-new-payment').click();
+    fixture.componentInstance.confirmNewAttempt();
+    fixture.detectChanges();
+    expect(paymentGateway.confirm).toHaveBeenCalledTimes(2);
+    expect(paymentGateway.confirm.mock.calls[1][1]).not.toBe(originalKey);
+    expect(fixture.nativeElement.querySelector('.request-new-payment')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain(es.subscription.sagaStatuses.issued);
+  });
+
+  it('does not submit a confirmation prepared for an older rejection', () => {
+    paymentGateway.confirm.mockReturnValueOnce(of(REJECTED_PAYMENT));
+    fixture.componentInstance.confirmPayment();
+    fixture.componentInstance.requestNewAttempt();
+    paymentGateway.load.mockReturnValue(
+      of({ ...REJECTED_PAYMENT, id: 'another-rejection', reference: 'SIM-another-rejection' }),
+    );
+    fixture.componentInstance.payments.load(SUBSCRIPTION).subscribe();
+    fixture.componentInstance.confirmNewAttempt();
+    expect(paymentGateway.confirm).toHaveBeenCalledOnce();
+  });
+
+  it('keeps rejection recovery available in detail without automatically starting another attempt', () => {
+    fixture.destroy();
+    TestBed.inject(ActivatedRoute).snapshot.data['detail'] = true;
+    paymentGateway.load.mockReturnValue(of(REJECTED_PAYMENT));
+    fixture = TestBed.createComponent(SubscriptionStatusPageComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.payment-rejection')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.request-new-payment')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
+    expect(paymentGateway.confirm).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('a').getAttribute('href')).toBe('/app/cotizaciones');
   });
 
   it('does not enable confirmation after a failed status request', () => {

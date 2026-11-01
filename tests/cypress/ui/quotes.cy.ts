@@ -222,6 +222,7 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
   });
 
   it('no abre planes de una solicitud cuyo perfil ya vencio al recuperarla', () => {
+    cy.expectConsoleError('The quote process could not be recovered.', 422, 'perfil_vencido');
     cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}`, {
       id: quoteId,
       productoId: 'travel',

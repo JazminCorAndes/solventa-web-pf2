@@ -7,7 +7,10 @@ export function quoteProgress(requestId: string, snapshot: DashboardSnapshot, no
     !!subscription &&
     (['pago_confirmado', 'emitida'].includes(subscription.saga.status) ||
       snapshot.payments.some(
-        (payment) => payment.requestId === requestId && payment.subscriptionId === subscription.id,
+        (payment) =>
+          payment.status === 'confirmado' &&
+          payment.requestId === requestId &&
+          payment.subscriptionId === subscription.id,
       ));
   const expired = paid && !!subscription?.validUntil && Date.parse(subscription.validUntil) <= now;
   return {

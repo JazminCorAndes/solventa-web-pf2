@@ -52,9 +52,9 @@ en conjunto. No recrear Apps, cambiar credenciales ni desactivar protecciones pa
 
 Integrar el PR no cambia automáticamente el controlador, la App ni las protecciones.
 
-| Proceso                              | Cuándo                                             | Qué comprueba                             |
-| ------------------------------------ | -------------------------------------------------- | ----------------------------------------- |
-| Actions: `Calidad`                   | Cada PR y push a develop/master                    | Lint, pruebas y compilación               |
+| Proceso                              | Cuándo                                             | Qué comprueba                                                                                |
+| ------------------------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Actions: `Calidad`                   | Cada PR y push a develop/master                    | Lint, pruebas y compilación                                                                  |
 | Jenkins: `CI / Validación (Jenkins)` | Comentario nuevo `/test-jenkins` de un colaborador | Lint, unitarias/cobertura, Cypress Frontend controlado, compilación y artefacto por revisión |
 
 Después de nuevos commits, solicitar Jenkins otra vez. La aprobación del equipo es
@@ -118,6 +118,14 @@ del sistema ni cambia el agente o los disparadores, y falla si el navegador no a
 Las regresiones locales del contrato Jenkins y del artefacto se ejecutan con
 `node --test scripts/*.test.cjs tests/cypress/runner.test.cjs`; no sustituyen una ejecución
 del Jenkins vivo.
+
+El preflight `scripts/verify-ci-toolchain.cjs` tiene alcance **Linux**, igual que el
+`Jenkinsfile`: usa etapas `sh` y las rutas fijadas de Node 22.22.3/pnpm 11.19.0 bajo
+`/opt/jenkins-web`. Invoca `pnpm` directamente, sin intérprete; los shims `.cmd` de
+Windows no son ejecutables de ese contrato y pueden producir `ENOENT`. No se deben
+relajar los pins, añadir `shell: true` ni cambiar el agente para acomodar esa prueba.
+En Windows se pueden comprobar los comandos afectados con el Node fijado y Corepack
+en un directorio de sesión, pero eso no acredita este preflight ni Jenkins/Linux vivo.
 
 Actions valida también `pnpm test:pages` y `pnpm build:pages` en los PRs, sin publicar.
 El workflow separado `pages.yml` publica después del CI exitoso de un push a `master`, usando

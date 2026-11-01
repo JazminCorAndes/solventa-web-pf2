@@ -128,17 +128,30 @@ function subscription(value: unknown): DashboardSubscription {
 
 function payment(value: unknown): DashboardPayment {
   const item = record(value);
-  if (item['estado'] !== 'confirmado' || item['simulada'] !== true) {
+  if (!['confirmado', 'rechazado'].includes(String(item['estado'])) || item['simulada'] !== true) {
     invalid();
   }
-  return {
+  const common = {
     id: text(item['id']),
     requestId: text(item['solicitudId']),
     subscriptionId: text(item['suscripcionId']),
-    status: 'confirmado',
-    simulated: true,
     amount: money(item['importe'], true),
     periodicity: periodicity(item['periodicidad']),
+  };
+  if (item['estado'] === 'rechazado') {
+    if (item['motivo'] !== 'rechazo_simulado' || 'confirmadaEn' in item) invalid();
+    return {
+      ...common,
+      status: 'rechazado',
+      simulated: true,
+      rejectedAt: date(item['rechazadaEn']),
+      reason: 'rechazo_simulado',
+    };
+  }
+  return {
+    ...common,
+    status: 'confirmado',
+    simulated: true,
     confirmedAt: date(item['confirmadaEn']),
   };
 }

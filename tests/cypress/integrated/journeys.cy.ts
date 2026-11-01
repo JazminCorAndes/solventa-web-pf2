@@ -134,6 +134,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
         requestId = response!.body.id;
       });
       cy.location('pathname').should('eq', '/app/cotizaciones/ofertas');
+      cy.get('.plan-card').first().should('be.visible');
       cy.contains('button', 'Cerrar sesión').click();
     });
     register().then((stranger) => {
@@ -160,6 +161,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
           expect(body.polizas).to.deep.eq([]);
         });
       });
+      cy.expectConsoleError('The quote process could not be recovered.', 404);
       cy.then(() => cy.visit(`/app/cotizaciones/ofertas?solicitud=${requestId}`));
       cy.location('pathname').should('eq', '/app/cotizaciones');
       cy.location('search').should('include', 'error=resume');
@@ -185,6 +187,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
         requestId = response!.body.id;
       });
       cy.location('pathname').should('eq', '/app/cotizaciones/ofertas');
+      cy.get('.plan-card').first().should('be.visible');
       cy.visit('/app/cotizaciones/solicitar?producto=automotive');
       cy.intercept('PUT', '/api/v1/consentimientos/perfilamiento').as('realRevocation');
       cy.contains('button', 'Revocar autorización').click();

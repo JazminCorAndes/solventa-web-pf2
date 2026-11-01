@@ -81,6 +81,7 @@ export function login(email: string, password: string) {
   cy.get('#login-password').type(password, { log: false });
   cy.get('button[type=submit]').click();
   cy.location('pathname').should('eq', '/app/dashboard');
+  cy.get('.dashboard .metric-grid, .dashboard .state-panel[role=alert]').should('be.visible');
 }
 
 export function openQuote(product: Product) {

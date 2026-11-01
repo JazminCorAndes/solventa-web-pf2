@@ -13,7 +13,10 @@ import { AuthUser } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { TEST_USER } from '../../core/auth/auth.testing';
 import { DASHBOARD_GATEWAY } from '../../core/dashboard/dashboard.gateway';
-import { DASHBOARD_RESPONSE } from '../../core/dashboard/dashboard.testing';
+import {
+  DASHBOARD_RESPONSE,
+  REJECTED_DASHBOARD_RESPONSE,
+} from '../../core/dashboard/dashboard.testing';
 import { HttpDashboardGateway } from '../../data-access/dashboard/http-dashboard.gateway';
 import populatedReal from '../../data-access/dashboard/testing/dashboard-populated-real.json';
 import emptyReal from '../../data-access/dashboard/testing/dashboard-empty-real.json';
@@ -105,6 +108,27 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
     expect(elements('[role="alert"]')).toHaveLength(0);
   });
+
+  it.each(['es', 'en'])(
+    'shows the rejected outcome in %s without implying payment or issuance',
+    (lang) => {
+      TestBed.inject(TranslocoService).setActiveLang(lang);
+      const labels = lang === 'es' ? es : en;
+      http.expectOne(URL).flush({
+        ...DASHBOARD_RESPONSE,
+        suscripciones: [],
+        polizas: [],
+        pagos: [REJECTED_DASHBOARD_RESPONSE],
+      });
+      fixture.detectChanges();
+      const payment = elements('[data-testid="dashboard-payment"]')[0].textContent ?? '';
+      expect(payment).toContain(labels.payment.rejected);
+      expect(payment).toContain(labels.payment.rejectedAt);
+      expect(payment).toContain(labels.payment.rejectionReasons.rechazo_simulado);
+      expect(payment).not.toContain(labels.dashboard.confirmedAt);
+      expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
+    },
+  );
 
   it('counts only policies and preserves unknown policy types and states literally', () => {
     http.expectOne(URL).flush({

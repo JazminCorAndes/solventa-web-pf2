@@ -12,6 +12,8 @@ import {
   DASHBOARD_RESPONSE,
   DASHBOARD_SNAPSHOT,
   EMPTY_DASHBOARD,
+  REJECTED_DASHBOARD_RESPONSE,
+  REJECTED_DASHBOARD_PAYMENT,
 } from '../../core/dashboard/dashboard.testing';
 import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
 import { HttpDashboardGateway } from './http-dashboard.gateway';
@@ -95,6 +97,28 @@ describe('HttpDashboardGateway', () => {
     const result = firstValueFrom(gateway.load());
     http.expectOne(URL).flush(EMPTY_RESPONSE);
     await expect(result).resolves.toEqual(EMPTY_DASHBOARD);
+  });
+
+  it('maps a definitive simulated rejection without a confirmation timestamp', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(URL).flush({ ...EMPTY_RESPONSE, pagos: [REJECTED_DASHBOARD_RESPONSE] });
+    const snapshot = await result;
+    expect(snapshot.payments).toEqual([REJECTED_DASHBOARD_PAYMENT]);
+    expect(snapshot.payments[0]).not.toHaveProperty('confirmedAt');
+  });
+
+  it.each([
+    { confirmadaEn: '2026-10-01T12:15:00Z' },
+    { confirmadaEn: null },
+    { rechazadaEn: undefined },
+    { rechazadaEn: '2026-10-01' },
+    { motivo: 'otro' },
+  ])('rejects inconsistent rejection history %j', async (fields) => {
+    const result = firstValueFrom(gateway.load());
+    http
+      .expectOne(URL)
+      .flush({ ...EMPTY_RESPONSE, pagos: [{ ...REJECTED_DASHBOARD_RESPONSE, ...fields }] });
+    await expect(result).rejects.toThrow('The dashboard response is invalid.');
   });
 
   it('propagates a network failure without presenting empty account records', async () => {

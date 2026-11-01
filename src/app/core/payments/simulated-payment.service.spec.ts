@@ -10,6 +10,7 @@ import {
   CONFIRMED_PAYMENT,
   PAYMENT_SELECTION,
   PAYMENT_SUBSCRIPTION,
+  REJECTED_PAYMENT,
 } from './simulated-payment.testing';
 
 describe('SimulatedPaymentService', () => {
@@ -17,12 +18,14 @@ describe('SimulatedPaymentService', () => {
   const gateway = { load: vi.fn(), confirm: vi.fn() };
   const offers = { loadSelection: vi.fn() };
   const storageKey = `solventa.payment.attempt.${PAYMENT_SUBSCRIPTION.id}`;
+  const receiptKey = `solventa.payment.receipt.${PAYMENT_SUBSCRIPTION.id}`;
   let service: SimulatedPaymentService;
 
   beforeEach(() => {
     environment.dataAccessMode = 'backend';
     vi.resetAllMocks();
     window.sessionStorage.removeItem(storageKey);
+    window.sessionStorage.removeItem(receiptKey);
     gateway.load.mockReturnValue(of(null));
     gateway.confirm.mockReturnValue(of(CONFIRMED_PAYMENT));
     offers.loadSelection.mockReturnValue(of(PAYMENT_SELECTION));
@@ -38,6 +41,7 @@ describe('SimulatedPaymentService', () => {
   afterEach(() => {
     environment.dataAccessMode = originalMode;
     window.sessionStorage.removeItem(storageKey);
+    window.sessionStorage.removeItem(receiptKey);
     vi.restoreAllMocks();
   });
 
@@ -149,8 +153,160 @@ describe('SimulatedPaymentService', () => {
     await expect(firstValueFrom(service.confirm())).resolves.toBeNull();
 
     expect(service.payment()).toEqual(CONFIRMED_PAYMENT);
-    expect(service.errorKey()).toBe('payment.errors.unavailable');
+    expect(service.errorKey()).toBe('payment.errors.conflict');
     expect(gateway.confirm).toHaveBeenCalledWith(PAYMENT_SUBSCRIPTION.quoteId, 'original-key');
+  });
+
+  async function rejectFirstAttempt(): Promise<string> {
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    gateway.confirm.mockReturnValueOnce(of(REJECTED_PAYMENT));
+    await expect(firstValueFrom(service.confirm())).resolves.toEqual(REJECTED_PAYMENT);
+    return gateway.confirm.mock.calls[0][1];
+  }
+
+  it('requires a separate explicit action to create a new attempt after definitive rejection', async () => {
+    const rejectedKey = await rejectFirstAttempt();
+    expect(service.canConfirm()).toBe(false);
+    expect(service.canRetryIssuance()).toBe(false);
+    expect(service.canStartNewAttempt()).toBe(true);
+    expect(service.payment()).not.toHaveProperty('confirmedAt');
+    await expect(firstValueFrom(service.startNewAttempt())).resolves.toEqual(CONFIRMED_PAYMENT);
+    expect(gateway.confirm).toHaveBeenCalledTimes(2);
+    expect(gateway.confirm.mock.calls[1][1]).not.toBe(rejectedKey);
+    expect(service.canStartNewAttempt()).toBe(false);
+    await firstValueFrom(service.startNewAttempt());
+    expect(gateway.confirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('never enables a new key when GET still returns the previous rejection after an ambiguous new attempt', async () => {
+    const rejectedKey = await rejectFirstAttempt();
+    gateway.confirm.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })));
+    await firstValueFrom(service.startNewAttempt());
+    const newKey = gateway.confirm.mock.calls[1][1];
+    expect(newKey).not.toBe(rejectedKey);
+    gateway.load.mockReturnValue(of(REJECTED_PAYMENT));
+    const reloaded = TestBed.runInInjectionContext(() => new SimulatedPaymentService());
+    await firstValueFrom(reloaded.load(PAYMENT_SUBSCRIPTION));
+    expect(reloaded.canStartNewAttempt()).toBe(false);
+    expect(reloaded.canRecoverAttempt()).toBe(true);
+    expect(gateway.confirm).toHaveBeenCalledTimes(2);
+    await expect(firstValueFrom(reloaded.confirm())).resolves.toEqual(CONFIRMED_PAYMENT);
+    expect(gateway.confirm).toHaveBeenNthCalledWith(3, PAYMENT_SUBSCRIPTION.quoteId, newKey);
+    expect(reloaded.canStartNewAttempt()).toBe(false);
+  });
+
+  it('resolves an ambiguous rejection with the same key before allowing another attempt', async () => {
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    gateway.confirm.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })));
+    await firstValueFrom(service.confirm());
+    const originalKey = gateway.confirm.mock.calls[0][1];
+    gateway.load.mockReturnValue(of(REJECTED_PAYMENT));
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    expect(service.canStartNewAttempt()).toBe(false);
+    gateway.confirm.mockReturnValueOnce(of(REJECTED_PAYMENT));
+    await expect(firstValueFrom(service.confirm())).resolves.toEqual(REJECTED_PAYMENT);
+    expect(gateway.confirm).toHaveBeenNthCalledWith(2, PAYMENT_SUBSCRIPTION.quoteId, originalKey);
+    expect(service.canStartNewAttempt()).toBe(true);
+  });
+
+  it('does not let an old rejected response replace a confirmed payment learned during a new attempt', async () => {
+    await rejectFirstAttempt();
+    const pending = new Subject<SimulatedPaymentRecord>();
+    gateway.confirm.mockReturnValueOnce(pending);
+    const result = firstValueFrom(service.startNewAttempt());
+    gateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    await firstValueFrom(service.load({ ...PAYMENT_SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga }));
+    pending.next(REJECTED_PAYMENT);
+    await expect(result).resolves.toBeNull();
+    expect(service.payment()).toEqual(CONFIRMED_PAYMENT);
+    expect(service.errorKey()).toBe('payment.errors.conflict');
+    expect(service.canStartNewAttempt()).toBe(false);
+    await firstValueFrom(service.load({ ...PAYMENT_SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga }));
+    expect(service.canRetryIssuance()).toBe(false);
+    expect(service.errorKey()).toBe('payment.errors.retryKeyUnavailable');
+  });
+
+  it('does not downgrade a known confirmation when a subsequent GET returns an old rejection', async () => {
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    await firstValueFrom(service.confirm());
+    gateway.load.mockReturnValue(of(REJECTED_PAYMENT));
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    expect(service.payment()).toBeNull();
+    expect(service.errorKey()).toBe('payment.errors.conflict');
+    expect(service.canStartNewAttempt()).toBe(false);
+    expect(gateway.confirm).toHaveBeenCalledOnce();
+  });
+
+  it.each([false, true])(
+    'does not forget a confirmation after an empty GET (new instance: %s)',
+    async (newInstance) => {
+      await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+      await firstValueFrom(service.confirm());
+      const active = newInstance
+        ? TestBed.runInInjectionContext(() => new SimulatedPaymentService())
+        : service;
+      await firstValueFrom(active.load(PAYMENT_SUBSCRIPTION));
+      expect(active.errorKey()).toBe('payment.errors.conflict');
+      expect(active.canConfirm()).toBe(false);
+      expect(active.canStartNewAttempt()).toBe(false);
+      expect(gateway.confirm).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('preserves confirmed identity across service instances without restricting a new attempt after rejection', async () => {
+    await rejectFirstAttempt();
+    await firstValueFrom(service.startNewAttempt());
+    const reloaded = TestBed.runInInjectionContext(() => new SimulatedPaymentService());
+    gateway.load.mockReturnValue(
+      of({
+        ...CONFIRMED_PAYMENT,
+        id: 'different-confirmation',
+        reference: 'SIM-different-confirmation',
+      }),
+    );
+    await firstValueFrom(reloaded.load({ ...PAYMENT_SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga }));
+    expect(reloaded.errorKey()).toBe('payment.errors.conflict');
+    expect(reloaded.payment()).toBeNull();
+    expect(reloaded.canRetryIssuance()).toBe(false);
+    expect(gateway.confirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not offer a further new key if storing a new attempt fails before its POST', async () => {
+    const originalKey = await rejectFirstAttempt();
+    const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+      throw new DOMException('Storage is full.', 'QuotaExceededError');
+    });
+    await expect(firstValueFrom(service.startNewAttempt())).resolves.toBeNull();
+    write.mockRestore();
+    expect(service.unresolvedAttempt()).toBe(true);
+    expect(service.canStartNewAttempt()).toBe(false);
+    expect(window.sessionStorage.getItem(storageKey)).toBe(originalKey);
+    expect(gateway.confirm).toHaveBeenCalledOnce();
+    await firstValueFrom(service.confirm());
+    expect(service.errorKey()).toBe('payment.errors.retryKeyUnavailable');
+    expect(gateway.confirm).toHaveBeenCalledOnce();
+  });
+
+  it('blocks a new attempt when current offer or subscription validation fails', async () => {
+    await rejectFirstAttempt();
+    offers.loadSelection.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 422 })),
+    );
+    gateway.load.mockReturnValue(of(REJECTED_PAYMENT));
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    await firstValueFrom(service.startNewAttempt());
+    expect(gateway.confirm).toHaveBeenCalledOnce();
+    expect(service.canStartNewAttempt()).toBe(false);
+  });
+
+  it('blocks missing or corrupt attempt receipts rather than replacing an unresolved key', async () => {
+    await rejectFirstAttempt();
+    window.sessionStorage.setItem(receiptKey, '{invalid');
+    gateway.load.mockReturnValue(of(REJECTED_PAYMENT));
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    expect(service.errorKey()).toBe('payment.errors.retryKeyUnavailable');
+    await firstValueFrom(service.startNewAttempt());
+    expect(gateway.confirm).toHaveBeenCalledOnce();
   });
 
   it('blocks repeated issuance clicks and stops offering retries after authoritative issuance', async () => {

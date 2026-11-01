@@ -894,8 +894,28 @@ Está disponible también en el detalle y vuelve a leer la saga después del rei
 No envía automáticamente, no genera otra clave y rechaza una identidad de pago distinta.
 Si falta la clave original de esta pestaña, solo permite consultar estado y explica el
 bloqueo. Una saga `emitida` elimina la acción; el GET por sí solo no concilia la emisión.
+
+El mismo endpoint también devuelve HTTP 200 con `estado: rechazado`, `rechazadaEn`,
+`motivo: rechazo_simulado` y la saga persistida `pago_pendiente` v1, **sin `confirmadaEn`**.
+Es un rechazo definitivo de la simulación, no un error 422/503 ni un pago financiero pendiente.
+Estado, detalle y dashboard muestran su fecha y motivo; el historial no lo cuenta como pago
+confirmado ni deduce una póliza. El navegador no puede elegir el resultado.
+
+Tras ese rechazo, «Preparar un nuevo intento» solicita confirmación explícita antes de enviar
+otro POST con una clave nueva. Cancelar, consultar, recargar o montar la pantalla no lo envían.
+La clave conserva metadata mínima de resolución en `sessionStorage`: un POST ambiguo de un
+nuevo intento sigue pendiente de resolver aunque GET todavía devuelva el rechazo anterior.
+«Recuperar el mismo intento» reenvía esa misma clave, sin habilitar una tercera. Esta metadata
+no sustituye el resultado autoritativo del servidor. Una respuesta antigua rechazada no
+reemplaza un confirmado conocido; la identidad de este último se conserva al recuperar.
+Un nuevo intento explícito tras rechazo puede devolver otro ID válido o el confirmado ya
+existente por una carrera, sin confundirlo con la recuperación de emisión de un pago confirmado.
+El backend debe incluir la migración `intentos_pago_simulado` antes de consumir estos endpoints,
+también para el dashboard.
+
 Las periodicidades `mensual`, `por_viaje`, `por_vuelo` y `por_periodo` se conservan sin convertirlas
-en mensualidades. Los estados en revisión, rechazada, fallida o emitida no habilitan nuevos pagos.
+en mensualidades. Las decisiones de suscripción en revisión/rechazada y las sagas fallida/emitida
+no habilitan nuevos intentos de pago.
 Esta simulación requiere el modo backend: no cobra dinero ni abre un checkout real.
 La póliza académica depende de la emisión confirmada por el servicio y no acredita
 cobertura real, documento ni firma. No se implementa un éxito ficticio en el modo mock.

@@ -107,18 +107,18 @@ ese manifiesto temporal y esperar su salida; no matar solo el proceso padre de P
 
 ## Cobertura funcional
 
-| Área implementada         | UI controlada                                                                                                            | Integración real                                                                                                            |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| Identidad                 | Campos requeridos/email, 401/429/503, recuperación, guardas, refresh fallido, logout                                     | Registro API, duplicado, login UI válido/inválido, petición anónima, renovación al recargar, refresh revocado, nueva sesión |
-| Ocho productos            | Obligatorios y payload exacto de cada formulario                                                                         | Ocho recorridos independientes completos                                                                                    |
-| Productos                 | Automotriz, viaje, vida, dispositivos, vuelo paramétrico, clima paramétrico, protección de pagos, vida hipotecaria       | Los mismos ocho, con datos sintéticos y fechas relativas                                                                    |
-| Validaciones específicas  | Saldo hipotecario cero, destino fuera de catálogo, fechas invertidas, ofertas vencidas/retiradas                         | Contratos transmitidos y prima positiva del servicio                                                                        |
-| Consentimiento            | Ausente, autorización, revocación, expiración                                                                            | Ausente denegado, autorización durable, revocación deniega nuevo perfil y nueva cotización con 403                          |
-| Oferta/suscripción        | Condiciones obligatorias, oferta cambiada, revisión/rechazo no permiten pagar                                            | Selección persistida, decisión aprobada, hash y versión de regla, perfil con fuentes/modelo/versiones                       |
-| Pago simulado             | Fallo y reintento con misma clave; importe discordante no muestra éxito                                                  | Importe igual a oferta, misma referencia en replay de clave, un pago y una póliza                                           |
-| Recuperación              | Error de dashboard y solicitud con reintento                                                                             | Recarga, logout, borrado de storage, login nuevo, dashboard y deep link a suscripción recuperados del backend               |
-| Ownership                 | No se presenta oferta tras fallo de recuperación                                                                         | Segundo usuario recibe 404 en solicitud/ofertas/selección/suscripción/perfil/pago y dashboard vacío                         |
-| Socio hipotecario SOL-198/205 | Navegador: portal → formulario → oferta y factores → GET; autorización insuficiente, fallos y mismo operationId. Regresiones HTTP del panel para vencimiento | Contexto socio/cliente/crédito, prima, explicación, GET idéntico persistido, aviso histórico y ausencia de POST duplicados |
+| Área implementada             | UI controlada                                                                                                                                                | Integración real                                                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Identidad                     | Campos requeridos/email, 401/429/503, recuperación, guardas, refresh fallido, logout                                                                         | Registro API, duplicado, login UI válido/inválido, petición anónima, renovación al recargar, refresh revocado, nueva sesión |
+| Ocho productos                | Obligatorios y payload exacto de cada formulario                                                                                                             | Ocho recorridos independientes completos                                                                                    |
+| Productos                     | Automotriz, viaje, vida, dispositivos, vuelo paramétrico, clima paramétrico, protección de pagos, vida hipotecaria                                           | Los mismos ocho, con datos sintéticos y fechas relativas                                                                    |
+| Validaciones específicas      | Saldo hipotecario cero, destino fuera de catálogo, fechas invertidas, ofertas vencidas/retiradas                                                             | Contratos transmitidos y prima positiva del servicio                                                                        |
+| Consentimiento                | Ausente, autorización, revocación, expiración                                                                                                                | Ausente denegado, autorización durable, revocación deniega nuevo perfil y nueva cotización con 403                          |
+| Oferta/suscripción            | Condiciones obligatorias, oferta cambiada, revisión/rechazo no permiten pagar                                                                                | Selección persistida, decisión aprobada, hash y versión de regla, perfil con fuentes/modelo/versiones                       |
+| Pago simulado                 | Fallo y reintento con misma clave; importe discordante no muestra éxito                                                                                      | Importe igual a oferta, misma referencia en replay de clave, un pago y una póliza                                           |
+| Recuperación                  | Error de dashboard y solicitud con reintento                                                                                                                 | Recarga, logout, borrado de storage, login nuevo, dashboard y deep link a suscripción recuperados del backend               |
+| Ownership                     | No se presenta oferta tras fallo de recuperación                                                                                                             | Segundo usuario recibe 404 en solicitud/ofertas/selección/suscripción/perfil/pago y dashboard vacío                         |
+| Socio hipotecario SOL-198/205 | Navegador: portal → formulario → oferta y factores → GET; autorización insuficiente, fallos y mismo operationId. Regresiones HTTP del panel para vencimiento | Contexto socio/cliente/crédito, prima, explicación, GET idéntico persistido, aviso histórico y ausencia de POST duplicados  |
 
 El caso del socio adelanta solo el reloj del navegador al recibir la oferta
 recuperada, después de autenticar. No altera el GET, el snapshot persistido, el TTL
@@ -132,8 +132,16 @@ No hay `cy.wait(ms)` ni reintentos automáticos de tests. La sincronización usa
 observación HTTP y assertions reintentables de Cypress. La emisión se consulta
 con polling de estado real, backoff 100–1000 ms y límite total de 60 segundos.
 Ese límite detecta falta de convergencia funcional; **no mide p95/p99**.
+Antes de navegar fuera del dashboard o de las ofertas, los helpers esperan el contenido
+resuelto de la vista, no solo la URL. Esto evita que una navegación dura del runner
+cancele una consulta aún en vuelo; no se filtran los errores de transporte `status: 0`.
+Cada caso comprueba también cero errores de consola **inesperados**, errores JavaScript y
+promesas sin manejar, incluso al recargar o navegar. Un caso negativo debe declarar el
+mensaje literal, estado HTTP y, cuando corresponde, código del diagnóstico esperado;
+debe observarlo exactamente una vez. No se desactiva el logging de la aplicación ni se
+guardan argumentos de consola o credenciales. Los HTTP negativos no se ocultan como éxitos.
 
-La suite UI incluye 41 casos. Cinco recorren el formulario/panel socio con HTTP
+La suite UI incluye 42 casos. Cinco recorren el formulario/panel socio con HTTP
 controlado y sin crear cuentas, consentimiento ni cotizaciones reales. No conectan
 el circuito de asesor con el de socio ni acreditan percentiles o persistencia AWS.
 Verifican operación y referencia de perfil confirmadas después de POST, recuperación
@@ -142,6 +150,11 @@ El caso de acuse perdido reproduce 503 con pago confirmado y póliza existente:
 la UI consulta la saga actual, reintenta explícitamente con la misma clave desde
 el detalle y no anuncia emisión hasta recibir `emitida`. Es HTTP controlado,
 no una prueba de persistencia o conciliación real ni una grabación nueva.
+Otro caso recorre rechazo HTTP 200 sin fecha de confirmación, dashboard, detalle y
+cancelación/confirmación explícita de un nuevo intento. Tras un 503 de esa nueva clave
+y una recarga, GET aún devuelve el rechazo anterior: la UI no ofrece otra evaluación,
+recupera la misma clave y solo entonces muestra el confirmado recibido. Verifica tres
+POST explícitos y exactamente dos claves; ni navegación ni recarga envían un pago.
 El consentimiento informado comprueba el payload
 completo de la decisión (incluida la vigencia mostrada), rechazo y posterior
 autorización versionada, cancelación/confirmación de revocación y lectura tras
