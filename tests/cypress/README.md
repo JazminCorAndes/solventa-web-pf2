@@ -133,9 +133,13 @@ observación HTTP y assertions reintentables de Cypress. La emisión se consulta
 con polling de estado real, backoff 100–1000 ms y límite total de 60 segundos.
 Ese límite detecta falta de convergencia funcional; **no mide p95/p99**.
 
-La suite UI incluye 40 casos. Cinco recorren el formulario/panel socio con HTTP
+La suite UI incluye 41 casos. Cinco recorren el formulario/panel socio con HTTP
 controlado y sin crear cuentas, consentimiento ni cotizaciones reales. No conectan
 el circuito de asesor con el de socio ni acreditan percentiles o persistencia AWS.
+El caso de acuse perdido reproduce 503 con pago confirmado y póliza existente:
+la UI consulta la saga actual, reintenta explícitamente con la misma clave desde
+el detalle y no anuncia emisión hasta recibir `emitida`. Es HTTP controlado,
+no una prueba de persistencia o conciliación real ni una grabación nueva.
 El consentimiento informado comprueba el payload
 completo de la decisión (incluida la vigencia mostrada), rechazo y posterior
 autorización versionada, cancelación/confirmación de revocación y lectura tras

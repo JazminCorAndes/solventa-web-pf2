@@ -22,16 +22,31 @@ export class SimulatedPaymentService {
   readonly loading = signal(false);
   readonly confirming = signal(false);
   readonly errorKey = signal<string | null>(null);
+  private readonly recoveryKey = signal<string | null>(null);
+  private readonly actionBlocked = computed(
+    () =>
+      this.loading() ||
+      this.confirming() ||
+      [
+        'payment.errors.notAllowed',
+        'payment.errors.notFound',
+        'payment.errors.conflict',
+        'payment.errors.retryKeyUnavailable',
+      ].includes(this.errorKey() ?? ''),
+  );
   readonly canConfirm = computed(
     () =>
       !!this.selection() &&
       this.subscription?.saga.status === 'payment_pending' &&
       !this.payment() &&
-      !this.loading() &&
-      !this.confirming() &&
-      !['payment.errors.notAllowed', 'payment.errors.notFound', 'payment.errors.conflict'].includes(
-        this.errorKey() ?? '',
-      ),
+      !this.actionBlocked(),
+  );
+  readonly canRetryIssuance = computed(
+    () =>
+      !!this.payment() &&
+      this.subscription?.saga.status === 'payment_confirmed' &&
+      !!this.recoveryKey() &&
+      !this.actionBlocked(),
   );
 
   reset(): void {
@@ -39,6 +54,7 @@ export class SimulatedPaymentService {
     this.payment.set(null);
     this.selection.set(null);
     this.errorKey.set(null);
+    this.recoveryKey.set(null);
   }
 
   load(subscription: SubscriptionRecord): Observable<void> {
@@ -76,6 +92,14 @@ export class SimulatedPaymentService {
         }
         this.selection.set(selection);
         this.payment.set(payment);
+        if (payment && subscription.saga.status === 'payment_confirmed') {
+          const key = this.storage?.getItem(`solventa.payment.attempt.${subscription.id}`);
+          if (key) {
+            this.recoveryKey.set(key);
+          } else {
+            this.errorKey.set('payment.errors.retryKeyUnavailable');
+          }
+        }
       }),
       catchError((error: unknown) => {
         this.errorKey.set(paymentErrorKey(error));
@@ -91,10 +115,11 @@ export class SimulatedPaymentService {
     }
     const subscription = this.subscription;
     const selection = this.selection();
-    if (!this.canConfirm() || !subscription || !selection) {
+    if ((!this.canConfirm() && !this.canRetryIssuance()) || !subscription || !selection) {
       this.errorKey.set('payment.errors.notAllowed');
       return of(null);
     }
+    const recoveredPayment = this.payment();
     this.confirming.set(true);
     this.errorKey.set(null);
     return defer(() => {
@@ -102,13 +127,26 @@ export class SimulatedPaymentService {
         throw new Error('Session storage is required for safe payment retries.');
       }
       const storageKey = `solventa.payment.attempt.${subscription.id}`;
-      const key = this.storage.getItem(storageKey) ?? crypto.randomUUID();
+      const existingKey = this.storage.getItem(storageKey);
+      if (recoveredPayment && (!existingKey || existingKey !== this.recoveryKey())) {
+        this.recoveryKey.set(null);
+        throw new PaymentAttemptUnavailableError(
+          'The original payment attempt key is unavailable.',
+        );
+      }
+      const key = existingKey ?? crypto.randomUUID();
       this.storage.setItem(storageKey, key);
       return this.gateway.confirm(subscription.quoteId, key);
     }).pipe(
       take(1),
       map((payment) => {
         this.validatePayment(payment, subscription, selection);
+        if (
+          recoveredPayment &&
+          (payment.id !== recoveredPayment.id || payment.reference !== recoveredPayment.reference)
+        ) {
+          throw new Error('The persisted payment changed during the issuance retry.');
+        }
         this.payment.set(payment);
         return payment;
       }),
@@ -139,7 +177,12 @@ export class SimulatedPaymentService {
   }
 }
 
+class PaymentAttemptUnavailableError extends Error {}
+
 function paymentErrorKey(error: unknown): string {
+  if (error instanceof PaymentAttemptUnavailableError) {
+    return 'payment.errors.retryKeyUnavailable';
+  }
   if (error instanceof HttpErrorResponse) {
     switch (error.status) {
       case 401:

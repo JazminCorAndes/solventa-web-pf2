@@ -588,7 +588,7 @@
   },
   "payment": {
     "title": "Pago simulado",
-    "disclaimer": "Esta operación es una simulación: no cobra dinero, no solicita tarjetas ni emite una póliza.",
+    "disclaimer": "Esta simulación no cobra dinero ni solicita tarjetas. La emisión de una póliza académica requiere confirmación del servicio; no incluye cobertura real, documento ni firma.",
     "backendRequired": "El pago simulado requiere una conexión con el servicio.",
     "loading": "Consultando el importe y el estado del pago simulado.",
     "pending": "Pago simulado pendiente de confirmación.",
@@ -599,7 +599,11 @@
     "reference": "Referencia de simulación",
     "confirmedAt": "Fecha de confirmación",
     "refresh": "Actualizar estado",
+    "issuancePending": "El pago está confirmado, pero el servicio aún no confirma la emisión. Actualiza el estado o reintenta la misma operación si está disponible.",
+    "retryIssuance": "Reintentar emisión",
+    "retryingIssuance": "Reintentando emisión…",
     "errors": {
+      "retryKeyUnavailable": "La clave del intento original no está disponible en esta pestaña. Solo puedes actualizar el estado; no se generará otro pago.",
       "session": "No fue posible validar tu sesión. Inicia sesión nuevamente para continuar.",
       "notFound": "No fue posible encontrar esta solicitud para tu sesión. Vuelve a consultar tus cotizaciones.",
       "conflict": "No fue posible conciliar este intento de pago simulado. Actualiza el estado antes de continuar.",

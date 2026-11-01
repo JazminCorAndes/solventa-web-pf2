@@ -74,7 +74,7 @@ export class SubscriptionStatusPageComponent implements OnInit {
   }
 
   confirmPayment(): void {
-    if (!this.payments.canConfirm()) {
+    if (!this.payments.canConfirm() && !this.payments.canRetryIssuance()) {
       return;
     }
     this.payments

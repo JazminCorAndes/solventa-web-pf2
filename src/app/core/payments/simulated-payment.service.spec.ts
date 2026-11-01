@@ -82,6 +82,99 @@ describe('SimulatedPaymentService', () => {
     expect(gateway.confirm).toHaveBeenNthCalledWith(2, PAYMENT_SUBSCRIPTION.quoteId, firstKey);
     expect(reloaded.errorKey()).toBeNull();
     expect(reloaded.canConfirm()).toBe(false);
+    expect(reloaded.canRetryIssuance()).toBe(false);
+  });
+
+  it('retries issuance with the original key after recovering the persisted payment', async () => {
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    gateway.confirm.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })));
+    await firstValueFrom(service.confirm());
+    const originalKey = window.sessionStorage.getItem(storageKey);
+
+    gateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    const reloaded = TestBed.runInInjectionContext(() => new SimulatedPaymentService());
+    expect(reloaded.canRetryIssuance()).toBe(false);
+    await firstValueFrom(reloaded.load({ ...PAYMENT_SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga }));
+    expect(reloaded.canConfirm()).toBe(false);
+    expect(reloaded.canRetryIssuance()).toBe(true);
+    expect(gateway.confirm).toHaveBeenCalledOnce();
+
+    await expect(firstValueFrom(reloaded.confirm())).resolves.toEqual(CONFIRMED_PAYMENT);
+
+    expect(gateway.confirm).toHaveBeenNthCalledWith(2, PAYMENT_SUBSCRIPTION.quoteId, originalKey);
+    expect(window.sessionStorage.getItem(storageKey)).toBe(originalKey);
+  });
+
+  it('does not invent an attempt key when only the persisted payment can be recovered', async () => {
+    const randomUUID = vi.spyOn(crypto, 'randomUUID');
+    gateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    await firstValueFrom(service.load({ ...PAYMENT_SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga }));
+
+    expect(service.payment()).toEqual(CONFIRMED_PAYMENT);
+    expect(service.errorKey()).toBe('payment.errors.retryKeyUnavailable');
+    expect(service.canConfirm()).toBe(false);
+    expect(service.canRetryIssuance()).toBe(false);
+    await firstValueFrom(service.confirm());
+    expect(gateway.confirm).not.toHaveBeenCalled();
+    expect(randomUUID).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem(storageKey)).toBeNull();
+  });
+
+  it.each([null, 'another-key'])(
+    'does not replace the original key when it changes after the status lookup: %s',
+    async (changedKey) => {
+      window.sessionStorage.setItem(storageKey, 'original-key');
+      gateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+      await firstValueFrom(service.load({ ...PAYMENT_SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga }));
+      if (changedKey === null) window.sessionStorage.removeItem(storageKey);
+      else window.sessionStorage.setItem(storageKey, changedKey);
+
+      await expect(firstValueFrom(service.confirm())).resolves.toBeNull();
+
+      expect(service.errorKey()).toBe('payment.errors.retryKeyUnavailable');
+      expect(service.canRetryIssuance()).toBe(false);
+      expect(gateway.confirm).not.toHaveBeenCalled();
+      expect(window.sessionStorage.getItem(storageKey)).toBe(changedKey);
+    },
+  );
+
+  it('rejects a different payment returned by an issuance retry', async () => {
+    window.sessionStorage.setItem(storageKey, 'original-key');
+    gateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    await firstValueFrom(service.load({ ...PAYMENT_SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga }));
+    gateway.confirm.mockReturnValue(
+      of({ ...CONFIRMED_PAYMENT, id: 'different-payment', reference: 'SIM-different-payment' }),
+    );
+
+    await expect(firstValueFrom(service.confirm())).resolves.toBeNull();
+
+    expect(service.payment()).toEqual(CONFIRMED_PAYMENT);
+    expect(service.errorKey()).toBe('payment.errors.unavailable');
+    expect(gateway.confirm).toHaveBeenCalledWith(PAYMENT_SUBSCRIPTION.quoteId, 'original-key');
+  });
+
+  it('blocks repeated issuance clicks and stops offering retries after authoritative issuance', async () => {
+    window.sessionStorage.setItem(storageKey, 'original-key');
+    gateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    await firstValueFrom(service.load({ ...PAYMENT_SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga }));
+    const pending = new Subject<SimulatedPaymentRecord>();
+    gateway.confirm.mockReturnValue(pending);
+    const result = firstValueFrom(service.confirm());
+
+    expect(service.canRetryIssuance()).toBe(false);
+    await expect(firstValueFrom(service.confirm())).resolves.toBeNull();
+    expect(gateway.confirm).toHaveBeenCalledOnce();
+    pending.next(CONFIRMED_PAYMENT);
+    await result;
+    await firstValueFrom(
+      service.load({
+        ...PAYMENT_SUBSCRIPTION,
+        saga: { ...CONFIRMED_PAYMENT.saga, status: 'issued', version: 3 },
+      }),
+    );
+    expect(service.canRetryIssuance()).toBe(false);
+    await firstValueFrom(service.confirm());
+    expect(gateway.confirm).toHaveBeenCalledOnce();
   });
 
   it('disables confirmation while the request is pending', async () => {

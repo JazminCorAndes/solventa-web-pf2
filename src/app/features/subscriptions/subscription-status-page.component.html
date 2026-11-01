@@ -90,6 +90,10 @@
             } @else {
               @if (payments.errorKey(); as error) {
                 <p role="alert">{{ error | transloco }}</p>
+              }
+              @if (
+                payments.errorKey() || (payments.payment() && subscription.saga.status !== 'issued')
+              ) {
                 <button
                   mat-stroked-button
                   type="button"
@@ -129,6 +133,28 @@
                     </div>
                   </dl>
                 </div>
+                @if (subscription.saga.status !== 'issued') {
+                  <p class="issuance-pending" role="status">
+                    {{ 'payment.issuancePending' | transloco }}
+                  </p>
+                  @if (payments.canRetryIssuance() || payments.confirming()) {
+                    <button
+                      mat-flat-button
+                      type="button"
+                      class="retry-issuance"
+                      [disabled]="!payments.canRetryIssuance()"
+                      [attr.aria-busy]="payments.confirming()"
+                      (click)="confirmPayment()"
+                    >
+                      {{
+                        (payments.confirming()
+                          ? 'payment.retryingIssuance'
+                          : 'payment.retryIssuance'
+                        ) | transloco
+                      }}
+                    </button>
+                  }
+                }
               } @else if (!detail && payments.selection(); as selection) {
                 <p role="status">{{ 'payment.pending' | transloco }}</p>
                 <p class="payment-amount">

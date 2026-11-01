@@ -588,7 +588,7 @@
   },
   "payment": {
     "title": "Simulated payment",
-    "disclaimer": "This operation is a simulation: it does not charge money, request card details or issue a policy.",
+    "disclaimer": "This simulation does not charge money or request card details. Academic policy issuance requires confirmation from the service; it provides no real coverage, document or signature.",
     "backendRequired": "Simulated payment requires a connection to the service.",
     "loading": "Loading the simulated payment amount and status.",
     "pending": "Simulated payment awaiting confirmation.",
@@ -599,7 +599,11 @@
     "reference": "Simulation reference",
     "confirmedAt": "Confirmation date",
     "refresh": "Refresh status",
+    "issuancePending": "Payment is confirmed, but issuance has not yet been confirmed by the service. Refresh the status or retry the same operation if available.",
+    "retryIssuance": "Retry issuance",
+    "retryingIssuance": "Retrying issuance…",
     "errors": {
+      "retryKeyUnavailable": "The original attempt key is unavailable in this tab. You can only refresh the status; no new payment will be created.",
       "session": "Your session could not be validated. Sign in again to continue.",
       "notFound": "This request could not be found for your session. Return to your quotes.",
       "conflict": "This simulated payment attempt could not be reconciled. Refresh the status before continuing.",

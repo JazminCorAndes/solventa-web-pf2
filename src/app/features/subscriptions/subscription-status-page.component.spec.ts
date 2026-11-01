@@ -258,6 +258,49 @@ describe('SubscriptionStatusPageComponent', () => {
     expect(paymentGateway.confirm).not.toHaveBeenCalled();
   });
 
+  it('retries the original operation after a lost issuance acknowledgement, not a new payment', () => {
+    paymentGateway.confirm.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 503 })),
+    );
+    fixture.nativeElement.querySelector('.confirm-payment').click();
+    const originalKey = paymentGateway.confirm.mock.calls[0][1];
+    paymentGateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    subscription.set({ ...SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(es.payment.issuancePending);
+    expect(fixture.nativeElement.textContent).not.toContain(es.subscription.sagaStatuses.issued);
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
+    fixture.nativeElement.querySelector('.retry-issuance').click();
+    fixture.detectChanges();
+
+    expect(paymentGateway.confirm).toHaveBeenNthCalledWith(2, SUBSCRIPTION.quoteId, originalKey);
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.textContent).not.toContain(es.subscription.sagaStatuses.issued);
+    subscription.set({
+      ...SUBSCRIPTION,
+      saga: { ...CONFIRMED_PAYMENT.saga, status: 'issued', version: 3 },
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(es.subscription.sagaStatuses.issued);
+    expect(fixture.nativeElement.querySelector('.retry-issuance')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
+  });
+
+  it('keeps confirmed payment visible but permits only status reads without the original attempt key', () => {
+    paymentGateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    subscription.set({ ...SUBSCRIPTION, saga: CONFIRMED_PAYMENT.saga });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(CONFIRMED_PAYMENT.reference);
+    expect(fixture.nativeElement.textContent).toContain(es.payment.errors.retryKeyUnavailable);
+    expect(fixture.nativeElement.querySelector('.retry-issuance')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
+    fixture.nativeElement.querySelector('.payment-section button').click();
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(paymentGateway.confirm).not.toHaveBeenCalled();
+  });
+
   it('does not enable confirmation after a failed status request', () => {
     paymentGateway.load.mockReturnValueOnce(
       throwError(

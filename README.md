@@ -878,11 +878,23 @@ El `POST` sobre la misma ruta envía `{}`, Bearer JWT y `Idempotency-Key` UUID, 
 ni datos de tarjetas. La clave se conserva en `sessionStorage` por suscripción para reintentar
 incluso tras una recarga; el resultado siempre se recupera del servidor, no de un éxito local.
 La confirmación muestra la referencia `SIM-…`, el importe y el estado persistidos; después
-se vuelve a consultar la suscripción para mostrar la saga `pago_confirmado`.
+se vuelve a consultar la suscripción para mostrar su saga actual. El pago conserva una
+instantánea `pago_confirmado`: un HTTP 200 de pago o una póliza presente en el dashboard
+no confirman el cierre. Solo `GET .../suscripcion` con saga `emitida` permite mostrarlo.
+
+Un 503 puede ocurrir después de persistir pago y póliza, por pérdida del acuse de emisión;
+no se rotula como pago rechazado. «Actualizar estado» consulta la suscripción y el pago.
+Si el pago está confirmado pero la saga sigue `pago_confirmado`, «Reintentar emisión»
+reenvía explícitamente el mismo POST, solicitud y clave original, sin crear otro pago.
+Está disponible también en el detalle y vuelve a leer la saga después del reintento.
+No envía automáticamente, no genera otra clave y rechaza una identidad de pago distinta.
+Si falta la clave original de esta pestaña, solo permite consultar estado y explica el
+bloqueo. Una saga `emitida` elimina la acción; el GET por sí solo no concilia la emisión.
 Las periodicidades `mensual`, `por_viaje`, `por_vuelo` y `por_periodo` se conservan sin convertirlas
 en mensualidades. Los estados en revisión, rechazada, fallida o emitida no habilitan nuevos pagos.
-Esta simulación requiere el modo backend: no cobra dinero, no abre un checkout real y no
-emite pólizas. No se implementa un éxito ficticio en el modo mock.
+Esta simulación requiere el modo backend: no cobra dinero ni abre un checkout real.
+La póliza académica depende de la emisión confirmada por el servicio y no acredita
+cobertura real, documento ni firma. No se implementa un éxito ficticio en el modo mock.
 Siniestros, detalle de pólizas, notificaciones y recuperación de contraseña permanecen
 fuera del alcance actual.
 
