@@ -31,6 +31,7 @@ yarn-error.log
 
 # Otros archivos generados
 /.angular/cache
+/.angular/cypress/
 .sass-cache/
 /connect.lock
 /coverage

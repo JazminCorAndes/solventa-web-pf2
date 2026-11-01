@@ -14,7 +14,9 @@ adaptadores y casos de borde; Cypress añade interacción real del navegador.
 
 `integrated/` no importa fixtures de `ui/` ni reemplaza respuestas de negocio.
 Los interceptores de esa suite observan peticiones para correlacionar sus resultados.
-El setup registra cuentas sintéticas por API porque **no existe pantalla de registro**.
+El setup registra cuentas sintéticas por la API de Identidad, con documento, fecha
+de nacimiento y teléfono. El registro del BFF web solo admite nombre, correo y
+contraseña; no permite preparar el perfil completo que exige la cotización.
 Cada caso usa correo único `cypress-<uuid>@example.com` y contraseña aleatoria;
 no necesita cuentas preexistentes ni secretos productivos.
 
@@ -52,22 +54,24 @@ instaladas según `tests/jmeter/README.md`. Debe incluir emisión académica hab
 y todas las bases migradas; no sirve un BFF aislado ni un `/ping` saludable.
 Además, esta rama requiere el backend nuevo con `ENCRYPTED_LOGIN_ENABLED`
 habilitado tanto en identidad como en BFF web del entorno desechable.
-El helper compatible activa ambas configuraciones mediante `--encrypted-login`;
-el workflow integrado ya pasa ese argumento.
+`tests/cypress/partner_backend.py` del repositorio web arranca ese `LocalStack`
+con login cifrado y crea un socio sintético mediante el CLI oficial de Identidad.
 El workflow fija `jobs.integrated.env.BACKEND_REVISION` en
 `.github/workflows/cypress-integrated.yml` al commit
-`7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1`, que incluye socios y login cifrado.
+`4fbe81798962dea6780ddc3e56d00490d5a68796`, que incluye la oferta hipotecaria del
+socio, el consentimiento informado y la prioridad de imports del checkout de pruebas.
 Es una referencia del entorno de pruebas, no un destino de despliegue productivo.
 
 Revisión reproducible del backend público:
-[`7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1`](https://github.com/Migue765/backend-solventa/commit/7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1).
+[`4fbe81798962dea6780ddc3e56d00490d5a68796`](https://github.com/Migue765/backend-solventa/commit/4fbe81798962dea6780ddc3e56d00490d5a68796).
 El workflow usa ese SHA inmutable, no `develop` ni una rama que pueda cambiar.
 Esta revisión deja JMeter exclusivamente manual en el backend; el workflow web
 solo utiliza su helper de servicios y no ejecuta JMeter.
 
-```sh
-# En el checkout backend de pruebas, nunca en producción:
-python -m tests.jmeter.local_stack --web-port 5000 --mobile-port 5001 --encrypted-login
+```powershell
+# Desde el repositorio web, con el Python que tenga las dependencias del backend:
+$env:CYPRESS_DISPOSABLE_BACKEND='1'
+python tests\cypress\partner_backend.py --backend '..\backend-solventa' --web-port 5000 --mobile-port 5001
 ```
 
 En otra terminal del repositorio web:
@@ -95,27 +99,41 @@ habitual conserva puerto 5001). `CYPRESS_WEB_PORT` permite otro puerto libre; po
 defecto 4300. Cada suite debe tener un puerto diferente si se ejecutan en paralelo.
 Al cerrar el helper backend se eliminan sus bases temporales: no se borran cuentas
 reales ni se presupone una API de limpieza inexistente.
+El helper escribe solo las URLs locales en `.angular/cypress/partner-backend.json`.
+La tarea Node de Cypress comprueba que Identidad y el navegador pertenezcan al
+mismo entorno desechable antes de registrar clientes; no sigue redirecciones.
+No arrancar dos helpers en el mismo checkout. Para cerrarlo, usar Ctrl+C o eliminar
+ese manifiesto temporal y esperar su salida; no matar solo el proceso padre de Python.
 
 ## Cobertura funcional
 
-| Área implementada        | UI controlada                                                                                                      | Integración real                                                                                                            |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| Identidad                | Campos requeridos/email, 401/429/503, recuperación, guardas, refresh fallido, logout                               | Registro API, duplicado, login UI válido/inválido, petición anónima, renovación al recargar, refresh revocado, nueva sesión |
-| Ocho productos           | Obligatorios y payload exacto de cada formulario                                                                   | Ocho recorridos independientes completos                                                                                    |
-| Productos                | Automotriz, viaje, vida, dispositivos, vuelo paramétrico, clima paramétrico, protección de pagos, vida hipotecaria | Los mismos ocho, con datos sintéticos y fechas relativas                                                                    |
-| Validaciones específicas | Saldo hipotecario cero, destino fuera de catálogo, fechas invertidas, ofertas vencidas/retiradas                   | Contratos transmitidos y prima positiva del servicio                                                                        |
-| Consentimiento           | Ausente, autorización, revocación, expiración                                                                      | Ausente denegado, autorización durable, revocación deniega nuevo perfil y nueva cotización con 403                          |
-| Oferta/suscripción       | Condiciones obligatorias, oferta cambiada, revisión/rechazo no permiten pagar                                      | Selección persistida, decisión aprobada, hash y versión de regla, perfil con fuentes/modelo/versiones                       |
-| Pago simulado            | Fallo y reintento con misma clave; importe discordante no muestra éxito                                            | Importe igual a oferta, misma referencia en replay de clave, un pago y una póliza                                           |
-| Recuperación             | Error de dashboard y solicitud con reintento                                                                       | Recarga, logout, borrado de storage, login nuevo, dashboard y deep link a suscripción recuperados del backend               |
-| Ownership                | No se presenta oferta tras fallo de recuperación                                                                   | Segundo usuario recibe 404 en solicitud/ofertas/selección/suscripción/perfil/pago y dashboard vacío                         |
+| Área implementada         | UI controlada                                                                                                            | Integración real                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Identidad                 | Campos requeridos/email, 401/429/503, recuperación, guardas, refresh fallido, logout                                     | Registro API, duplicado, login UI válido/inválido, petición anónima, renovación al recargar, refresh revocado, nueva sesión |
+| Ocho productos            | Obligatorios y payload exacto de cada formulario                                                                         | Ocho recorridos independientes completos                                                                                    |
+| Productos                 | Automotriz, viaje, vida, dispositivos, vuelo paramétrico, clima paramétrico, protección de pagos, vida hipotecaria       | Los mismos ocho, con datos sintéticos y fechas relativas                                                                    |
+| Validaciones específicas  | Saldo hipotecario cero, destino fuera de catálogo, fechas invertidas, ofertas vencidas/retiradas                         | Contratos transmitidos y prima positiva del servicio                                                                        |
+| Consentimiento            | Ausente, autorización, revocación, expiración                                                                            | Ausente denegado, autorización durable, revocación deniega nuevo perfil y nueva cotización con 403                          |
+| Oferta/suscripción        | Condiciones obligatorias, oferta cambiada, revisión/rechazo no permiten pagar                                            | Selección persistida, decisión aprobada, hash y versión de regla, perfil con fuentes/modelo/versiones                       |
+| Pago simulado             | Fallo y reintento con misma clave; importe discordante no muestra éxito                                                  | Importe igual a oferta, misma referencia en replay de clave, un pago y una póliza                                           |
+| Recuperación              | Error de dashboard y solicitud con reintento                                                                             | Recarga, logout, borrado de storage, login nuevo, dashboard y deep link a suscripción recuperados del backend               |
+| Ownership                 | No se presenta oferta tras fallo de recuperación                                                                         | Segundo usuario recibe 404 en solicitud/ofertas/selección/suscripción/perfil/pago y dashboard vacío                         |
+| Socio hipotecario SOL-205 | Regresiones HTTP del panel: oferta vencida al recuperar o mientras está abierta, errores y reintentos sin éxito anterior | Contexto socio/cliente/crédito, prima, explicación, GET idéntico persistido, aviso histórico y ausencia de POST duplicados  |
+
+El caso del socio adelanta solo el reloj del navegador al recibir la oferta
+recuperada, después de autenticar. No altera el GET, el snapshot persistido, el TTL
+del backend ni el consentimiento. No acredita que el backend acepte una oferta
+vencida. El panel conserva el contenido original para consulta y distingue su
+vencimiento; preparar otra operación exige consultar de nuevo al cliente y
+revalidar producto, perfil y consentimiento. No cancela selecciones o suscripciones
+ya aceptadas.
 
 No hay `cy.wait(ms)` ni reintentos automáticos de tests. La sincronización usa
 observación HTTP y assertions reintentables de Cypress. La emisión se consulta
 con polling de estado real, backoff 100–1000 ms y límite total de 60 segundos.
 Ese límite detecta falta de convergencia funcional; **no mide p95/p99**.
 
-La suite UI incluye 33 casos. El consentimiento informado comprueba el payload
+La suite UI incluye 35 casos. El consentimiento informado comprueba el payload
 completo de la decisión (incluida la vigencia mostrada), rechazo y posterior
 autorización versionada, cancelación/confirmación de revocación y lectura tras
 recargar. Los mocks conservan el estado solo durante cada caso; no acreditan
@@ -131,7 +149,7 @@ pp. 17/21/23/31/35.
 | Requisito fuente            | Alcance alcanzable en este checkout                                                                                                                                                                                                           |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Seis journeys del enunciado | Cotización cliente web, aceptación/emisión académica y vida hipotecaria. Cotizar vuelo/clima **no equivale** a tramitar un siniestro paramétrico                                                                                              |
-| Web gestión completa        | No hay siniestros, socios embebidos/back-office, renovación, modificación, cancelación, reportes regulatorios o reaseguro integrados en rutas actuales. No se inventan pruebas verdes para ellos                                              |
+| Web gestión completa        | El portal del socio incluye cotización hipotecaria y recuperación de oferta. No acredita siniestros, una integración embebida externa, renovación, modificación, cancelación, reportes regulatorios o reaseguro                               |
 | ASR-FIN-01 / ASR-EMI-01     | Idempotencia del pago **simulado** y póliza académica única, recuperación/nueva sesión y convergencia hasta 60 s. No acredita ledger bancario, firma legal, pérdida de respuesta real, caos/reinicio de servicios ni compensación distribuida |
 | ASR-PRV-01                  | Revocación autoritativa online comprobada. No acredita propagación a batch/analítica/cachés ni cero divulgación a proveedores reales                                                                                                          |
 | ASR-EXT-01                  | UI rechaza consentimiento vencido; perfil real vigente con `fallbackUsed=false`. No acredita circuit breaker/fallback de proveedor real o perfiles alterados: conservan pruebas unitarias específicas y experimentos backend                  |
@@ -187,3 +205,10 @@ las validaciones del producto y actualiza los datos y la confirmación de revoca
 de las pruebas: 27/27 UI aprobadas localmente, sin pendientes ni skips. El caso
 integrado de revocación también espera la confirmación HTTP real antes de comprobar
 los 403; no se volvió a ejecutar la suite integrada en esta corrección.
+
+Para SOL-205 se ejecutaron localmente las 12 pruebas integradas contra
+`4fbe81798962dea6780ddc3e56d00490d5a68796` y las 35 UI controladas, sin fallos ni
+casos omitidos. El entorno fue Windows, Node 22.23.2, pnpm 11.19.0 y Cypress 16.2.0.
+También pasaron las 52 regresiones HTTP del gateway/panel socio, las cinco pruebas
+del runner, el typecheck Cypress, lint y build Pages. No se ejecutó CI remoto,
+una auditoría manual de accesibilidad ni una medición de latencia productiva.

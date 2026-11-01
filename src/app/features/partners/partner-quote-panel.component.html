@@ -87,7 +87,12 @@
     <p role="status">{{ 'partnerQuote.retryAfter' | transloco: { seconds: retrySeconds() } }}</p>
   }
   @if (result(); as result) {
-    <h3 role="status">{{ 'partnerQuote.completed' | transloco }}</h3>
+    <h3 role="status">
+      {{ (offerExpired() ? 'partnerQuote.offerExpired' : 'partnerQuote.completed') | transloco }}
+    </h3>
+    @if (offerExpired()) {
+      <p>{{ 'partnerQuote.historicalOffer' | transloco }}</p>
+    }
     <article class="client-summary">
       <strong>{{ result.oferta.nombre }}</strong>
       <span>{{ result.oferta.descripcion }}</span>

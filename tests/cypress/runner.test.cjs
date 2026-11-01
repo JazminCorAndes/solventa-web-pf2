@@ -3,6 +3,70 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { localUrl } = require('./run.cjs');
+const config = require('./cypress.config.cjs');
+const fs = require('node:fs');
+
+test('solo registra la preparación de clientes en la suite integrada', () => {
+  let registered = false;
+  config.e2e.setupNodeEvents(
+    () => {
+      registered = true;
+    },
+    { env: { suite: 'ui' } },
+  );
+  assert.equal(registered, false);
+});
+
+test('prepara clientes solo en el mismo backend desechable y no expone errores con datos', async (t) => {
+  const previous = {
+    disposable: process.env.CYPRESS_DISPOSABLE_BACKEND,
+    backend: process.env.CYPRESS_BACKEND_URL,
+  };
+  t.after(() => {
+    for (const [name, value] of Object.entries({
+      CYPRESS_DISPOSABLE_BACKEND: previous.disposable,
+      CYPRESS_BACKEND_URL: previous.backend,
+    })) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+  let tasks;
+  config.e2e.setupNodeEvents(
+    (event, handlers) => {
+      assert.equal(event, 'task');
+      tasks = handlers;
+    },
+    { env: { suite: 'integrated' } },
+  );
+  delete process.env.CYPRESS_DISPOSABLE_BACKEND;
+  await assert.rejects(tasks.registerCustomer({}), /requires a disposable/);
+  process.env.CYPRESS_DISPOSABLE_BACKEND = '1';
+  process.env.CYPRESS_BACKEND_URL = 'http://127.0.0.1:5000';
+  let manifest = { identityUrl: 'https://example.com', webUrl: 'http://127.0.0.1:5000' };
+  t.mock.method(fs, 'readFileSync', () => JSON.stringify(manifest));
+  await assert.rejects(tasks.registerCustomer({}), /local desechable/);
+  manifest = { identityUrl: 'http://127.0.0.1:5002', webUrl: 'http://127.0.0.1:5001' };
+  await assert.rejects(tasks.registerCustomer({}), /same disposable backend/);
+  manifest.webUrl = 'http://127.0.0.1:5000';
+  const fetchMock = t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, 'http://127.0.0.1:5002/v1/usuarios');
+    assert.equal(options.redirect, 'error');
+    return { status: 201, json: async () => ({ usuario: { id: 'customer-id' } }) };
+  });
+  assert.deepEqual(await tasks.registerCustomer({ nombre: 'Cliente Sintetico' }), {
+    id: 'customer-id',
+  });
+  fetchMock.mock.mockImplementation(async () => ({ status: 400 }));
+  await assert.rejects(tasks.registerCustomer({}), /^Error: Disposable customer setup: HTTP 400$/);
+  fetchMock.mock.mockImplementation(async () => {
+    throw new Error('sensitive transport details');
+  });
+  await assert.rejects(
+    tasks.registerCustomer({}),
+    /^Error: Disposable customer setup transport failed\.$/,
+  );
+});
 
 test('solo permite backend HTTP local, sin credenciales ni rutas', () => {
   assert.equal(localUrl('http://127.0.0.1:5000'), 'http://127.0.0.1:5000');
@@ -25,9 +89,13 @@ test('el workflow integrado inicia el backend con login cifrado habilitado', () 
     join(__dirname, '..', '..', '.github', 'workflows', 'cypress-integrated.yml'),
     'utf8',
   );
-  const invocation = workflow.match(/exec python -m tests\.jmeter\.local_stack[^\n)]+/)?.[0];
+  const invocation = workflow.match(/python tests\/cypress\/partner_backend\.py[^\n>]+/)?.[0];
   assert.ok(invocation, 'El workflow debe iniciar el helper backend real');
-  assert.match(invocation, /(?:^|\s)--encrypted-login(?:\s|$)/);
+  const helper = readFileSync(join(__dirname, 'partner_backend.py'), 'utf8');
+  assert.match(helper, /from tests\.jmeter\.local_stack import LocalStack/);
+  assert.match(helper, /encrypted_login_enabled=True/);
+  assert.match(helper, /TemporaryDirectory/);
+  assert.match(helper, /CYPRESS_DISPOSABLE_BACKEND/);
 });
 
 test('el workflow integrado obtiene el backend publico sin credenciales persistentes', () => {

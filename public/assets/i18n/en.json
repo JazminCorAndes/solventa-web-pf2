@@ -28,6 +28,8 @@
     "recover": "Retrieve result",
     "retryAfter": "Wait {{ seconds }} seconds before retrying.",
     "completed": "Quote recorded by the server",
+    "offerExpired": "Expired offer",
+    "historicalOffer": "Historical view: the original price, terms and explanation are preserved. To obtain a current offer, prepare another operation; the system will validate the customer's profile, product and consent again. This does not cancel an already accepted selection or subscription.",
     "offerCoverages": "Coverages",
     "offerConditions": "Offer conditions",
     "offerExplanation": "How this offer was calculated",

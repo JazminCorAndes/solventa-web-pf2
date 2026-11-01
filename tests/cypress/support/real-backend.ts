@@ -3,6 +3,8 @@ import { expectEncryptedLogin } from './login-crypto';
 export interface Account {
   email: string;
   password: string;
+  document: string;
+  id: string;
 }
 export interface Grant {
   accessToken: string;
@@ -24,19 +26,29 @@ export interface Dashboard {
 
 export function register(): Cypress.Chainable<Account> {
   const id = crypto.randomUUID();
-  const account = { email: `cypress-${id}@example.com`, password: `E2e-${id}!` };
-  return request({
-    method: 'POST',
-    url: '/api/v1/usuarios',
-    body: {
-      nombre: 'Cliente Sintetico Cypress',
-      correo: account.email,
-      contrasena: account.password,
-    },
-  }).then((response) => {
-    expect(response.status, 'registro sintetico real').to.eq(201);
-    return account;
-  });
+  const account = {
+    email: `cypress-${id}@example.com`,
+    password: `E2e-${id}!`,
+    document: String(1_000_000_000 + crypto.getRandomValues(new Uint32Array(1))[0]),
+  };
+  return cy
+    .task<{ id: string }>(
+      'registerCustomer',
+      {
+        nombre: 'Cliente Sintetico Cypress',
+        correo: account.email,
+        contrasena: account.password,
+        tipoDocumento: 'cc',
+        numeroDocumento: account.document,
+        fechaNacimiento: '1990-01-01',
+        telefono: '+573001234567',
+      },
+      { log: false },
+    )
+    .then((response) => {
+      expect(response.id, 'registro sintetico real').to.be.a('string');
+      return { ...account, id: response.id };
+    });
 }
 
 export function api<T>(token: string, method: string, path: string, body?: object, key?: string) {

@@ -28,6 +28,8 @@
     "recover": "Consultar resultado",
     "retryAfter": "Espera {{ seconds }} segundos antes de reintentar.",
     "completed": "Cotización registrada por el servidor",
+    "offerExpired": "Oferta vencida",
+    "historicalOffer": "Consulta histórica: conservamos el precio, las condiciones y la explicación originales. Para obtener una oferta vigente, prepara otra operación; el sistema volverá a validar el perfil, el producto y el consentimiento del cliente. Esto no cancela una selección o suscripción ya aceptada.",
     "offerCoverages": "Coberturas",
     "offerConditions": "Condiciones de la oferta",
     "offerExplanation": "Cómo se calculó esta oferta",
