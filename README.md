@@ -786,6 +786,14 @@ pero no cotizar. Solo el error `404` con código `seguro_no_encontrado` represen
 inexistente; un `404` de infraestructura se muestra como error recuperable.
 La solicitud distingue carga, catálogo vacío y error: solo una respuesta exitosa sin productos
 muestra el mensaje vacío accesible y traducido. Los errores conservan su mensaje y reintento.
+En la misma solicitud se muestran la descripción y `coberturasPrincipales` recibidas.
+«Ver coberturas y condiciones» consulta, con la autenticación habitual, el objeto directo de
+`GET /api/v1/productos-seguro/{id}`: coberturas, condiciones e información relevante.
+Los importes decimales se conservan como cadenas junto a su moneda, sin convertirlos a `number`.
+Cambiar de producto o salir cancela la lectura y retira el detalle anterior; una carga o un error
+de detalle bloquea la continuación hasta recuperar datos válidos. Un producto no disponible
+permite consultar su detalle, pero no cotizar. El modo mock no inventa coberturas ni condiciones:
+el detalle requiere conexión con el backend.
 
 En vuelos, `coverageType` admite `delay-cancellation`, `missed-connection` y
 `comprehensive`. El backend mantiene las solicitudes antiguas sin ese campo como

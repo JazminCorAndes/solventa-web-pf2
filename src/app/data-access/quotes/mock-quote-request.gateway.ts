@@ -8,6 +8,7 @@ import {
 import { QuoteRequestGateway } from '../../core/quotes/quote-request.gateway';
 import {
   InsuranceProduct,
+  InsuranceProductDetail,
   QuoteRequestDraft,
   QuoteRequestRecord,
   TravelDestination,
@@ -21,48 +22,56 @@ const PRODUCTS: InsuranceProduct[] = [
     name: 'Seguro Automotriz Total',
     description: 'Protección para tu vehículo, ocupantes y terceros.',
     available: true,
+    mainCoverages: [],
   },
   {
     id: 'travel',
     name: 'Seguro de Viaje',
     description: 'Protección para viajes nacionales e internacionales.',
     available: true,
+    mainCoverages: [],
   },
   {
     id: 'life',
     name: 'Microseguro de Vida',
     description: 'Respaldo financiero accesible para ti y tu familia.',
     available: true,
+    mainCoverages: [],
   },
   {
     id: 'device-protection',
     name: 'Protección de Dispositivos',
     description: 'Cobertura para daños, hurto y fallas de tus dispositivos.',
     available: true,
+    mainCoverages: [],
   },
   {
     id: 'parametric',
     name: 'Seguro de Vuelos',
     description: 'Protección ante retrasos, cancelaciones o pérdida de conexión, según el plan.',
     available: true,
+    mainCoverages: [],
   },
   {
     id: 'parametric-weather',
     name: 'Seguro Paramétrico Climático',
     description: 'Protección ante lluvia intensa o sequía durante el periodo asegurado.',
     available: true,
+    mainCoverages: [],
   },
   {
     id: 'payment-protection',
     name: 'Protección de Pagos',
     description: 'Respaldo de obligaciones financieras asociadas a créditos.',
     available: true,
+    mainCoverages: [],
   },
   {
     id: 'mortgage-life',
     name: 'Seguro de Vida Hipotecario',
     description: 'Protección personalizada para el saldo de tu crédito de vivienda.',
     available: true,
+    mainCoverages: [],
   },
 ];
 
@@ -118,6 +127,10 @@ export class MockQuoteRequestGateway implements QuoteRequestGateway {
 
   loadProducts(): Observable<InsuranceProduct[]> {
     return of(PRODUCTS).pipe(delay(250));
+  }
+
+  loadProductDetail(): Observable<InsuranceProductDetail> {
+    return throwError(() => new Error('Insurance product details require the backend.'));
   }
 
   loadTravelDestinations(): Observable<TravelDestination[]> {

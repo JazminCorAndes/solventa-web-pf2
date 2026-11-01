@@ -38,6 +38,7 @@ const PRODUCT: InsuranceProduct = {
   name: 'Seguro Automotriz Total',
   description: 'Protección para el vehículo',
   available: true,
+  mainCoverages: [],
 };
 
 const TRAVEL_PRODUCT: InsuranceProduct = {
@@ -45,6 +46,7 @@ const TRAVEL_PRODUCT: InsuranceProduct = {
   name: 'Seguro de Viaje',
   description: 'Protección para viajes',
   available: true,
+  mainCoverages: [],
 };
 
 const OTHER_PRODUCTS = [
@@ -54,7 +56,13 @@ const OTHER_PRODUCTS = [
   'parametric-weather',
   'payment-protection',
   'mortgage-life',
-].map((id): InsuranceProduct => ({ id, name: id, description: id, available: true }));
+].map((id): InsuranceProduct => ({
+  id,
+  name: id,
+  description: id,
+  available: true,
+  mainCoverages: [],
+}));
 
 const RECORD: QuoteRequestRecord = {
   id: 'AQT-2026-123456',
@@ -70,6 +78,8 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadProductDetail = vi.fn<QuoteRequestGateway['loadProductDetail']>();
+
   loadRequest(): Observable<QuoteRequestRecord> {
     return of(RECORD);
   }
@@ -189,6 +199,16 @@ describe('QuoteRequestPageComponent', () => {
 
     component.submit();
     expect(gateway.submitCalls).toBe(0);
+  });
+
+  it('does not fabricate product details when running without the backend', () => {
+    fillValidForm(component);
+    fixture.detectChanges();
+    const overview = fixture.nativeElement.querySelector('.product-overview');
+    expect(overview.textContent).toContain('quoteRequest.productDetails.backendRequired');
+    expect(overview.querySelector('button')).toBeNull();
+    expect(overview.querySelector('.product-details')).toBeNull();
+    expect(gateway.loadProductDetail).not.toHaveBeenCalled();
   });
 
   it.each([

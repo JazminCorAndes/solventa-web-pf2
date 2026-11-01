@@ -255,6 +255,22 @@
     "unavailableProduct": "Unavailable for quotes",
     "loadingProducts": "Loading available insurance",
     "emptyProducts": "There are no insurance products available at this time.",
+    "productDetails": {
+      "mainCoverages": "Main coverages",
+      "view": "View coverages and conditions",
+      "title": "Insurance details",
+      "loading": "Loading insurance details",
+      "error": "The details could not be loaded. Retry before continuing.",
+      "notFound": "This insurance product no longer exists. Retry or select another product.",
+      "coverages": "Coverages",
+      "conditions": "Conditions",
+      "noCoverages": "The service does not report coverages for this product.",
+      "noConditions": "The service does not report conditions for this product.",
+      "insuredAmount": "Insured amount",
+      "deductible": "Deductible",
+      "validity": "Validity",
+      "backendRequired": "Details require a backend connection; coverages and conditions are not simulated."
+    },
     "documentType": "Document type",
     "documentTypes": {
       "cc": "Citizenship ID",

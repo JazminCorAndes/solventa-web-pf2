@@ -151,7 +151,13 @@ export function mockBackend() {
   cy.intercept('DELETE', '/api/v1/sesiones/actual', { statusCode: 204, log: false }).as('logout');
   cy.intercept('GET', '/api/v1/clientes/me/dashboard', { body: emptyDashboard }).as('dashboard');
   cy.intercept('GET', '/api/v1/productos-seguro', {
-    productos: products.map(({ id }) => ({ id, nombre: id, descripcion: id, disponible: true })),
+    productos: products.map(({ id }) => ({
+      id,
+      nombre: id,
+      descripcion: id,
+      disponible: true,
+      coberturasPrincipales: [],
+    })),
   }).as('catalog');
   cy.intercept('GET', '/api/v1/destinos-viaje', { destinos: [{ codigo: 'ES', nombre: 'España' }] });
   cy.intercept('GET', '/api/v1/consentimientos/perfilamiento', (request) => {

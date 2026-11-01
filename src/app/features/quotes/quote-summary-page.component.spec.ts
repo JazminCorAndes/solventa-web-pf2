@@ -44,6 +44,8 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadProductDetail = vi.fn<QuoteRequestGateway['loadProductDetail']>();
+
   loadRequest(id: string): Observable<QuoteRequestRecord> {
     return of({ ...RECORD, id });
   }
@@ -54,6 +56,7 @@ class TestQuoteRequestGateway implements QuoteRequestGateway {
         name: 'Seguro Automotriz Total',
         description: 'Protección para el vehículo',
         available: true,
+        mainCoverages: [],
       },
     ]);
   }

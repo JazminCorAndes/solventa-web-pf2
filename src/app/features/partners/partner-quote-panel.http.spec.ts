@@ -114,7 +114,13 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     const catalog = http.match(`${base}/productos-seguro`);
     catalog.forEach((request) =>
       request.flush({
-        productos: products.map((id) => ({ id, nombre: id, descripcion: id, disponible: true })),
+        productos: products.map((id) => ({
+          id,
+          nombre: id,
+          descripcion: id,
+          disponible: true,
+          coberturasPrincipales: [],
+        })),
       }),
     );
     http

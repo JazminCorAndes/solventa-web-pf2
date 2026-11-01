@@ -255,6 +255,22 @@
     "unavailableProduct": "No disponible para cotizar",
     "loadingProducts": "Cargando seguros disponibles",
     "emptyProducts": "No hay seguros disponibles en este momento.",
+    "productDetails": {
+      "mainCoverages": "Coberturas principales",
+      "view": "Ver coberturas y condiciones",
+      "title": "Detalle del seguro",
+      "loading": "Cargando detalle del seguro",
+      "error": "No fue posible consultar el detalle. Reintenta antes de continuar.",
+      "notFound": "El seguro consultado ya no existe. Reintenta o selecciona otro seguro.",
+      "coverages": "Coberturas",
+      "conditions": "Condiciones",
+      "noCoverages": "El servicio no informa coberturas para este seguro.",
+      "noConditions": "El servicio no informa condiciones para este seguro.",
+      "insuredAmount": "Suma asegurada",
+      "deductible": "Deducible",
+      "validity": "Vigencia",
+      "backendRequired": "El detalle requiere conexión con el backend; no se simulan coberturas ni condiciones."
+    },
     "documentType": "Tipo de documento",
     "documentTypes": {
       "cc": "Cédula de ciudadanía",

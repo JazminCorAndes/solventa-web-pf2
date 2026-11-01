@@ -24,7 +24,7 @@
           <span class="product-symbol" aria-hidden="true">▣</span>
           <div class="product-copy">
             <span>{{ 'quoteRequest.selectedInsurance' | transloco }}</span>
-            <strong>
+            <strong id="selected-product-name">
               {{
                 selectedProduct()?.name ?? ('quoteRequest.selectInsurancePlaceholder' | transloco)
               }}
@@ -38,7 +38,7 @@
                 (selectionChange)="clearMessages()"
               >
                 @for (product of products(); track product.id) {
-                  <mat-option [value]="product.id" [disabled]="!product.available">
+                  <mat-option [value]="product.id">
                     {{ product.name }}
                     @if (!product.available) {
                       — {{ 'quoteRequest.unavailableProduct' | transloco }}
@@ -50,6 +50,89 @@
                 <mat-error>{{ 'quoteRequest.errors.productUnavailable' | transloco }}</mat-error>
               }
             </mat-form-field>
+          }
+          @if (quotes.catalogStatus() === 'ready' && selectedProduct(); as product) {
+            <section class="product-overview" aria-labelledby="selected-product-name">
+              <p>{{ product.description }}</p>
+              @if (!product.available) {
+                <p role="status">{{ 'quoteRequest.unavailableProduct' | transloco }}</p>
+              }
+              <h2>{{ 'quoteRequest.productDetails.mainCoverages' | transloco }}</h2>
+              <ul>
+                @for (coverage of product.mainCoverages; track $index) {
+                  <li>{{ coverage }}</li>
+                } @empty {
+                  <li>{{ 'quoteRequest.productDetails.noCoverages' | transloco }}</li>
+                }
+              </ul>
+              @let details = productDetails();
+              @if (!backendProductDetails) {
+                <p role="status">{{ 'quoteRequest.productDetails.backendRequired' | transloco }}</p>
+              } @else if (details.status === 'idle') {
+                <button mat-button type="button" (click)="loadProductDetails()">
+                  {{ 'quoteRequest.productDetails.view' | transloco }}
+                </button>
+              } @else if (details.status === 'loading') {
+                <p class="product-detail-loading" role="status">
+                  {{ 'quoteRequest.productDetails.loading' | transloco }}
+                </p>
+              } @else if (details.status === 'error') {
+                <div class="inline-alert error product-detail-error" role="alert">
+                  {{ details.messageKey | transloco }}
+                  <button mat-button type="button" (click)="loadProductDetails()">
+                    {{ 'common.retry' | transloco }}
+                  </button>
+                </div>
+              } @else if (details.status === 'ready') {
+                <section class="product-details" aria-labelledby="product-details-title">
+                  <h2 id="product-details-title">
+                    {{ 'quoteRequest.productDetails.title' | transloco }}
+                  </h2>
+                  @if (!details.detail.available) {
+                    <p role="status">{{ 'quoteRequest.unavailableProduct' | transloco }}</p>
+                  }
+                  <h3>{{ 'quoteRequest.productDetails.coverages' | transloco }}</h3>
+                  <ul>
+                    @for (coverage of details.detail.coverages; track $index) {
+                      <li>
+                        <strong>{{ coverage.name }}</strong
+                        >: {{ coverage.description }}
+                      </li>
+                    } @empty {
+                      <li>{{ 'quoteRequest.productDetails.noCoverages' | transloco }}</li>
+                    }
+                  </ul>
+                  <h3>{{ 'quoteRequest.productDetails.conditions' | transloco }}</h3>
+                  <ul>
+                    @for (condition of details.detail.conditions; track $index) {
+                      <li>{{ condition }}</li>
+                    } @empty {
+                      <li>{{ 'quoteRequest.productDetails.noConditions' | transloco }}</li>
+                    }
+                  </ul>
+                  <dl>
+                    <div>
+                      <dt>{{ 'quoteRequest.productDetails.insuredAmount' | transloco }}</dt>
+                      <dd>
+                        {{ details.detail.information.insuredAmount }}
+                        {{ details.detail.information.currency }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{{ 'quoteRequest.productDetails.deductible' | transloco }}</dt>
+                      <dd>
+                        {{ details.detail.information.deductible }}
+                        {{ details.detail.information.currency }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{{ 'quoteRequest.productDetails.validity' | transloco }}</dt>
+                      <dd>{{ details.detail.information.validity }}</dd>
+                    </div>
+                  </dl>
+                </section>
+              }
+            </section>
           }
         </mat-card-content>
       </mat-card>
@@ -563,6 +646,7 @@
                 submitting() ||
                 !!submittedRequest() ||
                 partnerLocked() ||
+                productUnavailable() ||
                 (!partnerMode && !profilingReady())
               "
             >
