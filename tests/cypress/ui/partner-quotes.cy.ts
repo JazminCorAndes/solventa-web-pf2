@@ -139,6 +139,7 @@ describe('SOL-198/205: formulario y oferta socio (HTTP controlado, no AWS)', () 
     cy.get('button[type=submit]').click();
     cy.get('[role=alert]').should('be.visible');
     cy.get('@partnerCreate.all').should('have.length', 0);
+    cy.get('[data-testid=partner-profile-reference]').should('not.exist');
     fill();
     cy.contains('Consentimiento: Vigente').should('be.visible');
     cy.get('button[type=submit]').click().should('be.disabled');
@@ -162,7 +163,10 @@ describe('SOL-198/205: formulario y oferta socio (HTTP controlado, no AWS)', () 
         expect(result!.body.oferta.trazabilidad.perfilId).to.eq(
           result!.body.perfilamientoReferencia,
         );
-        cy.get('app-partner-quote-panel code').should('have.text', result!.body.operationId);
+        cy.get('[data-testid=partner-operation-id]').should('have.text', result!.body.operationId);
+        cy.get('[data-testid=partner-profile-reference]')
+          .should('have.text', result!.body.perfilamientoReferencia)
+          .and('be.visible');
         cy.contains(result!.body.oferta.nombre).should('be.visible');
         cy.contains(result!.body.oferta.explicacion.resumen).should('be.visible');
         cy.contains('99.000').should('be.visible');
@@ -186,12 +190,18 @@ describe('SOL-198/205: formulario y oferta socio (HTTP controlado, no AWS)', () 
     cy.get('#credit-reference').should('have.value', creditReference).and('be.disabled');
     cy.get('.offer-explanation').should('have.length', 1);
     cy.reload();
-    cy.wait('@partnerRecovery').then(({ response: result }) => {
+    cy.wait<unknown, PartnerQuoteResult>('@partnerRecovery').then(({ response: result }) => {
       expect(result?.body).to.deep.eq(saved);
+      cy.get('[data-testid=partner-operation-id]').should('have.text', result!.body.operationId);
+      cy.get('[data-testid=partner-profile-reference]')
+        .should('have.text', result!.body.perfilamientoReferencia)
+        .and('be.visible');
     });
     cy.contains('h3', 'Cotización registrada por el servidor').should('be.visible');
     cy.get('.offer-explanation').should('have.length', 1);
     cy.get('button[type=submit]').should('be.disabled');
+    cy.get('input[formcontrolname=numeroDocumento]').should('have.value', '');
+    cy.get('#credit-reference').should('have.value', '');
     cy.get('@partnerCreate.all').should('have.length', 1);
     cy.get('@consent.all').should('have.length', 0);
     cy.get('@quote.all').should('have.length', 0);
@@ -210,12 +220,19 @@ describe('SOL-198/205: formulario y oferta socio (HTTP controlado, no AWS)', () 
     });
     cy.get('app-partner-quote-panel [role=alert]').should('be.visible');
     cy.get('.offer-explanation').should('not.exist');
+    cy.get('[data-testid=partner-profile-reference]').should('not.exist');
     cy.contains('h3', 'Cotización registrada por el servidor').should('not.exist');
     cy.contains('app-partner-quote-panel button', 'Reintentar').click();
-    cy.wait<PartnerQuoteRequest>('@partnerCreate').then(({ request }) => {
-      expect(request.body).to.deep.eq(original);
-      expect(request.headers['idempotency-key']).to.eq(original.operationId);
-    });
+    cy.wait<PartnerQuoteRequest, PartnerQuoteResult>('@partnerCreate').then(
+      ({ request, response: result }) => {
+        expect(request.body).to.deep.eq(original);
+        expect(request.headers['idempotency-key']).to.eq(original.operationId);
+        cy.get('[data-testid=partner-operation-id]').should('have.text', original.operationId);
+        cy.get('[data-testid=partner-profile-reference]')
+          .should('have.text', result!.body.perfilamientoReferencia)
+          .and('be.visible');
+      },
+    );
     cy.contains('h3', 'Cotización registrada por el servidor').should('be.visible');
     cy.get('.offer-explanation').should('have.length', 1);
   });
@@ -231,6 +248,7 @@ describe('SOL-198/205: formulario y oferta socio (HTTP controlado, no AWS)', () 
     cy.get('@partnerCreate.all').should('have.length', 0);
     cy.get('@consent.all').should('have.length', 0);
     cy.get('.offer-explanation').should('not.exist');
+    cy.get('[data-testid=partner-profile-reference]').should('not.exist');
   });
 
   for (const code of ['perfil_no_encontrado', 'producto_no_disponible']) {
@@ -241,6 +259,7 @@ describe('SOL-198/205: formulario y oferta socio (HTTP controlado, no AWS)', () 
       cy.wait('@rejected').its('response.body.code').should('eq', code);
       cy.get('app-partner-quote-panel [role=alert]').should('be.visible');
       cy.get('.offer-explanation').should('not.exist');
+      cy.get('[data-testid=partner-profile-reference]').should('not.exist');
       cy.contains('h3', 'Cotización registrada por el servidor').should('not.exist');
     });
   }

@@ -452,7 +452,9 @@ Solo una respuesta válida del servidor con `estado: "completada"` y asociación
 operación/socio/cliente/producto confirma el éxito. La pantalla presenta la oferta
 recomendada calculada por Cotización, con prima, periodicidad, cobertura, deducible,
 vigencia, fecha límite, condiciones y explicación de los factores determinantes,
-sin recalcular rating o riesgo ni mostrar hashes y referencias técnicas internas.
+sin recalcular rating o riesgo ni mostrar hashes internos. Junto al identificador
+de operación presenta `perfilamientoReferencia` como referencia confirmada, solo
+cuando la respuesta completa ha sido validada; nunca se calcula desde otro campo.
 El cliente valida también la trazabilidad recibida; si faltan la explicación, sus
 factores, las condiciones o las versiones requeridas, no presenta una oferta parcial
 como válida.
@@ -461,6 +463,8 @@ Antes de enviar se guarda únicamente operación y organización en la URL. Los 
 en la misma página conservan UUID y cuerpo original; `Retry-After` impide reenvíos mientras
 dure la espera. La recarga consulta
 `GET /v1/socios/solicitudes-cotizacion/{operationId}?socioId=...`, sin repetir el POST.
+La respuesta recuperada conserva visibles la operación y la referencia del perfil,
+sin reconstruir documento o referencia del crédito ausentes del contrato GET.
 Si devuelve `operacion_reintentable` o `operacion_no_encontrada`, se pueden reintroducir
 los mismos datos conservando la clave; el servidor detecta cambios mediante su idempotencia.
 Documento y cuerpo de la operación no se persisten en el navegador.

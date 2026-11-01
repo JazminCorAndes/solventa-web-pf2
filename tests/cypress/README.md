@@ -136,6 +136,8 @@ Ese límite detecta falta de convergencia funcional; **no mide p95/p99**.
 La suite UI incluye 41 casos. Cinco recorren el formulario/panel socio con HTTP
 controlado y sin crear cuentas, consentimiento ni cotizaciones reales. No conectan
 el circuito de asesor con el de socio ni acreditan percentiles o persistencia AWS.
+Verifican operación y referencia de perfil confirmadas después de POST, recuperación
+GET y reintento, sin mostrar esta última ante errores ni reconstruir datos ausentes.
 El caso de acuse perdido reproduce 503 con pago confirmado y póliza existente:
 la UI consulta la saga actual, reintenta explícitamente con la misma clave desde
 el detalle y no anuncia emisión hasta recibir `emitida`. Es HTTP controlado,

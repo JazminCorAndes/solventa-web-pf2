@@ -24,6 +24,7 @@
     "phoneInvalid": "Enter +57 followed by 10 digits.",
     "versionInvalid": "Enter an integer version of at least 1.",
     "operation": "Operation identifier",
+    "profileReference": "Confirmed profiling reference",
     "recoveryNote": "This page address retains only the operation and organization. Reloading retrieves its result; if a retry is needed, enter exactly the same details. Documents and phone numbers are not stored in the browser.",
     "recover": "Retrieve result",
     "retryAfter": "Wait {{ seconds }} seconds before retrying.",
