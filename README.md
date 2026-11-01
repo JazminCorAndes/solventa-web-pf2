@@ -874,8 +874,30 @@ cotización. `sessionStorage` conserva la referencia necesaria para reanudar el 
 misma pestaña. Las ofertas vencidas o retiradas permanecen visibles para comparación, pero no
 se pueden seleccionar.
 
-La selección mediante `PUT /v1/solicitudes-cotizacion/{id}/seleccion` es la aceptación definitiva
-y envía `{ ofertaId, version }` con `Idempotency-Key` UUID. La suscripción se inicia con
+Elegir una oferta guarda una preselección mediante
+`PUT /v1/solicitudes-cotizacion/{id}/seleccion-provisional`, con
+`{ ofertaId, version, revisionEsperada }` e `Idempotency-Key` UUID. Cambiar de oferta
+usa una clave nueva; reintentar un envío incierto conserva clave y cuerpo.
+El GET de esa ruta es la autoridad al reanudar y después de escribir: un replay
+puede devolver el acuse antiguo de A cuando la selección actual ya es B.
+`sessionStorage` es solo caché; nunca convierte un borrador antiguo en aceptación.
+
+La selección mediante `PUT /v1/solicitudes-cotizacion/{id}/seleccion` sigue siendo
+la aceptación definitiva. Solo se envía al confirmar las condiciones de la oferta
+mostrada, con `{ ofertaId, version, revisionSeleccion }` y otra clave UUID.
+Antes se vuelve a leer el estado canónico; si cambió la referencia o revisión,
+se retira el consentimiento y se exige revisar la selección actual. Un conflicto,
+volver o preseleccionar nunca inicia la suscripción. Una aceptación persistida es
+terminal y prevalece incluso en registros legados sin preselección.
+
+Desplegar primero backend `95a487c83618f983db81c9994588ddb50b7043f6` o una revisión
+compatible y aplicar todas sus migraciones (`0017`, `selecciones_provisionales`,
+depende de `conciliacion_emision`). La nueva web no oculta un 404 de esa ruta con
+selección local ni con la ruta histórica. El contrato anterior de aceptación sin
+`revisionSeleccion` se conserva en backend únicamente para operaciones sin provisional;
+los registros aceptados previos no requieren una nueva aceptación.
+
+La suscripción se inicia con
 `POST /v1/solicitudes-cotizacion/{id}/suscripcion`, cuerpo `{}` y otra clave UUID; se consulta
 con `GET` sobre la misma ruta. La interfaz muestra las decisiones aprobada, en revisión o
 rechazada y los estados reales de la saga, sin presentar datos cacheados como éxito tras un error.

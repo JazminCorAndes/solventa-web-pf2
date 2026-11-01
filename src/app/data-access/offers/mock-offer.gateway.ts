@@ -1,10 +1,14 @@
 import { inject, Injectable } from '@angular/core';
-import { delay, map, Observable, of, switchMap, throwError } from 'rxjs';
-import { OfferUnavailableError } from '../../core/offers/offer.errors';
+import { defer, delay, map, Observable, of, switchMap, throwError } from 'rxjs';
+import { OfferSelectionChangedError, OfferUnavailableError } from '../../core/offers/offer.errors';
 import { OfferGateway } from '../../core/offers/offer.gateway';
 import {
   InsuranceOffer,
+  isProvisionalSelection,
   OfferCalculation,
+  OfferSelectionState,
+  ProvisionalOfferSelection,
+  ProvisionalSelectionRequest,
   SelectedOfferRecord,
 } from '../../core/offers/offer.models';
 import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
@@ -419,6 +423,21 @@ export class MockOfferGateway implements OfferGateway {
   private readonly quoteRequestStorage = inject(QUOTE_REQUEST_STORAGE);
   private readonly selectionStorage = inject(OFFER_SELECTION_STORAGE);
   private readonly profiling = inject(MockProfilingGateway);
+  private readonly provisionals = new Map<string, ProvisionalOfferSelection>();
+  private readonly acceptances = new Map<string, SelectedOfferRecord>();
+  private readonly receipts = new Map<
+    string,
+    { fingerprint: string; selection: ProvisionalOfferSelection }
+  >();
+
+  constructor() {
+    const stored = this.selectionStorage.read();
+    if (stored?.confirmed) {
+      this.acceptances.set(stored.quoteId, stored);
+    } else if (stored && isProvisionalSelection(stored)) {
+      this.provisionals.set(stored.quoteId, stored);
+    }
+  }
 
   loadOffers(): Observable<OfferCalculation> {
     const request = this.quoteRequestStorage.read();
@@ -429,7 +448,7 @@ export class MockOfferGateway implements OfferGateway {
       delay(450),
       switchMap((record) => this.profiling.loadProfile(record.id).pipe(map(() => record))),
       map((record): OfferCalculation => {
-        const selection = this.selectionStorage.read();
+        const selection = this.acceptances.get(record.id) ?? this.selectionStorage.read();
         return {
           quoteId: record.id,
           calculatedAt: new Date().toISOString(),
@@ -447,47 +466,189 @@ export class MockOfferGateway implements OfferGateway {
     );
   }
 
-  loadSelection(): Observable<SelectedOfferRecord | null> {
-    const selection = this.selectionStorage.read();
-    return of(selection?.confirmed ? selection : null);
+  loadSelection(
+    quoteId = this.quoteRequestStorage.read()?.id ?? '',
+  ): Observable<SelectedOfferRecord | null> {
+    return this.loadSelectionState(quoteId).pipe(map((state) => state.acceptance));
+  }
+
+  loadSelectionState(quoteId: string): Observable<OfferSelectionState> {
+    return defer(() => {
+      const request = this.quoteRequestStorage.read();
+      if (!request || request.id !== quoteId) {
+        throw new OfferUnavailableError();
+      }
+      const stored = this.selectionStorage.read();
+      const current = stored?.quoteId === quoteId ? stored : null;
+      const selection =
+        this.provisionals.get(quoteId) ??
+        (current && isProvisionalSelection(current) ? current : null);
+      if (selection) {
+        this.provisionals.set(quoteId, selection);
+      }
+      const acceptance = this.acceptances.get(quoteId) ?? (current?.confirmed ? current : null);
+      if (acceptance) {
+        this.acceptances.set(quoteId, acceptance);
+      }
+      const offer = selection
+        ? offersFor(request.productId, request.productData).find(
+            (item) => item.id === selection.offerId && item.version === selection.offerVersion,
+          )
+        : null;
+      return of({
+        quoteId,
+        selection,
+        acceptance,
+        offerStatus: !selection
+          ? null
+          : acceptance
+            ? ('accepted' as const)
+            : !offer
+              ? ('withdrawn' as const)
+              : Date.parse(selection.validUntil) <= Date.now()
+                ? ('expired' as const)
+                : offer.status,
+      });
+    });
+  }
+
+  saveProvisionalSelection(
+    command: ProvisionalSelectionRequest,
+  ): Observable<ProvisionalOfferSelection> {
+    return defer(() => {
+      if (this.quoteRequestStorage.read()?.id !== command.quoteId) {
+        throw new OfferUnavailableError();
+      }
+      const key = `${command.quoteId}:${command.idempotencyKey}`;
+      const fingerprint = JSON.stringify([
+        command.quoteId,
+        command.offerId,
+        command.offerVersion,
+        command.expectedRevision,
+      ]);
+      const receipt = this.receipts.get(key);
+      if (receipt) {
+        if (receipt.fingerprint !== fingerprint) {
+          throw new Error('The idempotency key belongs to a different provisional selection.');
+        }
+        return of(structuredClone(receipt.selection));
+      }
+      return this.loadSelectionState(command.quoteId).pipe(
+        switchMap((state) => {
+          if (state.acceptance || command.expectedRevision !== (state.selection?.revision ?? 0)) {
+            throw new OfferSelectionChangedError();
+          }
+          return this.profiling.loadProfile(command.quoteId);
+        }),
+        map(() => {
+          const concurrentReceipt = this.receipts.get(key);
+          if (concurrentReceipt) {
+            if (concurrentReceipt.fingerprint !== fingerprint) {
+              throw new Error('The idempotency key belongs to a different provisional selection.');
+            }
+            return structuredClone(concurrentReceipt.selection);
+          }
+          const accepted = this.acceptances.get(command.quoteId) ?? this.selectionStorage.read();
+          if (
+            (accepted?.quoteId === command.quoteId && accepted.confirmed) ||
+            (this.provisionals.get(command.quoteId)?.revision ?? 0) !== command.expectedRevision
+          ) {
+            throw new OfferSelectionChangedError();
+          }
+          const offer = this.currentOffer(command.quoteId, command.offerId, command.offerVersion);
+          const selection: ProvisionalOfferSelection = {
+            quoteId: command.quoteId,
+            offerId: offer.id,
+            offerVersion: offer.version,
+            offerName: offer.name,
+            premium: offer.premium,
+            periodicity: offer.periodicity,
+            selectedAt: new Date().toISOString(),
+            confirmed: false,
+            revision: command.expectedRevision + 1,
+            validUntil: offer.validUntil,
+          };
+          this.provisionals.set(command.quoteId, selection);
+          this.receipts.set(key, { fingerprint, selection: structuredClone(selection) });
+          this.selectionStorage.write(selection);
+          return selection;
+        }),
+      );
+    });
   }
 
   confirmSelection(
     quoteId: string,
     offerId: string,
     offerVersion: number,
+    selectionRevision?: number,
   ): Observable<SelectedOfferRecord> {
     return of(null).pipe(
       delay(350),
-      switchMap(() => this.profiling.loadProfile(quoteId)),
-      map(() => {
-        const request = this.quoteRequestStorage.read();
-        if (!request || request.id !== quoteId) {
-          throw new OfferUnavailableError();
-        }
-        const offer = offersFor(request.productId, request.productData).find(
-          (item) => item.id === offerId,
-        );
+      switchMap(() => this.loadSelectionState(quoteId)),
+      switchMap((state) => {
         if (
-          !offer ||
-          offer.version !== offerVersion ||
-          offer.status !== 'available' ||
-          Date.parse(offer.validUntil) <= Date.now()
+          state.selection &&
+          (state.selection.offerId !== offerId ||
+            state.selection.offerVersion !== offerVersion ||
+            state.selection.revision !== selectionRevision)
         ) {
-          throw new OfferUnavailableError();
+          throw new OfferSelectionChangedError();
         }
-
-        return {
-          quoteId,
-          offerId,
-          offerVersion,
-          offerName: offer.name,
-          premium: offer.premium,
-          periodicity: offer.periodicity,
-          selectedAt: new Date().toISOString(),
-          confirmed: true,
-        };
+        if (state.acceptance) {
+          if (
+            state.acceptance.offerId !== offerId ||
+            state.acceptance.offerVersion !== offerVersion
+          ) {
+            throw new OfferUnavailableError();
+          }
+          return of(state.acceptance);
+        }
+        return this.profiling.loadProfile(quoteId).pipe(
+          map(() => {
+            const current = this.provisionals.get(quoteId);
+            if (
+              current &&
+              (current.offerId !== offerId ||
+                current.offerVersion !== offerVersion ||
+                current.revision !== selectionRevision)
+            ) {
+              throw new OfferSelectionChangedError();
+            }
+            const offer = this.currentOffer(quoteId, offerId, offerVersion);
+            const acceptance: SelectedOfferRecord = {
+              quoteId,
+              offerId,
+              offerVersion,
+              offerName: offer.name,
+              premium: offer.premium,
+              periodicity: offer.periodicity,
+              selectedAt: new Date().toISOString(),
+              confirmed: true,
+            };
+            this.selectionStorage.write(acceptance);
+            this.acceptances.set(quoteId, acceptance);
+            return acceptance;
+          }),
+        );
       }),
     );
+  }
+
+  private currentOffer(quoteId: string, offerId: string, version: number): InsuranceOffer {
+    const request = this.quoteRequestStorage.read();
+    const offer =
+      request?.id === quoteId
+        ? offersFor(request.productId, request.productData).find((item) => item.id === offerId)
+        : undefined;
+    if (
+      !offer ||
+      offer.version !== version ||
+      offer.status !== 'available' ||
+      Date.parse(offer.validUntil) <= Date.now()
+    ) {
+      throw new OfferUnavailableError();
+    }
+    return offer;
   }
 }

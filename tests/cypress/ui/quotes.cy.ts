@@ -185,7 +185,7 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     cy.contains('button', 'Confirmar selección').click();
     cy.wait('@selection')
       .its('request.body')
-      .should('deep.eq', { ofertaId: 'offer-0', version: 1 });
+      .should('deep.eq', { ofertaId: 'offer-0', version: 1, revisionSeleccion: 1 });
     cy.contains('[role=alert]', 'La oferta cambió o venció').should('be.visible');
     cy.location('pathname').should('eq', '/app/cotizaciones/aceptacion');
   });
@@ -238,7 +238,7 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/suscripcion`, {
       statusCode: 404,
     });
-    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion`, {
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion-provisional`, {
       statusCode: 422,
       body: { code: 'perfil_vencido' },
     });

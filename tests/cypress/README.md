@@ -58,13 +58,14 @@ habilitado tanto en identidad como en BFF web del entorno desechable.
 con login cifrado y crea un socio sintético mediante el CLI oficial de Identidad.
 El workflow fija `jobs.integrated.env.BACKEND_REVISION` en
 `.github/workflows/cypress-integrated.yml` al commit
-`6a9aa08ab579c2321513e2d56204c4847d3464e6`, que conserva la oferta hipotecaria del
-socio, el consentimiento informado y la prioridad de imports del checkout de pruebas,
-y completa los clientes de JMeter por Identidad con documento, teléfono y nacimiento.
+`95a487c83618f983db81c9994588ddb50b7043f6`, que añade preselección durable,
+recuperación canónica y aceptación con revisión, conservando los contratos anteriores.
+Requiere aplicar `upgrade head`, incluida la migración `0017` de
+`selecciones_provisionales` sobre `conciliacion_emision`, antes de iniciar la web.
 Es una referencia del entorno de pruebas, no un destino de despliegue productivo.
 
 Revisión reproducible del backend público:
-[`6a9aa08ab579c2321513e2d56204c4847d3464e6`](https://github.com/Migue765/backend-solventa/commit/6a9aa08ab579c2321513e2d56204c4847d3464e6).
+[`95a487c83618f983db81c9994588ddb50b7043f6`](https://github.com/Migue765/backend-solventa/commit/95a487c83618f983db81c9994588ddb50b7043f6).
 El workflow usa ese SHA inmutable, no `develop` ni una rama que pueda cambiar.
 Esta revisión deja JMeter exclusivamente manual en el backend; el workflow web
 solo utiliza su helper de servicios y no ejecuta JMeter.
@@ -112,8 +113,16 @@ con `CYPRESS_WEB_PORT` en un puerto libre propio. El tercer argumento acepta un 
 Sus XML y evidencia JSON saneada quedan en `reports/cypress/integrated/catalog/`, separados
 de los informes de la suite completa. El caso usa login JWE, resumen/detalle reales y un único
 POST de cotización desde la UI hasta ofertas; no acepta ofertas ni realiza pagos.
-Exige los contratos exactos de los GET 404 iniciales por consentimiento y selección
-ausentes; cualquier otro fallo HTTP o diagnóstico inesperado hace fallar el caso.
+Exige el GET 404 contractual de consentimiento ausente y el GET 200 canónico de
+`seleccion-provisional` con selección y aceptación nulas. No hace fallback a la ruta
+histórica si falta la nueva. La evidencia anterior del catálogo web718/backend6a
+conserva sus dos GET404 y no acredita esta nueva combinación.
+Para el recorrido nuevo A → B → recarga → aceptación explícita → suscripción,
+ejecutar únicamente `node tests/cypress/run.cjs integrated selection.cy.ts`.
+Los XML y la captura parcial/final previa a las guardas compartidas quedan en
+`reports/cypress/integrated/selection/`; el XML final determina éxito, no la captura.
+Este caso no realiza pagos ni emisión. Las pruebas controladas de conflictos/replay
+no se atribuyen al backend vivo ni sustituyen el cotejo SQL del entorno desechable.
 Al cerrar el helper backend se eliminan sus bases temporales: no se borran cuentas
 reales ni se presupone una API de limpieza inexistente.
 El helper escribe solo las URLs locales en `.angular/cypress/partner-backend.json`.

@@ -25,6 +25,7 @@ export const quoteResumeGuard: CanActivateFn = (route) => {
   const subscriptionRoute = path.includes('suscripcion');
   const recoverError = (error: unknown) => {
     console.error('The quote process could not be recovered.', error);
+    selections.clear();
     const key = profilingErrorKey(error);
     return of(
       router.createUrlTree(['/app/cotizaciones'], {
@@ -78,19 +79,32 @@ export const quoteResumeGuard: CanActivateFn = (route) => {
     }
     return true;
   };
+  const recoverSelection = (requestId: string) =>
+    offers.loadSelectionState(requestId).pipe(
+      switchMap((state) => {
+        if (
+          state.quoteId !== requestId ||
+          (state.selection && state.selection.quoteId !== requestId) ||
+          (state.acceptance && state.acceptance.quoteId !== requestId)
+        ) {
+          throw new Error('The recovered selection does not match the requested quote.');
+        }
+        selections.clear();
+        const current = state.acceptance ?? state.selection;
+        if (current) {
+          selections.write(current);
+        }
+        return state.acceptance
+          ? of(destination())
+          : validateProfile(requestId).pipe(map(() => destination()));
+      }),
+    );
   if (!id) {
-    const next = destination();
     const requestId = quotes.latestRequest()?.id;
-    const selection = selections.read();
-    if (
-      next !== true ||
-      !requestId ||
-      subscriptionRoute ||
-      (selection?.quoteId === requestId && selection.confirmed)
-    ) {
-      return next;
+    if (!requestId || subscriptionRoute) {
+      return destination();
     }
-    return validateProfile(requestId).pipe(catchError(recoverError));
+    return recoverSelection(requestId).pipe(catchError(recoverError));
   }
   return forkJoin({
     request: inject(QUOTE_REQUEST_GATEWAY).loadRequest(id),
@@ -109,18 +123,7 @@ export const quoteResumeGuard: CanActivateFn = (route) => {
           return of(destination());
         }
       }
-      return offers.loadSelection(id).pipe(
-        switchMap((selection) => {
-          if (selection && selection.quoteId !== id) {
-            throw new Error('The recovered selection does not match the requested quote.');
-          }
-          if (selection) {
-            selections.write(selection);
-            return of(destination());
-          }
-          return validateProfile(id).pipe(map(() => destination()));
-        }),
-      );
+      return recoverSelection(id);
     }),
     catchError(recoverError),
   );

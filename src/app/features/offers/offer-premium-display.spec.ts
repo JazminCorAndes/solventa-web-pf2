@@ -78,6 +78,10 @@ async function configurePage(periodicity: PremiumPeriodicity): Promise<void> {
     | 'selectOffer'
     | 'toggleDetails'
     | 'confirmSelected'
+    | 'saving'
+    | 'canRetrySelection'
+    | 'selectionReference'
+    | 'cancelPending'
   > = {
     load: vi.fn(),
     status: signal('ready'),
@@ -89,9 +93,20 @@ async function configurePage(periodicity: PremiumPeriodicity): Promise<void> {
     canContinue: signal(true),
     isSelectable: () => true,
     confirmedSelection: signal(selection),
-    selectOffer: vi.fn(() => true),
+    selectOffer: vi.fn(() =>
+      of({
+        ...selection,
+        confirmed: false as const,
+        revision: 1,
+        validUntil: offer.validUntil,
+      }),
+    ),
     toggleDetails: vi.fn(),
     confirmSelected: () => of(selection),
+    saving: signal(false),
+    canRetrySelection: signal(false),
+    selectionReference: signal(null),
+    cancelPending: vi.fn(),
   };
 
   await TestBed.configureTestingModule({

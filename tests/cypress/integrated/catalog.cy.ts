@@ -103,7 +103,9 @@ describe('Catalogo integrado: detalle recibido y una cotizacion desde la UI', ()
       quotePosts++;
     }).as('catalogQuote');
     cy.intercept('GET', '/api/v1/solicitudes-cotizacion/*/ofertas').as('catalogOffers');
-    cy.intercept('GET', '/api/v1/solicitudes-cotizacion/*/seleccion').as('catalogSelection');
+    cy.intercept('GET', '/api/v1/solicitudes-cotizacion/*/seleccion-provisional').as(
+      'catalogSelection',
+    );
 
     register().then((account) => {
       customerId = account.id;
@@ -195,15 +197,14 @@ describe('Catalogo integrado: detalle recibido y una cotizacion desde la UI', ()
       });
       cy.wait('@catalogSelection', { log: false }).then(({ request, response }) => {
         expect(new URL(request.url).pathname).to.eq(
-          `/api/v1/solicitudes-cotizacion/${requestId}/seleccion`,
+          `/api/v1/solicitudes-cotizacion/${requestId}/seleccion-provisional`,
         );
-        expect(response?.statusCode, 'consulta sin seleccion previa, no aceptacion').to.eq(404);
-        expect(response!.body).to.include({
-          status: 404,
-          type: 'https://api.solventa.co/problems/solicitud_no_encontrada',
-          title: 'Solicitud no encontrada',
-          detail: 'La solicitud o la selección no existe para el cliente.',
-          code: 'solicitud_no_encontrada',
+        expect(response?.statusCode, 'estado canonico vacio, no aceptacion').to.eq(200);
+        expect(response!.body).to.deep.eq({
+          solicitudId: requestId,
+          seleccion: null,
+          aceptacion: null,
+          estadoOferta: null,
         });
       });
       cy.location('pathname').should('eq', '/app/cotizaciones/ofertas');
@@ -212,16 +213,11 @@ describe('Catalogo integrado: detalle recibido y una cotizacion desde la UI', ()
         expect(quotePosts, 'unico POSTcotizacion, emitido por la UI').to.eq(1);
         expect(
           observed.filter((item) => item.status >= 400),
-          'solo las consultas iniciales sin consentimiento ni seleccion',
+          'solo la consulta inicial sin consentimiento',
         ).to.deep.eq([
           {
             method: 'GET',
             path: '/api/v1/consentimientos/perfilamiento',
-            status: 404,
-          },
-          {
-            method: 'GET',
-            path: `/api/v1/solicitudes-cotizacion/${requestId}/seleccion`,
             status: 404,
           },
         ]);
@@ -229,9 +225,9 @@ describe('Catalogo integrado: detalle recibido y una cotizacion desde la UI', ()
           observed.filter(
             (item) =>
               item.method !== 'GET' &&
-              /\/(?:seleccion|suscripcion|pago-simulado)(?:\/|$)/.test(item.path),
+              /\/(?:seleccion(?:-provisional)?|suscripcion|pago-simulado)(?:\/|$)/.test(item.path),
           ),
-          'sin aceptacion, suscripcion ni pagos',
+          'sin preseleccion de oferta, aceptacion, suscripcion ni pagos',
         ).to.deep.eq([]);
         expect(diagnostics).to.deep.eq({
           consoleErrors: 0,

@@ -497,6 +497,8 @@
     "title": "Elige tu plan",
     "subtitle": "Compara coberturas y selecciona la opción que mejor se ajusta a tus necesidades.",
     "loading": "Actualizando ofertas disponibles",
+    "savingSelection": "Guardando preselección",
+    "refreshSelection": "Actualizar selección",
     "recommendedPlan": "Plan recomendado",
     "premiumLabels": {
       "mensual": "Prima mensual",
@@ -549,6 +551,8 @@
       "loadTitle": "No pudimos cargar las ofertas",
       "loadBody": "Inténtalo nuevamente para consultar las opciones disponibles.",
       "unavailable": "La oferta seleccionada cambió o venció. Revisa las opciones actualizadas.",
+      "selectionSave": "No fue posible guardar la preselección. Reintenta o consulta el estado actual.",
+      "selectionChanged": "La selección cambió o ya fue aceptada. Revisa el estado actualizado.",
       "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente."
     }
   },
@@ -571,6 +575,8 @@
     "backToOffers": "Volver a las ofertas",
     "errors": {
       "unavailable": "La oferta cambió o venció. Vuelve a las ofertas para seleccionar una opción vigente.",
+      "selectionChanged": "La selección cambió o ya fue aceptada. Revisa su estado actual antes de continuar.",
+      "selectionMissing": "No hay una oferta disponible para revisar en esta cotización. Vuelve a consultar las ofertas.",
       "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente.",
       "subscription": "No fue posible procesar la suscripción. Inténtalo nuevamente."
     }

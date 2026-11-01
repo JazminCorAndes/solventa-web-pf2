@@ -497,6 +497,8 @@
     "title": "Choose your plan",
     "subtitle": "Compare coverage and select the option that best fits your needs.",
     "loading": "Updating available offers",
+    "savingSelection": "Saving provisional selection",
+    "refreshSelection": "Refresh selection",
     "recommendedPlan": "Recommended plan",
     "premiumLabels": {
       "mensual": "Monthly premium",
@@ -549,6 +551,8 @@
       "loadTitle": "We could not load the offers",
       "loadBody": "Try again to retrieve the available options.",
       "unavailable": "The selected offer changed or expired. Review the updated options.",
+      "selectionSave": "The provisional selection could not be saved. Retry or check its current state.",
+      "selectionChanged": "The selection changed or has already been accepted. Review the updated state.",
       "confirmation": "The selection could not be confirmed. Please try again."
     }
   },
@@ -571,6 +575,8 @@
     "backToOffers": "Back to offers",
     "errors": {
       "unavailable": "The offer changed or expired. Return to the offers to select an available option.",
+      "selectionChanged": "The selection changed or has already been accepted. Review its current state before continuing.",
+      "selectionMissing": "No offer is available to review for this quote. Return to the offers.",
       "confirmation": "The selection could not be confirmed. Please try again.",
       "subscription": "The subscription could not be processed. Please try again."
     }

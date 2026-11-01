@@ -36,10 +36,47 @@ function reachSubscription(state = 'aprobada') {
     saga: { estado: 'pago_pendiente', version: 1, actualizadaEn: time },
   };
   let selected = false;
+  let preselected = false;
+  const provisional = {
+    ...selection,
+    primaMensual: selection.prima,
+    revision: 1,
+    vigenteHasta: new Date(Date.now() + 86400000).toISOString(),
+  };
+  cy.intercept(
+    'GET',
+    `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion-provisional`,
+    (request) => {
+      request.reply({
+        solicitudId: quoteId,
+        seleccion: preselected ? provisional : null,
+        aceptacion: selected ? selection : null,
+        estadoOferta: preselected ? (selected ? 'aceptada' : 'disponible') : null,
+      });
+    },
+  );
+  cy.intercept(
+    'PUT',
+    `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion-provisional`,
+    (request) => {
+      expect(request.body).to.deep.eq({
+        ofertaId: selection.ofertaId,
+        version: 1,
+        revisionEsperada: 0,
+      });
+      preselected = true;
+      request.reply(provisional);
+    },
+  );
   cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion`, (request) => {
     request.reply(selected ? { body: selection } : { statusCode: 404 });
   });
   cy.intercept('PUT', `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion`, (request) => {
+    expect(request.body).to.deep.eq({
+      ofertaId: selection.ofertaId,
+      version: 1,
+      revisionSeleccion: 1,
+    });
     selected = true;
     request.reply(selection);
   }).as('selection');
