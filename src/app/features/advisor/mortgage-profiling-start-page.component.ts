@@ -28,11 +28,14 @@ import {
 } from '../../core/advisor-profiling/advisor-profiling.models';
 import { DocumentType, isPartnerIds } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
+import { documentNumberFilter, documentNumberValidator } from '../../core/market/document-number';
+import { InputFilterDirective } from '../../shared/input-filter/input-filter.directive';
 
 @Component({
   selector: 'app-mortgage-profiling-start-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    InputFilterDirective,
     MatButtonModule,
     MatCardModule,
     MatCheckboxModule,
@@ -83,7 +86,7 @@ export class MortgageProfilingStartPageComponent {
   readonly form = this.formBuilder.nonNullable.group({
     customerId: ['', [Validators.required, Validators.pattern(MORTGAGE_UUID_PATTERN)]],
     documentType: this.formBuilder.nonNullable.control<DocumentType>('cc', Validators.required),
-    documentNumber: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{6,15}$/)]],
+    documentNumber: ['', [Validators.required, documentNumberValidator('documentType')]],
     birthDate: ['', [Validators.required, Validators.pattern(/^\d{4}-\d{2}-\d{2}$/)]],
     phone: ['', [Validators.required, Validators.pattern(/^\+57[0-9]{10}$/)]],
     creditReference: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9-]{4,30}$/)]],
@@ -107,9 +110,14 @@ export class MortgageProfilingStartPageComponent {
     consentVerified: [false, Validators.requiredTrue],
   });
 
+  readonly documentNumberFilter = documentNumberFilter;
+
   constructor() {
     this.synchronizeFormContext();
     effect(() => this.synchronizeFormContext());
+    this.form.controls.documentType.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.revalidate('documentNumber'));
   }
 
   submit(): void {
@@ -239,6 +247,11 @@ export class MortgageProfilingStartPageComponent {
     this.formOwnerId = ownerId;
     this.formPartnerId = this.partnerId();
     if (this.formPartnerId) this.selectedPartnerId.set(this.formPartnerId);
+  }
+
+  /** Al deshabilitar el formulario cada control emite; revalidar entonces lo reactivaría. */
+  private revalidate(controlName: 'documentNumber'): void {
+    if (this.form.enabled) this.form.controls[controlName].updateValueAndValidity();
   }
 
   showError(controlName: keyof typeof this.form.controls): boolean {

@@ -19,6 +19,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { finalize, Observable, take } from 'rxjs';
+import { documentNumberFilter, documentNumberValidator } from '../../core/market/document-number';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
 import { DocumentType, QuoteRequestDraft } from '../../core/quotes/quote-request.models';
 import {
@@ -31,6 +32,7 @@ import {
   partnerRetryDelay,
   UUID_PATTERN,
 } from '../../data-access/quotes/http-partner-quote.gateway';
+import { InputFilterDirective } from '../../shared/input-filter/input-filter.directive';
 
 @Component({
   selector: 'app-partner-quote-panel',
@@ -38,6 +40,7 @@ import {
   imports: [
     DatePipe,
     CurrencyPipe,
+    InputFilterDirective,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -109,11 +112,13 @@ export class PartnerQuotePanelComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private pendingRequest: PartnerQuoteRequest | null = null;
   private retryTimer?: ReturnType<typeof setTimeout>;
+  private expiryTimer?: ReturnType<typeof setTimeout>;
   @Output() readonly lockedChange = new EventEmitter<boolean>();
   @Output() readonly loadingChange = new EventEmitter<boolean>();
   readonly context = this.partners.context;
   readonly operationId = signal<string | null>(null);
   readonly result = signal<PartnerQuoteResult | null>(null);
+  readonly offerExpired = signal(false);
   readonly errorKey = signal<string | null>(null);
   readonly loading = signal(false);
   readonly retrySeconds = signal(0);
@@ -123,8 +128,9 @@ export class PartnerQuotePanelComponent implements OnInit {
   readonly form = this.builder.nonNullable.group({
     socioId: ['', Validators.required],
     tipoDocumento: this.builder.nonNullable.control<DocumentType>('cc'),
-    numeroDocumento: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{6,15}$/)]],
+    numeroDocumento: ['', [Validators.required, documentNumberValidator('tipoDocumento')]],
   });
+  readonly documentNumberFilter = documentNumberFilter;
   private readonly selectedPartner = toSignal(this.form.controls.socioId.valueChanges, {
     initialValue: '',
   });
@@ -135,13 +141,19 @@ export class PartnerQuotePanelComponent implements OnInit {
   );
 
   constructor() {
-    this.destroyRef.onDestroy(() => clearTimeout(this.retryTimer));
+    this.destroyRef.onDestroy(() => {
+      clearTimeout(this.retryTimer);
+      clearTimeout(this.expiryTimer);
+    });
     this.form.controls.socioId.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.clearClientLookup());
     this.form.controls.tipoDocumento.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.clearClientLookup());
+      .subscribe(() => {
+        if (this.form.enabled) this.form.controls.numeroDocumento.updateValueAndValidity();
+        this.clearClientLookup();
+      });
     this.form.controls.numeroDocumento.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.clearClientLookup());
@@ -292,6 +304,7 @@ export class PartnerQuotePanelComponent implements OnInit {
         this.pendingRequest = null;
         this.operationId.set(null);
         this.result.set(null);
+        this.updateOfferExpiry();
         this.clientLookup.set(null);
         this.errorKey.set(null);
         this.setLocked(false);
@@ -302,6 +315,8 @@ export class PartnerQuotePanelComponent implements OnInit {
   private run(operation: Observable<PartnerQuoteResult>, recovery = false): void {
     this.setLoading(true);
     this.errorKey.set(null);
+    this.result.set(null);
+    this.updateOfferExpiry();
     operation
       .pipe(
         take(1),
@@ -320,6 +335,7 @@ export class PartnerQuotePanelComponent implements OnInit {
             return;
           }
           this.result.set(result);
+          this.updateOfferExpiry();
           this.pendingRequest = null;
           this.setLocked(true);
         },
@@ -337,6 +353,20 @@ export class PartnerQuotePanelComponent implements OnInit {
           }
         },
       });
+  }
+
+  private updateOfferExpiry(): void {
+    clearTimeout(this.expiryTimer);
+    const offer = this.result()?.oferta;
+    const remaining = offer ? Date.parse(offer.vigenteHasta) - Date.now() : 0;
+    this.offerExpired.set(!!offer && remaining <= 0);
+    if (offer && remaining > 0) {
+      // setTimeout uses a signed 32-bit delay; recheck long-lived offers without overflow.
+      this.expiryTimer = setTimeout(
+        () => this.updateOfferExpiry(),
+        Math.min(remaining, 2_147_483_647),
+      );
+    }
   }
 
   private waitForRetry(seconds: number): void {

@@ -121,7 +121,16 @@
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'mortgageProfiling.documentNumber' | transloco }}</mat-label>
-                <input matInput formControlName="documentNumber" autocomplete="off" />
+                <input
+                  matInput
+                  formControlName="documentNumber"
+                  autocomplete="off"
+                  maxlength="16"
+                  [appInputFilter]="documentNumberFilter(form.controls.documentType.value)"
+                  [attr.inputmode]="
+                    form.controls.documentType.value === 'passport' ? 'text' : 'numeric'
+                  "
+                />
                 @if (showError('documentNumber')) {
                   <mat-error>{{
                     'mortgageProfiling.validation.documentNumber' | transloco

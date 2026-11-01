@@ -25,7 +25,14 @@
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>{{ 'partnerQuote.document' | transloco }}</mat-label>
-      <input matInput formControlName="numeroDocumento" autocomplete="off" maxlength="15" />
+      <input
+        matInput
+        formControlName="numeroDocumento"
+        autocomplete="off"
+        maxlength="16"
+        [appInputFilter]="documentNumberFilter(form.controls.tipoDocumento.value)"
+        [attr.inputmode]="form.controls.tipoDocumento.value === 'passport' ? 'text' : 'numeric'"
+      />
       <mat-error>{{ 'partnerQuote.documentInvalid' | transloco }}</mat-error>
     </mat-form-field>
     <button
@@ -80,7 +87,12 @@
     <p role="status">{{ 'partnerQuote.retryAfter' | transloco: { seconds: retrySeconds() } }}</p>
   }
   @if (result(); as result) {
-    <h3 role="status">{{ 'partnerQuote.completed' | transloco }}</h3>
+    <h3 role="status">
+      {{ (offerExpired() ? 'partnerQuote.offerExpired' : 'partnerQuote.completed') | transloco }}
+    </h3>
+    @if (offerExpired()) {
+      <p>{{ 'partnerQuote.historicalOffer' | transloco }}</p>
+    }
     <article class="client-summary">
       <strong>{{ result.oferta.nombre }}</strong>
       <span>{{ result.oferta.descripcion }}</span>
