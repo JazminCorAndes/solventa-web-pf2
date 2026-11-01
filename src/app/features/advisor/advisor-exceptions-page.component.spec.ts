@@ -2,7 +2,7 @@ import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
 import en from '../../../../public/assets/i18n/en.json';
 import {
@@ -177,6 +177,84 @@ describe('AdvisorExceptionsPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain(
       es.advisorExceptions.errors.consentimiento_no_vigente,
     );
+  });
+
+  it.each(['usuario', 'socio', 'caso'] as const)(
+    'WEB-F6 descarta el error tardío y el motivo al cambiar %s',
+    async (contextChange) => {
+      const response = new Subject<ResolvedAdvisorException>();
+      gateway.get.mockImplementation((excepcionId, socioId) =>
+        of({ ...exception, excepcionId, socioId }),
+      );
+      gateway.resolve.mockReturnValue(response.asObservable());
+      params.next(convertToParamMap({ exceptionId: exception.excepcionId }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      component.reasonForm.controls.motivo.setValue('Motivo del caso anterior.');
+      component.resolve('aprobar');
+      expect(component.resolving()).toBe(true);
+
+      if (contextChange === 'usuario') {
+        user.set({ ...advisor, id: 'advisor-other' });
+      } else if (contextChange === 'socio') {
+        query.next(convertToParamMap({ socioId: 'BANCO-002' }));
+      } else {
+        params.next(convertToParamMap({ exceptionId: 'exception-other' }));
+      }
+      fixture.detectChanges();
+      await fixture.whenStable();
+      response.error(new AdvisorExceptionError('consentimiento_no_vigente'));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component.resolveErrorCode()).toBeNull();
+      expect(component.reasonForm.controls.motivo.value).toBe('');
+      expect(component.resolved()).toBeNull();
+      expect(component.resolving()).toBe(false);
+      expect(gateway.resolve).toHaveBeenCalledTimes(1);
+      expect(fixture.nativeElement.textContent).not.toContain(
+        es.advisorExceptions.errors.consentimiento_no_vigente,
+      );
+    },
+  );
+
+  it('WEB-F6 revalida el detalle al cambiar de usuario aunque conserve el mismo socio', async () => {
+    const previousRead = new Subject<AdvisorException>();
+    gateway.get
+      .mockReturnValueOnce(previousRead.asObservable())
+      .mockReturnValueOnce(throwError(() => new AdvisorExceptionError('alcance_insuficiente')));
+    params.next(convertToParamMap({ exceptionId: exception.excepcionId }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    user.set({ ...advisor, id: 'advisor-other' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    previousRead.next(exception);
+    previousRead.complete();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(gateway.get).toHaveBeenCalledTimes(2);
+    expect(component.exception()).toBeNull();
+    expect(component.loadErrorCode()).toBe('alcance_insuficiente');
+    expect(fixture.nativeElement.textContent).not.toContain(exception.motivoBloqueo);
+  });
+
+  it('WEB-F6 conserva el motivo al reintentar la lectura del mismo caso y usuario', async () => {
+    params.next(convertToParamMap({ exceptionId: exception.excepcionId }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.reasonForm.controls.motivo.setValue('Motivo del mismo caso.');
+
+    component.retryLoad();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(gateway.get).toHaveBeenCalledTimes(2);
+    expect(component.reasonForm.controls.motivo.value).toBe('Motivo del mismo caso.');
+    expect(gateway.resolve).not.toHaveBeenCalled();
   });
 
   it.each([

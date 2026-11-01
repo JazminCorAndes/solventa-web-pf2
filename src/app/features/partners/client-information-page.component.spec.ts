@@ -1,8 +1,8 @@
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
-import { of, throwError } from 'rxjs';
+import { of, startWith, Subject, throwError } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
 import { PartnerContext, PartnerContextService } from '../../core/partners/partner-context.service';
 import {
@@ -53,9 +53,13 @@ describe('ClientInformationPageComponent', () => {
   let fixture: ComponentFixture<ClientInformationPageComponent>;
   let gateway: { consult: ReturnType<typeof vi.fn>; load: ReturnType<typeof vi.fn> };
   let query: Record<string, string>;
+  let queryChanges: Subject<ReturnType<typeof convertToParamMap>>;
+  let context: WritableSignal<PartnerContext | null>;
 
   beforeEach(async () => {
     query = { socio: 'BANCO-001' };
+    queryChanges = new Subject();
+    context = signal<PartnerContext | null>(CONTEXT);
     gateway = { consult: vi.fn(), load: vi.fn() };
     await TestBed.configureTestingModule({
       imports: [
@@ -69,6 +73,9 @@ describe('ClientInformationPageComponent', () => {
         {
           provide: ActivatedRoute,
           useValue: {
+            get queryParamMap() {
+              return queryChanges.pipe(startWith(convertToParamMap(query)));
+            },
             snapshot: {
               get queryParamMap() {
                 return convertToParamMap(query);
@@ -79,7 +86,7 @@ describe('ClientInformationPageComponent', () => {
         { provide: Router, useValue: { navigate: vi.fn().mockResolvedValue(true) } },
         {
           provide: PartnerContextService,
-          useValue: { context: signal(CONTEXT).asReadonly() },
+          useValue: { context: context.asReadonly() },
         },
         { provide: HttpClientInformationGateway, useValue: gateway },
       ],
@@ -171,5 +178,149 @@ describe('ClientInformationPageComponent', () => {
     expect(gateway.load).toHaveBeenCalledWith(operationId, 'BANCO-001');
     expect(fixture.componentInstance.result()?.operationId).toBe(operationId);
     expect(gateway.consult).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['user', 'success'],
+    ['user', 'error'],
+    ['partner', 'success'],
+    ['partner', 'error'],
+  ] as const)(
+    'WEB-F6 ignores a late %s-context %s without retaining previous customer data',
+    async (contextChange, outcome) => {
+      const response = new Subject<ClientInformationResult>();
+      gateway.consult.mockReturnValue(response.asObservable());
+      fixture.componentInstance.form.controls.documentNumber.setValue('1012345678');
+      fixture.componentInstance.submit();
+      await Promise.resolve();
+      const request = gateway.consult.mock.calls[0][0] as ClientInformationRequest;
+
+      context.set(
+        contextChange === 'user'
+          ? {
+              ...CONTEXT,
+              usuario: { ...CONTEXT.usuario, id: '66666666-6666-4666-8666-666666666666' },
+            }
+          : {
+              ...CONTEXT,
+              usuario: { ...CONTEXT.usuario, socios: ['BANCO-002'] },
+              socios: [{ socioId: 'BANCO-002', productos: ['mortgage-life'] }],
+            },
+      );
+      fixture.detectChanges();
+      await fixture.whenStable();
+      if (outcome === 'success') response.next(resultFor(request));
+      else response.error(new Error('Previous consultation unavailable'));
+      response.complete();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.result()).toBeNull();
+      expect(fixture.componentInstance.errorKey()).not.toBe('clientInformation.errors.unavailable');
+      expect(fixture.componentInstance.form.controls.documentNumber.value).toBe('');
+      expect(fixture.nativeElement.textContent).not.toContain('Indicador de riesgo: 0.50');
+    },
+  );
+
+  it('WEB-F6 reloads the operation in the URL and discards an older read', async () => {
+    const firstId = '55555555-5555-4555-8555-555555555555';
+    const secondId = '66666666-6666-4666-8666-666666666666';
+    const firstRead = new Subject<ClientInformationResult>();
+    const secondRead = new Subject<ClientInformationResult>();
+    const firstRequest: ClientInformationRequest = {
+      operationId: firstId,
+      socioId: 'BANCO-001',
+      clienteId: CLIENT_ID,
+      productoId: 'mortgage-life',
+      finalidad: 'cotizacion',
+      datosSolicitados: ['indicador_riesgo'],
+    };
+    gateway.load.mockImplementation((operationId: string) =>
+      operationId === firstId ? firstRead.asObservable() : secondRead.asObservable(),
+    );
+    query = { socio: 'BANCO-001', operacion: firstId };
+    fixture.destroy();
+    fixture = TestBed.createComponent(ClientInformationPageComponent);
+    fixture.detectChanges();
+
+    query = { socio: 'BANCO-001', operacion: secondId };
+    queryChanges.next(convertToParamMap(query));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    secondRead.next(resultFor({ ...firstRequest, operationId: secondId }));
+    secondRead.complete();
+    firstRead.next(resultFor(firstRequest));
+    firstRead.complete();
+    fixture.detectChanges();
+
+    expect(gateway.load).toHaveBeenCalledTimes(2);
+    expect(fixture.componentInstance.operationId()).toBe(secondId);
+    expect(fixture.componentInstance.result()?.operationId).toBe(secondId);
+    expect(gateway.consult).not.toHaveBeenCalled();
+  });
+
+  it('WEB-F6 does not dispatch a consultation after its navigation outlives the user', async () => {
+    let finishNavigation!: (navigated: boolean) => void;
+    vi.mocked(TestBed.inject(Router).navigate).mockReturnValue(
+      new Promise<boolean>((resolve) => {
+        finishNavigation = resolve;
+      }),
+    );
+    gateway.consult.mockImplementation((request: ClientInformationRequest) =>
+      of(resultFor(request)),
+    );
+    fixture.componentInstance.form.controls.documentNumber.setValue('1012345678');
+    fixture.componentInstance.submit();
+    expect(gateway.consult).not.toHaveBeenCalled();
+
+    context.set({
+      ...CONTEXT,
+      usuario: { ...CONTEXT.usuario, id: '66666666-6666-4666-8666-666666666666' },
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    finishNavigation(true);
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(gateway.consult).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.result()).toBeNull();
+    expect(fixture.componentInstance.loading()).toBe(false);
+  });
+
+  it('WEB-F6 keeps its own URL update attached to one consultation without an early read', async () => {
+    let finishNavigation!: (navigated: boolean) => void;
+    const navigation = new Promise<boolean>((resolve) => {
+      finishNavigation = resolve;
+    });
+    vi.mocked(TestBed.inject(Router).navigate).mockImplementation((_commands, extras) => {
+      query = {
+        socio: String(extras?.queryParams?.['socio']),
+        operacion: String(extras?.queryParams?.['operacion']),
+      };
+      queryChanges.next(convertToParamMap(query));
+      return navigation;
+    });
+    const response = new Subject<ClientInformationResult>();
+    gateway.consult.mockReturnValue(response.asObservable());
+    fixture.componentInstance.form.controls.documentNumber.setValue('1012345678');
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(gateway.load).not.toHaveBeenCalled();
+    expect(gateway.consult).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.loading()).toBe(true);
+
+    finishNavigation(true);
+    await Promise.resolve();
+    const request = gateway.consult.mock.calls[0][0] as ClientInformationRequest;
+    response.next(resultFor(request));
+    response.complete();
+    fixture.detectChanges();
+
+    expect(gateway.consult).toHaveBeenCalledTimes(1);
+    expect(gateway.load).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.result()?.operationId).toBe(query['operacion']);
+    expect(fixture.componentInstance.loading()).toBe(false);
   });
 });

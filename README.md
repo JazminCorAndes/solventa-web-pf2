@@ -254,6 +254,17 @@ identidad, BFF, cotización, perfilamiento y bases migradas. Contiene únicament
 sintética `BANK-E2E`, sin tokens ni credenciales, y se importa solo en pruebas. Coteja el
 consumidor con una respuesta real del contrato; no sustituye la verificación en AWS/Pages.
 
+### Aislamiento de consultas y revisión
+
+La consulta de información del cliente descarta resultados y errores tardíos al cambiar
+de usuario, socio u operación. Recuperar otra operación desde la URL hace una lectura,
+sin repetir su envío. Guardar en la URL el identificador de una consulta nueva tampoco
+dispara una lectura prematura ni permite enviar desde una navegación de otra sesión.
+El backoffice aplica el mismo aislamiento por asesor, socio y excepción: limpia el motivo
+al cambiar de contexto, pero lo conserva al reintentar la lectura del mismo caso.
+Estas comprobaciones de UI no sustituyen la autorización del backend ni deshacen una
+operación que el servicio ya haya recibido.
+
 ### Perfilamiento hipotecario del asesor (HU46)
 
 La ruta `/asesor/perfilamientos/nuevo` requiere una sesión con `usuario.rol: "asesor"`.

@@ -23,7 +23,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { combineLatest, finalize, map, Observable, take } from 'rxjs';
+import { combineLatest, finalize, map, Observable, Subject, take, takeUntil } from 'rxjs';
 import {
   ADVISOR_EXCEPTIONS_GATEWAY,
   AdvisorExceptionsGateway,
@@ -39,8 +39,7 @@ import { isPartnerIds } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 
 type ExceptionLoadResult =
-  | { items: AdvisorException[]; item?: never }
-  | { item: AdvisorException; items?: never };
+  { items: AdvisorException[]; item?: never } | { item: AdvisorException; items?: never };
 
 @Component({
   selector: 'app-advisor-exceptions-page',
@@ -77,6 +76,9 @@ export class AdvisorExceptionsPageComponent {
   );
   private readonly reloadVersion = signal(0);
   private readonly resolutionAttempted = signal(false);
+  private readonly contextInvalidated = new Subject<void>();
+  private activeScope: string | null = null;
+  private scopeGeneration = 0;
 
   readonly authorizedPartnerIds = computed(() => {
     const user = this.auth.user();
@@ -118,7 +120,18 @@ export class AdvisorExceptionsPageComponent {
     effect((onCleanup) => {
       const socioId = this.selectedSocioId();
       const exceptionId = this.exceptionId();
+      const scope = this.scopeKey();
       this.reloadVersion();
+      if (scope !== this.activeScope) {
+        this.activeScope = scope;
+        this.scopeGeneration++;
+        this.contextInvalidated.next();
+        this.reasonForm.reset();
+        this.resolutionAttempted.set(false);
+        this.resolveErrorCode.set(null);
+        this.resolving.set(false);
+      }
+      const generation = this.scopeGeneration;
       this.exceptions.set([]);
       this.exception.set(null);
       this.resolved.set(null);
@@ -138,17 +151,19 @@ export class AdvisorExceptionsPageComponent {
       const subscription = request
         .pipe(
           take(1),
-          finalize(() => this.loading.set(false)),
+          finalize(() => {
+            if (this.isCurrentScope(scope, generation)) this.loading.set(false);
+          }),
           takeUntilDestroyed(this.destroyRef),
         )
         .subscribe({
           next: (result) => {
-            if (this.selectedSocioId() !== socioId || this.exceptionId() !== exceptionId) return;
+            if (!this.isCurrentScope(scope, generation)) return;
             if (result.items) this.exceptions.set(result.items);
             else if (result.item) this.exception.set(result.item);
           },
           error: (error: unknown) => {
-            if (this.selectedSocioId() !== socioId || this.exceptionId() !== exceptionId) return;
+            if (!this.isCurrentScope(scope, generation)) return;
             this.loadErrorCode.set(errorCode(error));
           },
         });
@@ -187,6 +202,9 @@ export class AdvisorExceptionsPageComponent {
     if (
       !exception ||
       exception.estado !== 'pendiente' ||
+      exception.excepcionId !== this.exceptionId() ||
+      exception.socioId !== socioId ||
+      this.activeScope !== this.scopeKey() ||
       !socioId ||
       !user ||
       user.role !== 'advisor' ||
@@ -198,34 +216,47 @@ export class AdvisorExceptionsPageComponent {
     }
 
     const exceptionId = exception.excepcionId;
-    const ownerId = user.id;
+    const scope = this.scopeKey();
+    const generation = this.scopeGeneration;
     const motivo = this.reasonForm.controls.motivo.value.trim();
     this.resolving.set(true);
     this.gateway
       .resolve(exceptionId, socioId, decision, motivo)
       .pipe(
         take(1),
-        finalize(() => this.resolving.set(false)),
+        takeUntil(this.contextInvalidated),
+        finalize(() => {
+          if (this.isCurrentScope(scope, generation)) this.resolving.set(false);
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (result) => {
-          const currentUser = this.auth.user();
-          if (
-            this.exceptionId() !== exceptionId ||
-            this.selectedSocioId() !== socioId ||
-            currentUser?.id !== ownerId ||
-            currentUser.role !== 'advisor' ||
-            !isPartnerIds(currentUser.partnerIds) ||
-            !currentUser.partnerIds.includes(socioId)
-          ) {
-            return;
-          }
+          if (!this.isCurrentScope(scope, generation)) return;
           this.resolved.set(result);
           this.exception.set(result);
         },
-        error: (error: unknown) => this.resolveErrorCode.set(errorCode(error)),
+        error: (error: unknown) => {
+          if (this.isCurrentScope(scope, generation)) {
+            this.resolveErrorCode.set(errorCode(error));
+          }
+        },
       });
+  }
+
+  private scopeKey(): string {
+    const user = this.auth.user();
+    return JSON.stringify([
+      user?.role === 'advisor' ? user.id : null,
+      this.selectedSocioId(),
+      this.exceptionId(),
+    ]);
+  }
+
+  private isCurrentScope(scope: string, generation: number): boolean {
+    return (
+      !this.destroyRef.destroyed && generation === this.scopeGeneration && scope === this.scopeKey()
+    );
   }
 }
 
