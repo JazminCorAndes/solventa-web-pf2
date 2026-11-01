@@ -169,7 +169,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
           'La suma asegurada corresponde al saldo informado.',
         ],
         beneficiosAdicionales: [],
-        vigenteHasta: '2026-11-23T05:00:00Z',
+        vigenteHasta: new Date(Date.now() + 15 * 60_000).toISOString(),
         explicacion: {
           resumen: 'La prima protege el saldo hipotecario usando el perfil autorizado.',
           factoresDeterminantes: [
@@ -300,6 +300,107 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(fixture.nativeElement.textContent).toContain('open_finance: política default');
     expect(fixture.nativeElement.textContent).toContain('fuente_no_disponible');
   });
+
+  it('conserva la oferta recuperada vencida como historica sin repetir el POST', async () => {
+    fillCustomer();
+    const request = await submit();
+    const original: PartnerQuoteRequest = request.request.body;
+    const response = result(original);
+    response.oferta.vigenteHasta = '2020-01-01T00:00:00Z';
+    request.flush(response);
+    fixture.destroy();
+    query = { socio: original.socioId, operacion: original.operationId };
+    createPage();
+    http.expectOne(`${endpoint}/${original.operationId}?socioId=BANCO-001`).flush(response);
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Oferta vencida');
+    expect(text).toContain('Consulta histórica');
+    expect(text).toContain(response.oferta.explicacion.resumen);
+    expect(text).not.toContain(es.partnerQuote.completed);
+    expect(panel.result()).toEqual(response);
+    expect(panel.operationId()).toBe(original.operationId);
+    expect(page.form.disabled).toBe(true);
+    panel.retry();
+    page.submit();
+    http.expectNone(endpoint);
+  });
+
+  it('cambia a historica en el instante exacto de vencimiento con la pagina abierta', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+    fillCustomer();
+    const request = await submit();
+    const response = result(request.request.body);
+    response.oferta.vigenteHasta = '2026-11-01T07:00:02-05:00';
+    request.flush(response);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.completed);
+    vi.advanceTimersByTime(1999);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Oferta vencida');
+    vi.advanceTimersByTime(1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Oferta vencida');
+    expect(fixture.nativeElement.textContent).not.toContain(es.partnerQuote.completed);
+    expect(panel.result()?.oferta).toEqual(response.oferta);
+    http.expectNone(endpoint);
+  });
+
+  it('preparar otra operacion no cotiza ni renueva consentimiento y exige consultar al cliente', async () => {
+    fillCustomer();
+    const request = await submit();
+    const response = result(request.request.body);
+    response.oferta.vigenteHasta = '2020-01-01T00:00:00Z';
+    request.flush(response);
+    panel.newOperation();
+    await Promise.resolve();
+    fixture.detectChanges();
+    expect(panel.result()).toBeNull();
+    expect(panel.operationId()).toBeNull();
+    expect(panel.clientLookup()).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Oferta vencida');
+    page.submit();
+    http.expectNone(endpoint);
+    http.expectNone(`${base}/consentimientos/perfilamiento`);
+  });
+
+  it('reprograma vencimientos largos sin desbordar el timer y lo cancela al salir', async () => {
+    vi.useFakeTimers();
+    fillCustomer();
+    const request = await submit();
+    const response = result(request.request.body);
+    response.oferta.vigenteHasta = new Date(Date.now() + 31 * 86_400_000).toISOString();
+    request.flush(response);
+    vi.advanceTimersByTime(2_147_483_647);
+    expect(panel.offerExpired()).toBe(false);
+    const expiryChange = vi.spyOn(panel.offerExpired, 'set');
+    fixture.destroy();
+    vi.advanceTimersByTime(31 * 86_400_000);
+    expect(expiryChange).not.toHaveBeenCalled();
+    http.expectNone(endpoint);
+  });
+
+  it.each(['perfil_no_encontrado', 'producto_no_disponible'])(
+    'un error %s al consultar no deja visible el resultado anterior como valido',
+    async (code) => {
+      fillCustomer();
+      const request = await submit();
+      const response = result(request.request.body);
+      request.flush(response);
+      panel.recover();
+      http
+        .expectOne(`${endpoint}/${response.operationId}?socioId=BANCO-001`)
+        .flush({ code }, { status: 422, statusText: 'Unprocessable Entity' });
+      fixture.detectChanges();
+      expect(panel.result()).toBeNull();
+      expect(fixture.nativeElement.querySelector('[role=alert]')).not.toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain(response.oferta.nombre);
+      expect(panel.operationId()).toBe(response.operationId);
+      http.expectNone(endpoint);
+    },
+  );
 
   it('muestra y envia exclusivamente vida hipotecaria', () => {
     expect(page.products().map((product) => product.id)).toEqual(['mortgage-life']);

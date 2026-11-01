@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      BACKEND_REVISION: 7c53b1ef87ebcff4fa276d865d8e0a6bdbb695b1
+      BACKEND_REVISION: 4fbe81798962dea6780ddc3e56d00490d5a68796
       CYPRESS_DISPOSABLE_BACKEND: '1'
       CYPRESS_BACKEND_URL: http://127.0.0.1:5000
     steps:
@@ -51,19 +51,20 @@ jobs:
       - name: Arrancar entorno desechable y recorrer la aplicación
         run: |
           mkdir -p .angular/cypress
-          (cd .angular/cypress-backend && exec python -m tests.jmeter.local_stack --web-port 5000 --mobile-port 5001 --encrypted-login) > .angular/cypress/backend.log 2>&1 &
+          python tests/cypress/partner_backend.py --backend .angular/cypress-backend --web-port 5000 --mobile-port 5001 > .angular/cypress/backend.log 2>&1 &
           backend_pid=$!
           trap 'kill "$backend_pid" 2>/dev/null || true; wait "$backend_pid" 2>/dev/null || true' EXIT
           python - <<'PY'
           import time
           import urllib.error
           import urllib.request
+          from pathlib import Path
 
           deadline = time.monotonic() + 60
           while time.monotonic() < deadline:
               try:
                   with urllib.request.urlopen("http://127.0.0.1:5000/ping", timeout=1) as response:
-                      if response.status == 200:
+                      if response.status == 200 and Path(".angular/cypress/partner-backend.json").is_file():
                           break
               except (OSError, urllib.error.URLError):
                   time.sleep(0.25)

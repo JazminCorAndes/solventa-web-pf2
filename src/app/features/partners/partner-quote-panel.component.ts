@@ -112,11 +112,13 @@ export class PartnerQuotePanelComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private pendingRequest: PartnerQuoteRequest | null = null;
   private retryTimer?: ReturnType<typeof setTimeout>;
+  private expiryTimer?: ReturnType<typeof setTimeout>;
   @Output() readonly lockedChange = new EventEmitter<boolean>();
   @Output() readonly loadingChange = new EventEmitter<boolean>();
   readonly context = this.partners.context;
   readonly operationId = signal<string | null>(null);
   readonly result = signal<PartnerQuoteResult | null>(null);
+  readonly offerExpired = signal(false);
   readonly errorKey = signal<string | null>(null);
   readonly loading = signal(false);
   readonly retrySeconds = signal(0);
@@ -139,7 +141,10 @@ export class PartnerQuotePanelComponent implements OnInit {
   );
 
   constructor() {
-    this.destroyRef.onDestroy(() => clearTimeout(this.retryTimer));
+    this.destroyRef.onDestroy(() => {
+      clearTimeout(this.retryTimer);
+      clearTimeout(this.expiryTimer);
+    });
     this.form.controls.socioId.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.clearClientLookup());
@@ -299,6 +304,7 @@ export class PartnerQuotePanelComponent implements OnInit {
         this.pendingRequest = null;
         this.operationId.set(null);
         this.result.set(null);
+        this.updateOfferExpiry();
         this.clientLookup.set(null);
         this.errorKey.set(null);
         this.setLocked(false);
@@ -309,6 +315,8 @@ export class PartnerQuotePanelComponent implements OnInit {
   private run(operation: Observable<PartnerQuoteResult>, recovery = false): void {
     this.setLoading(true);
     this.errorKey.set(null);
+    this.result.set(null);
+    this.updateOfferExpiry();
     operation
       .pipe(
         take(1),
@@ -327,6 +335,7 @@ export class PartnerQuotePanelComponent implements OnInit {
             return;
           }
           this.result.set(result);
+          this.updateOfferExpiry();
           this.pendingRequest = null;
           this.setLocked(true);
         },
@@ -344,6 +353,20 @@ export class PartnerQuotePanelComponent implements OnInit {
           }
         },
       });
+  }
+
+  private updateOfferExpiry(): void {
+    clearTimeout(this.expiryTimer);
+    const offer = this.result()?.oferta;
+    const remaining = offer ? Date.parse(offer.vigenteHasta) - Date.now() : 0;
+    this.offerExpired.set(!!offer && remaining <= 0);
+    if (offer && remaining > 0) {
+      // setTimeout uses a signed 32-bit delay; recheck long-lived offers without overflow.
+      this.expiryTimer = setTimeout(
+        () => this.updateOfferExpiry(),
+        Math.min(remaining, 2_147_483_647),
+      );
+    }
   }
 
   private waitForRetry(seconds: number): void {
