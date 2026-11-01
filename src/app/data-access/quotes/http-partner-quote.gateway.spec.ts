@@ -13,7 +13,6 @@ import {
 
 const operationId = '11111111-1111-4111-8111-111111111111';
 const customerId = '22222222-2222-4222-8222-222222222222';
-const consentId = '33333333-3333-4333-8333-333333333333';
 const quoteId = '44444444-4444-4444-8444-444444444444';
 
 export function partnerRequest(productId = 'automotive'): PartnerQuoteRequest {
@@ -23,14 +22,10 @@ export function partnerRequest(productId = 'automotive'): PartnerQuoteRequest {
     productoId: productId,
     datosProducto: { vehiclePlate: 'ABC123' },
     cliente: {
-      clienteId: customerId,
       tipoCliente: 'persona_natural',
       tipoDocumento: 'cc',
       numeroDocumento: '1023456789',
-      telefono: '+573001234567',
     },
-    consentimientoId: consentId,
-    consentimientoVersion: 1,
   };
 }
 
@@ -38,13 +33,57 @@ export function partnerResult(request = partnerRequest()): PartnerQuoteResult {
   return {
     operationId: request.operationId,
     socioId: request.socioId,
-    clienteId: request.cliente.clienteId,
+    clienteId: customerId,
     productoId: request.productoId,
     estado: 'completada',
     perfilamientoReferencia: 'profile-reference',
     solicitudId: 'AQT-2026-123456',
     cotizacionId: quoteId,
     recibidaEn: '2026-10-23T05:00:00Z',
+    oferta: {
+      id: '55555555-5555-4555-8555-555555555555',
+      version: 1,
+      nombre: 'Plan recomendado',
+      descripcion: 'Protección para el saldo hipotecario.',
+      prima: { monto: '99000.00', moneda: 'COP' },
+      periodicidad: 'mensual',
+      coberturaPrincipal: 'Saldo hipotecario',
+      deducible: 'Sin deducible',
+      vigencia: '12 meses',
+      coberturas: ['Fallecimiento'],
+      condiciones: ['El crédito debe permanecer vigente.'],
+      beneficiosAdicionales: [],
+      vigenteHasta: '2026-11-23T05:00:00Z',
+      explicacion: {
+        resumen: 'La prima protege el saldo hipotecario usando el perfil autorizado.',
+        factoresDeterminantes: [
+          {
+            nombre: 'Saldo hipotecario',
+            valor: '$180.000.000 COP',
+            impacto: 'Define la suma asegurada.',
+          },
+          {
+            nombre: 'Perfil de riesgo autorizado',
+            valor: 'Nivel A, score 0.35',
+            impacto: 'Ajusta la prima con la regla vigente.',
+          },
+        ],
+      },
+      trazabilidad: {
+        esquemaDecision: 1,
+        hashDecision: 'a'.repeat(64),
+        hashContenido: 'b'.repeat(64),
+        perfilId: '66666666-6666-4666-8666-666666666666',
+        perfilVersion: 1,
+        modeloPerfilVersion: 'perfil-v1',
+        reglaId: '77777777-7777-4777-8777-777777777777',
+        reglaVersion: 'academico-v1',
+        fuentes: [
+          { nombre: 'open_finance', version: 'v1' },
+          { nombre: 'open_data', version: 'v1' },
+        ],
+      },
+    },
   };
 }
 
@@ -98,17 +137,61 @@ describe('HttpPartnerQuoteGateway', () => {
     expect(received).toHaveBeenCalledWith(partnerResult());
   });
 
+  it('busca al cliente sin exponer UUID ni version del consentimiento', () => {
+    const received = vi.fn();
+    gateway.lookupClient('BANCO-001', 'cc', '1023456789').subscribe(received);
+    const request = http.expectOne(
+      `${environment.apiBaseUrl}/v1/socios/clientes/por-documento?socioId=BANCO-001&tipoDocumento=cc&numeroDocumento=1023456789`,
+    );
+    request.flush({
+      nombre: 'Ana Cliente',
+      tipoDocumento: 'cc',
+      numeroDocumentoEnmascarado: '******6789',
+      consentimientoEstado: 'vigente',
+    });
+
+    expect(received).toHaveBeenCalledWith({
+      nombre: 'Ana Cliente',
+      tipoDocumento: 'cc',
+      numeroDocumentoEnmascarado: '******6789',
+      consentimientoEstado: 'vigente',
+    });
+  });
+
   it.each([
     null,
     { ...partnerResult(), operationId: quoteId },
     { ...partnerResult(), socioId: 'OTRO-SOCIO' },
-    { ...partnerResult(), clienteId: quoteId },
     { ...partnerResult(), productoId: 'life' },
     { ...partnerResult(), estado: 'procesando' },
     { ...partnerResult(), solicitudId: '' },
     { ...partnerResult(), perfilamientoReferencia: null },
     { ...partnerResult(), cotizacionId: 'invalido' },
     { ...partnerResult(), recibidaEn: 'ayer' },
+    {
+      ...partnerResult(),
+      oferta: { ...partnerResult().oferta, condiciones: [] },
+    },
+    {
+      ...partnerResult(),
+      oferta: {
+        ...partnerResult().oferta,
+        explicacion: {
+          ...partnerResult().oferta.explicacion,
+          factoresDeterminantes: [],
+        },
+      },
+    },
+    {
+      ...partnerResult(),
+      oferta: {
+        ...partnerResult().oferta,
+        trazabilidad: {
+          ...partnerResult().oferta.trazabilidad,
+          hashDecision: 'invalido',
+        },
+      },
+    },
   ])('no presenta una respuesta incompatible como exitosa: %j', (body) => {
     const failed = vi.fn();
     gateway.submit(partnerRequest()).subscribe({ error: failed });

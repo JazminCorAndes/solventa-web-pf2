@@ -50,6 +50,15 @@
         </button>
         <a
           mat-list-item
+          routerLink="/asesor/excepciones"
+          routerLinkActive="active-link"
+          (click)="closeMobileMenu()"
+        >
+          <app-icon matListItemIcon name="policy" />
+          <span matListItemTitle>{{ 'advisorNavigation.exceptions' | transloco }}</span>
+        </a>
+        <a
+          mat-list-item
           routerLink="/asesor/perfilamientos/nuevo"
           routerLinkActive="active-link"
           (click)="closeMobileMenu()"

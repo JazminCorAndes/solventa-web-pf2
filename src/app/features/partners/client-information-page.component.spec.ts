@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of, throwError } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
@@ -30,7 +30,7 @@ function resultFor(request: ClientInformationRequest): ClientInformationResult {
   return {
     operationId: request.operationId,
     socioId: request.socioId,
-    clienteId: request.clienteId,
+    clienteId: CLIENT_ID,
     productoId: request.productoId,
     finalidad: 'cotizacion',
     estado: 'completada',
@@ -51,10 +51,12 @@ function resultFor(request: ClientInformationRequest): ClientInformationResult {
 
 describe('ClientInformationPageComponent', () => {
   let fixture: ComponentFixture<ClientInformationPageComponent>;
-  let gateway: { consult: ReturnType<typeof vi.fn> };
+  let gateway: { consult: ReturnType<typeof vi.fn>; load: ReturnType<typeof vi.fn> };
+  let query: Record<string, string>;
 
   beforeEach(async () => {
-    gateway = { consult: vi.fn() };
+    query = { socio: 'BANCO-001' };
+    gateway = { consult: vi.fn(), load: vi.fn() };
     await TestBed.configureTestingModule({
       imports: [
         ClientInformationPageComponent,
@@ -67,9 +69,14 @@ describe('ClientInformationPageComponent', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { queryParamMap: convertToParamMap({ socio: 'BANCO-001' }) },
+            snapshot: {
+              get queryParamMap() {
+                return convertToParamMap(query);
+              },
+            },
           },
         },
+        { provide: Router, useValue: { navigate: vi.fn().mockResolvedValue(true) } },
         {
           provide: PartnerContextService,
           useValue: { context: signal(CONTEXT).asReadonly() },
@@ -81,29 +88,31 @@ describe('ClientInformationPageComponent', () => {
     fixture.detectChanges();
   });
 
-  it('uses hidden partner context and renders only authorized result data', () => {
+  it('uses hidden partner context and renders only authorized result data', async () => {
     gateway.consult.mockImplementation((request: ClientInformationRequest) =>
       of(resultFor(request)),
     );
-    fixture.componentInstance.form.controls.clienteId.setValue(CLIENT_ID);
+    fixture.componentInstance.form.controls.documentNumber.setValue('1012345678');
 
     fixture.componentInstance.submit();
+    await Promise.resolve();
     fixture.detectChanges();
 
     const request = gateway.consult.mock.calls[0][0] as ClientInformationRequest;
     expect(request).toMatchObject({
       socioId: 'BANCO-001',
-      clienteId: CLIENT_ID,
+      tipoDocumento: 'cc',
+      numeroDocumento: '1012345678',
       productoId: 'mortgage-life',
       finalidad: 'cotizacion',
       datosSolicitados: ['indicador_riesgo'],
     });
     expect(fixture.nativeElement.textContent).toContain('Indicador de riesgo: 0.50');
     expect(fixture.nativeElement.textContent).toContain('Consentimiento vigente · versión 2');
-    expect(fixture.nativeElement.querySelector('mat-select')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('mat-select')).toHaveLength(2);
   });
 
-  it('keeps the operation identifier when a fail-closed request is retried', () => {
+  it('keeps the operation identifier when a fail-closed request is retried', async () => {
     let attempt = 0;
     gateway.consult.mockImplementation((request: ClientInformationRequest) => {
       attempt++;
@@ -111,18 +120,56 @@ describe('ClientInformationPageComponent', () => {
         ? throwError(() => new Error('source unavailable'))
         : of(resultFor(request));
     });
-    fixture.componentInstance.form.controls.clienteId.setValue(CLIENT_ID);
+    fixture.componentInstance.form.controls.documentNumber.setValue('1012345678');
 
     fixture.componentInstance.submit();
+    await Promise.resolve();
     const firstRequest = gateway.consult.mock.calls[0][0] as ClientInformationRequest;
     expect(fixture.componentInstance.result()).toBeNull();
-    expect(fixture.componentInstance.errorKey()).toBe(
-      'clientInformation.errors.unavailable',
-    );
+    expect(fixture.componentInstance.errorKey()).toBe('clientInformation.errors.unavailable');
 
     fixture.componentInstance.submit();
+    await Promise.resolve();
     const secondRequest = gateway.consult.mock.calls[1][0] as ClientInformationRequest;
     expect(secondRequest.operationId).toBe(firstRequest.operationId);
     expect(fixture.componentInstance.result()?.estado).toBe('completada');
+  });
+
+  it('keeps UUID lookup available for legacy clients', async () => {
+    gateway.consult.mockImplementation((request: ClientInformationRequest) =>
+      of(resultFor(request)),
+    );
+    fixture.componentInstance.form.controls.searchMode.setValue('id');
+    fixture.componentInstance.form.controls.clienteId.setValue(CLIENT_ID);
+
+    fixture.componentInstance.submit();
+    await Promise.resolve();
+
+    expect(gateway.consult.mock.calls[0][0]).toMatchObject({ clienteId: CLIENT_ID });
+  });
+
+  it('recovers a persisted consultation from the operation in the URL', () => {
+    const operationId = '55555555-5555-4555-8555-555555555555';
+    query = { socio: 'BANCO-001', operacion: operationId };
+    gateway.load.mockReturnValue(
+      of(
+        resultFor({
+          operationId,
+          socioId: 'BANCO-001',
+          clienteId: CLIENT_ID,
+          productoId: 'mortgage-life',
+          finalidad: 'cotizacion',
+          datosSolicitados: ['indicador_riesgo'],
+        }),
+      ),
+    );
+
+    fixture.destroy();
+    fixture = TestBed.createComponent(ClientInformationPageComponent);
+    fixture.detectChanges();
+
+    expect(gateway.load).toHaveBeenCalledWith(operationId, 'BANCO-001');
+    expect(fixture.componentInstance.result()?.operationId).toBe(operationId);
+    expect(gateway.consult).not.toHaveBeenCalled();
   });
 });

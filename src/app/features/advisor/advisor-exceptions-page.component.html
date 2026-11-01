@@ -1,0 +1,255 @@
+<section class="exceptions-page">
+  <header>
+    <span class="eyebrow">{{ 'advisorExceptions.eyebrow' | transloco }}</span>
+    <h1>
+      {{
+        exceptionId()
+          ? ('advisorExceptions.detailTitle' | transloco)
+          : ('advisorExceptions.title' | transloco)
+      }}
+    </h1>
+    <p>{{ 'advisorExceptions.subtitle' | transloco }}</p>
+  </header>
+
+  @if (!isAdvisor() || !authorizedPartnerIds().length) {
+    <div class="inline-alert" role="alert">
+      {{ 'advisorExceptions.errors.advisor_context_unavailable' | transloco }}
+    </div>
+  } @else {
+    <mat-card appearance="outlined" class="partner-card">
+      <mat-card-content>
+        <label for="exception-partner">{{ 'advisorExceptions.partner' | transloco }}</label>
+        @if (authorizedPartnerIds().length > 1) {
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'advisorExceptions.selectPartner' | transloco }}</mat-label>
+            <mat-select
+              id="exception-partner"
+              [value]="selectedSocioId() ?? ''"
+              (selectionChange)="selectSocio($event.value)"
+            >
+              <mat-option value="">{{ 'advisorExceptions.selectPartner' | transloco }}</mat-option>
+              @for (socioId of authorizedPartnerIds(); track socioId) {
+                <mat-option [value]="socioId">{{ socioId }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        } @else {
+          <strong>{{ authorizedPartnerIds()[0] }}</strong>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    @if (unauthorizedRequestedSocio()) {
+      <div class="inline-alert" role="alert">
+        {{ 'advisorExceptions.errors.socio_no_autorizado' | transloco }}
+      </div>
+    } @else if (!selectedSocioId()) {
+      <p class="selection-hint" role="status">
+        {{ 'advisorExceptions.selectPartnerPrompt' | transloco }}
+      </p>
+    } @else if (loading()) {
+      <div class="loading-state" role="status">
+        <mat-spinner diameter="28" />
+        <span>{{ 'advisorExceptions.loading' | transloco }}</span>
+      </div>
+    } @else if (loadErrorCode(); as code) {
+      <div class="inline-alert" role="alert">
+        <p>{{ 'advisorExceptions.errors.' + code | transloco }}</p>
+        <button mat-stroked-button type="button" (click)="retryLoad()">
+          {{ 'advisorExceptions.retry' | transloco }}
+        </button>
+      </div>
+    } @else if (exceptionId()) {
+      @if (exception(); as item) {
+        <a
+          class="back-link"
+          routerLink="/asesor/excepciones"
+          [queryParams]="{ socioId: item.socioId }"
+        >
+          {{ 'advisorExceptions.backToList' | transloco }}
+        </a>
+        <mat-card appearance="outlined" class="exception-card">
+          <mat-card-content>
+            <div class="status-row">
+              <span class="status-badge">{{
+                'advisorExceptions.status.' + item.estado | transloco
+              }}</span>
+              <span>{{ item.codigo }}</span>
+            </div>
+            <h2>{{ 'advisorExceptions.blockReason' | transloco }}</h2>
+            <p>{{ item.motivoBloqueo }}</p>
+            <dl>
+              <div>
+                <dt>{{ 'advisorExceptions.exceptionId' | transloco }}</dt>
+                <dd>{{ item.excepcionId }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.operationId' | transloco }}</dt>
+                <dd>{{ item.operationId }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.customerId' | transloco }}</dt>
+                <dd>{{ item.clienteId }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.previousStatus' | transloco }}</dt>
+                <dd>{{ item.estadoAnterior ?? ('advisorExceptions.notAvailable' | transloco) }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.createdAt' | transloco }}</dt>
+                <dd>{{ item.creadoEn }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.scope' | transloco }}</dt>
+                <dd>{{ item.alcance }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.purpose' | transloco }}</dt>
+                <dd>{{ item.finalidad }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.data' | transloco }}</dt>
+                <dd>{{ item.datos.join(', ') }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.consentStatus' | transloco }}</dt>
+                <dd>{{ 'advisorExceptions.consent.' + item.consentimiento.estado | transloco }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.consentVersion' | transloco }}</dt>
+                <dd>{{ item.consentimiento.version }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.consentSources' | transloco }}</dt>
+                <dd>
+                  {{
+                    item.consentimiento.fuentes.join(', ') ||
+                      ('advisorExceptions.notAvailable' | transloco)
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.consentData' | transloco }}</dt>
+                <dd>
+                  {{
+                    item.consentimiento.datos.join(', ') ||
+                      ('advisorExceptions.notAvailable' | transloco)
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.consentExpires' | transloco }}</dt>
+                <dd>{{ item.consentimiento.vigenteHasta }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.correlationId' | transloco }}</dt>
+                <dd>{{ item.trazabilidad.correlationId }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'advisorExceptions.traceStatus' | transloco }}</dt>
+                <dd>
+                  {{
+                    item.trazabilidad.estadoAnterior ??
+                      ('advisorExceptions.notAvailable' | transloco)
+                  }}
+                  → {{ item.trazabilidad.estadoActual }}
+                </dd>
+              </div>
+            </dl>
+          </mat-card-content>
+        </mat-card>
+
+        @if (item.estado === 'pendiente' && !resolved()) {
+          <mat-card appearance="outlined" class="resolution-card">
+            <mat-card-content>
+              <h2>{{ 'advisorExceptions.resolveTitle' | transloco }}</h2>
+              <form [formGroup]="reasonForm" (ngSubmit)="resolve('aprobar')" novalidate>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'advisorExceptions.resolutionReason' | transloco }}</mat-label>
+                  <textarea matInput rows="4" maxlength="500" formControlName="motivo"></textarea>
+                  @if (showReasonError()) {
+                    <mat-error>{{ 'advisorExceptions.validation.reason' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+                @if (resolveErrorCode(); as error) {
+                  <div class="inline-alert" role="alert">
+                    {{ 'advisorExceptions.errors.' + error | transloco }}
+                  </div>
+                }
+                <div class="actions">
+                  <button mat-flat-button type="submit" [disabled]="resolving()">
+                    @if (resolving()) {
+                      <mat-spinner diameter="20" />
+                    }
+                    {{ 'advisorExceptions.approve' | transloco }}
+                  </button>
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    [disabled]="resolving()"
+                    (click)="resolve('rechazar')"
+                  >
+                    {{ 'advisorExceptions.reject' | transloco }}
+                  </button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        @if (resolved(); as resolution) {
+          <div class="success-alert" role="status" aria-live="polite">
+            <strong>{{ 'advisorExceptions.resolutionSaved' | transloco }}</strong>
+            <span>{{ 'advisorExceptions.status.' + resolution.estado | transloco }}</span>
+            <span>{{ 'advisorExceptions.actor' | transloco }}: {{ resolution.actorId }}</span>
+            <span
+              >{{ 'advisorExceptions.resolvedAt' | transloco }}: {{ resolution.resueltaEn }}</span
+            >
+            <span
+              >{{ 'advisorExceptions.resolutionReason' | transloco }}: {{ resolution.motivo }}</span
+            >
+          </div>
+        }
+      } @else {
+        <div class="inline-alert" role="alert">
+          {{ 'advisorExceptions.errors.excepcion_no_encontrada' | transloco }}
+        </div>
+      }
+    } @else if (exceptions().length === 0) {
+      <mat-card appearance="outlined" class="empty-state" role="status">
+        <mat-card-content>
+          <h2>{{ 'advisorExceptions.emptyTitle' | transloco }}</h2>
+          <p>{{ 'advisorExceptions.emptyBody' | transloco }}</p>
+        </mat-card-content>
+      </mat-card>
+    } @else {
+      <div class="exception-list">
+        @for (item of exceptions(); track item.excepcionId) {
+          <mat-card appearance="outlined" class="exception-card">
+            <mat-card-content>
+              <div class="status-row">
+                <span class="status-badge">{{
+                  'advisorExceptions.status.' + item.estado | transloco
+                }}</span>
+                <span>{{ item.codigo }}</span>
+              </div>
+              <h2>{{ item.motivoBloqueo }}</h2>
+              <p>
+                {{ 'advisorExceptions.previousStatus' | transloco }}:
+                {{ item.estadoAnterior ?? ('advisorExceptions.notAvailable' | transloco) }}
+              </p>
+              <p>{{ item.creadoEn }}</p>
+              <a
+                mat-flat-button
+                [routerLink]="['/asesor/excepciones', item.excepcionId]"
+                [queryParams]="{ socioId: item.socioId }"
+              >
+                {{ 'advisorExceptions.viewDetail' | transloco }}
+              </a>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+  }
+</section>

@@ -139,6 +139,22 @@ export const routes: Routes = [
       ),
     children: [
       {
+        path: 'excepciones/:exceptionId',
+        loadComponent: () =>
+          import('./features/advisor/advisor-exceptions-page.component').then(
+            (component) => component.AdvisorExceptionsPageComponent,
+          ),
+        title: 'Detalle de excepción | Solventa',
+      },
+      {
+        path: 'excepciones',
+        loadComponent: () =>
+          import('./features/advisor/advisor-exceptions-page.component').then(
+            (component) => component.AdvisorExceptionsPageComponent,
+          ),
+        title: 'Excepciones Open Finance | Solventa',
+      },
+      {
         path: 'perfilamientos/nuevo',
         loadComponent: () =>
           import('./features/advisor/mortgage-profiling-start-page.component').then(

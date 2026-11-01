@@ -1,17 +1,28 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ActivatedRoute } from '@angular/router';
+import { MatSelectModule } from '@angular/material/select';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { finalize, take } from 'rxjs';
+import { finalize, Observable, take } from 'rxjs';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
+import { DocumentType } from '../../core/auth/auth.models';
 import {
   clientInformationErrorKey,
+  ClientInformationRequest,
   ClientInformationResult,
   HttpClientInformationGateway,
 } from '../../data-access/partners/http-client-information.gateway';
@@ -27,6 +38,7 @@ import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gatewa
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
     ReactiveFormsModule,
     TranslocoPipe,
   ],
@@ -40,16 +52,53 @@ import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gatewa
       <mat-card appearance="outlined">
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'clientInformation.search' | transloco }}</mat-label>
-              <input
-                matInput
-                formControlName="clienteId"
-                autocomplete="off"
-                [placeholder]="'clientInformation.searchPlaceholder' | transloco"
-              />
-              <mat-hint>{{ 'clientInformation.searchHint' | transloco }}</mat-hint>
-            </mat-form-field>
+            <div class="identifier-fields">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'clientInformation.searchMode' | transloco }}</mat-label>
+                <mat-select formControlName="searchMode">
+                  <mat-option value="document">
+                    {{ 'clientInformation.searchByDocument' | transloco }}
+                  </mat-option>
+                  <mat-option value="id">
+                    {{ 'clientInformation.searchById' | transloco }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              @if (form.controls.searchMode.value === 'document') {
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'clientInformation.documentType' | transloco }}</mat-label>
+                  <mat-select formControlName="documentType">
+                    @for (type of documentTypes; track type) {
+                      <mat-option [value]="type">
+                        {{ 'quoteRequest.documentTypes.' + type | transloco }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'clientInformation.documentNumber' | transloco }}</mat-label>
+                  <input matInput formControlName="documentNumber" autocomplete="off" />
+                  <mat-hint>{{ 'clientInformation.documentHint' | transloco }}</mat-hint>
+                  @if (
+                    form.controls.documentNumber.touched && form.controls.documentNumber.invalid
+                  ) {
+                    <mat-error>{{ 'clientInformation.errors.document' | transloco }}</mat-error>
+                  }
+                </mat-form-field>
+              } @else {
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'clientInformation.search' | transloco }}</mat-label>
+                  <input
+                    matInput
+                    formControlName="clienteId"
+                    autocomplete="off"
+                    [placeholder]="'clientInformation.searchPlaceholder' | transloco"
+                  />
+                  <mat-hint>{{ 'clientInformation.searchHint' | transloco }}</mat-hint>
+                </mat-form-field>
+              }
+            </div>
 
             <div class="summary" aria-live="polite">
               <div class="summary-field">
@@ -75,7 +124,7 @@ import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gatewa
                 <strong>{{
                   result()
                     ? ('clientInformation.consentVersion'
-                        | transloco: { version: result()!.consentimientoVersion })
+                      | transloco: { version: result()!.consentimientoVersion })
                     : ('clientInformation.pendingValue' | transloco)
                 }}</strong>
               </div>
@@ -145,6 +194,11 @@ import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gatewa
     mat-form-field {
       width: 100%;
     }
+    .identifier-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+      gap: var(--solventa-space-2);
+    }
     .summary-field {
       display: grid;
       min-height: 4.25rem;
@@ -181,17 +235,22 @@ import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gatewa
     }
   `,
 })
-export class ClientInformationPageComponent {
+export class ClientInformationPageComponent implements OnInit {
   private readonly builder = inject(FormBuilder);
   private readonly gateway = inject(HttpClientInformationGateway);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   readonly context = inject(PartnerContextService).context;
   readonly loading = signal(false);
   readonly errorKey = signal<string | null>(null);
   readonly result = signal<ClientInformationResult | null>(null);
   readonly operationId = signal<string | null>(null);
+  readonly documentTypes: readonly DocumentType[] = ['cc', 'ce', 'passport', 'ppt'];
   readonly form = this.builder.nonNullable.group({
-    clienteId: ['', [Validators.required, Validators.pattern(UUID_PATTERN)]],
+    searchMode: this.builder.nonNullable.control<'document' | 'id'>('document'),
+    documentType: this.builder.nonNullable.control<DocumentType>('cc'),
+    documentNumber: [''],
+    clienteId: [''],
   });
   readonly partner = computed(() => {
     const partners = this.context()?.socios ?? [];
@@ -201,6 +260,29 @@ export class ClientInformationPageComponent {
       (partners.length === 1 ? partners[0] : null)
     );
   });
+
+  constructor() {
+    this.form.controls.searchMode.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((mode) => this.configureValidators(mode));
+    this.form.controls.documentType.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.configureValidators(this.form.controls.searchMode.value));
+    this.configureValidators('document');
+  }
+
+  ngOnInit(): void {
+    const operationId = this.route.snapshot.queryParamMap.get('operacion');
+    const partner = this.partner();
+    if (!operationId) return;
+    if (!UUID_PATTERN.test(operationId) || !partner) {
+      this.errorKey.set('clientInformation.errors.invalid');
+      return;
+    }
+    this.operationId.set(operationId);
+    this.form.disable();
+    this.run(this.gateway.load(operationId, partner.socioId));
+  }
 
   submit(): void {
     if (this.loading() || this.result()) return;
@@ -217,19 +299,47 @@ export class ClientInformationPageComponent {
       return;
     }
     const values = this.form.getRawValue();
+    const identifier =
+      values.searchMode === 'document'
+        ? {
+            tipoDocumento: values.documentType,
+            numeroDocumento: values.documentNumber.trim().toUpperCase(),
+          }
+        : { clienteId: values.clienteId.trim() };
     const operationId = this.operationId() ?? crypto.randomUUID();
     this.operationId.set(operationId);
-    this.loading.set(true);
     this.form.disable();
-    this.gateway
-      .consult({
-        operationId,
-        socioId: partner.socioId,
-        clienteId: values.clienteId,
-        productoId: productId,
-        finalidad: 'cotizacion',
-        datosSolicitados: ['indicador_riesgo'],
+    const request: ClientInformationRequest = {
+      operationId,
+      socioId: partner.socioId,
+      ...identifier,
+      productoId: productId,
+      finalidad: 'cotizacion',
+      datosSolicitados: ['indicador_riesgo'],
+    };
+    void this.router
+      .navigate([], {
+        relativeTo: this.route,
+        queryParams: { operacion: operationId, socio: partner.socioId },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
       })
+      .then((navigated) => {
+        if (navigated) this.run(this.gateway.consult(request));
+        else {
+          this.form.enable();
+          this.errorKey.set('clientInformation.errors.unavailable');
+        }
+      })
+      .catch(() => {
+        this.form.enable();
+        this.errorKey.set('clientInformation.errors.unavailable');
+      });
+  }
+
+  private run(operation: Observable<ClientInformationResult>): void {
+    this.loading.set(true);
+    operation
       .pipe(
         take(1),
         finalize(() => {
@@ -247,7 +357,46 @@ export class ClientInformationPageComponent {
     this.result.set(null);
     this.errorKey.set(null);
     this.operationId.set(null);
-    this.form.reset({ clienteId: '' });
+    this.form.reset({
+      searchMode: 'document',
+      documentType: 'cc',
+      documentNumber: '',
+      clienteId: '',
+    });
+    this.configureValidators('document');
     this.form.enable();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { operacion: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
+
+  private configureValidators(mode: 'document' | 'id'): void {
+    const clientId = this.form.controls.clienteId;
+    const documentNumber = this.form.controls.documentNumber;
+    if (mode === 'document') {
+      clientId.clearValidators();
+      documentNumber.setValidators([
+        Validators.required,
+        Validators.pattern(documentPattern(this.form.controls.documentType.value)),
+      ]);
+    } else {
+      documentNumber.clearValidators();
+      clientId.setValidators([Validators.required, Validators.pattern(UUID_PATTERN)]);
+    }
+    clientId.updateValueAndValidity({ emitEvent: false });
+    documentNumber.updateValueAndValidity({ emitEvent: false });
+  }
+}
+
+function documentPattern(type: DocumentType): RegExp {
+  const patterns: Record<DocumentType, RegExp> = {
+    cc: /^[0-9]{6,10}$/,
+    ce: /^[0-9]{6,12}$/,
+    passport: /^[A-Za-z0-9]{5,16}$/,
+    ppt: /^[0-9]{7,10}$/,
+  };
+  return patterns[type];
 }
