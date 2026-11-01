@@ -19,6 +19,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { finalize, Observable, take } from 'rxjs';
+import { documentNumberFilter, documentNumberValidator } from '../../core/market/document-number';
 import { PartnerContextService } from '../../core/partners/partner-context.service';
 import { DocumentType, QuoteRequestDraft } from '../../core/quotes/quote-request.models';
 import {
@@ -31,6 +32,7 @@ import {
   partnerRetryDelay,
   UUID_PATTERN,
 } from '../../data-access/quotes/http-partner-quote.gateway';
+import { InputFilterDirective } from '../../shared/input-filter/input-filter.directive';
 
 @Component({
   selector: 'app-partner-quote-panel',
@@ -38,6 +40,7 @@ import {
   imports: [
     DatePipe,
     CurrencyPipe,
+    InputFilterDirective,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -123,8 +126,9 @@ export class PartnerQuotePanelComponent implements OnInit {
   readonly form = this.builder.nonNullable.group({
     socioId: ['', Validators.required],
     tipoDocumento: this.builder.nonNullable.control<DocumentType>('cc'),
-    numeroDocumento: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{6,15}$/)]],
+    numeroDocumento: ['', [Validators.required, documentNumberValidator('tipoDocumento')]],
   });
+  readonly documentNumberFilter = documentNumberFilter;
   private readonly selectedPartner = toSignal(this.form.controls.socioId.valueChanges, {
     initialValue: '',
   });
@@ -141,7 +145,10 @@ export class PartnerQuotePanelComponent implements OnInit {
       .subscribe(() => this.clearClientLookup());
     this.form.controls.tipoDocumento.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.clearClientLookup());
+      .subscribe(() => {
+        if (this.form.enabled) this.form.controls.numeroDocumento.updateValueAndValidity();
+        this.clearClientLookup();
+      });
     this.form.controls.numeroDocumento.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.clearClientLookup());

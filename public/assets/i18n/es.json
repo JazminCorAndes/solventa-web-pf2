@@ -20,7 +20,7 @@
     "consentVersion": "Versión del consentimiento",
     "required": "Selecciona una organización autorizada.",
     "uuid": "Ingresa un identificador UUID válido.",
-    "documentInvalid": "Ingresa entre 6 y 15 caracteres alfanuméricos. El servidor verifica el tipo de documento y su titular.",
+    "documentInvalid": "Ingresa solo números con la longitud del tipo de documento; el pasaporte admite letras. El servidor verifica el tipo de documento y su titular.",
     "phoneInvalid": "Ingresa +57 seguido de 10 dígitos.",
     "versionInvalid": "Ingresa una versión entera mayor o igual a 1.",
     "operation": "Identificador de operación",
@@ -711,7 +711,7 @@
       "completed": "Completado"
     },
     "validation": {
-      "documentNumber": "Ingresa un documento válido de 6 a 15 caracteres.",
+      "documentNumber": "Ingresa solo números con la longitud del tipo de documento; el pasaporte admite letras.",
       "customerId": "Ingresa el UUID del cliente registrado.",
       "birthDate": "Ingresa una fecha de nacimiento válida.",
       "phone": "Ingresa un teléfono colombiano con +57 y 10 dígitos.",

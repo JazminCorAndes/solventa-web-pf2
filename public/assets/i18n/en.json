@@ -20,7 +20,7 @@
     "consentVersion": "Consent version",
     "required": "Select an authorized organization.",
     "uuid": "Enter a valid UUID.",
-    "documentInvalid": "Enter 6 to 15 alphanumeric characters. The server verifies the document type and its owner.",
+    "documentInvalid": "Enter digits only, with the length of the document type; passports may include letters. The server verifies the document type and its owner.",
     "phoneInvalid": "Enter +57 followed by 10 digits.",
     "versionInvalid": "Enter an integer version of at least 1.",
     "operation": "Operation identifier",
@@ -711,7 +711,7 @@
       "completed": "Completed"
     },
     "validation": {
-      "documentNumber": "Enter a valid document containing 6 to 15 characters.",
+      "documentNumber": "Enter digits only, with the length of the document type; passports may include letters.",
       "customerId": "Enter the registered customer's UUID.",
       "birthDate": "Enter a valid date of birth.",
       "phone": "Enter a Colombian phone number with +57 and 10 digits.",

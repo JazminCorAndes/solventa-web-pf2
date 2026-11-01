@@ -111,8 +111,21 @@ describe('MortgageProfilingStartPageComponent', () => {
     expect(text).toContain(es.mortgageProfiling.resultBody);
     expect(start.mock.calls[0][0]).toMatchObject({
       partnerId: 'BANCO-001',
-      customer: { id: completed.customerId, birthDate: '1985-02-10' },
+      customer: {
+        id: completed.customerId,
+        birthDate: '1985-02-10',
+        documentNumber: '1023456789',
+        phone: '+573001234567',
+      },
     });
+  });
+
+  it('exige solo dígitos en documentos colombianos y admite letras en pasaporte', () => {
+    component.form.setValue({ ...validValue, documentNumber: 'AB123456' });
+    expect(component.form.controls.documentNumber.hasError('pattern')).toBe(true);
+
+    component.form.controls.documentType.setValue('passport');
+    expect(component.form.controls.documentNumber.valid).toBe(true);
   });
 
   it('muestra un error identificable y permite reintentar sin marcar éxito', () => {
