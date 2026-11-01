@@ -68,6 +68,10 @@
                 {{ 'common.retry' | transloco }}
               </button>
             </div>
+          } @else if (quotes.catalogStatus() === 'ready' && quotes.products().length === 0) {
+            <div class="catalog-status" role="status">
+              {{ 'quoteRequest.emptyProducts' | transloco }}
+            </div>
           }
 
           <form [formGroup]="form" (ngSubmit)="submit()" novalidate>

@@ -254,6 +254,7 @@
     "changeInsurance": "Elegir seguro",
     "unavailableProduct": "No disponible para cotizar",
     "loadingProducts": "Cargando seguros disponibles",
+    "emptyProducts": "No hay seguros disponibles en este momento.",
     "documentType": "Tipo de documento",
     "documentTypes": {
       "cc": "Cédula de ciudadanía",

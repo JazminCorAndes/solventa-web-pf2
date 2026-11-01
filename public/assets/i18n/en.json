@@ -254,6 +254,7 @@
     "changeInsurance": "Choose insurance",
     "unavailableProduct": "Unavailable for quotes",
     "loadingProducts": "Loading available insurance",
+    "emptyProducts": "There are no insurance products available at this time.",
     "documentType": "Document type",
     "documentTypes": {
       "cc": "Citizenship ID",

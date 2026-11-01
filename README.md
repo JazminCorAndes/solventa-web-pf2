@@ -784,6 +784,8 @@ Los valores de compra, cuota y saldo hipotecario admiten enteros positivos de ha
 El catálogo muestra la disponibilidad real: los productos no disponibles se pueden consultar,
 pero no cotizar. Solo el error `404` con código `seguro_no_encontrado` representa un producto
 inexistente; un `404` de infraestructura se muestra como error recuperable.
+La solicitud distingue carga, catálogo vacío y error: solo una respuesta exitosa sin productos
+muestra el mensaje vacío accesible y traducido. Los errores conservan su mensaje y reintento.
 
 En vuelos, `coverageType` admite `delay-cancellation`, `missed-connection` y
 `comprehensive`. El backend mantiene las solicitudes antiguas sin ese campo como
