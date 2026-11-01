@@ -475,10 +475,13 @@ CD. Las pruebas locales no acreditan publicación ni persistencia productiva: la
 requiere recorrido de navegador en Pages contra AWS con identidades sintéticas autorizadas,
 verificación de asociación persistida y cierre de sesiones de prueba.
 
-Compatibilidad del despliegue con SOL201: el perfil puede reutilizar evidencia en caché
-vigente, sin relajar consentimiento, versión, fechas ni indicadores. `fallbackUsed: true`
+Compatibilidad del despliegue con SOL201/SOL202: el perfil puede reutilizar evidencia en
+caché vigente o valores predeterminados del modelo, sin relajar consentimiento, versión,
+fechas ni indicadores. `fallbackUsed: true`
 solo se acepta con `estadoFuentes` completo, único y coincidente con `fuentes`, con
-al menos un estado `cache` y ninguno `fallida`. Los perfiles anteriores sin esos
+al menos un estado `cache` o `default` y ninguno `fallida`. El panel distingue los valores
+predeterminados de la caché y muestra el estado de cada fuente en el detalle, sin
+presentar una degradación como una consulta actual exitosa. Los perfiles anteriores sin esos
 metadatos siguen permitidos únicamente con `fallbackUsed: false`. Se requieren
 `open_finance` y `open_data`; los adaptadores adicionales deben aportar evidencia
 completa y vigente, sin duplicados, y se muestran por su nombre como adicionales,

@@ -103,6 +103,16 @@ describe('Solicitud de consentimiento', () => {
       }
     });
 
+    it('acepta valores predeterminados y los distingue de la cache', () => {
+      const profile = cachedProfile();
+      profile.estadoFuentes![0].estado = 'default';
+      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(true);
+      profile.estadoFuentes![1].estado = 'cache';
+      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(true);
+      profile.fallbackUsed = false;
+      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(false);
+    });
+
     it.each<Partial<RiskProfile>>([
       { estadoFuentes: undefined },
       { estadoFuentes: [] },
@@ -137,17 +147,25 @@ describe('Solicitud de consentimiento', () => {
       expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(false);
     });
 
-    it('cache no evita las restricciones de consentimiento, expiracion o version', () => {
-      const profile = cachedProfile();
-      expect(
-        profileIsCurrent(profile, { ...createConsent(), estado: 'revocado' }, profile.solicitudId),
-      ).toBe(false);
-      expect(
-        profileIsCurrent(profile, { ...createConsent(), version: 2 }, profile.solicitudId),
-      ).toBe(false);
-      profile.fuentes[0].vigenteHasta = new Date(Date.now() - 1).toISOString();
-      expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(false);
-    });
+    it.each(['cache', 'default'] as const)(
+      '%s no evita las restricciones de consentimiento, expiracion o version',
+      (state) => {
+        const profile = cachedProfile();
+        profile.estadoFuentes![0].estado = state;
+        expect(
+          profileIsCurrent(
+            profile,
+            { ...createConsent(), estado: 'revocado' },
+            profile.solicitudId,
+          ),
+        ).toBe(false);
+        expect(
+          profileIsCurrent(profile, { ...createConsent(), version: 2 }, profile.solicitudId),
+        ).toBe(false);
+        profile.fuentes[0].vigenteHasta = new Date(Date.now() - 1).toISOString();
+        expect(profileIsCurrent(profile, createConsent(), profile.solicitudId)).toBe(false);
+      },
+    );
 
     it('valida todas las fuentes adicionales y rechaza duplicados o falta de fuentes obligatorias', () => {
       const profile = cachedProfile();
