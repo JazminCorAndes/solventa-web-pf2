@@ -28,14 +28,7 @@ import {
 } from '../../core/advisor-profiling/advisor-profiling.models';
 import { DocumentType, isPartnerIds } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
-import {
-  callingCodeOptions,
-  internationalPhone,
-  nationalPhoneMaxLength,
-  nationalPhoneValidator,
-} from '../../core/market/calling-codes';
 import { documentNumberFilter, documentNumberValidator } from '../../core/market/document-number';
-import { ACTIVE_MARKET } from '../../core/market/market.config';
 import { InputFilterDirective } from '../../shared/input-filter/input-filter.directive';
 
 @Component({
@@ -95,8 +88,7 @@ export class MortgageProfilingStartPageComponent {
     documentType: this.formBuilder.nonNullable.control<DocumentType>('cc', Validators.required),
     documentNumber: ['', [Validators.required, documentNumberValidator('documentType')]],
     birthDate: ['', [Validators.required, Validators.pattern(/^\d{4}-\d{2}-\d{2}$/)]],
-    phoneCountry: [ACTIVE_MARKET.countryCode as string, Validators.required],
-    phone: ['', [Validators.required, nationalPhoneValidator('phoneCountry')]],
+    phone: ['', [Validators.required, Validators.pattern(/^\+57[0-9]{10}$/)]],
     creditReference: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9-]{4,30}$/)]],
     creditAmount: this.formBuilder.control<number | null>(null, [
       Validators.required,
@@ -118,9 +110,7 @@ export class MortgageProfilingStartPageComponent {
     consentVerified: [false, Validators.requiredTrue],
   });
 
-  readonly callingCodes = callingCodeOptions();
   readonly documentNumberFilter = documentNumberFilter;
-  readonly phoneMaxLength = nationalPhoneMaxLength;
 
   constructor() {
     this.synchronizeFormContext();
@@ -128,9 +118,6 @@ export class MortgageProfilingStartPageComponent {
     this.form.controls.documentType.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.revalidate('documentNumber'));
-    this.form.controls.phoneCountry.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.revalidate('phone'));
   }
 
   submit(): void {
@@ -237,7 +224,6 @@ export class MortgageProfilingStartPageComponent {
       documentType: 'cc',
       documentNumber: '',
       birthDate: '',
-      phoneCountry: ACTIVE_MARKET.countryCode,
       phone: '',
       creditReference: '',
       creditAmount: null,
@@ -264,7 +250,7 @@ export class MortgageProfilingStartPageComponent {
   }
 
   /** Al deshabilitar el formulario cada control emite; revalidar entonces lo reactivaría. */
-  private revalidate(controlName: 'documentNumber' | 'phone'): void {
+  private revalidate(controlName: 'documentNumber'): void {
     if (this.form.enabled) this.form.controls[controlName].updateValueAndValidity();
   }
 
@@ -282,7 +268,7 @@ export class MortgageProfilingStartPageComponent {
         documentType: value.documentType,
         documentNumber: value.documentNumber.trim(),
         birthDate: value.birthDate,
-        phone: internationalPhone(value.phoneCountry, value.phone),
+        phone: value.phone.trim(),
       },
       credit: {
         reference: value.creditReference.trim(),
