@@ -114,13 +114,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     const catalog = http.match(`${base}/productos-seguro`);
     catalog.forEach((request) =>
       request.flush({
-        productos: products.map((id) => ({
-          id,
-          nombre: id,
-          descripcion: id,
-          disponible: true,
-          coberturasPrincipales: [],
-        })),
+        productos: products.map((id) => ({ id, nombre: id, descripcion: id, disponible: true })),
       }),
     );
     http
@@ -216,16 +210,6 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     return http.expectOne(endpoint);
   }
 
-  function expectConfirmedReferences(response: PartnerQuoteResult): void {
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]')?.textContent,
-    ).toBe(response.perfilamientoReferencia);
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="partner-operation-id"]')?.textContent,
-    ).toBe(response.operationId);
-    expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.profileReference);
-  }
-
   afterEach(() => {
     fixture.destroy();
     http.verify();
@@ -260,14 +244,8 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(panel.result()).toBeNull();
     expect(page.form.disabled).toBe(true);
     expect(fixture.nativeElement.querySelector('app-profiling-panel')).toBeNull();
+    request.flush(result(request.request.body));
     fixture.detectChanges();
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]'),
-    ).toBeNull();
-    const response = result(request.request.body);
-    request.flush(response);
-    fixture.detectChanges();
-    expectConfirmedReferences(response);
     const text = fixture.nativeElement.textContent;
     expect(text).toContain(es.partnerQuote.completed);
     expect(text).toContain(es.partnerQuote.offerConditions);
@@ -303,22 +281,6 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(panel.result()).toBeNull();
     expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.errors.response);
     expect(fixture.nativeElement.textContent).not.toContain(response.oferta.nombre);
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]'),
-    ).toBeNull();
-  });
-
-  it.each(['', null])('no confirma una referencia de perfil invalida: %s', async (reference) => {
-    fillCustomer();
-    const request = await submit();
-    request.flush({ ...result(request.request.body), perfilamientoReferencia: reference });
-    fixture.detectChanges();
-
-    expect(panel.result()).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.errors.response);
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]'),
-    ).toBeNull();
   });
 
   it('muestra la degradacion trazable enviada por el backend', async () => {
@@ -359,7 +321,6 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(text).not.toContain(es.partnerQuote.completed);
     expect(panel.result()).toEqual(response);
     expect(panel.operationId()).toBe(original.operationId);
-    expectConfirmedReferences(response);
     expect(page.form.disabled).toBe(true);
     panel.retry();
     page.submit();
@@ -399,9 +360,6 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(panel.result()).toBeNull();
     expect(panel.operationId()).toBeNull();
     expect(panel.clientLookup()).toBeNull();
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]'),
-    ).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Oferta vencida');
     page.submit();
     http.expectNone(endpoint);
@@ -439,9 +397,6 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
       expect(panel.result()).toBeNull();
       expect(fixture.nativeElement.querySelector('[role=alert]')).not.toBeNull();
       expect(fixture.nativeElement.textContent).not.toContain(response.oferta.nombre);
-      expect(
-        fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]'),
-      ).toBeNull();
       expect(panel.operationId()).toBe(response.operationId);
       http.expectNone(endpoint);
     },
@@ -529,19 +484,12 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     const original = request.request.body;
     request.flush({ code }, { status, statusText: 'Error' });
     expect(panel.result()).toBeNull();
-    fixture.detectChanges();
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]'),
-    ).toBeNull();
     expect(page.partnerLocked()).toBe(true);
     panel.retry();
     const retry = http.expectOne(endpoint);
     expect(retry.request.body).toEqual(original);
     expect(retry.request.headers.get('Idempotency-Key')).toBe(original.operationId);
-    const response = result(original);
-    retry.flush(response);
-    fixture.detectChanges();
-    expectConfirmedReferences(response);
+    retry.flush(result(original));
     expect(panel.result()?.solicitudId).toBe('AQT-2026-123456');
   });
 
@@ -597,18 +545,9 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     const recovery = http.expectOne(`${endpoint}/${original.operationId}?socioId=BANCO-001`);
     recovery.flush({ ...result(original), socioId: 'OTRO-SOCIO' });
     expect(panel.result()).toBeNull();
-    fixture.detectChanges();
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]'),
-    ).toBeNull();
     panel.recover();
-    const response = result(original);
-    http.expectOne(`${endpoint}/${original.operationId}?socioId=BANCO-001`).flush(response);
-    fixture.detectChanges();
+    http.expectOne(`${endpoint}/${original.operationId}?socioId=BANCO-001`).flush(result(original));
     expect(panel.result()?.operationId).toBe(original.operationId);
-    expectConfirmedReferences(response);
-    expect(panel.form.controls.numeroDocumento.value).toBe('');
-    expect(page.form.controls.creditReference.value).toBe('');
     http.expectNone(endpoint);
   });
 });

@@ -11,7 +11,7 @@ import {
   QuoteRequestStorage,
 } from '../../core/quotes/quote-request-storage.service';
 import { MockOfferGateway } from './mock-offer.gateway';
-import { OfferSelectionChangedError, OfferUnavailableError } from '../../core/offers/offer.errors';
+import { OfferUnavailableError } from '../../core/offers/offer.errors';
 import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
 import { createProfile } from '../../core/profiling/profiling.fixtures';
 import { ProfilingError } from '../../core/profiling/profiling.errors';
@@ -44,12 +44,8 @@ class TestOfferSelectionStorage implements OfferSelectionStorage {
   read(): SelectedOfferRecord | null {
     return this.selection;
   }
-  write(value: SelectedOfferRecord): void {
-    this.selection = value;
-  }
-  clear(): void {
-    this.selection = null;
-  }
+  write(): void {}
+  clear(): void {}
 }
 
 describe('MockOfferGateway', () => {
@@ -78,81 +74,6 @@ describe('MockOfferGateway', () => {
     expect(calculation.quoteId).toBe('AQT-2026-654321');
     expect(calculation.offers).toHaveLength(3);
     expect(calculation.offers.every((offer) => offer.status === 'available')).toBe(true);
-  });
-
-  it('keeps canonical B after an old A replay and preserves terminal acceptance after cache clearing', async () => {
-    const calculation = await firstValueFrom(gateway.loadOffers());
-    const [offerA, offerB] = calculation.offers;
-    const commandA = {
-      quoteId: REQUEST.id,
-      offerId: offerA.id,
-      offerVersion: offerA.version,
-      expectedRevision: 0,
-      idempotencyKey: crypto.randomUUID(),
-    };
-    const receiptA = await firstValueFrom(gateway.saveProvisionalSelection(commandA));
-    const commandB = {
-      ...commandA,
-      offerId: offerB.id,
-      expectedRevision: 1,
-      idempotencyKey: crypto.randomUUID(),
-    };
-    await firstValueFrom(gateway.saveProvisionalSelection(commandB));
-    await expect(firstValueFrom(gateway.saveProvisionalSelection(commandA))).resolves.toEqual(
-      receiptA,
-    );
-    let state = await firstValueFrom(gateway.loadSelectionState(REQUEST.id));
-    expect(state.selection?.offerId).toBe(offerB.id);
-    expect(state.selection?.revision).toBe(2);
-    expect(state.acceptance).toBeNull();
-
-    await expect(
-      firstValueFrom(gateway.confirmSelection(REQUEST.id, offerB.id, 1)),
-    ).rejects.toBeInstanceOf(OfferSelectionChangedError);
-    await firstValueFrom(gateway.confirmSelection(REQUEST.id, offerB.id, 1, 2));
-    TestBed.inject(OFFER_SELECTION_STORAGE).clear();
-    await expect(
-      firstValueFrom(
-        gateway.saveProvisionalSelection({
-          ...commandB,
-          expectedRevision: 2,
-          idempotencyKey: crypto.randomUUID(),
-        }),
-      ),
-    ).rejects.toBeInstanceOf(OfferSelectionChangedError);
-    await expect(firstValueFrom(gateway.saveProvisionalSelection(commandA))).resolves.toEqual(
-      receiptA,
-    );
-
-    state = await firstValueFrom(gateway.loadSelectionState(REQUEST.id));
-    expect(state.selection?.offerId).toBe(offerB.id);
-    expect(state.acceptance?.offerId).toBe(offerB.id);
-    expect(state.acceptance?.confirmed).toBe(true);
-    expect(state.offerStatus).toBe('accepted');
-  });
-
-  it('rejects a changed payload under the same provisional key', async () => {
-    const calculation = await firstValueFrom(gateway.loadOffers());
-    const [offerA, offerB] = calculation.offers;
-    const command = {
-      quoteId: REQUEST.id,
-      offerId: offerA.id,
-      offerVersion: offerA.version,
-      expectedRevision: 0,
-      idempotencyKey: crypto.randomUUID(),
-    };
-    await firstValueFrom(gateway.saveProvisionalSelection(command));
-    await expect(
-      firstValueFrom(
-        gateway.saveProvisionalSelection({
-          ...command,
-          offerId: offerB.id,
-        }),
-      ),
-    ).rejects.toThrow('idempotency key');
-    expect((await firstValueFrom(gateway.loadSelectionState(REQUEST.id))).selection?.offerId).toBe(
-      offerA.id,
-    );
   });
 
   it.each(['load', 'confirm'])('rechaza %s sin un perfil vigente', async (operation) => {

@@ -37,12 +37,6 @@ describe('ProfilingPanelComponent', () => {
                 simulated: 'Datos simulados. No es una consulta financiera real.',
                 additionalSource: 'Adaptador adicional: {{ name }}',
                 cachedEvidence: 'Evidencia en caché vigente y simulada.',
-                defaultEvidence: 'Este perfil incluye valores predeterminados del modelo.',
-                sourceState: {
-                  disponible: 'Disponible',
-                  cache: 'Caché vigente autorizada',
-                  default: 'Valor predeterminado del modelo',
-                },
               },
             },
           },
@@ -126,34 +120,6 @@ describe('ProfilingPanelComponent', () => {
     expect(component.profile()).toBeNull();
     expect(component.authorized()).toBe(false);
     expect(component.errorKey()).toBe('profiling.errors.consent');
-  });
-
-  it('identifica las fuentes por defecto sin presentarlas como evidencia en cache', () => {
-    const profile = createProfile();
-    profile.fallbackUsed = true;
-    profile.estadoFuentes = profile.fuentes.map((source, index) => ({
-      fuente: source.nombre,
-      estado: index === 0 ? 'default' : 'cache',
-      intentos: 2,
-      motivo: 'fuente_no_disponible',
-    }));
-    gateway.loadProfile.mockReturnValue(of(profile));
-    openProfile();
-    expect(component.profile()).toBe(profile);
-    expect(component.authorized()).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain(
-      'Este perfil incluye valores predeterminados del modelo.',
-    );
-    expect(fixture.nativeElement.textContent).not.toContain(
-      'Evidencia en caché vigente y simulada.',
-    );
-    const states: HTMLElement[] = Array.from(
-      fixture.nativeElement.querySelectorAll('.source-state'),
-    );
-    expect(states.map((state) => state.textContent?.trim())).toEqual([
-      'Valor predeterminado del modelo',
-      'Caché vigente autorizada',
-    ]);
   });
 
   it('oculta datos mientras consulta y cuando falla sin fallback', () => {

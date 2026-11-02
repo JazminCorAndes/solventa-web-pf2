@@ -1,4 +1,4 @@
-import { computed, signal } from '@angular/core';
+import { signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { registerLocaleData } from '@angular/common';
 import localeEsCo from '@angular/common/locales/es-CO';
@@ -9,12 +9,8 @@ import { of, Subject, tap, throwError } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
 import en from '../../../../public/assets/i18n/en.json';
 import { AuthService } from '../../core/auth/auth.service';
-import { OfferSelectionChangedError, OfferUnavailableError } from '../../core/offers/offer.errors';
-import {
-  InsuranceOffer,
-  OfferSelectionReference,
-  SelectedOfferRecord,
-} from '../../core/offers/offer.models';
+import { OfferUnavailableError } from '../../core/offers/offer.errors';
+import { InsuranceOffer, SelectedOfferRecord } from '../../core/offers/offer.models';
 import { OfferSelectionService } from '../../core/offers/offer-selection.service';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
 import { SubscriptionRecord } from '../../core/subscriptions/subscription.models';
@@ -74,12 +70,6 @@ const SUBSCRIPTION: SubscriptionRecord = {
     updatedAt: '2026-10-15T03:01:00.000Z',
   },
 };
-const REFERENCE: OfferSelectionReference = {
-  quoteId: CONFIRMED_SELECTION.quoteId,
-  offerId: OFFER.id,
-  offerVersion: OFFER.version,
-  revision: 1,
-};
 
 describe('OfferAcceptancePageComponent', () => {
   let fixture: ComponentFixture<OfferAcceptancePageComponent>;
@@ -87,10 +77,6 @@ describe('OfferAcceptancePageComponent', () => {
   const selectedOffer = signal<InsuranceOffer | null>(OFFER);
   const offersStatus = signal<'ready' | 'error'>('ready');
   const offersError = signal<string | null>(null);
-  const provisionalReference = signal<OfferSelectionReference | null>(REFERENCE);
-  const canContinue = signal(true);
-  const requireAcceptedSelection = vi.fn(() => of(CONFIRMED_SELECTION));
-  const cancelPending = vi.fn();
   const confirmSelected = vi.fn(() => of(CONFIRMED_SELECTION));
   const startSubscription = vi.fn(() => of(SUBSCRIPTION));
   let navigate: ReturnType<typeof vi.spyOn>;
@@ -100,10 +86,6 @@ describe('OfferAcceptancePageComponent', () => {
     selectedOffer.set(OFFER);
     offersStatus.set('ready');
     offersError.set(null);
-    provisionalReference.set(REFERENCE);
-    canContinue.set(true);
-    requireAcceptedSelection.mockReset().mockReturnValue(of(CONFIRMED_SELECTION));
-    cancelPending.mockClear();
     confirmSelected
       .mockReset()
       .mockImplementation(() =>
@@ -129,12 +111,6 @@ describe('OfferAcceptancePageComponent', () => {
             errorKey: offersError,
             load: vi.fn(),
             confirmSelected,
-            canContinue,
-            selectionReference: computed(() =>
-              confirmedSelection() ? null : provisionalReference(),
-            ),
-            requireAcceptedSelection,
-            cancelPending,
           },
         },
         {
@@ -205,9 +181,9 @@ describe('OfferAcceptancePageComponent', () => {
     component.confirm();
     expect(confirmSelected).not.toHaveBeenCalled();
 
-    acceptAndConfirm();
+    component.accepted.set(true);
+    component.confirm();
     expect(confirmSelected).toHaveBeenCalledOnce();
-    expect(confirmSelected).toHaveBeenCalledWith(REFERENCE);
     expect(startSubscription).toHaveBeenCalledOnce();
     expect(navigate).toHaveBeenCalledWith(['/app/cotizaciones/suscripcion']);
   });
@@ -355,7 +331,7 @@ describe('OfferAcceptancePageComponent', () => {
     { code: 'perfil_vencido', status: 422, key: 'profiling.errors.expired' },
     { code: 'consentimiento_no_vigente', status: 403, key: 'profiling.errors.consent' },
   ])(
-    'preserves terminal selection error $code and withdrawn consent after an attempted toggle',
+    'preserves terminal selection error $code after toggling acceptance',
     ({ code, status, key }) => {
       confirmSelected.mockReturnValueOnce(
         throwError(() => new HttpErrorResponse({ status, error: { code } })),
@@ -365,12 +341,12 @@ describe('OfferAcceptancePageComponent', () => {
 
       checkbox.click();
       fixture.detectChanges();
+      checkbox.click();
+      fixture.detectChanges();
       actionButton().click();
       fixture.componentInstance.confirm();
 
-      expect(fixture.componentInstance.accepted()).toBe(false);
-      expect(checkbox.checked).toBe(false);
-      expect(checkbox.disabled).toBe(true);
+      expect(fixture.componentInstance.accepted()).toBe(true);
       expect(fixture.componentInstance.errorKey()).toBe(key);
       expect(actionButton().disabled).toBe(true);
       expect(confirmSelected).toHaveBeenCalledOnce();
@@ -432,6 +408,8 @@ describe('OfferAcceptancePageComponent', () => {
 
     checkbox.click();
     fixture.detectChanges();
+    checkbox.click();
+    fixture.detectChanges();
     expect(actionButton().disabled).toBe(false);
     actionButton().click();
 
@@ -453,93 +431,6 @@ describe('OfferAcceptancePageComponent', () => {
     expect(
       fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
     ).not.toBeNull();
-  });
-
-  it('withdraws consent when the selection changes and never accepts B using the consent for A', () => {
-    const nextReference = { ...REFERENCE, offerId: 'offer-b', revision: 2 };
-    const nextOffer = { ...OFFER, id: nextReference.offerId, name: 'Plan B' };
-    confirmSelected.mockImplementationOnce(() => {
-      provisionalReference.set(nextReference);
-      selectedOffer.set(nextOffer);
-      return throwError(() => new OfferSelectionChangedError());
-    });
-
-    acceptAndConfirm();
-
-    expect(confirmSelected).toHaveBeenCalledWith(REFERENCE);
-    expect(fixture.componentInstance.accepted()).toBe(false);
-    expect(actionButton().disabled).toBe(true);
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
-      es.acceptance.errors.selectionChanged,
-    );
-    expect(startSubscription).not.toHaveBeenCalled();
-    expect(navigate).not.toHaveBeenCalled();
-
-    const nextAcceptance = {
-      ...CONFIRMED_SELECTION,
-      offerId: nextOffer.id,
-      offerName: nextOffer.name,
-    };
-    confirmSelected.mockReturnValueOnce(
-      of(nextAcceptance).pipe(tap(() => confirmedSelection.set(nextAcceptance))),
-    );
-    acceptAndConfirm();
-
-    expect(confirmSelected).toHaveBeenNthCalledWith(2, nextReference);
-    expect(startSubscription).toHaveBeenCalledOnce();
-  });
-
-  it('withdraws an already checked consent when a new canonical revision is displayed', () => {
-    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('mat-checkbox input');
-    checkbox.click();
-    fixture.detectChanges();
-    expect(fixture.componentInstance.accepted()).toBe(true);
-
-    provisionalReference.set({ ...REFERENCE, revision: 2 });
-    fixture.detectChanges();
-
-    expect(checkbox.checked).toBe(false);
-    expect(actionButton().disabled).toBe(true);
-    expect(confirmSelected).not.toHaveBeenCalled();
-    expect(startSubscription).not.toHaveBeenCalled();
-  });
-
-  it('does not subscribe when refreshing a restored acceptance fails', () => {
-    confirmedSelection.set(CONFIRMED_SELECTION);
-    requireAcceptedSelection.mockReturnValueOnce(
-      throwError(() => new OfferSelectionChangedError()),
-    );
-    fixture.detectChanges();
-    actionButton().click();
-    fixture.detectChanges();
-
-    expect(requireAcceptedSelection).toHaveBeenCalledOnce();
-    expect(startSubscription).not.toHaveBeenCalled();
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it('shows missing selection explicitly and never treats two absent records as accepted', () => {
-    selectedOffer.set(null);
-    provisionalReference.set(null);
-    fixture.detectChanges();
-    fixture.componentInstance.continueWithSubscription();
-
-    expect(fixture.nativeElement.textContent).toContain(es.acceptance.errors.selectionMissing);
-    expect(fixture.nativeElement.querySelector('mat-spinner')).toBeNull();
-    expect(fixture.componentInstance.confirmed()).toBe(false);
-    expect(startSubscription).not.toHaveBeenCalled();
-  });
-
-  it('does not start a subscription after leaving while confirmation is pending', () => {
-    const pending = new Subject<SelectedOfferRecord>();
-    confirmSelected.mockReturnValueOnce(pending);
-    acceptAndConfirm();
-    fixture.destroy();
-    pending.next(CONFIRMED_SELECTION);
-
-    expect(cancelPending).toHaveBeenCalledOnce();
-    expect(startSubscription).not.toHaveBeenCalled();
-    expect(navigate).not.toHaveBeenCalled();
   });
 
   it.each(['approved', 'review', 'rejected'] as const)(

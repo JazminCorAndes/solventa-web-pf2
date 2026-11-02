@@ -1,4 +1,4 @@
-import { DashboardPayment, DashboardSnapshot } from './dashboard.models';
+import { DashboardSnapshot } from './dashboard.models';
 
 export const DASHBOARD_RESPONSE = {
   cotizaciones: [
@@ -63,30 +63,6 @@ export const EMPTY_DASHBOARD: DashboardSnapshot = {
   payments: [],
   policies: [],
   notifications: { availability: 'no_implementado' },
-};
-
-export const REJECTED_DASHBOARD_RESPONSE = {
-  id: '40000000-0000-4000-8000-000000000002',
-  solicitudId: 'request-001',
-  suscripcionId: DASHBOARD_RESPONSE.suscripciones[0].id,
-  estado: 'rechazado',
-  simulada: true,
-  importe: { monto: '12345.67', moneda: 'COP' },
-  periodicidad: 'por_viaje',
-  rechazadaEn: '2026-10-01T12:15:00Z',
-  motivo: 'rechazo_simulado',
-};
-
-export const REJECTED_DASHBOARD_PAYMENT: DashboardPayment = {
-  id: REJECTED_DASHBOARD_RESPONSE.id,
-  requestId: REJECTED_DASHBOARD_RESPONSE.solicitudId,
-  subscriptionId: REJECTED_DASHBOARD_RESPONSE.suscripcionId,
-  status: 'rechazado',
-  simulated: true,
-  amount: { amount: '12345.67', currency: 'COP' },
-  periodicity: 'por_viaje',
-  rejectedAt: REJECTED_DASHBOARD_RESPONSE.rechazadaEn,
-  reason: 'rechazo_simulado',
 };
 
 export const DASHBOARD_SNAPSHOT: DashboardSnapshot = {

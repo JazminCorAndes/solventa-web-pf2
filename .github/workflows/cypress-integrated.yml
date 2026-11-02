@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      BACKEND_REVISION: d0a3145918c019b1cfb347faa1a8d0d5d05dac8d
+      BACKEND_REVISION: 4fbe81798962dea6780ddc3e56d00490d5a68796
       CYPRESS_DISPOSABLE_BACKEND: '1'
       CYPRESS_BACKEND_URL: http://127.0.0.1:5000
     steps:

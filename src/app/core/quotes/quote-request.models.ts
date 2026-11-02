@@ -3,18 +3,6 @@ export interface InsuranceProduct {
   name: string;
   description: string;
   available: boolean;
-  mainCoverages: string[];
-}
-
-export interface InsuranceProductDetail extends InsuranceProduct {
-  coverages: Array<{ name: string; description: string }>;
-  conditions: string[];
-  information: {
-    insuredAmount: string;
-    deductible: string;
-    currency: string;
-    validity: string;
-  };
 }
 
 export interface TravelDestination {

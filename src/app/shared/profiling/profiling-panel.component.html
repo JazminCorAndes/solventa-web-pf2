@@ -174,12 +174,7 @@
       }
       @if (profile(); as profile) {
         @if (profile.fallbackUsed) {
-          <p>
-            {{
-              (hasDefaultSources() ? 'profiling.defaultEvidence' : 'profiling.cachedEvidence')
-                | transloco
-            }}
-          </p>
+          <p>{{ 'profiling.cachedEvidence' | transloco }}</p>
         }
         <dl class="metrics">
           <div>
@@ -243,12 +238,6 @@
                   sourceLabelKey(source.nombre) | transloco: { name: source.nombre }
                 }}</strong>
                 <span>{{ 'profiling.simulatedSource' | transloco }} · {{ source.version }}</span>
-                @let state = sourceState(source.nombre);
-                @if (state) {
-                  <span class="source-state">{{
-                    'profiling.sourceState.' + state | transloco
-                  }}</span>
-                }
                 <span>{{ 'profiling.indicator' | transloco }}: {{ source.indicadorRiesgo }}</span>
                 <span
                   >{{ 'profiling.consultedAt' | transloco }}:

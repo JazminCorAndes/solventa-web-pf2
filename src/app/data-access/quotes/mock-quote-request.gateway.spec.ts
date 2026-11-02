@@ -39,10 +39,6 @@ describe('MockQuoteRequestGateway', () => {
       'mortgage-life',
     ]);
     expect(products.every((product) => product.available)).toBe(true);
-    expect(products.every((product) => product.mainCoverages.length === 0)).toBe(true);
-    await expect(firstValueFrom(gateway.loadProductDetail())).rejects.toThrow(
-      'Insurance product details require the backend.',
-    );
     const productData = {
       location: 'Villavicencio, Meta',
       weatherEvent: 'drought',

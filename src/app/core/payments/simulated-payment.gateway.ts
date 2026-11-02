@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { SimulatedPaymentRecord } from './simulated-payment.models';
 
 export interface SimulatedPaymentGateway {
-  load(quoteId: string, idempotencyKey?: string): Observable<SimulatedPaymentRecord | null>;
+  load(quoteId: string): Observable<SimulatedPaymentRecord | null>;
   confirm(quoteId: string, idempotencyKey: string): Observable<SimulatedPaymentRecord>;
 }
 

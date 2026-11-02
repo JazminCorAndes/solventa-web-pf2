@@ -5,11 +5,6 @@ import { firstValueFrom } from 'rxjs';
 import { HttpQuoteRequestGateway } from './http-quote-request.gateway';
 import { environment } from '../../../environments/environment';
 import { QuoteRequestDraft } from '../../core/quotes/quote-request.models';
-import {
-  InsuranceProductNotFoundError,
-  QuoteRequestUnavailableError,
-} from '../../core/quotes/quote-request.errors';
-import productDetail from './testing/insurance-product-detail.json';
 
 describe('HttpQuoteRequestGateway', () => {
   let gateway: HttpQuoteRequestGateway;
@@ -55,7 +50,6 @@ describe('HttpQuoteRequestGateway', () => {
           nombre: 'Seguro Automotriz Total',
           descripcion: 'Protección para el vehículo',
           disponible: true,
-          coberturasPrincipales: ['Daños al vehículo'],
         },
       ],
     });
@@ -66,121 +60,8 @@ describe('HttpQuoteRequestGateway', () => {
         name: 'Seguro Automotriz Total',
         description: 'Protección para el vehículo',
         available: true,
-        mainCoverages: ['Daños al vehículo'],
       },
     ]);
-  });
-
-  it('reads the direct detail DTO and preserves decimal strings and unavailable products', async () => {
-    const result = firstValueFrom(gateway.loadProductDetail('automotive'));
-    const request = http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro/automotive`);
-    expect(request.request.method).toBe('GET');
-    expect(request.request.withCredentials).toBe(false);
-    request.flush({ ...productDetail, disponible: false });
-    await expect(result).resolves.toEqual({
-      id: productDetail.id,
-      name: productDetail.nombre,
-      description: productDetail.descripcion,
-      available: false,
-      mainCoverages: productDetail.coberturasPrincipales,
-      coverages: productDetail.coberturas.map(({ nombre, descripcion }) => ({
-        name: nombre,
-        description: descripcion,
-      })),
-      conditions: productDetail.condiciones,
-      information: {
-        insuredAmount: '25000000',
-        deductible: '500000',
-        currency: 'COP',
-        validity: 'Anual con renovación',
-      },
-    });
-  });
-
-  it('accepts empty coverage and condition arrays without inventing contents', async () => {
-    const result = firstValueFrom(gateway.loadProductDetail(productDetail.id));
-    http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro/${productDetail.id}`).flush({
-      ...productDetail,
-      coberturasPrincipales: [],
-      coberturas: [],
-      condiciones: [],
-    });
-    await expect(result).resolves.toMatchObject({
-      mainCoverages: [],
-      coverages: [],
-      conditions: [],
-    });
-  });
-
-  it.each([
-    null,
-    { producto: productDetail },
-    { ...productDetail, id: 'travel' },
-    { ...productDetail, coberturasPrincipales: undefined },
-    { ...productDetail, coberturas: null },
-    { ...productDetail, coberturas: [{ nombre: 'Incompleta' }] },
-    { ...productDetail, condiciones: [null] },
-    { ...productDetail, informacionRelevante: null },
-    {
-      ...productDetail,
-      informacionRelevante: { ...productDetail.informacionRelevante, sumaAsegurada: 25000000 },
-    },
-    {
-      ...productDetail,
-      informacionRelevante: { ...productDetail.informacionRelevante, vigencia: undefined },
-    },
-  ])('rejects malformed or mismatched product details %#', async (body) => {
-    const result = firstValueFrom(gateway.loadProductDetail(productDetail.id));
-    const assertion = expect(result).rejects.toThrow(/Invalid insurance product/);
-    http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro/${productDetail.id}`).flush(body);
-    await assertion;
-  });
-
-  it('does not turn a malformed catalog into an empty or fabricated catalog', async () => {
-    const result = firstValueFrom(gateway.loadProducts());
-    const assertion = expect(result).rejects.toThrow('Invalid insurance product response');
-    http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro`).flush({
-      productos: [{ ...productDetail, coberturasPrincipales: undefined }],
-    });
-    await assertion;
-  });
-
-  it('maps only the domain 404 to product not found', async () => {
-    const result = firstValueFrom(gateway.loadProductDetail('not-found'));
-    const assertion = expect(result).rejects.toBeInstanceOf(InsuranceProductNotFoundError);
-    http.expectOne(`${environment.apiBaseUrl}/v1/productos-seguro/not-found`).flush(
-      {
-        type: 'https://api.solventa.co/problems/seguro_no_encontrado',
-        title: 'Seguro no encontrado',
-        status: 404,
-        detail: 'El seguro consultado no existe o ya no está disponible.',
-        code: 'seguro_no_encontrado',
-        correlationId: crypto.randomUUID(),
-      },
-      { status: 404, statusText: 'Not Found' },
-    );
-    await assertion;
-  });
-
-  it('preserves an infrastructure 404 instead of claiming the product is absent', async () => {
-    const result = firstValueFrom(gateway.loadProductDetail(productDetail.id));
-    const assertion = expect(result).rejects.toMatchObject({ status: 404 });
-    http
-      .expectOne(`${environment.apiBaseUrl}/v1/productos-seguro/${productDetail.id}`)
-      .flush({ code: 'route_not_found' }, { status: 404, statusText: 'Not Found' });
-    await assertion;
-  });
-
-  it('encodes product IDs and keeps unavailable detail requests as errors', async () => {
-    const result = firstValueFrom(gateway.loadProductDetail('invalid/id'));
-    const assertion = expect(result).rejects.toBeInstanceOf(QuoteRequestUnavailableError);
-    http
-      .expectOne(`${environment.apiBaseUrl}/v1/productos-seguro/invalid%2Fid`)
-      .flush(
-        { code: 'servicio_no_disponible' },
-        { status: 503, statusText: 'Service Unavailable' },
-      );
-    await assertion;
   });
 
   it('loads and maps the supported travel destinations', async () => {

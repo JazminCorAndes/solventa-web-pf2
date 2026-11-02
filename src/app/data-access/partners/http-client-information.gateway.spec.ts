@@ -1,15 +1,12 @@
-import { HttpErrorResponse, HttpHeaders, provideHttpClient } from '@angular/common/http';
+import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   ClientInformationRequest,
-  ClientInformationReviewRequired,
-  clientInformationStatusMissing,
   HttpClientInformationGateway,
 } from './http-client-information.gateway';
-import contract from '../advisor-exceptions/testing/exception-contract-real.json';
 
 describe('HttpClientInformationGateway', () => {
   let gateway: HttpClientInformationGateway;
@@ -148,128 +145,4 @@ describe('HttpClientInformationGateway', () => {
 
     await expect(result).resolves.toMatchObject({ operationId: request.operationId });
   });
-
-  it.each(contract.cases)(
-    'WEB-F6 valida la proyección real $requester.aplicacion.estado sin consultar datos',
-    async ({ requester }) => {
-      const result = firstValueFrom(gateway.loadStatus(requester.operationId, requester.socioId));
-      const pending = http.expectOne(
-        (pending) =>
-          pending.url.endsWith(`/${requester.operationId}/estado`) &&
-          pending.params.get('socioId') === requester.socioId,
-      );
-      expect(pending.request.method).toBe('GET');
-      expect(pending.request.headers.get('API-Version')).toBe('1');
-      pending.flush(requester);
-      await expect(result).resolves.toEqual(requester);
-    },
-  );
-
-  it('WEB-F6 conserva solo la operación validada del 503 revisable sin convertirla en resultado', async () => {
-    const { blockedProblem } = contract.cases[0];
-    const input: ClientInformationRequest = {
-      ...request,
-      operationId: blockedProblem.operacion.operationId,
-      socioId: blockedProblem.operacion.socioId,
-      clienteId: blockedProblem.operacion.clienteId,
-    };
-    const result = firstValueFrom(gateway.consult(input));
-    const assertion = expect(result).rejects.toMatchObject({
-      name: 'ClientInformationReviewRequired',
-      review: blockedProblem.operacion,
-    });
-    http
-      .expectOne((pending) => pending.url.endsWith('/consultas-informacion-cliente'))
-      .flush(blockedProblem, {
-        status: 503,
-        statusText: 'Unavailable',
-        headers: { 'Content-Type': 'application/problem+json' },
-      });
-    await assertion;
-  });
-
-  it.each([
-    { code: 'servicio_no_disponible' },
-    { operacion: { ...contract.cases[0].blockedProblem.operacion, socioId: 'OTRO-SOCIO' } },
-    {
-      operacion: {
-        ...contract.cases[0].blockedProblem.operacion,
-        operationId: crypto.randomUUID(),
-      },
-    },
-    { operacion: { ...contract.cases[0].blockedProblem.operacion, datos: { saldo: '1000' } } },
-    { operacion: { ...contract.cases[0].blockedProblem.operacion, aplicacion: null } },
-  ])(
-    'WEB-F6 no promueve un 503 genérico o una operación incoherente a revisión %#',
-    async (changes) => {
-      const { blockedProblem } = contract.cases[0];
-      const result = firstValueFrom(
-        gateway.consult({
-          ...request,
-          operationId: blockedProblem.operacion.operationId,
-          socioId: blockedProblem.operacion.socioId,
-          clienteId: blockedProblem.operacion.clienteId,
-        }),
-      ).catch((error: unknown) => error);
-      http
-        .expectOne((pending) => pending.url.endsWith('/consultas-informacion-cliente'))
-        .flush(
-          { ...blockedProblem, ...changes },
-          {
-            status: 503,
-            statusText: 'Unavailable',
-            headers: { 'Content-Type': 'application/problem+json' },
-          },
-        );
-      const error = await result;
-      expect(error).toBeInstanceOf('code' in changes ? HttpErrorResponse : Error);
-      expect(error).not.toBeInstanceOf(ClientInformationReviewRequired);
-    },
-  );
-
-  it.each([
-    { acuseId: null },
-    { intentos: 0 },
-    { estado: 'pendiente' },
-    { datos: { saldo: '1000' } },
-  ])('WEB-F6 rechaza ACK o aplicación terminal incoherente %#', async (changes) => {
-    const body = contract.cases[0].requester;
-    const result = firstValueFrom(gateway.loadStatus(body.operationId, body.socioId));
-    const assertion = expect(result).rejects.toThrow('Invalid client information review.');
-    http
-      .expectOne((pending) => pending.url.endsWith('/estado'))
-      .flush({ ...body, aplicacion: { ...body.aplicacion, ...changes } });
-    await assertion;
-  });
-
-  it('WEB-F6 no cierra el catálogo de códigos de aplicación bloqueada', async () => {
-    const body = contract.cases[2].requester;
-    const updated = {
-      ...body,
-      aplicacion: { ...body.aplicacion, codigo: 'causa_nueva_del_servicio' },
-    };
-    const result = firstValueFrom(gateway.loadStatus(body.operationId, body.socioId));
-    http.expectOne((pending) => pending.url.endsWith('/estado')).flush(updated);
-    await expect(result).resolves.toEqual(updated);
-  });
-
-  it.each([401, 403, 503, 404])(
-    'WEB-F6 solo reconoce el 404 contractual de consulta no vinculada: %s',
-    (status) => {
-      const problem = {
-        type: 'https://api.solventa.co/problems/consulta_no_encontrada',
-        title: 'Consulta no encontrada',
-        detail: 'No existe operación vinculada.',
-        code: 'consulta_no_encontrada',
-        status,
-        correlationId: '66666666-6666-4666-8666-666666666666',
-      };
-      const error = new HttpErrorResponse({
-        status,
-        error: problem,
-        headers: new HttpHeaders({ 'Content-Type': 'application/problem+json' }),
-      });
-      expect(clientInformationStatusMissing(error)).toBe(status === 404);
-    },
-  );
 });

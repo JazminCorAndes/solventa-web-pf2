@@ -98,16 +98,7 @@
         </div>
       </div>
     } @else {
-      @if (!offers.canContinue()) {
-        <p class="confirmation-error" role="alert">
-          {{ 'acceptance.errors.unavailable' | transloco }}
-        </p>
-      }
-      <mat-checkbox
-        [checked]="accepted()"
-        [disabled]="confirming() || !offers.canContinue() || flowInvalidated()"
-        (change)="updateConsent($event)"
-      >
+      <mat-checkbox [checked]="accepted()" (change)="updateConsent($event)">
         {{ 'acceptance.consent' | transloco }}
       </mat-checkbox>
     }
@@ -131,7 +122,7 @@
         <button
           mat-flat-button
           type="button"
-          [disabled]="!accepted() || confirming() || flowInvalidated() || !offers.canContinue()"
+          [disabled]="!accepted() || confirming() || flowInvalidated()"
           (click)="confirm()"
         >
           @if (confirming()) {
@@ -165,13 +156,6 @@
       }
       <a mat-button routerLink="/app/cotizaciones/solicitar">
         {{ 'quoteSummary.newQuote' | transloco }}
-      </a>
-    </div>
-  } @else if (offers.status() === 'ready' || offers.status() === 'empty') {
-    <div class="confirmation-error" role="alert">
-      <p>{{ 'acceptance.errors.selectionMissing' | transloco }}</p>
-      <a mat-stroked-button routerLink="/app/cotizaciones/ofertas">
-        {{ 'acceptance.backToOffers' | transloco }}
       </a>
     </div>
   } @else {

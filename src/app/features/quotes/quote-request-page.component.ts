@@ -3,7 +3,6 @@ import {
   Component,
   computed,
   DestroyRef,
-  effect,
   inject,
   OnInit,
   signal,
@@ -29,17 +28,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { distinctUntilChanged, finalize, startWith, Subscription, take } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { distinctUntilChanged, finalize, startWith, take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   InsuranceProductUnavailableError,
-  InsuranceProductNotFoundError,
   QuoteRequestUnavailableError,
 } from '../../core/quotes/quote-request.errors';
 import {
   FLIGHT_COVERAGE_TYPES,
-  InsuranceProductDetail,
   QuoteRequestRecord,
   TravelDestination,
   WEATHER_EVENT_TYPES,
@@ -156,27 +152,6 @@ export class QuoteRequestPageComponent implements OnInit {
   readonly selectedProduct = computed(
     () => this.products().find((product) => product.id === this.productId()) ?? null,
   );
-  readonly backendProductDetails = environment.dataAccessMode === 'backend';
-  private readonly productDetailsState = signal<ProductDetailsState>({ status: 'idle' });
-  private productDetailsRequest: Subscription | undefined;
-  private requestedDetailId: string | null = null;
-  readonly productDetails = computed<ProductDetailsState>(() => {
-    const state = this.productDetailsState();
-    return this.quotes.catalogStatus() === 'ready' &&
-      (state.status === 'idle' || state.productId === this.selectedProduct()?.id)
-      ? state
-      : { status: 'idle' };
-  });
-  readonly productUnavailable = computed(() => {
-    const details = this.productDetails();
-    return (
-      !this.selectedProduct()?.available ||
-      this.quotes.catalogStatus() !== 'ready' ||
-      details.status === 'loading' ||
-      details.status === 'error' ||
-      (details.status === 'ready' && !details.detail.available)
-    );
-  });
   readonly documentTypeLabelKey = computed(() =>
     this.user()?.documentType
       ? `quoteRequest.documentTypes.${this.user()?.documentType}`
@@ -191,59 +166,6 @@ export class QuoteRequestPageComponent implements OnInit {
   });
   readonly displayDestination = (destination: TravelDestination | string | null): string =>
     typeof destination === 'string' ? destination : (destination?.name ?? '');
-
-  constructor() {
-    effect(() => {
-      if (
-        this.quotes.catalogStatus() !== 'ready' ||
-        this.selectedProduct()?.id !== this.requestedDetailId
-      ) {
-        this.clearProductDetails();
-      }
-    });
-  }
-
-  loadProductDetails(): void {
-    const product = this.selectedProduct();
-    if (
-      !product ||
-      !this.backendProductDetails ||
-      this.quotes.catalogStatus() !== 'ready' ||
-      this.productDetails().status === 'loading'
-    ) {
-      return;
-    }
-    this.clearProductDetails();
-    this.requestedDetailId = product.id;
-    this.productDetailsState.set({ status: 'loading', productId: product.id });
-    this.productDetailsRequest = this.quotes
-      .loadProductDetail(product.id)
-      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (detail) => {
-          this.productDetailsState.set({ status: 'ready', productId: product.id, detail });
-          this.form.controls.productId.updateValueAndValidity({ emitEvent: false });
-        },
-        error: (error: unknown) => {
-          console.error('Insurance product detail could not be loaded.', error);
-          this.productDetailsState.set({
-            status: 'error',
-            productId: product.id,
-            messageKey:
-              error instanceof InsuranceProductNotFoundError
-                ? 'quoteRequest.productDetails.notFound'
-                : 'quoteRequest.productDetails.error',
-          });
-        },
-      });
-  }
-
-  private clearProductDetails(): void {
-    this.productDetailsRequest?.unsubscribe();
-    this.productDetailsRequest = undefined;
-    this.requestedDetailId = null;
-    this.productDetailsState.set({ status: 'idle' });
-  }
 
   ngOnInit(): void {
     this.translations
@@ -268,10 +190,7 @@ export class QuoteRequestPageComponent implements OnInit {
         distinctUntilChanged(),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((productId) => {
-        this.clearProductDetails();
-        this.configureProductFields(productId);
-      });
+      .subscribe((productId) => this.configureProductFields(productId));
   }
 
   submit(): void {
@@ -281,7 +200,7 @@ export class QuoteRequestPageComponent implements OnInit {
 
     this.attempted.set(true);
     this.errorKey.set(null);
-    if (this.productUnavailable() || !SUPPORTED_PRODUCTS.includes(this.productId())) {
+    if (!this.selectedProduct()?.available || !SUPPORTED_PRODUCTS.includes(this.productId())) {
       this.form.controls.productId.setErrors({ unavailableProduct: true });
     }
     if (this.form.invalid) {
@@ -521,12 +440,6 @@ export class QuoteRequestPageComponent implements OnInit {
     }
   }
 }
-
-type ProductDetailsState =
-  | { status: 'idle' }
-  | { status: 'loading'; productId: string }
-  | { status: 'ready'; productId: string; detail: InsuranceProductDetail }
-  | { status: 'error'; productId: string; messageKey: string };
 
 type FormControlName = keyof QuoteRequestPageComponent['form']['controls'];
 

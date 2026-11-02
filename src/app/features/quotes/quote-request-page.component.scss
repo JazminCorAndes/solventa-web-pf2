@@ -76,31 +76,6 @@ header p {
   width: 100%;
 }
 
-.product-overview {
-  grid-column: 1 / -1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.product-overview h2,
-.product-overview h3 {
-  font-size: 0.9rem;
-}
-
-.product-overview p,
-.product-overview li,
-.product-overview dl {
-  font-size: 0.85rem;
-}
-
-.product-details dl div {
-  gap: var(--solventa-space-3);
-}
-
-.product-details dd {
-  text-align: right;
-}
-
 .form-card mat-card-content {
   padding: var(--solventa-space-5);
 }

@@ -65,7 +65,7 @@ export class QuoteSummaryPageComponent implements OnInit {
 
   productDetails(request: QuoteRequestRecord) {
     return Object.entries(request.productData).map(([key, value]) => ({
-      labelKey: `quoteRequest.fields.${key === 'referenciaCredito' ? 'creditReference' : key}`,
+      labelKey: `quoteRequest.fields.${key}`,
       valueKey:
         key === 'coverageType'
           ? `quoteRequest.flightCoverages.${value}`

@@ -130,23 +130,13 @@ describe('historical quote route integration', () => {
       subscription.flush({}, { status: 404, statusText: 'Not Found' });
     }
     if (!(subscribed && step.includes('suscripcion'))) {
-      const selection = http.expectOne(`${base}/seleccion-provisional`);
+      const selection = http.expectOne(`${base}/seleccion`);
       expect(selection.request.method).toBe('GET');
-      selection.flush({
-        solicitudId: REQUEST.id,
-        seleccion: null,
-        aceptacion: selected ? SELECTION : null,
-        estadoOferta: null,
-      });
-    }
-    if (step.includes('suscripcion') && !subscribed) {
-      const redirected = await vi.waitFor(() => http.expectOne(`${base}/seleccion-provisional`));
-      redirected.flush({
-        solicitudId: REQUEST.id,
-        seleccion: null,
-        aceptacion: selected ? SELECTION : null,
-        estadoOferta: null,
-      });
+      if (selected) {
+        selection.flush(SELECTION);
+      } else {
+        selection.flush({}, { status: 404, statusText: 'Not Found' });
+      }
     }
     await navigation;
   }
@@ -201,7 +191,7 @@ describe('historical quote route integration', () => {
         estado: status,
         decision: { ...SUBSCRIPTION.decision, resultado: status },
       });
-      http.expectNone(`${base}/seleccion-provisional`);
+      http.expectNone(`${base}/seleccion`);
       await navigation;
       expect(TestBed.inject(Router).url).toContain('/app/cotizaciones/suscripcion?');
       expect(profiling.loadProfile).not.toHaveBeenCalled();
@@ -217,7 +207,7 @@ describe('historical quote route integration', () => {
     request.flush(REQUEST);
     http.expectOne(`${base}/suscripcion`).flush({}, { status: 404, statusText: 'Not Found' });
     http
-      .expectOne(`${base}/seleccion-provisional`)
+      .expectOne(`${base}/seleccion`)
       .flush({ code: 'perfil_vencido' }, { status: 422, statusText: 'Unprocessable Entity' });
     await navigation;
 
@@ -245,59 +235,5 @@ describe('historical quote route integration', () => {
 
     expect(TestBed.inject(Router).url).toBe(`/app/cotizaciones/aceptacion?solicitud=${REQUEST.id}`);
     expect(profiling.loadProfile).not.toHaveBeenCalled();
-  });
-
-  it('recovers a provisional selection without inventing acceptance', async () => {
-    const navigation = harness.navigateByUrl(
-      `/app/cotizaciones/aceptacion?solicitud=${REQUEST.id}`,
-    );
-    const request = await vi.waitFor(() => http.expectOne(base));
-    request.flush(REQUEST);
-    http.expectOne(`${base}/suscripcion`).flush({}, { status: 404, statusText: 'Not Found' });
-    http.expectOne(`${base}/seleccion-provisional`).flush({
-      solicitudId: REQUEST.id,
-      seleccion: { ...SELECTION, revision: 2, vigenteHasta: '2030-01-01T00:00:00Z' },
-      aceptacion: null,
-      estadoOferta: 'disponible',
-    });
-    await navigation;
-    expect(TestBed.inject(OFFER_SELECTION_STORAGE).read()).toMatchObject({
-      confirmed: false,
-      revision: 2,
-      offerId: SELECTION.ofertaId,
-    });
-    expect(profiling.loadProfile).toHaveBeenCalledWith(REQUEST.id);
-    http.expectNone(`${base}/seleccion`);
-  });
-
-  it('refreshes canonical selection on routes without query parameters instead of trusting cache', async () => {
-    TestBed.inject(QuoteRequestService).activate({
-      id: REQUEST.id,
-      productId: REQUEST.productoId,
-      customerType: 'natural',
-      documentType: 'cc',
-      nationalId: REQUEST.identificacion,
-      productData: REQUEST.datosProducto,
-      email: REQUEST.correo,
-      phone: REQUEST.telefono,
-      status: 'received',
-      createdAt: REQUEST.creadaEn,
-    });
-    TestBed.inject(OFFER_SELECTION_STORAGE).write({
-      quoteId: REQUEST.id,
-      offerId: SELECTION.ofertaId,
-      offerVersion: 1,
-      offerName: SELECTION.nombreOferta,
-      premium: { amount: 10_000, currency: 'COP' },
-      periodicity: 'mensual',
-      selectedAt: SELECTION.seleccionadaEn,
-      confirmed: true,
-    });
-    const navigation = harness.navigateByUrl('/app/cotizaciones/ofertas');
-    const state = await vi.waitFor(() => http.expectOne(`${base}/seleccion-provisional`));
-    state.flush({ solicitudId: REQUEST.id, seleccion: null, aceptacion: null, estadoOferta: null });
-    await navigation;
-    expect(TestBed.inject(OFFER_SELECTION_STORAGE).read()).toBeNull();
-    expect(profiling.loadProfile).toHaveBeenCalledWith(REQUEST.id);
   });
 });

@@ -20,8 +20,4 @@ export class MockAdvisorExceptionsGateway implements AdvisorExceptionsGateway {
   resolve(): Observable<ResolvedAdvisorException> {
     return throwError(() => new AdvisorExceptionError('excepcion_no_encontrada'));
   }
-
-  apply(): Observable<ResolvedAdvisorException> {
-    return throwError(() => new AdvisorExceptionError('excepcion_no_encontrada'));
-  }
 }

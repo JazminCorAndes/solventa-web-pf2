@@ -254,60 +254,6 @@ identidad, BFF, cotización, perfilamiento y bases migradas. Contiene únicament
 sintética `BANK-E2E`, sin tokens ni credenciales, y se importa solo en pruebas. Coteja el
 consumidor con una respuesta real del contrato; no sustituye la verificación en AWS/Pages.
 
-### Aislamiento de consultas y revisión
-
-La consulta de información del cliente descarta resultados y errores tardíos al cambiar
-de usuario, socio u operación. Recuperar otra operación desde la URL hace una lectura,
-sin repetir su envío. Guardar en la URL el identificador de una consulta nueva tampoco
-dispara una lectura prematura ni permite enviar desde una navegación de otra sesión.
-El backoffice aplica el mismo aislamiento por asesor, socio y excepción: limpia el motivo
-al cambiar de contexto, pero lo conserva al reintentar la lectura del mismo caso.
-Estas comprobaciones de UI no sustituyen la autorización del backend ni deshacen una
-operación que el servicio ya haya recibido.
-
-### Revisión de consultas HU44 y backoffice (SOL-204/331)
-
-Este consumo requiere backend `d0a3145918c019b1cfb347faa1a8d0d5d05dac8d` o una
-revisión compatible, con sus migraciones. No se debe desplegar contra el contrato
-anterior. El productor es exclusivamente el formulario de consulta del socio:
-`POST /v1/socios/consultas-informacion-cliente`. Solo un `503` problem+json con
-`code: consulta_bloqueada` y una operación válida, del mismo contexto, abre la
-revisión. Un `503` genérico no crea un caso local. No cambia HU48 ni se convierte
-el fallback hipotecario en una excepción.
-
-La bandeja `/asesor/excepciones` mantiene las decisiones pendientes por defecto.
-El filtro `estadoAplicacion=pendiente|completada|bloqueada|detenida`, conservado en
-la URL, permite recuperar también decisiones ya guardadas. El detalle muestra
-por separado la decisión (`estado`, actor, motivo y fecha), el proceso vinculado
-informado por backend y su aplicación. Nunca se inventa el solicitante.
-Los históricos con `proceso: null` y `aplicacion: null` no ofrecen reanudación.
-
-`POST .../{id}/resolver?socioId=...` mantiene `{ decision, motivo }`. Un `200` no
-demuestra éxito de la consulta: una decisión aprobada puede tener aplicación
-bloqueada. Ante un error ambiguo de entrega se vuelve a leer el caso; no se decide
-automáticamente otra vez ni se presenta el error como prueba de rollback.
-Solo una aplicación pendiente, sin acuse y con decisión persistida permite
-«Aplicar operación», mediante `POST .../{id}/aplicar?socioId=...` con `{}`.
-La acción es explícita; GET y recargas no aplican nada.
-
-`completada` indica un resultado persistido; `bloqueada` es un fallo terminal con
-causa explícita, y `detenida` conserva el rechazo sin consultar fuentes.
-Las aplicaciones terminales con `acuseId` no ofrecen reaplicar. El código de
-aplicación es abierto, no un catálogo cerrado. El acuse acredita persistencia
-del resultado de aplicación, **no recepción del solicitante ni autorización
-ampliada**.
-
-El socio conserva el identificador original en la URL y recupera
-`GET /v1/socios/consultas-informacion-cliente/{operationId}/estado?socioId=...`.
-Esa proyección no contiene datos financieros. Solo si está completada lee el
-GET de datos existente, cotejando operación, socio, cliente y producto; el backend
-revalida el consentimiento actual. El único fallback permitido es el
-`404` problem+json contractual `consulta_no_encontrada` de `/estado`, porque las
-consultas normales o históricas sin excepción no tienen esa proyección: entonces
-se intenta solo GET de datos. No hay fallback ni POST ante 401/403/503 de recuperación.
-Un error de lectura retira el resultado anterior; recuperar una operación no
-habilita otra consulta ni genera un UUID nuevo.
-
 ### Perfilamiento hipotecario del asesor (HU46)
 
 La ruta `/asesor/perfilamientos/nuevo` requiere una sesión con `usuario.rol: "asesor"`.
@@ -506,9 +452,7 @@ Solo una respuesta válida del servidor con `estado: "completada"` y asociación
 operación/socio/cliente/producto confirma el éxito. La pantalla presenta la oferta
 recomendada calculada por Cotización, con prima, periodicidad, cobertura, deducible,
 vigencia, fecha límite, condiciones y explicación de los factores determinantes,
-sin recalcular rating o riesgo ni mostrar hashes internos. Junto al identificador
-de operación presenta `perfilamientoReferencia` como referencia confirmada, solo
-cuando la respuesta completa ha sido validada; nunca se calcula desde otro campo.
+sin recalcular rating o riesgo ni mostrar hashes y referencias técnicas internas.
 El cliente valida también la trazabilidad recibida; si faltan la explicación, sus
 factores, las condiciones o las versiones requeridas, no presenta una oferta parcial
 como válida.
@@ -517,8 +461,6 @@ Antes de enviar se guarda únicamente operación y organización en la URL. Los 
 en la misma página conservan UUID y cuerpo original; `Retry-After` impide reenvíos mientras
 dure la espera. La recarga consulta
 `GET /v1/socios/solicitudes-cotizacion/{operationId}?socioId=...`, sin repetir el POST.
-La respuesta recuperada conserva visibles la operación y la referencia del perfil,
-sin reconstruir documento o referencia del crédito ausentes del contrato GET.
 Si devuelve `operacion_reintentable` o `operacion_no_encontrada`, se pueden reintroducir
 los mismos datos conservando la clave; el servidor detecta cambios mediante su idempotencia.
 Documento y cuerpo de la operación no se persisten en el navegador.
@@ -533,13 +475,10 @@ CD. Las pruebas locales no acreditan publicación ni persistencia productiva: la
 requiere recorrido de navegador en Pages contra AWS con identidades sintéticas autorizadas,
 verificación de asociación persistida y cierre de sesiones de prueba.
 
-Compatibilidad del despliegue con SOL201/SOL202: el perfil puede reutilizar evidencia en
-caché vigente o valores predeterminados del modelo, sin relajar consentimiento, versión,
-fechas ni indicadores. `fallbackUsed: true`
+Compatibilidad del despliegue con SOL201: el perfil puede reutilizar evidencia en caché
+vigente, sin relajar consentimiento, versión, fechas ni indicadores. `fallbackUsed: true`
 solo se acepta con `estadoFuentes` completo, único y coincidente con `fuentes`, con
-al menos un estado `cache` o `default` y ninguno `fallida`. El panel distingue los valores
-predeterminados de la caché y muestra el estado de cada fuente en el detalle, sin
-presentar una degradación como una consulta actual exitosa. Los perfiles anteriores sin esos
+al menos un estado `cache` y ninguno `fallida`. Los perfiles anteriores sin esos
 metadatos siguen permitidos únicamente con `fallbackUsed: false`. Se requieren
 `open_finance` y `open_data`; los adaptadores adicionales deben aportar evidencia
 completa y vigente, sin duplicados, y se muestran por su nombre como adicionales,
@@ -739,25 +678,22 @@ sesión se necesita una cuenta registrada en ese backend, no las credenciales de
 
 ## Comandos disponibles
 
-| Comando                        | Descripción                                                  |
-| ------------------------------ | ------------------------------------------------------------ |
-| `pnpm start`                   | Inicia el desarrollo con adaptadores simulados               |
-| `pnpm start:backend`           | Inicia el desarrollo conectado al BFF local                  |
-| `pnpm start:aws`               | Inicia el desarrollo conectado al backend en AWS             |
-| `pnpm build`                   | Genera el build de producción conectado al backend           |
-| `pnpm build:pages`             | Compila producción para la subruta Pages y genera `404.html` |
-| `pnpm build:dev`               | Genera un build de desarrollo con mocks                      |
-| `pnpm build:backend`           | Genera un build de desarrollo conectado al BFF local         |
-| `pnpm build:aws`               | Genera un build de desarrollo conectado al API en AWS        |
-| `pnpm test`                    | Ejecuta las pruebas en modo interactivo                      |
-| `pnpm test:ci`                 | Ejecuta las pruebas una sola vez                             |
-| `pnpm test:pages`              | Verifica la generación del fallback SPA de Pages             |
-| `pnpm test:coverage`           | Ejecuta las pruebas con cobertura y reporte JUnit            |
-| `pnpm test:cypress:ui`         | Ejecuta Cypress de interfaz con respuestas HTTP controladas  |
-| `pnpm test:cypress:integrated` | Ejecuta Cypress integrado contra los servicios reales        |
-| `pnpm lint`                    | Ejecuta ESLint                                               |
-| `pnpm format`                  | Formatea el código con Prettier                              |
-| `pnpm format:check`            | Comprueba el formato sin modificar archivos                  |
+| Comando              | Descripción                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| `pnpm start`         | Inicia el desarrollo con adaptadores simulados               |
+| `pnpm start:backend` | Inicia el desarrollo conectado al BFF local                  |
+| `pnpm start:aws`     | Inicia el desarrollo conectado al backend en AWS             |
+| `pnpm build`         | Genera el build de producción conectado al backend           |
+| `pnpm build:pages`   | Compila producción para la subruta Pages y genera `404.html` |
+| `pnpm build:dev`     | Genera un build de desarrollo con mocks                      |
+| `pnpm build:backend` | Genera un build de desarrollo conectado al BFF local         |
+| `pnpm build:aws`     | Genera un build de desarrollo conectado al API en AWS        |
+| `pnpm test`          | Ejecuta las pruebas en modo interactivo                      |
+| `pnpm test:ci`       | Ejecuta las pruebas una sola vez                             |
+| `pnpm test:pages`    | Verifica la generación del fallback SPA de Pages             |
+| `pnpm lint`          | Ejecuta ESLint                                               |
+| `pnpm format`        | Formatea el código con Prettier                              |
+| `pnpm format:check`  | Comprueba el formato sin modificar archivos                  |
 
 ## Verificación de la instalación
 
@@ -786,9 +722,6 @@ src/
     app.routes.ts     Rutas de la aplicación
   styles/             Tokens, tema Material y estilos base
   styles.scss         Punto de entrada de estilos
-tests/cypress/        Pruebas E2E de interfaz (ui) e integradas (integrated)
-infra/jenkins/        Pipeline de Jenkins bajo demanda
-scripts/              Utilidades de CI y de publicación en GitHub Pages
 ```
 
 ## Internacionalización
@@ -844,16 +777,6 @@ Los valores de compra, cuota y saldo hipotecario admiten enteros positivos de ha
 El catálogo muestra la disponibilidad real: los productos no disponibles se pueden consultar,
 pero no cotizar. Solo el error `404` con código `seguro_no_encontrado` representa un producto
 inexistente; un `404` de infraestructura se muestra como error recuperable.
-La solicitud distingue carga, catálogo vacío y error: solo una respuesta exitosa sin productos
-muestra el mensaje vacío accesible y traducido. Los errores conservan su mensaje y reintento.
-En la misma solicitud se muestran la descripción y `coberturasPrincipales` recibidas.
-«Ver coberturas y condiciones» consulta, con la autenticación habitual, el objeto directo de
-`GET /api/v1/productos-seguro/{id}`: coberturas, condiciones e información relevante.
-Los importes decimales se conservan como cadenas junto a su moneda, sin convertirlos a `number`.
-Cambiar de producto o salir cancela la lectura y retira el detalle anterior; una carga o un error
-de detalle bloquea la continuación hasta recuperar datos válidos. Un producto no disponible
-permite consultar su detalle, pero no cotizar. El modo mock no inventa coberturas ni condiciones:
-el detalle requiere conexión con el backend.
 
 En vuelos, `coverageType` admite `delay-cancellation`, `missed-connection` y
 `comprehensive`. El backend mantiene las solicitudes antiguas sin ese campo como
@@ -934,30 +857,8 @@ cotización. `sessionStorage` conserva la referencia necesaria para reanudar el 
 misma pestaña. Las ofertas vencidas o retiradas permanecen visibles para comparación, pero no
 se pueden seleccionar.
 
-Elegir una oferta guarda una preselección mediante
-`PUT /v1/solicitudes-cotizacion/{id}/seleccion-provisional`, con
-`{ ofertaId, version, revisionEsperada }` e `Idempotency-Key` UUID. Cambiar de oferta
-usa una clave nueva; reintentar un envío incierto conserva clave y cuerpo.
-El GET de esa ruta es la autoridad al reanudar y después de escribir: un replay
-puede devolver el acuse antiguo de A cuando la selección actual ya es B.
-`sessionStorage` es solo caché; nunca convierte un borrador antiguo en aceptación.
-
-La selección mediante `PUT /v1/solicitudes-cotizacion/{id}/seleccion` sigue siendo
-la aceptación definitiva. Solo se envía al confirmar las condiciones de la oferta
-mostrada, con `{ ofertaId, version, revisionSeleccion }` y otra clave UUID.
-Antes se vuelve a leer el estado canónico; si cambió la referencia o revisión,
-se retira el consentimiento y se exige revisar la selección actual. Un conflicto,
-volver o preseleccionar nunca inicia la suscripción. Una aceptación persistida es
-terminal y prevalece incluso en registros legados sin preselección.
-
-Desplegar primero backend `95a487c83618f983db81c9994588ddb50b7043f6` o una revisión
-compatible y aplicar todas sus migraciones (`0017`, `selecciones_provisionales`,
-depende de `conciliacion_emision`). La nueva web no oculta un 404 de esa ruta con
-selección local ni con la ruta histórica. El contrato anterior de aceptación sin
-`revisionSeleccion` se conserva en backend únicamente para operaciones sin provisional;
-los registros aceptados previos no requieren una nueva aceptación.
-
-La suscripción se inicia con
+La selección mediante `PUT /v1/solicitudes-cotizacion/{id}/seleccion` es la aceptación definitiva
+y envía `{ ofertaId, version }` con `Idempotency-Key` UUID. La suscripción se inicia con
 `POST /v1/solicitudes-cotizacion/{id}/suscripcion`, cuerpo `{}` y otra clave UUID; se consulta
 con `GET` sobre la misma ruta. La interfaz muestra las decisiones aprobada, en revisión o
 rechazada y los estados reales de la saga, sin presentar datos cacheados como éxito tras un error.
@@ -974,43 +875,11 @@ El `POST` sobre la misma ruta envía `{}`, Bearer JWT y `Idempotency-Key` UUID, 
 ni datos de tarjetas. La clave se conserva en `sessionStorage` por suscripción para reintentar
 incluso tras una recarga; el resultado siempre se recupera del servidor, no de un éxito local.
 La confirmación muestra la referencia `SIM-…`, el importe y el estado persistidos; después
-se vuelve a consultar la suscripción para mostrar su saga actual. El pago conserva una
-instantánea `pago_confirmado`: un HTTP 200 de pago o una póliza presente en el dashboard
-no confirman el cierre. Solo `GET .../suscripcion` con saga `emitida` permite mostrarlo.
-
-Un 503 puede ocurrir después de persistir pago y póliza, por pérdida del acuse de emisión;
-no se rotula como pago rechazado. «Actualizar estado» consulta la suscripción y el pago.
-Si el pago está confirmado pero la saga sigue `pago_confirmado`, «Reintentar emisión»
-reenvía explícitamente el mismo POST, solicitud y clave original, sin crear otro pago.
-Está disponible también en el detalle y vuelve a leer la saga después del reintento.
-No envía automáticamente, no genera otra clave y rechaza una identidad de pago distinta.
-Si falta la clave original de esta pestaña, solo permite consultar estado y explica el
-bloqueo. Una saga `emitida` elimina la acción; el GET por sí solo no concilia la emisión.
-
-El mismo endpoint también devuelve HTTP 200 con `estado: rechazado`, `rechazadaEn`,
-`motivo: rechazo_simulado` y la saga persistida `pago_pendiente` v1, **sin `confirmadaEn`**.
-Es un rechazo definitivo de la simulación, no un error 422/503 ni un pago financiero pendiente.
-Estado, detalle y dashboard muestran su fecha y motivo; el historial no lo cuenta como pago
-confirmado ni deduce una póliza. El navegador no puede elegir el resultado.
-
-Tras ese rechazo, «Preparar un nuevo intento» solicita confirmación explícita antes de enviar
-otro POST con una clave nueva. Cancelar, consultar, recargar o montar la pantalla no lo envían.
-La clave conserva metadata mínima de resolución en `sessionStorage`: un POST ambiguo de un
-nuevo intento sigue pendiente de resolver aunque GET todavía devuelva el rechazo anterior.
-«Recuperar el mismo intento» reenvía esa misma clave, sin habilitar una tercera. Esta metadata
-no sustituye el resultado autoritativo del servidor. Una respuesta antigua rechazada no
-reemplaza un confirmado conocido; la identidad de este último se conserva al recuperar.
-Un nuevo intento explícito tras rechazo puede devolver otro ID válido o el confirmado ya
-existente por una carrera, sin confundirlo con la recuperación de emisión de un pago confirmado.
-El backend debe incluir la migración `intentos_pago_simulado` antes de consumir estos endpoints,
-también para el dashboard.
-
+se vuelve a consultar la suscripción para mostrar la saga `pago_confirmado`.
 Las periodicidades `mensual`, `por_viaje`, `por_vuelo` y `por_periodo` se conservan sin convertirlas
-en mensualidades. Las decisiones de suscripción en revisión/rechazada y las sagas fallida/emitida
-no habilitan nuevos intentos de pago.
-Esta simulación requiere el modo backend: no cobra dinero ni abre un checkout real.
-La póliza académica depende de la emisión confirmada por el servicio y no acredita
-cobertura real, documento ni firma. No se implementa un éxito ficticio en el modo mock.
+en mensualidades. Los estados en revisión, rechazada, fallida o emitida no habilitan nuevos pagos.
+Esta simulación requiere el modo backend: no cobra dinero, no abre un checkout real y no
+emite pólizas. No se implementa un éxito ficticio en el modo mock.
 Siniestros, detalle de pólizas, notificaciones y recuperación de contraseña permanecen
 fuera del alcance actual.
 
@@ -1031,21 +900,6 @@ fuera del alcance actual.
 ### El puerto 4200 está ocupado
 
 Cierra el proceso que utiliza el puerto o consulta con el equipo el puerto alternativo acordado.
-En Windows puedes identificarlo con `netstat -ano | findstr :4200` y cerrarlo con
-`taskkill /PID <pid> /F`. Si la pantalla sigue mostrando una versión anterior, reinicia
-`pnpm start` y recarga con Ctrl + Shift + R.
-
-### Cypress falla con `bad option: --ping`
-
-La variable de entorno `ELECTRON_RUN_AS_NODE` está definida (algunos editores la exportan).
-Quítala antes de ejecutar Cypress, por ejemplo `env -u ELECTRON_RUN_AS_NODE pnpm test:cypress:ui`
-en Git Bash.
-
-### Prettier modifica archivos que no tocaste
-
-En Windows con `core.autocrlf=true`, `pnpm format` sobre todo el repositorio puede cambiar fines de
-línea de archivos ajenos. Formatea solo los archivos modificados:
-`pnpm exec prettier --write <archivos>`.
 
 ### Las pruebas o el build fallan
 

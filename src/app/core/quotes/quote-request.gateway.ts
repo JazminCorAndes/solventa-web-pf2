@@ -2,7 +2,6 @@ import { InjectionToken } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   InsuranceProduct,
-  InsuranceProductDetail,
   QuoteRequestDraft,
   QuoteRequestRecord,
   TravelDestination,
@@ -11,7 +10,6 @@ import {
 export interface QuoteRequestGateway {
   loadRequest(id: string): Observable<QuoteRequestRecord>;
   loadProducts(): Observable<InsuranceProduct[]>;
-  loadProductDetail(id: string): Observable<InsuranceProductDetail>;
   loadTravelDestinations(): Observable<TravelDestination[]>;
   submitRequest(request: QuoteRequestDraft): Observable<QuoteRequestRecord>;
 }

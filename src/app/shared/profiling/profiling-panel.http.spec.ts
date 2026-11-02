@@ -126,65 +126,52 @@ describe('Panel de consentimiento con gateway HTTP autenticado', () => {
     http.expectNone((pending) => pending.method === 'PUT');
   });
 
-  it.each(['disponible', 'default'] as const)(
-    'consulta el perfil %s solo tras autorizar y lo retira antes de confirmar revocacion',
-    (state) => {
-      const consent = {
-        ...createConsent(),
-        efectivaEn: new Date(serverTime).toISOString(),
-        vigenteHasta: new Date(serverTime + 30 * 86400000).toISOString(),
-      };
-      click(es.profiling.authorize);
-      http.expectOne(url).flush(consent, { headers });
-      fixture.componentRef.setInput('requestId', 'AQT-2026-123456');
-      fixture.detectChanges();
-      // El primer cambio de input se deja a OnInit; recargar representa abrir el resumen.
-      fixture.componentInstance.reload();
-      http.expectOne(url).flush(consent, { headers });
-      const profile = createProfile();
-      profile.fallbackUsed = state === 'default';
-      profile.estadoFuentes = profile.fuentes.map((source) => ({
-        fuente: source.nombre,
-        estado: state,
-        intentos: 1,
-        motivo: state === 'default' ? 'fuente_no_disponible' : null,
-      }));
-      profile.calculadoEn = new Date(serverTime).toISOString();
-      profile.vigenteHasta = new Date(serverTime + 900000).toISOString();
-      profile.fuentes.forEach((source) => {
-        source.consultadaEn = profile.calculadoEn;
-        source.vigenteHasta = profile.vigenteHasta;
-      });
-      http
-        .expectOne(
-          `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/AQT-2026-123456/perfilamiento`,
-        )
-        .flush(profile, { headers });
-      fixture.detectChanges();
-      expect(fixture.componentInstance.profile()?.perfilId).toBe(profile.perfilId);
-      if (state === 'default') {
-        expect(fixture.nativeElement.textContent).toContain('valores predeterminados');
-      }
-      click(es.profiling.revoke);
-      http.expectNone(url);
-      expect(fixture.componentInstance.profile()).not.toBeNull();
-      click(es.profiling.revocation.cancel);
-      http.expectNone(url);
-      expect(fixture.componentInstance.authorized()).toBe(true);
-      click(es.profiling.revoke);
-      click(es.profiling.revocation.confirm);
-      expect(fixture.componentInstance.profile()).toBeNull();
-      expect(fixture.nativeElement.textContent).not.toContain(es.profiling.consentStatus.revocado);
-      const revocation = http.expectOne(url);
-      expect(revocation.request.body).toEqual({ autorizado: false, version: 1 });
-      revocation.flush({ ...consent, estado: 'revocado', version: 2 }, { headers });
-      fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).toContain(es.profiling.consentStatus.revocado);
-      expect(fixture.nativeElement.textContent).not.toContain(es.partnerQuote.shareConsent);
-      expect(fixture.componentInstance.authorized()).toBe(false);
-      http.expectNone((request) => request.url.includes('solicitudes-cotizacion'));
-    },
-  );
+  it('consulta el perfil solo tras autorizar y lo retira antes de confirmar revocacion', () => {
+    const consent = {
+      ...createConsent(),
+      efectivaEn: new Date(serverTime).toISOString(),
+      vigenteHasta: new Date(serverTime + 30 * 86400000).toISOString(),
+    };
+    click(es.profiling.authorize);
+    http.expectOne(url).flush(consent, { headers });
+    fixture.componentRef.setInput('requestId', 'AQT-2026-123456');
+    fixture.detectChanges();
+    // El primer cambio de input se deja a OnInit; recargar representa abrir el resumen.
+    fixture.componentInstance.reload();
+    http.expectOne(url).flush(consent, { headers });
+    const profile = createProfile();
+    profile.calculadoEn = new Date(serverTime).toISOString();
+    profile.vigenteHasta = new Date(serverTime + 900000).toISOString();
+    profile.fuentes.forEach((source) => {
+      source.consultadaEn = profile.calculadoEn;
+      source.vigenteHasta = profile.vigenteHasta;
+    });
+    http
+      .expectOne(
+        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/AQT-2026-123456/perfilamiento`,
+      )
+      .flush(profile, { headers });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.profile()?.perfilId).toBe(profile.perfilId);
+    click(es.profiling.revoke);
+    http.expectNone(url);
+    expect(fixture.componentInstance.profile()).not.toBeNull();
+    click(es.profiling.revocation.cancel);
+    http.expectNone(url);
+    expect(fixture.componentInstance.authorized()).toBe(true);
+    click(es.profiling.revoke);
+    click(es.profiling.revocation.confirm);
+    expect(fixture.componentInstance.profile()).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain(es.profiling.consentStatus.revocado);
+    const revocation = http.expectOne(url);
+    expect(revocation.request.body).toEqual({ autorizado: false, version: 1 });
+    revocation.flush({ ...consent, estado: 'revocado', version: 2 }, { headers });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(es.profiling.consentStatus.revocado);
+    expect(fixture.nativeElement.textContent).not.toContain(es.partnerQuote.shareConsent);
+    expect(fixture.componentInstance.authorized()).toBe(false);
+    http.expectNone((request) => request.url.includes('solicitudes-cotizacion'));
+  });
 
   it.each([
     [400, 'solicitud_invalida', es.profiling.errors.incompleteRequest],

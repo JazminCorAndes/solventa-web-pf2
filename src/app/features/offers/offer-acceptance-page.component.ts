@@ -3,15 +3,10 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
-  effect,
   inject,
-  OnDestroy,
   OnInit,
   signal,
-  untracked,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
@@ -20,9 +15,8 @@ import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { defer, finalize, switchMap, take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { OfferSelectionChangedError, OfferUnavailableError } from '../../core/offers/offer.errors';
-import { OfferSelectionReference } from '../../core/offers/offer.models';
-import { OfferSelectionService, sameReference } from '../../core/offers/offer-selection.service';
+import { OfferUnavailableError } from '../../core/offers/offer.errors';
+import { OfferSelectionService } from '../../core/offers/offer-selection.service';
 import { ACTIVE_MARKET } from '../../core/market/market.config';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
 import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
@@ -46,10 +40,8 @@ import { profilingErrorKey } from '../../core/profiling/profiling.errors';
   templateUrl: './offer-acceptance-page.component.html',
   styleUrl: './offer-acceptance-page.component.scss',
 })
-export class OfferAcceptancePageComponent implements OnInit, OnDestroy {
+export class OfferAcceptancePageComponent implements OnInit {
   private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly consentReference = signal<OfferSelectionReference | null>(null);
   readonly offers = inject(OfferSelectionService);
   readonly subscriptions = inject(SubscriptionService);
   readonly quotes = inject(QuoteRequestService);
@@ -65,16 +57,9 @@ export class OfferAcceptancePageComponent implements OnInit, OnDestroy {
   );
   readonly request = this.quotes.latestRequest;
   readonly selectedOffer = this.offers.selectedOffer;
-  readonly confirmed = computed(() => {
-    const accepted = this.offers.confirmedSelection();
-    const offer = this.selectedOffer();
-    return (
-      !!accepted &&
-      !!offer &&
-      accepted.offerId === offer.id &&
-      accepted.offerVersion === offer.version
-    );
-  });
+  readonly confirmed = computed(
+    () => this.offers.confirmedSelection()?.offerId === this.selectedOffer()?.id,
+  );
   readonly productName = computed(() => {
     const request = this.request();
     return (
@@ -97,15 +82,6 @@ export class OfferAcceptancePageComponent implements OnInit, OnDestroy {
       : [];
   });
 
-  constructor() {
-    effect(() => {
-      const current = this.offers.selectionReference();
-      if (this.accepted() && !sameReference(this.consentReference(), current)) {
-        untracked(() => this.clearConsent());
-      }
-    });
-  }
-
   ngOnInit(): void {
     this.quotes.loadProducts();
     this.quotes.loadTravelDestinations();
@@ -113,37 +89,35 @@ export class OfferAcceptancePageComponent implements OnInit, OnDestroy {
   }
 
   updateConsent(event: MatCheckboxChange): void {
-    const reference = this.offers.selectionReference();
-    this.consentReference.set(event.checked && this.offers.canContinue() ? reference : null);
-    this.accepted.set(event.checked && this.consentReference() !== null);
+    this.accepted.set(event.checked);
     if (!this.flowInvalidated()) {
       this.errorKey.set(null);
     }
   }
 
   confirm(): void {
-    if (
-      !this.accepted() ||
-      this.confirming() ||
-      this.confirmed() ||
-      this.flowInvalidated() ||
-      !this.offers.canContinue()
-    ) {
+    if (!this.accepted() || this.confirming() || this.confirmed() || this.flowInvalidated()) {
       return;
     }
 
     this.confirming.set(true);
     this.errorKey.set(null);
-    defer(() => this.offers.confirmSelected(this.consentReference()))
+    defer(() => this.offers.confirmSelected())
       .pipe(
         switchMap(() => this.subscriptions.start()),
         take(1),
-        takeUntilDestroyed(this.destroyRef),
         finalize(() => this.confirming.set(false)),
       )
       .subscribe({
         next: () => void this.router.navigate(['/app/cotizaciones/suscripcion']),
-        error: (error: unknown) => this.showError(error),
+        error: (error: unknown) => {
+          this.errorKey.set(
+            profilingErrorKey(error) ??
+              (error instanceof OfferUnavailableError
+                ? 'acceptance.errors.unavailable'
+                : 'acceptance.errors.subscription'),
+          );
+        },
       });
   }
 
@@ -153,39 +127,15 @@ export class OfferAcceptancePageComponent implements OnInit, OnDestroy {
     }
     this.confirming.set(true);
     this.errorKey.set(null);
-    defer(() => this.offers.requireAcceptedSelection())
+    defer(() => this.subscriptions.start())
       .pipe(
-        switchMap(() => this.subscriptions.start()),
         take(1),
-        takeUntilDestroyed(this.destroyRef),
         finalize(() => this.confirming.set(false)),
       )
       .subscribe({
         next: () => void this.router.navigate(['/app/cotizaciones/suscripcion']),
-        error: (error: unknown) => this.showError(error),
+        error: (error: unknown) =>
+          this.errorKey.set(profilingErrorKey(error) ?? 'acceptance.errors.subscription'),
       });
-  }
-
-  ngOnDestroy(): void {
-    this.offers.cancelPending();
-  }
-
-  private clearConsent(): void {
-    this.accepted.set(false);
-    this.consentReference.set(null);
-  }
-
-  private showError(error: unknown): void {
-    this.clearConsent();
-    this.errorKey.set(
-      profilingErrorKey(error) ??
-        (error instanceof OfferSelectionChangedError
-          ? 'acceptance.errors.selectionChanged'
-          : error instanceof OfferUnavailableError
-            ? 'acceptance.errors.unavailable'
-            : this.confirmed()
-              ? 'acceptance.errors.subscription'
-              : 'acceptance.errors.confirmation'),
-    );
   }
 }

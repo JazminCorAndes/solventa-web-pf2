@@ -4,7 +4,6 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
-import { OfferSelectionChangedError, OfferUnavailableError } from '../../core/offers/offer.errors';
 import { QuoteRequestRecord } from '../../core/quotes/quote-request.models';
 import {
   QUOTE_REQUEST_STORAGE,
@@ -52,28 +51,6 @@ const CALCULATION_RESPONSE = {
   tasaAplicada: 'Estándar',
   ofertas: [OFFER],
 };
-const SELECTION_RESPONSE = {
-  solicitudId: REQUEST.id,
-  ofertaId: OFFER.id,
-  version: OFFER.version,
-  nombreOferta: OFFER.nombre,
-  prima: OFFER.prima,
-  periodicidad: OFFER.periodicidad,
-  primaMensual: OFFER.primaMensual,
-  seleccionadaEn: '2026-10-11T18:05:00Z',
-};
-const PROVISIONAL_RESPONSE = {
-  ...SELECTION_RESPONSE,
-  revision: 1,
-  vigenteHasta: '2030-01-01T00:00:00Z',
-};
-const PROVISIONAL_COMMAND = {
-  quoteId: REQUEST.id,
-  offerId: OFFER.id,
-  offerVersion: OFFER.version,
-  expectedRevision: 0,
-  idempotencyKey: '20000000-0000-4000-8000-000000000001',
-};
 
 class TestQuoteStorage implements QuoteRequestStorage {
   read(): QuoteRequestRecord {
@@ -101,169 +78,6 @@ describe('HttpOfferGateway', () => {
   });
 
   afterEach(() => http.verify());
-
-  it('sends the provisional revision and caller-owned idempotency key without accepting', async () => {
-    const result = firstValueFrom(gateway.saveProvisionalSelection(PROVISIONAL_COMMAND));
-    const request = http.expectOne(
-      `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion-provisional`,
-    );
-    expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual({
-      ofertaId: OFFER.id,
-      version: OFFER.version,
-      revisionEsperada: 0,
-    });
-    expect(request.request.headers.get('Idempotency-Key')).toBe(PROVISIONAL_COMMAND.idempotencyKey);
-    request.flush(PROVISIONAL_RESPONSE);
-    await expect(result).resolves.toMatchObject({
-      confirmed: false,
-      revision: 1,
-      validUntil: PROVISIONAL_RESPONSE.vigenteHasta,
-      premium: { amount: 189_900, currency: 'COP' },
-      periodicity: 'mensual',
-    });
-    http.expectNone(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`);
-  });
-
-  it('sends the reviewed provisional revision only on explicit acceptance', async () => {
-    const result = firstValueFrom(gateway.confirmSelection(REQUEST.id, OFFER.id, OFFER.version, 2));
-    const request = http.expectOne(
-      `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`,
-    );
-    expect(request.request.body).toEqual({
-      ofertaId: OFFER.id,
-      version: OFFER.version,
-      revisionSeleccion: 2,
-    });
-    request.flush(SELECTION_RESPONSE);
-    await expect(result).resolves.toMatchObject({ confirmed: true, offerId: OFFER.id });
-  });
-
-  it.each([false, true])(
-    'recovers terminal acceptance with provisional=%s',
-    async (provisional) => {
-      const result = firstValueFrom(gateway.loadSelectionState(REQUEST.id));
-      http
-        .expectOne(
-          `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion-provisional`,
-        )
-        .flush({
-          solicitudId: REQUEST.id,
-          seleccion: provisional ? PROVISIONAL_RESPONSE : null,
-          aceptacion: SELECTION_RESPONSE,
-          estadoOferta: provisional ? 'aceptada' : null,
-        });
-      const state = await result;
-      expect(state.acceptance?.confirmed).toBe(true);
-      expect(state.acceptance?.offerId).toBe(OFFER.id);
-      expect(state.selection?.confirmed ?? null).toBe(provisional ? false : null);
-      expect(state.offerStatus).toBe(provisional ? 'accepted' : null);
-    },
-  );
-
-  it('keeps an empty canonical state distinct from a missing backend route', async () => {
-    const url = `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion-provisional`;
-    const empty = firstValueFrom(gateway.loadSelectionState(REQUEST.id));
-    http.expectOne(url).flush({
-      solicitudId: REQUEST.id,
-      seleccion: null,
-      aceptacion: null,
-      estadoOferta: null,
-    });
-    await expect(empty).resolves.toEqual({
-      quoteId: REQUEST.id,
-      selection: null,
-      acceptance: null,
-      offerStatus: null,
-    });
-    const unavailable = firstValueFrom(gateway.loadSelectionState(REQUEST.id));
-    const assertion = expect(unavailable).rejects.toMatchObject({ status: 404 });
-    http.expectOne(url).flush({}, { status: 404, statusText: 'Not Found' });
-    await assertion;
-    http.expectNone(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion`);
-  });
-
-  it.each([
-    { revision: 0 },
-    { revision: null },
-    { revision: '1' },
-    { revision: true },
-    { vigenteHasta: null },
-    { vigenteHasta: 'invalid' },
-    { vigenteHasta: '2030-01-01T00:00:00+00:00' },
-    { solicitudId: 'another-quote' },
-    { ofertaId: 'another-offer' },
-    { version: 2 },
-  ])('rejects invalid provisional metadata or a mismatched receipt: %j', async (fields) => {
-    const result = firstValueFrom(gateway.saveProvisionalSelection(PROVISIONAL_COMMAND));
-    const assertion = expect(result).rejects.toThrow();
-    http
-      .expectOne(
-        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion-provisional`,
-      )
-      .flush({ ...PROVISIONAL_RESPONSE, ...fields });
-    await assertion;
-  });
-
-  it.each([
-    { solicitudId: 'another-quote', seleccion: null, aceptacion: null, estadoOferta: null },
-    {
-      solicitudId: REQUEST.id,
-      seleccion: PROVISIONAL_RESPONSE,
-      aceptacion: null,
-      estadoOferta: null,
-    },
-    {
-      solicitudId: REQUEST.id,
-      seleccion: PROVISIONAL_RESPONSE,
-      aceptacion: null,
-      estadoOferta: 'aceptada',
-    },
-    {
-      solicitudId: REQUEST.id,
-      seleccion: PROVISIONAL_RESPONSE,
-      aceptacion: SELECTION_RESPONSE,
-      estadoOferta: 'disponible',
-    },
-  ])('rejects an inconsistent canonical response: %j', async (response) => {
-    const result = firstValueFrom(gateway.loadSelectionState(REQUEST.id));
-    const assertion = expect(result).rejects.toThrow();
-    http
-      .expectOne(
-        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion-provisional`,
-      )
-      .flush(response);
-    await assertion;
-  });
-
-  it.each([
-    { status: 409, code: 'seleccion_desactualizada', expected: OfferSelectionChangedError },
-    { status: 409, code: 'seleccion_no_modificable', expected: OfferSelectionChangedError },
-    { status: 422, code: 'oferta_no_disponible', expected: OfferUnavailableError },
-  ])('maps controlled $code without inventing success', async ({ status, code, expected }) => {
-    const result = firstValueFrom(gateway.saveProvisionalSelection(PROVISIONAL_COMMAND));
-    const assertion = expect(result).rejects.toBeInstanceOf(expected);
-    http
-      .expectOne(
-        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion-provisional`,
-      )
-      .flush({ code }, { status, statusText: 'Error' });
-    await assertion;
-  });
-
-  it('preserves an idempotency conflict instead of treating it as a valid selection', async () => {
-    const result = firstValueFrom(gateway.saveProvisionalSelection(PROVISIONAL_COMMAND));
-    const assertion = expect(result).rejects.toMatchObject({
-      status: 409,
-      error: { code: 'conflicto_idempotencia' },
-    });
-    http
-      .expectOne(
-        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${REQUEST.id}/seleccion-provisional`,
-      )
-      .flush({ code: 'conflicto_idempotencia' }, { status: 409, statusText: 'Conflict' });
-    await assertion;
-  });
 
   it('maps an accepted offer returned by the backend', async () => {
     const result = firstValueFrom(gateway.loadOffers());

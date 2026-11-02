@@ -17,12 +17,12 @@ export class BrowserSubscriptionStorage implements SubscriptionStorage {
   private readonly storage = inject(DOCUMENT).defaultView?.sessionStorage;
 
   read(): SubscriptionRecord | null {
-    const storedJson = this.storage?.getItem(STORAGE_KEY);
-    if (!storedJson) {
+    const value = this.storage?.getItem(STORAGE_KEY);
+    if (!value) {
       return null;
     }
     try {
-      const parsed: unknown = JSON.parse(storedJson);
+      const parsed: unknown = JSON.parse(value);
       if (isSubscription(parsed)) {
         return parsed;
       }

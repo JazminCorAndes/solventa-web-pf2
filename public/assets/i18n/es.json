@@ -24,7 +24,6 @@
     "phoneInvalid": "Ingresa +57 seguido de 10 dígitos.",
     "versionInvalid": "Ingresa una versión entera mayor o igual a 1.",
     "operation": "Identificador de operación",
-    "profileReference": "Referencia de perfilamiento confirmada",
     "recoveryNote": "La dirección de esta página conserva solo la operación y la organización. Al recargar se consulta su resultado; si debes reintentar, ingresa exactamente los mismos datos. No se guardan documentos ni teléfonos en el navegador.",
     "recover": "Consultar resultado",
     "retryAfter": "Espera {{ seconds }} segundos antes de reintentar.",
@@ -145,14 +144,6 @@
     "consultedAt": "Fecha de consulta",
     "evidence": "Fuentes consultadas",
     "newConsultation": "Nueva consulta",
-    "review": {
-      "title": "Estado de la consulta en revisión",
-      "decision": "Decisión del backoffice",
-      "noData": "Sin resultado autorizado consultado",
-      "awaitingRead": "Pendiente de recuperar el estado",
-      "refresh": "Consultar estado actual",
-      "readOnly": "Consultar el estado no repite la operación. Los datos se recuperan solo tras completar la aplicación y validar el consentimiento vigente."
-    },
     "data": {
       "indicadorRiesgo": "Indicador de riesgo"
     },
@@ -161,7 +152,6 @@
       "document": "El número no corresponde al tipo de documento seleccionado.",
       "consent": "El cliente no tiene un consentimiento vigente que cubra esta consulta.",
       "client": "El cliente seleccionado no está registrado.",
-      "operation": "No se encontró un resultado disponible para esta operación.",
       "forbidden": "El socio, producto o finalidad no están autorizados.",
       "conflict": "El identificador de operación ya fue utilizado con otros datos.",
       "unavailable": "No fue posible consultar todas las fuentes. No se muestran datos parciales."
@@ -263,23 +253,6 @@
     "changeInsurance": "Elegir seguro",
     "unavailableProduct": "No disponible para cotizar",
     "loadingProducts": "Cargando seguros disponibles",
-    "emptyProducts": "No hay seguros disponibles en este momento.",
-    "productDetails": {
-      "mainCoverages": "Coberturas principales",
-      "view": "Ver coberturas y condiciones",
-      "title": "Detalle del seguro",
-      "loading": "Cargando detalle del seguro",
-      "error": "No fue posible consultar el detalle. Reintenta antes de continuar.",
-      "notFound": "El seguro consultado ya no existe. Reintenta o selecciona otro seguro.",
-      "coverages": "Coberturas",
-      "conditions": "Condiciones",
-      "noCoverages": "El servicio no informa coberturas para este seguro.",
-      "noConditions": "El servicio no informa condiciones para este seguro.",
-      "insuredAmount": "Suma asegurada",
-      "deductible": "Deducible",
-      "validity": "Vigencia",
-      "backendRequired": "El detalle requiere conexión con el backend; no se simulan coberturas ni condiciones."
-    },
     "documentType": "Tipo de documento",
     "documentTypes": {
       "cc": "Cédula de ciudadanía",
@@ -370,12 +343,6 @@
   "profiling": {
     "additionalSource": "Adaptador adicional: {{ name }}",
     "cachedEvidence": "El servidor reutilizó evidencia en caché que sigue vigente y vinculada al consentimiento actual. Las fuentes siguen siendo simuladas.",
-    "defaultEvidence": "Este perfil incluye valores predeterminados del modelo, no resultados actuales de esas fuentes. Consulta el estado de cada fuente en el detalle.",
-    "sourceState": {
-      "disponible": "Estado: disponible",
-      "cache": "Estado: caché vigente autorizada",
-      "default": "Estado: valor predeterminado del modelo"
-    },
     "sessionIdentity": "Tu identidad y tus datos de contacto se obtienen de tu sesión autenticada. No necesitas ingresarlos de nuevo.",
     "title": "Información de perfilamiento",
     "detail": "Detalle del perfil y fuentes",
@@ -506,8 +473,6 @@
     "title": "Elige tu plan",
     "subtitle": "Compara coberturas y selecciona la opción que mejor se ajusta a tus necesidades.",
     "loading": "Actualizando ofertas disponibles",
-    "savingSelection": "Guardando preselección",
-    "refreshSelection": "Actualizar selección",
     "recommendedPlan": "Plan recomendado",
     "premiumLabels": {
       "mensual": "Prima mensual",
@@ -560,8 +525,6 @@
       "loadTitle": "No pudimos cargar las ofertas",
       "loadBody": "Inténtalo nuevamente para consultar las opciones disponibles.",
       "unavailable": "La oferta seleccionada cambió o venció. Revisa las opciones actualizadas.",
-      "selectionSave": "No fue posible guardar la preselección. Reintenta o consulta el estado actual.",
-      "selectionChanged": "La selección cambió o ya fue aceptada. Revisa el estado actualizado.",
       "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente."
     }
   },
@@ -584,8 +547,6 @@
     "backToOffers": "Volver a las ofertas",
     "errors": {
       "unavailable": "La oferta cambió o venció. Vuelve a las ofertas para seleccionar una opción vigente.",
-      "selectionChanged": "La selección cambió o ya fue aceptada. Revisa su estado actual antes de continuar.",
-      "selectionMissing": "No hay una oferta disponible para revisar en esta cotización. Vuelve a consultar las ofertas.",
       "confirmation": "No fue posible confirmar la selección. Inténtalo nuevamente.",
       "subscription": "No fue posible procesar la suscripción. Inténtalo nuevamente."
     }
@@ -621,42 +582,23 @@
   },
   "payment": {
     "title": "Pago simulado",
-    "disclaimer": "Esta simulación no cobra dinero ni solicita tarjetas. La emisión de una póliza académica requiere confirmación del servicio; no incluye cobertura real, documento ni firma.",
+    "disclaimer": "Esta operación es una simulación: no cobra dinero, no solicita tarjetas ni emite una póliza.",
     "backendRequired": "El pago simulado requiere una conexión con el servicio.",
     "loading": "Consultando el importe y el estado del pago simulado.",
     "pending": "Pago simulado pendiente de confirmación.",
-    "resultPending": "Resultado del pago simulado aún no confirmado",
-    "createdAt": "Fecha de inicio del intento",
     "amount": "Importe",
     "confirmAction": "Confirmar pago simulado",
     "confirming": "Confirmando pago simulado…",
     "confirmed": "Pago simulado confirmado",
     "reference": "Referencia de simulación",
     "confirmedAt": "Fecha de confirmación",
-    "rejected": "Pago simulado rechazado",
-    "rejectedAt": "Fecha de rechazo",
-    "rejectionReason": "Motivo del rechazo",
-    "rejectionReasons": { "rechazo_simulado": "Rechazo de la simulación" },
-    "recoverAttempt": "Consultar el mismo intento",
-    "recoveringAttempt": "Procesando el intento…",
-    "unresolvedAttempt": "El resultado del intento aún debe consultarse. Consultar o actualizar el estado no confirma otro pago ni inicia un nuevo intento.",
-    "newAttempt": "Preparar un nuevo intento",
-    "newAttemptTitle": "Confirmar un nuevo intento simulado",
-    "newAttemptBody": "El intento anterior fue rechazado. Esta acción enviará una nueva evaluación simulada con otra clave; el servicio decide el resultado. No es recuperar el intento anterior y no realiza un cobro real.",
-    "confirmNewAttempt": "Confirmar nuevo intento",
-    "cancelNewAttempt": "Cancelar",
     "refresh": "Actualizar estado",
-    "issuancePending": "El pago está confirmado, pero el servicio aún no confirma la emisión. Actualiza el estado o reintenta la misma operación si está disponible.",
-    "retryIssuance": "Reintentar emisión",
-    "retryingIssuance": "Reintentando emisión…",
     "errors": {
-      "inProgress": "Ya hay un pago simulado en proceso. Consulta su estado; esta clave no quedó vinculada al pago en curso y no se reenviará.",
-      "retryKeyUnavailable": "La clave del intento original no está disponible en esta pestaña. Solo puedes actualizar el estado; no se generará otro pago.",
       "session": "No fue posible validar tu sesión. Inicia sesión nuevamente para continuar.",
       "notFound": "No fue posible encontrar esta solicitud para tu sesión. Vuelve a consultar tus cotizaciones.",
       "conflict": "No fue posible conciliar este intento de pago simulado. Actualiza el estado antes de continuar.",
       "notAllowed": "El pago simulado no está permitido para el estado actual de esta solicitud. Actualiza el estado.",
-      "unavailable": "No fue posible obtener el resultado del pago simulado. Consulta o actualiza el estado; no se enviará otra confirmación mientras el intento siga sin resolver."
+      "unavailable": "No fue posible consultar o confirmar el pago simulado. Actualiza el estado o reintenta la confirmación."
     }
   },
   "advisorNavigation": {
@@ -715,33 +657,6 @@
     "resolutionSaved": "La decisión fue confirmada por el servicio.",
     "actor": "Asesor responsable",
     "resolvedAt": "Resuelta",
-    "application": {
-      "title": "Aplicación al proceso solicitante",
-      "filter": "Consultar por estado de aplicación",
-      "pendingDecisions": "Decisiones pendientes",
-      "requester": "Identificador del solicitante",
-      "product": "Producto",
-      "updatedAt": "Aplicación actualizada",
-      "attempts": "Aplicaciones confirmadas",
-      "code": "Código del resultado",
-      "ack": "Acuse de aplicación",
-      "ackNotice": "Este acuse confirma la aplicación durable, no la recepción por el solicitante.",
-      "noAck": "Sin acuse de aplicación confirmado.",
-      "apply": "Recuperar aplicación pendiente",
-      "refresh": "Actualizar estado del caso",
-      "legacy": "Caso histórico sin proceso vinculado verificado. No permite reanudar una operación.",
-      "uncertain": "La respuesta no pudo verificarse. Consulta el estado guardado; no registres otra decisión.",
-      "decisionNotice": "La decisión no confirma una consulta exitosa ni amplía el consentimiento.",
-      "emptyTitle": "No hay casos con este estado de aplicación",
-      "emptyBody": "Prueba otro filtro para consultar decisiones o aplicaciones pendientes.",
-      "status": {
-        "esperando_decision": "Consulta bloqueada: pendiente de decisión",
-        "pendiente": "Decisión guardada: aplicación pendiente",
-        "completada": "Aplicación completada: resultado sujeto al consentimiento actual",
-        "bloqueada": "Aplicación bloqueada: sin resultado disponible; no se reaplica",
-        "detenida": "Operación detenida por rechazo: no se consultan fuentes"
-      }
-    },
     "validation": {
       "reason": "Ingresa un motivo no vacío de 3 a 500 caracteres."
     },
@@ -749,19 +664,14 @@
       "advisor_context_unavailable": "Esta pantalla está disponible únicamente para asesores con socios autorizados en su sesión.",
       "sesion_invalida": "Tu sesión no es válida. Inicia sesión nuevamente.",
       "socio_no_autorizado": "No tienes autorización para consultar o resolver excepciones de este socio.",
-      "actor_no_autorizado": "El actor ya no tiene autorización para esta operación.",
       "alcance_insuficiente": "Tu sesión no cuenta con el alcance necesario para esta acción.",
       "excepcion_no_encontrada": "No se encontró la excepción solicitada para este socio.",
       "excepcion_ya_resuelta": "Esta excepción ya fue resuelta. Actualiza la información antes de continuar.",
-      "decision_pendiente": "La decisión aún está pendiente. Actualiza el caso antes de aplicar.",
-      "excepcion_sin_operacion": "Este caso no tiene una operación vinculada que pueda reanudarse.",
-      "conflicto_idempotencia": "El servicio conserva una operación con otros datos. Consulta su estado antes de continuar.",
-      "version_no_soportada": "La versión del contrato no está soportada por el servicio.",
       "solicitud_invalida": "La solicitud no es válida. Revisa el motivo de la decisión e inténtalo nuevamente.",
-      "servicio_no_disponible": "No se pudo confirmar la respuesta. Consulta el estado guardado antes de continuar.",
+      "servicio_no_disponible": "El servicio no está disponible. Puedes reintentar la consulta o decisión.",
       "consentimiento_ausente": "No existe un consentimiento vigente asociado a esta operación. No se aprobó la excepción.",
       "consentimiento_no_vigente": "El consentimiento ya no está vigente. No se aprobó la excepción.",
-      "respuesta_invalida": "No se pudo verificar la respuesta del servicio. Consulta el estado guardado antes de continuar."
+      "respuesta_invalida": "El servicio devolvió una respuesta incompleta o inválida. No se confirmó la decisión."
     }
   },
   "mortgageProfiling": {

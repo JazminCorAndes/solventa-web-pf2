@@ -32,30 +32,6 @@
       <p>{{ 'offers.empty.body' | transloco }}</p>
     </div>
   } @else if (offers.calculation(); as calculation) {
-    @if (offers.saving()) {
-      <div class="state-panel" role="status">
-        <mat-spinner diameter="24" />
-        <span>{{ 'offers.savingSelection' | transloco }}</span>
-      </div>
-    }
-    @if (selectionErrorKey(); as error) {
-      <div class="state-panel" role="alert">
-        <p>{{ error | transloco }}</p>
-        @if (offers.canRetrySelection()) {
-          <button
-            mat-stroked-button
-            type="button"
-            [disabled]="offers.saving()"
-            (click)="retrySelection()"
-          >
-            {{ 'common.retry' | transloco }}
-          </button>
-        }
-        <button mat-button type="button" [disabled]="offers.saving()" (click)="reload()">
-          {{ 'offers.refreshSelection' | transloco }}
-        </button>
-      </div>
-    }
     <div class="calculation-summary">
       <span
         >{{ 'offers.quoteId' | transloco }}: <strong>{{ calculation.quoteId }}</strong></span
@@ -148,11 +124,7 @@
                 mat-flat-button
                 type="button"
                 (click)="selectOffer(offer)"
-                [disabled]="
-                  offers.saving() ||
-                  !!offers.confirmedSelection() ||
-                  offers.selectedOfferId() === offer.id
-                "
+                [disabled]="offers.selectedOfferId() === offer.id"
               >
                 {{
                   (offers.selectedOfferId() === offer.id ? 'offers.selected' : 'offers.select')
@@ -212,10 +184,5 @@
         </article>
       }
     </div>
-    @if (offers.canContinue()) {
-      <a mat-flat-button routerLink="/app/cotizaciones/aceptacion">
-        {{ 'offers.continue' | transloco }} →
-      </a>
-    }
   }
 </section>

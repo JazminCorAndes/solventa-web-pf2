@@ -60,7 +60,7 @@ export class AdvisorLayoutComponent {
   readonly isHandset = toSignal(
     inject(BreakpointObserver)
       .observe('(max-width: 800px)')
-      .pipe(map((breakpointState) => breakpointState.matches)),
+      .pipe(map((result) => result.matches)),
     { initialValue: false },
   );
 
