@@ -174,6 +174,19 @@ describe('HU44 real con recuperación explícita de despacho HTTP y tres resulta
         cy.get('.logout-button').click();
         cy.location('pathname').should('eq', '/iniciar-sesion');
       };
+      const typeLabeledField = (selector: string, value: string) => {
+        cy.get(selector)
+          .closest('mat-form-field')
+          .find('mat-label')
+          .should('have.length', 1)
+          .should(($label) => {
+            const control = $label[0].ownerDocument.querySelector(selector);
+            expect(control).not.to.eq(null);
+            expect($label[0].closest('label')?.control).to.eq(control);
+          })
+          .click();
+        cy.get(selector).should('be.focused').type(value).should('have.value', value);
+      };
       const assertReceipt = (body: AdvisorException, sample: CaseEvidence, pending = false) => {
         const rejected = sample.outcome === 'detenida';
         expect(body).to.include({
@@ -239,7 +252,7 @@ describe('HU44 real con recuperación explícita de despacho HTTP y tres resulta
         );
         cy.get('mat-select[formcontrolname=documentType]').click();
         cy.contains('mat-option', es.quoteRequest.documentTypes.passport).click();
-        cy.get('input[formcontrolname=documentNumber]').type(client.numeroDocumento);
+        typeLabeledField('input[formcontrolname=documentNumber]', client.numeroDocumento);
         cy.get('button[type=submit]').should('be.enabled').click();
         cy.wait('@produce', { log: false }).then(({ request, response }) => {
           expect(response?.statusCode).to.eq(503);
@@ -305,7 +318,8 @@ describe('HU44 real con recuperación explícita de despacho HTTP y tres resulta
           expect(response!.body.decision).to.eq(null);
           expect(response!.body.aplicacion?.acuseId).to.eq(null);
         });
-        cy.get('textarea[formcontrolname=motivo]').type(
+        typeLabeledField(
+          'textarea[formcontrolname=motivo]',
           `Validacion HU44 ${sample.outcome} ${fixture.run_id}`,
         );
         if (sample.outcome === 'detenida')

@@ -183,6 +183,29 @@ describe('AdvisorExceptionsPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain(exception.estadoAnterior);
   });
 
+  it('WEB-F6-label enfoca el motivo mediante su etiqueta Material asociada', async () => {
+    gateway.get.mockReturnValue(of(linked));
+    params.next(convertToParamMap({ exceptionId: linked.excepcionId }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const host: HTMLElement = fixture.nativeElement;
+    const input = host.querySelector<HTMLTextAreaElement>('textarea[formcontrolname=motivo]');
+    expect(input).not.toBeNull();
+    const label = input!.closest('mat-form-field')!.querySelector<HTMLElement>('mat-label');
+    expect(label).not.toBeNull();
+    expect(label!.closest('label')?.htmlFor).toBe(input!.id);
+    expect(input!.value).toBe('');
+    expect(document.activeElement).not.toBe(input);
+
+    label!.click();
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(input);
+    expect(input!.closest('mat-form-field')?.classList.contains('mat-focused')).toBe(true);
+    expect(gateway.resolve).not.toHaveBeenCalled();
+    expect(gateway.apply).not.toHaveBeenCalled();
+  });
+
   it('exige un motivo no vacío antes de resolver y acepta solo el resultado autoritativo', async () => {
     params.next(convertToParamMap({ exceptionId: exception.excepcionId }));
     fixture.detectChanges();

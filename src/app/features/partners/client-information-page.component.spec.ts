@@ -137,6 +137,26 @@ describe('ClientInformationPageComponent', () => {
     fixture.detectChanges();
   });
 
+  it('WEB-F6-label focuses the empty document input through its visible Material label', () => {
+    fixture.componentInstance.form.controls.documentType.setValue('passport');
+    fixture.detectChanges();
+    const host: HTMLElement = fixture.nativeElement;
+    const input = host.querySelector<HTMLInputElement>('input[formcontrolname=documentNumber]');
+    expect(input).not.toBeNull();
+    const label = input!.closest('mat-form-field')!.querySelector<HTMLElement>('mat-label');
+    expect(label).not.toBeNull();
+    expect(label!.closest('label')?.htmlFor).toBe(input!.id);
+    expect(input!.value).toBe('');
+    expect(document.activeElement).not.toBe(input);
+
+    label!.click();
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(input);
+    expect(input!.closest('mat-form-field')?.classList.contains('mat-focused')).toBe(true);
+    expect(gateway.consult).not.toHaveBeenCalled();
+  });
+
   it('uses hidden partner context and renders only authorized result data', async () => {
     gateway.consult.mockImplementation((request: ClientInformationRequest) =>
       of(resultFor(request)),
