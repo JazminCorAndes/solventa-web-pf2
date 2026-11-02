@@ -318,6 +318,11 @@ export class SimulatedPaymentService implements OnDestroy {
         if (rivalId && submitted) {
           try {
             this.assertScope(subscription, ownerId);
+            if (this.readAttempt(subscription)?.key !== submitted.key) {
+              throw new PaymentAttemptUnavailableError(
+                'The original attempt key changed during the request.',
+              );
+            }
             this.saveAttempt(subscription, { ...submitted, outcome: 'rival', paymentId: rivalId });
             this.errorKey.set('payment.errors.inProgress');
           } catch (storageError) {

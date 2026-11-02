@@ -235,7 +235,7 @@ mensaje literal, estado HTTP y, cuando corresponde, código del diagnóstico esp
 debe observarlo exactamente una vez. No se desactiva el logging de la aplicación ni se
 guardan argumentos de consola o credenciales. Los HTTP negativos no se ocultan como éxitos.
 
-La suite UI incluye 46 casos. Cinco recorren el formulario/panel socio con HTTP
+La suite UI incluye 47 casos. Cinco recorren el formulario/panel socio con HTTP
 controlado y sin crear cuentas, consentimiento ni cotizaciones reales. No conectan
 el circuito de asesor con el de socio ni acreditan percentiles o persistencia AWS.
 Verifican operación y referencia de perfil confirmadas después de POST, recuperación
@@ -269,6 +269,10 @@ la URL canónica de la solicitud, sin selector, cotejando `pagoId`. No se sigue 
 `Location` arbitraria ni se reenvía la clave rival. Recibos antiguos sin propietario o
 solicitud verificables solo permiten lectura; no se adoptan ni se reemplazan por otra
 clave. Cambiar de cuenta cancela consultas en vuelo y oculta el estado previo.
+Un 409 tardío vuelve a validar el recibo y la clave antes de guardar el rival:
+si fueron reemplazados, desaparecieron o son inconsistentes, no escribe ni borra
+el almacenamiento y muestra el bloqueo sin otro POST. Ocho regresiones del servicio
+cubren esas variantes; un caso UI comprueba el recibo nuevo intacto y el error visible.
 
 Tres casos UI adicionales cubren pendiente tras recarga, 404 exacto y 409 rival,
 manteniendo un único POST. Dashboard muestra el inicio del intento pendiente, nunca

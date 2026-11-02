@@ -282,6 +282,46 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     cy.get('@rivalPayment.all').should('have.length', 1);
   });
 
+  it('conserva un intento nuevo si el POST anterior devuelve409 y muestra el bloqueo sin reenviar', () => {
+    const { payment, subscription } = reachSubscription();
+    const paymentPath = `/api/v1/solicitudes-cotizacion/${quoteId}/pago-simulado`;
+    const keyPath = `solventa.payment.attempt.${subscription.id}`;
+    const receiptPath = `solventa.payment.receipt.${subscription.id}`;
+    const replacementKey = '60000000-0000-4000-8000-000000000001';
+    let replacementReceipt: string;
+    cy.get('.confirm-payment').should('be.enabled');
+    cy.window({ log: false }).then((win) => {
+      cy.intercept('POST', paymentPath, (request) => {
+        expect(request.headers['idempotency-key']).to.eq(win.sessionStorage.getItem(keyPath));
+        expect(request.headers['idempotency-key']).not.to.eq(replacementKey);
+        replacementReceipt = JSON.stringify({
+          ...JSON.parse(win.sessionStorage.getItem(receiptPath)!),
+          key: replacementKey,
+        });
+        win.sessionStorage.setItem(receiptPath, replacementReceipt);
+        win.sessionStorage.setItem(keyPath, replacementKey);
+        request.reply({
+          statusCode: 409,
+          body: { code: 'pago_en_proceso', pagoId: payment.id },
+        });
+      }).as('lateRivalPayment');
+    });
+    cy.get('.confirm-payment').click();
+    cy.wait('@lateRivalPayment');
+    cy.get('.payment-section [role=alert]').should(
+      'contain.text',
+      'La clave del intento original no está disponible en esta pestaña',
+    );
+    cy.get('.confirm-payment, .request-new-payment, .retry-issuance').should('not.exist');
+    cy.get('.recover-payment').should('be.visible').and('be.disabled');
+    cy.get('.payment-pending, .payment-confirmation').should('not.exist');
+    cy.window({ log: false }).should((win) => {
+      expect(win.sessionStorage.getItem(keyPath)).to.eq(replacementKey);
+      expect(win.sessionStorage.getItem(receiptPath)).to.eq(replacementReceipt);
+    });
+    cy.get('@lateRivalPayment.all').should('have.length', 1);
+  });
+
   it('recupera el acuse perdido de emisión con la misma clave y espera la saga autoritativa', () => {
     const { payment, subscription } = reachSubscription();
     let originalKey: string;

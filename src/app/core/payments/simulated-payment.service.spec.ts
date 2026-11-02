@@ -161,6 +161,95 @@ describe('SimulatedPaymentService', () => {
     expect(reloaded.errorKey()).toBeNull();
   });
 
+  it.each([
+    {
+      state: 'another valid attempt',
+      mutate: () => storeUnresolvedPaymentAttempt(crypto.randomUUID()),
+    },
+    {
+      state: 'a missing receipt',
+      mutate: () => window.sessionStorage.removeItem(receiptKey),
+    },
+    {
+      state: 'a missing key',
+      mutate: () => window.sessionStorage.removeItem(storageKey),
+    },
+    {
+      state: 'no receipt or key',
+      mutate: () => {
+        window.sessionStorage.removeItem(receiptKey);
+        window.sessionStorage.removeItem(storageKey);
+      },
+    },
+    {
+      state: 'a mismatched receipt and key',
+      mutate: () => window.sessionStorage.setItem(storageKey, crypto.randomUUID()),
+    },
+    {
+      state: 'an invalid receipt',
+      mutate: () => window.sessionStorage.setItem(receiptKey, '{invalid'),
+    },
+    {
+      state: 'another owner receipt',
+      mutate: () =>
+        window.sessionStorage.setItem(
+          receiptKey,
+          JSON.stringify({
+            ...JSON.parse(window.sessionStorage.getItem(receiptKey)!),
+            ownerId: 'another-account',
+          }),
+        ),
+    },
+    {
+      state: 'another request receipt',
+      mutate: () =>
+        window.sessionStorage.setItem(
+          receiptKey,
+          JSON.stringify({
+            ...JSON.parse(window.sessionStorage.getItem(receiptKey)!),
+            quoteId: 'another-quote',
+          }),
+        ),
+    },
+  ])('preserves $state when a late rival 409 arrives', async ({ mutate }) => {
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    const pending = new Subject<SimulatedPaymentRecord>();
+    gateway.confirm.mockReturnValueOnce(pending);
+    const request = firstValueFrom(service.confirm());
+    mutate();
+    const savedKey = window.sessionStorage.getItem(storageKey);
+    const savedReceipt = window.sessionStorage.getItem(receiptKey);
+    const writes = vi.spyOn(Storage.prototype, 'setItem');
+    const removals = vi.spyOn(Storage.prototype, 'removeItem');
+    pending.error(
+      new HttpErrorResponse({
+        status: 409,
+        error: { code: 'pago_en_proceso', pagoId: PENDING_PAYMENT.id },
+      }),
+    );
+
+    await expect(request).resolves.toBeNull();
+    expect(window.sessionStorage.getItem(storageKey)).toBe(savedKey);
+    expect(window.sessionStorage.getItem(receiptKey)).toBe(savedReceipt);
+    expect(writes).not.toHaveBeenCalled();
+    expect(removals).not.toHaveBeenCalled();
+    expect(service.errorKey()).toBe('payment.errors.retryKeyUnavailable');
+    expect(service.payment()).toBeNull();
+    expect(service.confirming()).toBe(false);
+    expect(service.canConfirm()).toBe(false);
+    expect(service.canRecoverAttempt()).toBe(false);
+    expect(service.canStartNewAttempt()).toBe(false);
+    expect(service.canRetryIssuance()).toBe(false);
+
+    await firstValueFrom(service.confirm());
+    await firstValueFrom(service.startNewAttempt());
+    expect(gateway.confirm).toHaveBeenCalledOnce();
+    expect(gateway.load).toHaveBeenCalledOnce();
+    expect(writes).not.toHaveBeenCalled();
+    expect(removals).not.toHaveBeenCalled();
+    expect(service.errorKey()).toBeTruthy();
+  });
+
   it('allows a new explicit key only after the rival attempt is definitively rejected', async () => {
     await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
     gateway.confirm.mockReturnValueOnce(
