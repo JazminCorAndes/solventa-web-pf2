@@ -44,14 +44,14 @@ export class HttpAdvisorExceptionsGateway implements AdvisorExceptionsGateway {
         if (!isRecord(body) || !Array.isArray(body['excepciones'])) {
           throw new AdvisorExceptionError('respuesta_invalida');
         }
-        const exceptions = body['excepciones'].map((item) => parseException(item));
+        const exceptions = body['excepciones'].map((rawException) => parseException(rawException));
         if (
           exceptions.some(
-            (item) =>
-              item.socioId !== socioId ||
+            (exception) =>
+              exception.socioId !== socioId ||
               (estadoAplicacion === undefined
-                ? item.estado !== 'pendiente'
-                : item.aplicacion?.estado !== estadoAplicacion),
+                ? exception.estado !== 'pendiente'
+                : exception.aplicacion?.estado !== estadoAplicacion),
           )
         ) {
           throw new AdvisorExceptionError('respuesta_invalida');

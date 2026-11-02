@@ -639,7 +639,9 @@ export class MockOfferGateway implements OfferGateway {
     const request = this.quoteRequestStorage.read();
     const offer =
       request?.id === quoteId
-        ? offersFor(request.productId, request.productData).find((item) => item.id === offerId)
+        ? offersFor(request.productId, request.productData).find(
+            (candidateOffer) => candidateOffer.id === offerId,
+          )
         : undefined;
     if (
       !offer ||

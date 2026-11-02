@@ -739,22 +739,25 @@ sesión se necesita una cuenta registrada en ese backend, no las credenciales de
 
 ## Comandos disponibles
 
-| Comando              | Descripción                                                  |
-| -------------------- | ------------------------------------------------------------ |
-| `pnpm start`         | Inicia el desarrollo con adaptadores simulados               |
-| `pnpm start:backend` | Inicia el desarrollo conectado al BFF local                  |
-| `pnpm start:aws`     | Inicia el desarrollo conectado al backend en AWS             |
-| `pnpm build`         | Genera el build de producción conectado al backend           |
-| `pnpm build:pages`   | Compila producción para la subruta Pages y genera `404.html` |
-| `pnpm build:dev`     | Genera un build de desarrollo con mocks                      |
-| `pnpm build:backend` | Genera un build de desarrollo conectado al BFF local         |
-| `pnpm build:aws`     | Genera un build de desarrollo conectado al API en AWS        |
-| `pnpm test`          | Ejecuta las pruebas en modo interactivo                      |
-| `pnpm test:ci`       | Ejecuta las pruebas una sola vez                             |
-| `pnpm test:pages`    | Verifica la generación del fallback SPA de Pages             |
-| `pnpm lint`          | Ejecuta ESLint                                               |
-| `pnpm format`        | Formatea el código con Prettier                              |
-| `pnpm format:check`  | Comprueba el formato sin modificar archivos                  |
+| Comando                        | Descripción                                                  |
+| ------------------------------ | ------------------------------------------------------------ |
+| `pnpm start`                   | Inicia el desarrollo con adaptadores simulados               |
+| `pnpm start:backend`           | Inicia el desarrollo conectado al BFF local                  |
+| `pnpm start:aws`               | Inicia el desarrollo conectado al backend en AWS             |
+| `pnpm build`                   | Genera el build de producción conectado al backend           |
+| `pnpm build:pages`             | Compila producción para la subruta Pages y genera `404.html` |
+| `pnpm build:dev`               | Genera un build de desarrollo con mocks                      |
+| `pnpm build:backend`           | Genera un build de desarrollo conectado al BFF local         |
+| `pnpm build:aws`               | Genera un build de desarrollo conectado al API en AWS        |
+| `pnpm test`                    | Ejecuta las pruebas en modo interactivo                      |
+| `pnpm test:ci`                 | Ejecuta las pruebas una sola vez                             |
+| `pnpm test:pages`              | Verifica la generación del fallback SPA de Pages             |
+| `pnpm test:coverage`           | Ejecuta las pruebas con cobertura y reporte JUnit            |
+| `pnpm test:cypress:ui`         | Ejecuta Cypress de interfaz con respuestas HTTP controladas  |
+| `pnpm test:cypress:integrated` | Ejecuta Cypress integrado contra los servicios reales        |
+| `pnpm lint`                    | Ejecuta ESLint                                               |
+| `pnpm format`                  | Formatea el código con Prettier                              |
+| `pnpm format:check`            | Comprueba el formato sin modificar archivos                  |
 
 ## Verificación de la instalación
 
@@ -783,6 +786,9 @@ src/
     app.routes.ts     Rutas de la aplicación
   styles/             Tokens, tema Material y estilos base
   styles.scss         Punto de entrada de estilos
+tests/cypress/        Pruebas E2E de interfaz (ui) e integradas (integrated)
+infra/jenkins/        Pipeline de Jenkins bajo demanda
+scripts/              Utilidades de CI y de publicación en GitHub Pages
 ```
 
 ## Internacionalización
@@ -1025,6 +1031,21 @@ fuera del alcance actual.
 ### El puerto 4200 está ocupado
 
 Cierra el proceso que utiliza el puerto o consulta con el equipo el puerto alternativo acordado.
+En Windows puedes identificarlo con `netstat -ano | findstr :4200` y cerrarlo con
+`taskkill /PID <pid> /F`. Si la pantalla sigue mostrando una versión anterior, reinicia
+`pnpm start` y recarga con Ctrl + Shift + R.
+
+### Cypress falla con `bad option: --ping`
+
+La variable de entorno `ELECTRON_RUN_AS_NODE` está definida (algunos editores la exportan).
+Quítala antes de ejecutar Cypress, por ejemplo `env -u ELECTRON_RUN_AS_NODE pnpm test:cypress:ui`
+en Git Bash.
+
+### Prettier modifica archivos que no tocaste
+
+En Windows con `core.autocrlf=true`, `pnpm format` sobre todo el repositorio puede cambiar fines de
+línea de archivos ajenos. Formatea solo los archivos modificados:
+`pnpm exec prettier --write <archivos>`.
 
 ### Las pruebas o el build fallan
 

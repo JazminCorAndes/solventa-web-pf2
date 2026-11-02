@@ -47,9 +47,9 @@ function date(value: unknown): string {
 }
 
 function money(value: unknown, positive = false): DashboardMoney {
-  const item = record(value);
-  const amount = text(item['monto']);
-  const currency = text(item['moneda']);
+  const fields = record(value);
+  const amount = text(fields['monto']);
+  const currency = text(fields['moneda']);
   if (
     !/^\d+\.\d{2}$/.test(amount) ||
     (positive && !/[1-9]/.test(amount)) ||
@@ -79,16 +79,16 @@ function unavailable(value: unknown): { availability: 'no_implementado' } {
 }
 
 function quote(value: unknown): DashboardQuote {
-  const item = record(value);
-  const selected = item['seleccion'] === null ? null : record(item['seleccion']);
+  const fields = record(value);
+  const selected = fields['seleccion'] === null ? null : record(fields['seleccion']);
   return {
-    id: text(item['id']),
-    requestId: item['solicitudId'] === null ? null : text(item['solicitudId']),
-    productId: text(item['productoId']),
-    status: text(item['estado']),
-    createdAt: date(item['creadaEn']),
-    validUntil: date(item['validaHasta']),
-    estimatedPremium: money(item['primaEstimada']),
+    id: text(fields['id']),
+    requestId: fields['solicitudId'] === null ? null : text(fields['solicitudId']),
+    productId: text(fields['productoId']),
+    status: text(fields['estado']),
+    createdAt: date(fields['creadaEn']),
+    validUntil: date(fields['validaHasta']),
+    estimatedPremium: money(fields['primaEstimada']),
     selection: selected
       ? {
           offerId: text(selected['ofertaId']),
@@ -102,22 +102,22 @@ function quote(value: unknown): DashboardQuote {
 }
 
 function subscription(value: unknown): DashboardSubscription {
-  const item = record(value);
-  const saga = record(item['saga']);
+  const fields = record(value);
+  const saga = record(fields['saga']);
   const version = saga['version'];
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
     invalid();
   }
   return {
-    id: text(item['id']),
-    requestId: text(item['solicitudId']),
-    quoteId: text(item['cotizacionId']),
-    validFrom: item['vigenteDesde'] == null ? null : date(item['vigenteDesde']),
-    validUntil: item['vigenteHasta'] == null ? null : date(item['vigenteHasta']),
-    offerId: text(item['ofertaId']),
-    status: text(item['estado']),
-    createdAt: date(item['creadaEn']),
-    updatedAt: date(item['actualizadaEn']),
+    id: text(fields['id']),
+    requestId: text(fields['solicitudId']),
+    quoteId: text(fields['cotizacionId']),
+    validFrom: fields['vigenteDesde'] == null ? null : date(fields['vigenteDesde']),
+    validUntil: fields['vigenteHasta'] == null ? null : date(fields['vigenteHasta']),
+    offerId: text(fields['ofertaId']),
+    status: text(fields['estado']),
+    createdAt: date(fields['creadaEn']),
+    updatedAt: date(fields['actualizadaEn']),
     saga: {
       status: text(saga['estado']),
       version,
@@ -127,24 +127,27 @@ function subscription(value: unknown): DashboardSubscription {
 }
 
 function payment(value: unknown): DashboardPayment {
-  const item = record(value);
-  if (!['confirmado', 'rechazado'].includes(String(item['estado'])) || item['simulada'] !== true) {
+  const fields = record(value);
+  if (
+    !['confirmado', 'rechazado'].includes(String(fields['estado'])) ||
+    fields['simulada'] !== true
+  ) {
     invalid();
   }
   const common = {
-    id: text(item['id']),
-    requestId: text(item['solicitudId']),
-    subscriptionId: text(item['suscripcionId']),
-    amount: money(item['importe'], true),
-    periodicity: periodicity(item['periodicidad']),
+    id: text(fields['id']),
+    requestId: text(fields['solicitudId']),
+    subscriptionId: text(fields['suscripcionId']),
+    amount: money(fields['importe'], true),
+    periodicity: periodicity(fields['periodicidad']),
   };
-  if (item['estado'] === 'rechazado') {
-    if (item['motivo'] !== 'rechazo_simulado' || 'confirmadaEn' in item) invalid();
+  if (fields['estado'] === 'rechazado') {
+    if (fields['motivo'] !== 'rechazo_simulado' || 'confirmadaEn' in fields) invalid();
     return {
       ...common,
       status: 'rechazado',
       simulated: true,
-      rejectedAt: date(item['rechazadaEn']),
+      rejectedAt: date(fields['rechazadaEn']),
       reason: 'rechazo_simulado',
     };
   }
@@ -152,7 +155,7 @@ function payment(value: unknown): DashboardPayment {
     ...common,
     status: 'confirmado',
     simulated: true,
-    confirmedAt: date(item['confirmadaEn']),
+    confirmedAt: date(fields['confirmadaEn']),
   };
 }
 
@@ -167,30 +170,30 @@ function coverageDate(value: unknown): string {
 }
 
 function policy(value: unknown): DashboardPolicy {
-  const item = record(value);
-  const startDate = coverageDate(item['fechaInicio']);
-  const endDate = coverageDate(item['fechaFin']);
-  if (endDate < startDate || item['simulada'] !== true) {
+  const fields = record(value);
+  const startDate = coverageDate(fields['fechaInicio']);
+  const endDate = coverageDate(fields['fechaFin']);
+  if (endDate < startDate || fields['simulada'] !== true) {
     invalid();
   }
   return {
-    id: text(item['id']),
-    subscriptionId: text(item['suscripcionId']),
-    type: text(item['tipo']),
+    id: text(fields['id']),
+    subscriptionId: text(fields['suscripcionId']),
+    type: text(fields['tipo']),
     startDate,
     endDate,
-    status: text(item['estado']),
+    status: text(fields['estado']),
     simulated: true,
   };
 }
 
 function toSnapshot(value: unknown): DashboardSnapshot {
-  const item = record(value);
+  const fields = record(value);
   return {
-    quotes: items(item['cotizaciones'], quote),
-    subscriptions: items(item['suscripciones'], subscription),
-    payments: items(item['pagos'], payment),
-    policies: items(item['polizas'], policy),
-    notifications: unavailable(item['notificaciones']),
+    quotes: items(fields['cotizaciones'], quote),
+    subscriptions: items(fields['suscripciones'], subscription),
+    payments: items(fields['pagos'], payment),
+    policies: items(fields['polizas'], policy),
+    notifications: unavailable(fields['notificaciones']),
   };
 }
