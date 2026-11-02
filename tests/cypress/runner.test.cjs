@@ -2,9 +2,255 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
-const { localUrl, selectedSpec, hu44Fixture } = require('./run.cjs');
+const { localUrl, selectedSpec, hu44Fixture, main } = require('./run.cjs');
 const config = require('./cypress.config.cjs');
 const fs = require('node:fs');
+
+function offlineRunner(t, run, options = {}) {
+  const { EventEmitter } = require('node:events');
+  const files = require('node:fs/promises');
+  const childProcess = require('node:child_process');
+  const server = Object.assign(new EventEmitter(), {
+    stdout: new EventEmitter(),
+    stderr: new EventEmitter(),
+    pid: 12345,
+    exitCode: null,
+  });
+  const logs = [];
+  const written = new Map();
+  const removed = [];
+  let stopCalls = 0;
+  const previous = {
+    argv: process.argv,
+    exitCode: process.exitCode,
+    env: {
+      CYPRESS_BACKEND_URL: process.env.CYPRESS_BACKEND_URL,
+      CYPRESS_WEB_PORT: process.env.CYPRESS_WEB_PORT,
+      ELECTRON_RUN_AS_NODE: process.env.ELECTRON_RUN_AS_NODE,
+    },
+    sigint: process.listenerCount('SIGINT'),
+    sigterm: process.listenerCount('SIGTERM'),
+  };
+  process.argv = ['node', 'run.cjs', 'ui', 'catalog.cy.ts'];
+  process.env.CYPRESS_BACKEND_URL = 'http://127.0.0.1:5000';
+  process.env.CYPRESS_WEB_PORT = '63321';
+  process.exitCode = 0;
+  t.after(() => {
+    process.argv = previous.argv;
+    process.exitCode = previous.exitCode;
+    for (const key of ['CYPRESS_BACKEND_URL', 'CYPRESS_WEB_PORT', 'ELECTRON_RUN_AS_NODE']) {
+      if (previous.env[key] === undefined) delete process.env[key];
+      else process.env[key] = previous.env[key];
+    }
+    assert.equal(process.listenerCount('SIGINT'), previous.sigint);
+    assert.equal(process.listenerCount('SIGTERM'), previous.sigterm);
+  });
+  t.mock.method(console, 'log', (line) => {
+    if (options.logFails && line.startsWith('{"phase":"angular-diagnostics"')) {
+      throw new Error('private log details');
+    }
+    logs.push(line);
+  });
+  t.mock.method(console, 'error', (line) => logs.push(line));
+  t.mock.method(files, 'access', async () => {});
+  t.mock.method(files, 'mkdir', async () => {});
+  t.mock.method(files, 'writeFile', async (file, content) => {
+    if (options.writeFails && file.endsWith('angular-diagnostics.json')) {
+      throw new Error('private storage details');
+    }
+    written.set(file, content);
+  });
+  t.mock.method(files, 'rm', async (file) => {
+    removed.push(file);
+    if (options.cleanupFails && file.endsWith(`proxy-${process.pid}.json`)) {
+      throw new Error('private cleanup details');
+    }
+  });
+  t.mock.method(require('node:net'), 'createServer', () =>
+    Object.assign(new EventEmitter(), {
+      listen(_port, _host, callback) {
+        callback();
+      },
+      close(callback) {
+        callback();
+      },
+    }),
+  );
+  const fetchMock = t.mock.method(globalThis, 'fetch', async () => ({ ok: true }));
+  t.mock.method(childProcess, 'spawn', () => {
+    if (options.startupExit !== undefined) {
+      server.exitCode = options.startupExit;
+      queueMicrotask(() => {
+        server.stderr.emit('data', 'Error: EACCES private startup details');
+        server.emit('close', options.startupExit);
+      });
+    }
+    return server;
+  });
+  const stop = () => {
+    stopCalls++;
+    queueMicrotask(() => {
+      options.finalOutput?.(server);
+      server.exitCode = 0;
+      server.emit('close', 0);
+    });
+    if (options.stopFails) throw new Error('private stop details');
+    return { status: 0 };
+  };
+  t.mock.method(childProcess, 'spawnSync', stop);
+  t.mock.method(process, 'kill', stop);
+  t.mock.method(require('cypress'), 'run', async () => {
+    assert.equal(fetchMock.mock.callCount(), 1, 'Only the mocked readiness check runs.');
+    assert.ok(logs.some((line) => line.startsWith('Angular Cypress listo:')));
+    await run(server);
+    return {
+      status: 'finished',
+      totalTests: 1,
+      totalFailed: options.passes ? 0 : 1,
+      totalPassed: options.passes ? 1 : 0,
+    };
+  });
+  return {
+    server,
+    logs,
+    written,
+    removed,
+    stopCalls: () => stopCalls,
+    report: () =>
+      JSON.parse(logs.find((line) => line.startsWith('{"phase":"angular-diagnostics"'))),
+  };
+}
+
+test('conserva el error proxy posterior a readiness sin publicar texto privado', async (t) => {
+  const secrets = [
+    'token-no-exportar',
+    'clave-no-exportar',
+    'cookie-no-exportar',
+    'cuerpo-no-exportar',
+  ];
+  const harness = offlineRunner(t, (server) => {
+    server.stderr.emit(
+      'data',
+      Buffer.from('\u001b[31mhttp proxy error:\u001b[0m /api?token=token-no-exportar\n'),
+    );
+    server.stderr.emit('data', Buffer.from('Error: read ECONN'));
+    server.stderr.emit('data', Buffer.from('RESET\nAuthorization: Bearer token-no-exportar\n'));
+    server.stdout.emit(
+      'data',
+      'password=clave-no-exportar\nCookie: cookie-no-exportar\n{"body":"cuerpo-no-exportar"}',
+    );
+  });
+  await main();
+  assert.equal(process.exitCode, 1);
+  const report = harness.report();
+  assert.equal(report.readinessReached, true);
+  assert.equal(report.httpProxyError, true);
+  assert.deepEqual(report.codes, ['ECONNRESET']);
+  assert.equal(report.captureComplete, true);
+  assert.deepEqual(report.failures, []);
+  assert.equal(harness.stopCalls(), 1);
+  assert.ok(harness.removed.some((file) => file.endsWith(`proxy-${process.pid}.json`)));
+  const saved = [...harness.written].find(([file]) => file.endsWith('angular-diagnostics.json'));
+  assert.deepEqual(JSON.parse(saved[1]), report);
+  for (const secret of secrets) {
+    assert.equal(
+      JSON.stringify([...harness.logs, ...harness.written.values()]).includes(secret),
+      false,
+    );
+  }
+});
+
+test('espera la salida final de Angular e indica truncamiento sin cambiar exit cero', async (t) => {
+  const harness = offlineRunner(t, (server) => server.stdout.emit('data', 'x'.repeat(16000)), {
+    passes: true,
+    finalOutput: (server) => server.stderr.emit('data', 'Error: connect ECONNREFUSED\n'),
+  });
+  await main();
+  const report = harness.report();
+  assert.equal(process.exitCode, 0);
+  assert.equal(report.truncated, true);
+  assert.equal(report.captureComplete, false);
+  assert.equal(report.retainedCharacters, 12000);
+  assert.equal(report.droppedCharacters, 4000 + 'Error: connect ECONNREFUSED\n'.length);
+  assert.deepEqual(report.codes, ['ECONNREFUSED']);
+});
+
+test('informa fallos de lectura, decodificacion y archivo sin perder exit ni limpieza', async (t) => {
+  const harness = offlineRunner(
+    t,
+    (server) => {
+      server.stderr.emit('error', new Error('private stream details'));
+      server.stdout.emit('data', {});
+    },
+    { writeFails: true },
+  );
+  await main();
+  assert.equal(process.exitCode, 1);
+  assert.equal(harness.stopCalls(), 1);
+  assert.deepEqual(harness.report().failures, [
+    'stderr-read-failed',
+    'stdout-decode-failed',
+    'report-write-failed',
+  ]);
+  assert.equal(harness.report().captureComplete, false);
+  assert.doesNotMatch(harness.logs.join('\n'), /private/);
+  assert.ok(harness.removed.some((file) => file.endsWith(`proxy-${process.pid}.json`)));
+});
+
+test('separa la salida anormal de Angular del resultado original de Cypress', async (t) => {
+  const harness = offlineRunner(t, (server) => {
+    server.emit('error', new Error('private process details'));
+    server.exitCode = 7;
+    server.emit('close', 7);
+  });
+  await main();
+  assert.equal(process.exitCode, 1);
+  assert.equal(harness.report().angularExitCode, 7);
+  assert.deepEqual(harness.report().failures, ['angular-process-error']);
+  assert.equal(harness.stopCalls(), 0);
+  assert.ok(harness.removed.some((file) => file.endsWith(`proxy-${process.pid}.json`)));
+  assert.doesNotMatch(harness.logs.join('\n'), /private/);
+});
+
+test('conserva diagnosticos de arranque sin heredar XML previo ni texto libre', async (t) => {
+  const harness = offlineRunner(t, () => assert.fail('Cypress must not start'), { startupExit: 7 });
+  await assert.rejects(main(), /^Error: Angular terminó antes de responder\.$/);
+  assert.equal(harness.report().readinessReached, false);
+  assert.equal(harness.report().angularExitCode, 7);
+  assert.deepEqual(harness.report().codes, ['EACCES']);
+  assert.ok(harness.removed[0].endsWith(join('reports', 'cypress', 'ui', 'catalog')));
+  assert.ok(harness.removed.some((file) => file.endsWith(`proxy-${process.pid}.json`)));
+  assert.doesNotMatch(harness.logs.join('\n'), /private/);
+});
+
+test('expone fallos de ambos destinos de captura sin reemplazar el exit de Cypress', async (t) => {
+  const harness = offlineRunner(t, () => {}, { logFails: true, writeFails: true });
+  await main();
+  assert.equal(process.exitCode, 1);
+  assert.deepEqual(harness.report().failures, ['report-write-failed', 'report-log-failed']);
+  assert.equal(harness.report().captureComplete, false);
+  assert.equal(harness.stopCalls(), 1);
+  assert.doesNotMatch(harness.logs.join('\n'), /private/);
+});
+
+test('preserva el fallo original aunque fallen stop y retirada del proxy', async (t) => {
+  const original = new Error('fallo original Cypress');
+  const harness = offlineRunner(
+    t,
+    () => {
+      throw original;
+    },
+    {
+      stopFails: true,
+      cleanupFails: true,
+    },
+  );
+  await assert.rejects(main(), (error) => error === original);
+  assert.deepEqual(harness.report().failures, ['stop-failed', 'proxy-cleanup-failed']);
+  assert.equal(harness.stopCalls(), 1);
+  assert.ok(harness.removed.some((file) => file.endsWith(`proxy-${process.pid}.json`)));
+  assert.doesNotMatch(harness.logs.join('\n'), /private/);
+});
 
 test('selecciona solo un spec sin ampliar su alcance ni mezclar suites', () => {
   assert.equal(

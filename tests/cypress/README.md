@@ -107,6 +107,16 @@ El runner inicia Angular y un proxy temporal propio en `.angular/cypress`, verif
 respuesta HTTP y los cierra al terminar. No modifica `proxy.conf.json` (el desarrollo
 habitual conserva puerto 5001). `CYPRESS_WEB_PORT` permite otro puerto libre; por
 defecto 4300. Cada suite debe tener un puerto diferente si se ejecutan en paralelo.
+Al finalizar, incluso con un caso fallido o una salida anormal de Angular, espera
+hasta cinco segundos el cierre de sus streams y conserva `angular-diagnostics.json`
+junto a los XML, además de emitir el resumen en la salida del runner. Retiene solo
+indicadores fijos y códigos de error de una ventana de 12 000 caracteres; no exporta
+texto libre, URLs, cabeceras, credenciales, entorno ni cuerpos. `truncated` y
+`droppedCharacters` identifican pérdida por el límite. `failures` informa fallos de
+captura, escritura o limpieza; si no puede escribir el archivo, lo informa en la
+salida. Esos diagnósticos no reemplazan el resultado/exit original de Cypress.
+`captureComplete: false` impide atribuir una captura completa o ausencia de errores,
+aunque Cypress haya pasado. No permite reconstruir el buffer perdido de un run previo.
 Para ejecutar solo el recorrido de catálogo, usar `node tests/cypress/run.cjs integrated catalog.cy.ts`
 con `CYPRESS_WEB_PORT` en un puerto libre propio. El tercer argumento acepta un único nombre
 `.cy.ts` de la suite, sin rutas ni comodines; no ejecuta los demás specs.

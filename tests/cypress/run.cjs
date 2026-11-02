@@ -1,9 +1,8 @@
 const childProcess = require('node:child_process');
-const { spawn, spawnSync } = childProcess;
 const fs = require('node:fs');
 const { createHash } = require('node:crypto');
-const { isDeepStrictEqual } = require('node:util');
-const { access, mkdir, writeFile, rm } = require('node:fs/promises');
+const { isDeepStrictEqual, stripVTControlCharacters } = require('node:util');
+const files = require('node:fs/promises');
 const path = require('node:path');
 const net = require('node:net');
 const { setTimeout: delay } = require('node:timers/promises');
@@ -157,12 +156,111 @@ function hu44Fixture(includeCredentials = false) {
   return { fixture, readiness, credentials };
 }
 
+function angularDiagnostics(server) {
+  const limit = 12000;
+  let output = '';
+  let droppedCharacters = 0;
+  let readinessReached = false;
+  const failures = new Set();
+  const streamsSeen = new Set();
+  const closed = new Promise((resolve) => server.once('close', resolve));
+  server.on('error', () => failures.add('angular-process-error'));
+  for (const name of ['stdout', 'stderr']) {
+    const stream = server[name];
+    if (!stream) {
+      failures.add(`${name}-unavailable`);
+      continue;
+    }
+    stream.on('error', () => failures.add(`${name}-read-failed`));
+    stream.on('data', (data) => {
+      try {
+        if (typeof data !== 'string' && !Buffer.isBuffer(data)) {
+          throw new TypeError('Invalid Angular output chunk.');
+        }
+        streamsSeen.add(name);
+        const text = data.toString();
+        droppedCharacters += Math.max(0, output.length + text.length - limit);
+        output = (output + text).slice(-limit);
+      } catch {
+        failures.add(`${name}-decode-failed`);
+      }
+    });
+  }
+  const report = () => {
+    const text = stripVTControlCharacters(output);
+    // Export only fixed indicators/codes, never arbitrary log text, URLs, headers or bodies.
+    const codes = text.match(
+      /\b(?:ECONNRESET|ECONNREFUSED|ECONNABORTED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|EPIPE|EPROTO|EACCES|EPERM|ENOSPC|EMFILE|EADDRINUSE|ERR_STREAM_DESTROYED|HPE_INVALID_HEADER_TOKEN|HPE_INVALID_CHUNK_SIZE)\b/g,
+    );
+    return {
+      phase: 'angular-diagnostics',
+      readinessReached,
+      retainedCharacters: output.length,
+      droppedCharacters,
+      truncated: droppedCharacters > 0,
+      captureComplete: failures.size === 0 && droppedCharacters === 0,
+      streamsSeen: [...streamsSeen],
+      httpProxyError: /http proxy error:/i.test(text),
+      socketHangUp: /socket hang up/i.test(text),
+      errorTextObserved: /\berror\b/i.test(text),
+      warningTextObserved: /\bwarning\b/i.test(text),
+      codes: [...new Set(codes ?? [])],
+      angularExitCode: server.exitCode,
+      failures: [...failures],
+      redaction:
+        'Only fixed indicators and error codes are retained; all arbitrary text is omitted.',
+    };
+  };
+  return {
+    recordFailure: (failure) => failures.add(failure),
+    processFailed: () => failures.has('angular-process-error'),
+    markReady: () => {
+      readinessReached = true;
+    },
+    async finish(directory) {
+      await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          failures.add('angular-close-timeout');
+          resolve();
+        }, 5000);
+        closed.then(() => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
+      try {
+        await files.mkdir(directory, { recursive: true });
+        await files.writeFile(
+          path.join(directory, 'angular-diagnostics.json'),
+          `${JSON.stringify(report(), null, 2)}\n`,
+        );
+      } catch {
+        failures.add('report-write-failed');
+      }
+      try {
+        console.log(JSON.stringify(report()));
+      } catch {
+        failures.add('report-log-failed');
+        try {
+          await files.writeFile(
+            path.join(directory, 'angular-diagnostics.json'),
+            `${JSON.stringify(report(), null, 2)}\n`,
+          );
+        } catch {
+          failures.add('report-write-failed');
+        }
+        console.error(JSON.stringify(report()));
+      }
+    },
+  };
+}
+
 async function main() {
   const mode = process.argv[2];
   const file = process.argv[3];
   const specPattern = selectedSpec(mode, file);
   if (process.argv.length > 4) throw new Error('Solo se permite seleccionar un spec.');
-  if (file !== undefined) await access(path.resolve(specPattern));
+  if (file !== undefined) await files.access(path.resolve(specPattern));
   const backend = localUrl(process.env.CYPRESS_BACKEND_URL || 'http://127.0.0.1:5000');
   const port = Number(process.env.CYPRESS_WEB_PORT || 4300);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) {
@@ -201,14 +299,21 @@ async function main() {
   });
   const dir = path.resolve('.angular', 'cypress');
   const proxy = path.join(dir, `proxy-${process.pid}.json`);
-  await mkdir(dir, { recursive: true });
-  await writeFile(
+  const reports = path.resolve(
+    'reports',
+    'cypress',
+    mode,
+    ...(file ? [file.replace(/\.cy\.ts$/, '')] : []),
+  );
+  await files.rm(reports, { recursive: true, force: true });
+  await files.mkdir(dir, { recursive: true });
+  await files.writeFile(
     proxy,
     JSON.stringify({
       '/api': { target: backend, secure: false, pathRewrite: { '^/api': '' } },
     }),
   );
-  const server = spawn(
+  const server = childProcess.spawn(
     process.execPath,
     [
       require.resolve('@angular/cli/bin/ng.js'),
@@ -224,18 +329,22 @@ async function main() {
     ],
     { stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32' },
   );
-  let output = '';
-  for (const stream of [server.stdout, server.stderr]) {
-    stream.on('data', (data) => {
-      output = (output + data.toString()).slice(-12000);
-    });
-  }
+  const diagnostics = angularDiagnostics(server);
   const stop = () => {
-    if (server.exitCode !== null) return;
-    if (process.platform === 'win32') {
-      spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' });
-    } else {
-      process.kill(-server.pid, 'SIGTERM');
+    if (server.exitCode !== null || !server.pid) return;
+    try {
+      if (process.platform === 'win32') {
+        const stopped = childProcess.spawnSync(
+          'taskkill',
+          ['/PID', String(server.pid), '/T', '/F'],
+          { stdio: 'ignore' },
+        );
+        if (stopped.error || stopped.status !== 0) diagnostics.recordFailure('stop-failed');
+      } else {
+        process.kill(-server.pid, 'SIGTERM');
+      }
+    } catch {
+      diagnostics.recordFailure('stop-failed');
     }
   };
   const interrupt = () => {
@@ -249,7 +358,9 @@ async function main() {
     const deadline = Date.now() + 120000;
     let ready = false;
     while (Date.now() < deadline) {
-      if (server.exitCode !== null) throw new Error(`Angular terminó:\n${output}`);
+      if (server.exitCode !== null || diagnostics.processFailed()) {
+        throw new Error('Angular terminó antes de responder.');
+      }
       try {
         ready = (await fetch(baseUrl, { signal: AbortSignal.timeout(1000) })).ok;
       } catch (error) {
@@ -258,17 +369,11 @@ async function main() {
       if (ready) break;
       await delay(250);
     }
-    if (!ready) throw new Error(`Angular no respondió en 120s:\n${output}`);
+    if (!ready) throw new Error('Angular no respondió en 120s.');
+    diagnostics.markReady();
     console.log(`Angular Cypress listo: PID ${server.pid}; puerto ${port}.`);
     // Electron must start as a browser, not inherit a desktop host's Node mode.
     delete process.env.ELECTRON_RUN_AS_NODE;
-    const reports = path.resolve(
-      'reports',
-      'cypress',
-      mode,
-      ...(file ? [file.replace(/\.cy\.ts$/, '')] : []),
-    );
-    await rm(reports, { recursive: true, force: true });
     const result = await require('cypress').run({
       configFile: 'tests/cypress/cypress.config.cjs',
       config: { baseUrl, specPattern },
@@ -284,11 +389,16 @@ async function main() {
     stop();
     process.removeListener('SIGINT', interrupt);
     process.removeListener('SIGTERM', interrupt);
-    await rm(proxy, { force: true });
+    try {
+      await files.rm(proxy, { force: true });
+    } catch {
+      diagnostics.recordFailure('proxy-cleanup-failed');
+    }
+    await diagnostics.finish(reports);
   }
 }
 
-module.exports = { localUrl, selectedSpec, hu44Fixture };
+module.exports = { localUrl, selectedSpec, hu44Fixture, main };
 if (require.main === module) {
   main().catch((error) => {
     console.error(error.message);
