@@ -157,7 +157,7 @@
                     {{ 'dashboard.confirmedAt' | transloco }}:
                     {{ payment.confirmedAt | date: 'medium' : undefined : dateLocale }}
                   </p>
-                } @else {
+                } @else if (payment.status === 'rechazado') {
                   <p>
                     {{ 'payment.rejectedAt' | transloco }}:
                     {{ payment.rejectedAt | date: 'medium' : undefined : dateLocale }}
@@ -166,6 +166,12 @@
                     {{ 'payment.rejectionReason' | transloco }}:
                     {{ 'payment.rejectionReasons.' + payment.reason | transloco }}
                   </p>
+                } @else {
+                  <p>
+                    {{ 'payment.createdAt' | transloco }}:
+                    {{ payment.createdAt | date: 'medium' : undefined : dateLocale }}
+                  </p>
+                  <p>{{ 'payment.unresolvedAttempt' | transloco }}</p>
                 }
               </li>
             } @empty {

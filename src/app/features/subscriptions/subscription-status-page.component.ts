@@ -114,7 +114,7 @@ export class SubscriptionStatusPageComponent implements OnInit {
 
   private handlePayment(result: Observable<SimulatedPaymentRecord | null>): void {
     result.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((payment) => {
-      if (payment) {
+      if (payment && payment.status !== 'pending') {
         this.subscriptions.load();
       }
     });

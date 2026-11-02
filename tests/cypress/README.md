@@ -235,7 +235,7 @@ mensaje literal, estado HTTP y, cuando corresponde, código del diagnóstico esp
 debe observarlo exactamente una vez. No se desactiva el logging de la aplicación ni se
 guardan argumentos de consola o credenciales. Los HTTP negativos no se ocultan como éxitos.
 
-La suite UI incluye 43 casos. Cinco recorren el formulario/panel socio con HTTP
+La suite UI incluye 46 casos. Cinco recorren el formulario/panel socio con HTTP
 controlado y sin crear cuentas, consentimiento ni cotizaciones reales. No conectan
 el circuito de asesor con el de socio ni acreditan percentiles o persistencia AWS.
 Verifican operación y referencia de perfil confirmadas después de POST, recuperación
@@ -251,9 +251,31 @@ su código y el mensaje visible; no se permiten diagnósticos inesperados de con
 Este caso HTTP controlado no acredita un worker real de recuperación automática.
 Otro caso recorre rechazo HTTP 200 sin fecha de confirmación, dashboard, detalle y
 cancelación/confirmación explícita de un nuevo intento. Tras un 503 de esa nueva clave
-y una recarga, GET aún devuelve el rechazo anterior: la UI no ofrece otra evaluación,
-recupera la misma clave y solo entonces muestra el confirmado recibido. Verifica tres
-POST explícitos y exactamente dos claves; ni navegación ni recarga envían un pago.
+y una recarga, el GET selecciona la clave nueva y recupera su resultado, no el rechazo
+de otra clave. Verifica dos POST explícitos y exactamente dos claves; ni navegación,
+recarga ni recuperación envían un pago. Si el servicio devuelve el rechazo anterior
+para la clave nueva, las regresiones del servicio bloquean ese resultado inconsistente.
+
+El consumidor de pago admite `pendiente` con `creadaEn` UTC y
+`codigo=resultado_no_confirmado`, sin fechas finales ni motivo de rechazo. Antes del
+POST `{}` guarda en el almacenamiento de sesión el solicitante autenticado, la solicitud,
+la suscripción y el UUID. Pendiente o respuesta perdida se recuperan exclusivamente con
+GET y `Idempotency-Key`; un 404 no permite otra confirmación. Solo un rechazo definitivo
+permite preparar y confirmar explícitamente una clave nueva. Un pago confirmado conserva
+el reintento explícito de emisión con la clave exacta ya conciliada.
+
+El 409 `pago_en_proceso` no vincula la clave rival: se conserva como rival y se consulta
+la URL canónica de la solicitud, sin selector, cotejando `pagoId`. No se sigue una
+`Location` arbitraria ni se reenvía la clave rival. Recibos antiguos sin propietario o
+solicitud verificables solo permiten lectura; no se adoptan ni se reemplazan por otra
+clave. Cambiar de cuenta cancela consultas en vuelo y oculta el estado previo.
+
+Tres casos UI adicionales cubren pendiente tras recarga, 404 exacto y 409 rival,
+manteniendo un único POST. Dashboard muestra el inicio del intento pendiente, nunca
+fechas de confirmación/rechazo ni pólizas derivadas. Son respuestas HTTP controladas:
+no habilitan el proveedor ambiguo ni acreditan la recuperación SQL del backend.
+La aceptación integrada del contrato `ec102` queda pendiente de la revisión backend
+publicada y de probar ambos consumidores; no sustituirla por estas pruebas UI.
 El consentimiento informado comprueba el payload
 completo de la decisión (incluida la vigencia mostrada), rechazo y posterior
 autorización versionada, cancelación/confirmación de revocación y lectura tras

@@ -39,6 +39,7 @@ export class DashboardPageComponent implements OnInit {
     fallida: 'dashboard.states.failed',
     confirmado: 'dashboard.states.confirmed',
     rechazado: 'payment.rejected',
+    pendiente: 'payment.resultPending',
     programada: 'dashboard.states.scheduled',
     vigente: 'dashboard.states.active',
     vencida: 'dashboard.states.expired',

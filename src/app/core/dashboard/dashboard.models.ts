@@ -48,6 +48,7 @@ export type DashboardPayment = DashboardPaymentBase &
   (
     | { status: 'confirmado'; confirmedAt: string }
     | { status: 'rechazado'; rejectedAt: string; reason: 'rechazo_simulado' }
+    | { status: 'pendiente'; createdAt: string; code: 'resultado_no_confirmado' }
   );
 
 export interface DashboardPolicy {

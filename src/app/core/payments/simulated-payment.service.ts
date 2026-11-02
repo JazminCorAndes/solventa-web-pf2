@@ -1,29 +1,48 @@
 import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { catchError, defer, finalize, forkJoin, map, Observable, of, take } from 'rxjs';
+import { computed, effect, inject, Injectable, OnDestroy, signal, untracked } from '@angular/core';
+import {
+  catchError,
+  defaultIfEmpty,
+  defer,
+  finalize,
+  forkJoin,
+  map,
+  Observable,
+  of,
+  Subject,
+  take,
+  takeUntil,
+} from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../auth/auth.service';
 import { OFFER_GATEWAY } from '../offers/offer.gateway';
 import { SelectedOfferRecord } from '../offers/offer.models';
 import { SubscriptionRecord } from '../subscriptions/subscription.models';
 import { SIMULATED_PAYMENT_GATEWAY } from './simulated-payment.gateway';
-import { SimulatedPaymentRecord } from './simulated-payment.models';
+import { PAYMENT_ATTEMPT_KEY_PATTERN, SimulatedPaymentRecord } from './simulated-payment.models';
 
-type PaymentAttempt =
-  | { key: string; outcome: 'unresolved' }
-  | { key: string; outcome: 'confirmed' | 'rejected'; paymentId: string };
+type PaymentAttempt = { key: string; previousPaymentId?: string } & (
+  | { outcome: 'unresolved'; paymentId?: string }
+  | { outcome: 'pending' | 'confirmed' | 'rejected' | 'rival'; paymentId: string }
+);
 
 @Injectable({ providedIn: 'root' })
-export class SimulatedPaymentService {
+export class SimulatedPaymentService implements OnDestroy {
   private readonly gateway = inject(SIMULATED_PAYMENT_GATEWAY);
   private readonly offers = inject(OFFER_GATEWAY);
+  private readonly auth = inject(AuthService);
   private readonly storage = inject(DOCUMENT).defaultView?.sessionStorage;
+  private readonly cancelled = new Subject<void>();
+  private ownerId = this.auth.user()?.id ?? null;
   private subscription: SubscriptionRecord | null = null;
   private confirmedPayment: { id: string; reference: string; subscriptionId: string } | null = null;
+  private readonly paymentState = signal<SimulatedPaymentRecord | null>(null);
+  private readonly selectionState = signal<SelectedOfferRecord | null>(null);
 
   readonly available = environment.dataAccessMode === 'backend';
-  readonly payment = signal<SimulatedPaymentRecord | null>(null);
-  readonly selection = signal<SelectedOfferRecord | null>(null);
+  readonly payment = computed(() => (this.ownsSession() ? this.paymentState() : null));
+  readonly selection = computed(() => (this.ownsSession() ? this.selectionState() : null));
   readonly loading = signal(false);
   readonly confirming = signal(false);
   readonly errorKey = signal<string | null>(null);
@@ -31,9 +50,11 @@ export class SimulatedPaymentService {
   private readonly recoveryKey = signal<string | null>(null);
   private readonly actionBlocked = computed(
     () =>
+      !this.ownsSession() ||
       this.loading() ||
       this.confirming() ||
       [
+        'payment.errors.session',
         'payment.errors.notAllowed',
         'payment.errors.notFound',
         'payment.errors.conflict',
@@ -45,45 +66,79 @@ export class SimulatedPaymentService {
       !!this.selection() &&
       this.subscription?.saga.status === 'payment_pending' &&
       !this.payment() &&
+      !this.attempt() &&
       !this.actionBlocked(),
   );
   readonly canRetryIssuance = computed(
     () =>
       this.payment()?.status === 'confirmed' &&
       this.subscription?.saga.status === 'payment_confirmed' &&
+      this.attempt()?.outcome === 'confirmed' &&
       !!this.recoveryKey() &&
-      this.attempt()?.outcome !== 'rejected' &&
       !this.actionBlocked(),
   );
   readonly canRecoverAttempt = computed(
     () =>
-      this.payment()?.status === 'rejected' &&
-      this.subscription?.saga.status === 'payment_pending' &&
-      this.attempt()?.outcome === 'unresolved' &&
+      !!this.subscription &&
+      !!this.selection() &&
+      this.unresolvedAttempt() &&
       !this.actionBlocked(),
   );
   readonly canStartNewAttempt = computed(
     () =>
       this.payment()?.status === 'rejected' &&
       this.subscription?.saga.status === 'payment_pending' &&
-      this.attempt()?.outcome !== 'unresolved' &&
+      !this.unresolvedAttempt() &&
       !this.actionBlocked(),
   );
-  readonly unresolvedAttempt = computed(() => this.attempt()?.outcome === 'unresolved');
+  readonly unresolvedAttempt = computed(
+    () =>
+      ['unresolved', 'pending'].includes(this.attempt()?.outcome ?? '') ||
+      (this.attempt()?.outcome === 'rival' &&
+        (!this.payment() || this.payment()?.status === 'pending')),
+  );
+
+  constructor() {
+    effect(() => {
+      const ownerId = this.auth.user()?.id ?? null;
+      if (ownerId !== this.ownerId) {
+        untracked(() => {
+          this.ownerId = ownerId;
+          this.confirmedPayment = null;
+          this.reset();
+        });
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.cancelled.next();
+    this.cancelled.complete();
+  }
 
   reset(): void {
+    this.cancelled.next();
     this.subscription = null;
-    this.payment.set(null);
-    this.selection.set(null);
+    this.paymentState.set(null);
+    this.selectionState.set(null);
     this.errorKey.set(null);
     this.recoveryKey.set(null);
     this.attempt.set(null);
+    this.loading.set(false);
+    this.confirming.set(false);
   }
 
   load(subscription: SubscriptionRecord): Observable<void> {
     this.reset();
+    const ownerId = this.auth.user()?.id ?? null;
+    if (ownerId !== this.ownerId) this.confirmedPayment = null;
+    this.ownerId = ownerId;
     this.subscription = subscription;
     if (this.confirmedPayment?.subscriptionId !== subscription.id) this.confirmedPayment = null;
+    if (!ownerId) {
+      this.errorKey.set('payment.errors.session');
+      return of(undefined);
+    }
     if (
       !this.available ||
       subscription.status !== 'approved' ||
@@ -93,14 +148,33 @@ export class SimulatedPaymentService {
       return of(undefined);
     }
     this.loading.set(true);
-    return defer(() =>
-      forkJoin({
+    let attempt: PaymentAttempt | null = null;
+    let exact = false;
+    return defer(() => {
+      this.assertScope(subscription, ownerId);
+      try {
+        attempt = this.readAttempt(subscription);
+      } catch (error) {
+        if (!(error instanceof PaymentAttemptUnavailableError)) throw error;
+        this.errorKey.set('payment.errors.retryKeyUnavailable');
+      }
+      this.attempt.set(attempt);
+      exact = !!attempt && !['rejected', 'rival'].includes(attempt.outcome);
+      return forkJoin({
         selection: this.offers.loadSelection(subscription.quoteId),
-        payment: this.gateway.load(subscription.quoteId),
-      }),
-    ).pipe(
+        payment:
+          exact && attempt
+            ? this.gateway.load(subscription.quoteId, attempt.key)
+            : this.gateway.load(subscription.quoteId),
+      });
+    }).pipe(
+      takeUntil(this.cancelled),
       take(1),
       map(({ selection, payment }) => {
+        this.assertScope(subscription, ownerId);
+        if (attempt && this.readAttempt(subscription)?.key !== attempt.key) {
+          throw new PaymentAttemptUnavailableError('The attempt key changed during recovery.');
+        }
         if (
           !selection?.confirmed ||
           selection.quoteId !== subscription.quoteId ||
@@ -111,44 +185,63 @@ export class SimulatedPaymentService {
         }
         if (payment) {
           this.validatePayment(payment, subscription, selection);
+          if (exact || attempt?.outcome === 'rival') this.validateAttemptPayment(payment, attempt);
+        } else if (this.confirmedPayment || attempt) {
+          throw new PaymentConflictError('A known payment attempt could not be recovered.');
         } else if (['payment_confirmed', 'issued'].includes(subscription.saga.status)) {
           throw new Error('A confirmed payment could not be recovered.');
         }
-        const attempt = this.readAttempt(subscription.id);
-        if (!payment && (this.confirmedPayment || attempt?.outcome === 'confirmed')) {
-          throw new PaymentConflictError('A known confirmed payment could not be recovered.');
-        }
         if (
           this.conflictsWithConfirmed(payment) ||
-          (payment?.status === 'confirmed' &&
-            attempt?.outcome === 'confirmed' &&
-            payment.id !== attempt.paymentId) ||
-          (payment?.status === 'rejected' &&
+          (payment &&
+            payment.status !== 'confirmed' &&
             (attempt?.outcome === 'confirmed' || subscription.saga.status !== 'payment_pending'))
         ) {
           throw new PaymentConflictError('The payment conflicts with a known confirmation.');
         }
-        this.attempt.set(attempt);
-        this.selection.set(selection);
-        this.payment.set(payment);
+        if (exact && attempt && payment) {
+          this.saveAttempt(subscription, {
+            ...attempt,
+            outcome: payment.status,
+            paymentId: payment.id,
+          });
+        }
+        this.selectionState.set(selection);
+        this.paymentState.set(payment);
         this.rememberConfirmed(payment);
         if (payment?.status === 'confirmed' && subscription.saga.status === 'payment_confirmed') {
-          if (attempt && attempt.outcome !== 'rejected') {
-            this.recoveryKey.set(attempt.key);
+          const currentAttempt = this.attempt();
+          if (exact && currentAttempt?.outcome === 'confirmed') {
+            this.recoveryKey.set(currentAttempt.key);
           } else {
             this.errorKey.set('payment.errors.retryKeyUnavailable');
           }
+        } else if (payment?.status === 'pending' && !exact && attempt?.outcome !== 'rival') {
+          this.errorKey.set('payment.errors.retryKeyUnavailable');
         }
       }),
       catchError((error: unknown) => {
         this.errorKey.set(paymentErrorKey(error));
         return of(undefined);
       }),
+      defaultIfEmpty(undefined),
       finalize(() => this.loading.set(false)),
     );
   }
 
   confirm(): Observable<SimulatedPaymentRecord | null> {
+    if (this.loading() || this.confirming()) return of(null);
+    if (this.canRecoverAttempt() && this.subscription) {
+      try {
+        if (this.readAttempt(this.subscription)?.key !== this.attempt()?.key) {
+          throw new PaymentAttemptUnavailableError('The original payment attempt key changed.');
+        }
+      } catch (error) {
+        this.errorKey.set(paymentErrorKey(error));
+        return of(null);
+      }
+      return this.load(this.subscription).pipe(map(() => this.payment()));
+    }
     return this.executeAttempt(false);
   }
 
@@ -157,79 +250,102 @@ export class SimulatedPaymentService {
   }
 
   private executeAttempt(newAttempt: boolean): Observable<SimulatedPaymentRecord | null> {
-    if (this.confirming()) {
-      return of(null);
-    }
+    if (this.loading() || this.confirming()) return of(null);
     const subscription = this.subscription;
     const selection = this.selection();
+    const ownerId = this.ownerId;
     const allowed = newAttempt
       ? this.canStartNewAttempt()
-      : this.canConfirm() || this.canRetryIssuance() || this.canRecoverAttempt();
-    if (!allowed || !subscription || !selection) {
+      : this.canConfirm() || this.canRetryIssuance();
+    if (!allowed || !subscription || !selection || !ownerId) {
       this.errorKey.set('payment.errors.notAllowed');
       return of(null);
     }
     const recoveredPayment = this.payment();
     const expectedKey = this.attempt()?.key;
-    let key: string;
+    let submitted: PaymentAttempt | undefined;
     this.confirming.set(true);
     this.errorKey.set(null);
     return defer(() => {
-      if (!this.storage) {
-        throw new Error('Session storage is required for safe payment retries.');
-      }
-      const existing = this.readAttempt(subscription.id);
-      if (existing?.key !== expectedKey || (newAttempt && existing?.outcome === 'unresolved')) {
+      this.assertScope(subscription, ownerId);
+      const existing = this.readAttempt(subscription);
+      if (
+        existing?.key !== expectedKey ||
+        (existing && ['unresolved', 'pending'].includes(existing.outcome))
+      ) {
         this.recoveryKey.set(null);
         throw new PaymentAttemptUnavailableError(
           'The original payment attempt key is unavailable.',
         );
       }
-      key = newAttempt ? crypto.randomUUID() : (existing?.key ?? crypto.randomUUID());
-      this.saveAttempt(subscription.id, { key, outcome: 'unresolved' });
+      const key = newAttempt ? crypto.randomUUID() : (existing?.key ?? crypto.randomUUID());
+      submitted = {
+        key,
+        outcome: 'unresolved',
+        ...(newAttempt && recoveredPayment ? { previousPaymentId: recoveredPayment.id } : {}),
+        ...(!newAttempt && recoveredPayment?.status === 'confirmed'
+          ? { paymentId: recoveredPayment.id }
+          : {}),
+      };
+      this.saveAttempt(subscription, submitted);
       return this.gateway.confirm(subscription.quoteId, key);
     }).pipe(
+      takeUntil(this.cancelled),
       take(1),
       map((payment) => {
+        this.assertScope(subscription, ownerId);
         this.validatePayment(payment, subscription, selection);
-        if (this.subscription?.id !== subscription.id) {
-          throw new PaymentConflictError('The active subscription changed.');
-        }
-        if (this.readAttempt(subscription.id)?.key !== key) {
+        if (!submitted || this.readAttempt(subscription)?.key !== submitted.key) {
           throw new PaymentAttemptUnavailableError(
             'The original attempt key changed during the request.',
           );
         }
-        const current = this.payment();
-        const confirmed =
-          current?.status === 'confirmed'
-            ? current
-            : recoveredPayment?.status === 'confirmed'
-              ? recoveredPayment
-              : null;
-        if (
-          this.conflictsWithConfirmed(payment) ||
-          (confirmed &&
-            (payment.status !== 'confirmed' ||
-              payment.id !== confirmed.id ||
-              payment.reference !== confirmed.reference))
-        ) {
-          if (payment.status === 'rejected') {
-            this.saveAttempt(subscription.id, { key, outcome: 'rejected', paymentId: payment.id });
-          }
+        this.validateAttemptPayment(payment, submitted);
+        if (this.conflictsWithConfirmed(payment)) {
           throw new PaymentConflictError('The confirmed payment changed during recovery.');
         }
-        this.saveAttempt(subscription.id, { key, outcome: payment.status, paymentId: payment.id });
+        this.saveAttempt(subscription, {
+          ...submitted,
+          outcome: payment.status,
+          paymentId: payment.id,
+        });
         this.rememberConfirmed(payment);
-        this.payment.set(payment);
+        this.paymentState.set(payment);
         return payment;
       }),
       catchError((error: unknown) => {
-        this.errorKey.set(paymentErrorKey(error));
+        const rivalId = paymentInProgressId(error);
+        if (rivalId && submitted) {
+          try {
+            this.assertScope(subscription, ownerId);
+            this.saveAttempt(subscription, { ...submitted, outcome: 'rival', paymentId: rivalId });
+            this.errorKey.set('payment.errors.inProgress');
+          } catch (storageError) {
+            this.errorKey.set(paymentErrorKey(storageError));
+          }
+        } else {
+          this.errorKey.set(paymentErrorKey(error));
+        }
         return of(null);
       }),
+      defaultIfEmpty(null),
       finalize(() => this.confirming.set(false)),
     );
+  }
+
+  private ownsSession(): boolean {
+    return !!this.ownerId && this.auth.user()?.id === this.ownerId;
+  }
+
+  private assertScope(subscription: SubscriptionRecord, ownerId: string): void {
+    if (
+      !this.ownsSession() ||
+      this.ownerId !== ownerId ||
+      this.subscription?.id !== subscription.id ||
+      this.subscription.quoteId !== subscription.quoteId
+    ) {
+      throw new PaymentAttemptUnavailableError('The active payment session changed.');
+    }
   }
 
   private conflictsWithConfirmed(payment: SimulatedPaymentRecord | null): boolean {
@@ -252,10 +368,13 @@ export class SimulatedPaymentService {
     }
   }
 
-  private readAttempt(subscriptionId: string): PaymentAttempt | null {
-    const key = this.storage?.getItem(`solventa.payment.attempt.${subscriptionId}`);
-    const receipt = this.storage?.getItem(`solventa.payment.receipt.${subscriptionId}`);
-    if (!receipt) return key ? { key, outcome: 'unresolved' } : null;
+  private readAttempt(subscription: SubscriptionRecord): PaymentAttempt | null {
+    const key = this.storage?.getItem(`solventa.payment.attempt.${subscription.id}`);
+    const receipt = this.storage?.getItem(`solventa.payment.receipt.${subscription.id}`);
+    if (!receipt && !key) return null;
+    if (!receipt || !key || !PAYMENT_ATTEMPT_KEY_PATTERN.test(key)) {
+      throw new PaymentAttemptUnavailableError('The payment attempt cannot be attributed safely.');
+    }
     let parsed: unknown;
     try {
       parsed = JSON.parse(receipt);
@@ -267,31 +386,76 @@ export class SimulatedPaymentService {
       !parsed ||
       typeof parsed !== 'object' ||
       !('key' in parsed) ||
-      !key ||
       parsed.key !== key ||
+      !('ownerId' in parsed) ||
+      parsed.ownerId !== this.ownerId ||
+      !('quoteId' in parsed) ||
+      parsed.quoteId !== subscription.quoteId ||
+      !('subscriptionId' in parsed) ||
+      parsed.subscriptionId !== subscription.id ||
       !('outcome' in parsed)
     ) {
       throw new PaymentAttemptUnavailableError('The original payment attempt cannot be verified.');
     }
-    if (parsed.outcome === 'unresolved') return { key, outcome: 'unresolved' };
+    const previousPaymentId = 'previousPaymentId' in parsed ? parsed.previousPaymentId : undefined;
+    const paymentId = 'paymentId' in parsed ? parsed.paymentId : undefined;
     if (
-      (parsed.outcome === 'confirmed' || parsed.outcome === 'rejected') &&
-      'paymentId' in parsed &&
-      typeof parsed.paymentId === 'string' &&
-      parsed.paymentId
+      (previousPaymentId !== undefined &&
+        (typeof previousPaymentId !== 'string' || !previousPaymentId)) ||
+      (paymentId !== undefined && (typeof paymentId !== 'string' || !paymentId))
     ) {
-      return { key, outcome: parsed.outcome, paymentId: parsed.paymentId };
+      throw new PaymentAttemptUnavailableError('The payment attempt receipt is invalid.');
+    }
+    const common = { key, ...(previousPaymentId ? { previousPaymentId } : {}) };
+    if (parsed.outcome === 'unresolved') {
+      return { ...common, outcome: 'unresolved', ...(paymentId ? { paymentId } : {}) };
+    }
+    if (
+      (parsed.outcome === 'pending' ||
+        parsed.outcome === 'confirmed' ||
+        parsed.outcome === 'rejected' ||
+        parsed.outcome === 'rival') &&
+      paymentId
+    ) {
+      return { ...common, outcome: parsed.outcome, paymentId };
     }
     throw new PaymentAttemptUnavailableError('The payment attempt receipt is invalid.');
   }
 
-  private saveAttempt(subscriptionId: string, attempt: PaymentAttempt): void {
-    if (!this.storage) throw new PaymentAttemptUnavailableError('Session storage is required.');
+  private saveAttempt(subscription: SubscriptionRecord, attempt: PaymentAttempt): void {
+    if (!this.storage || !this.ownsSession()) {
+      throw new PaymentAttemptUnavailableError(
+        'Session storage and the original owner are required.',
+      );
+    }
     if (attempt.outcome === 'unresolved') this.attempt.set(attempt);
-    // Store the receipt first: an interrupted key rotation must block, not invent another attempt.
-    this.storage.setItem(`solventa.payment.receipt.${subscriptionId}`, JSON.stringify(attempt));
-    this.storage.setItem(`solventa.payment.attempt.${subscriptionId}`, attempt.key);
+    // An interrupted receipt/key rotation must block, not invent another attempt.
+    this.storage.setItem(
+      `solventa.payment.receipt.${subscription.id}`,
+      JSON.stringify({
+        ...attempt,
+        ownerId: this.ownerId,
+        quoteId: subscription.quoteId,
+        subscriptionId: subscription.id,
+      }),
+    );
+    this.storage.setItem(`solventa.payment.attempt.${subscription.id}`, attempt.key);
     this.attempt.set(attempt);
+  }
+
+  private validateAttemptPayment(
+    payment: SimulatedPaymentRecord,
+    attempt: PaymentAttempt | null,
+  ): void {
+    if (
+      attempt &&
+      ((attempt.paymentId && payment.id !== attempt.paymentId) ||
+        payment.id === attempt.previousPaymentId)
+    ) {
+      throw new PaymentConflictError(
+        'The response does not belong to the reserved payment attempt.',
+      );
+    }
   }
 
   private validatePayment(
@@ -316,17 +480,29 @@ export class SimulatedPaymentService {
 class PaymentAttemptUnavailableError extends Error {}
 class PaymentConflictError extends Error {}
 
+function paymentInProgressId(error: unknown): string | null {
+  if (!(error instanceof HttpErrorResponse) || error.status !== 409) return null;
+  const body: unknown = error.error;
+  return body !== null &&
+    typeof body === 'object' &&
+    'code' in body &&
+    body.code === 'pago_en_proceso' &&
+    'pagoId' in body &&
+    typeof body.pagoId === 'string' &&
+    body.pagoId.trim().length > 0
+    ? body.pagoId
+    : null;
+}
+
 function paymentErrorKey(error: unknown): string {
-  if (error instanceof PaymentConflictError) {
-    return 'payment.errors.conflict';
-  }
-  if (error instanceof PaymentAttemptUnavailableError) {
-    return 'payment.errors.retryKeyUnavailable';
-  }
+  if (error instanceof PaymentConflictError) return 'payment.errors.conflict';
+  if (error instanceof PaymentAttemptUnavailableError) return 'payment.errors.retryKeyUnavailable';
   if (error instanceof HttpErrorResponse) {
     switch (error.status) {
       case 401:
         return 'payment.errors.session';
+      case 403:
+        return 'payment.errors.notAllowed';
       case 404:
         return 'payment.errors.notFound';
       case 409:

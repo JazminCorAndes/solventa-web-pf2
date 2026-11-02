@@ -1,5 +1,8 @@
 import { Money, PremiumPeriodicity } from '../offers/offer.models';
 
+export const PAYMENT_ATTEMPT_KEY_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface SimulatedPaymentBase {
   id: string;
   quoteId: string;
@@ -33,4 +36,16 @@ export interface RejectedSimulatedPayment extends SimulatedPaymentBase {
   };
 }
 
-export type SimulatedPaymentRecord = ConfirmedSimulatedPayment | RejectedSimulatedPayment;
+export interface PendingSimulatedPayment extends SimulatedPaymentBase {
+  status: 'pending';
+  createdAt: string;
+  code: 'resultado_no_confirmado';
+  saga: {
+    status: 'payment_pending';
+    version: number;
+    updatedAt: string;
+  };
+}
+
+export type SimulatedPaymentRecord =
+  ConfirmedSimulatedPayment | RejectedSimulatedPayment | PendingSimulatedPayment;

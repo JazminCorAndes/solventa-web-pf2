@@ -625,6 +625,8 @@
     "backendRequired": "El pago simulado requiere una conexión con el servicio.",
     "loading": "Consultando el importe y el estado del pago simulado.",
     "pending": "Pago simulado pendiente de confirmación.",
+    "resultPending": "Resultado del pago simulado aún no confirmado",
+    "createdAt": "Fecha de inicio del intento",
     "amount": "Importe",
     "confirmAction": "Confirmar pago simulado",
     "confirming": "Confirmando pago simulado…",
@@ -635,9 +637,9 @@
     "rejectedAt": "Fecha de rechazo",
     "rejectionReason": "Motivo del rechazo",
     "rejectionReasons": { "rechazo_simulado": "Rechazo de la simulación" },
-    "recoverAttempt": "Recuperar el mismo intento",
+    "recoverAttempt": "Consultar el mismo intento",
     "recoveringAttempt": "Procesando el intento…",
-    "unresolvedAttempt": "El resultado mostrado es el último conocido. Hay un intento cuya respuesta aún debe recuperarse con la misma clave; no se iniciará otro.",
+    "unresolvedAttempt": "El resultado del intento aún debe consultarse. Consultar o actualizar el estado no confirma otro pago ni inicia un nuevo intento.",
     "newAttempt": "Preparar un nuevo intento",
     "newAttemptTitle": "Confirmar un nuevo intento simulado",
     "newAttemptBody": "El intento anterior fue rechazado. Esta acción enviará una nueva evaluación simulada con otra clave; el servicio decide el resultado. No es recuperar el intento anterior y no realiza un cobro real.",
@@ -648,12 +650,13 @@
     "retryIssuance": "Reintentar emisión",
     "retryingIssuance": "Reintentando emisión…",
     "errors": {
+      "inProgress": "Ya hay un pago simulado en proceso. Consulta su estado; esta clave no quedó vinculada al pago en curso y no se reenviará.",
       "retryKeyUnavailable": "La clave del intento original no está disponible en esta pestaña. Solo puedes actualizar el estado; no se generará otro pago.",
       "session": "No fue posible validar tu sesión. Inicia sesión nuevamente para continuar.",
       "notFound": "No fue posible encontrar esta solicitud para tu sesión. Vuelve a consultar tus cotizaciones.",
       "conflict": "No fue posible conciliar este intento de pago simulado. Actualiza el estado antes de continuar.",
       "notAllowed": "El pago simulado no está permitido para el estado actual de esta solicitud. Actualiza el estado.",
-      "unavailable": "No fue posible consultar o confirmar el pago simulado. Actualiza el estado o reintenta la confirmación."
+      "unavailable": "No fue posible obtener el resultado del pago simulado. Consulta o actualiza el estado; no se enviará otra confirmación mientras el intento siga sin resolver."
     }
   },
   "advisorNavigation": {

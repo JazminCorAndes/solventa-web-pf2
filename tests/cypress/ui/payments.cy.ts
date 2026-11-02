@@ -133,10 +133,24 @@ function rejection(
   };
 }
 
+function pendingPayment(
+  payment: ReturnType<typeof reachSubscription>['payment'],
+  subscription: ReturnType<typeof reachSubscription>['subscription'],
+) {
+  const { confirmadaEn, ...fields } = payment;
+  return {
+    ...fields,
+    estado: 'pendiente' as const,
+    creadaEn: confirmadaEn,
+    codigo: 'resultado_no_confirmado',
+    saga: subscription.saga,
+  };
+}
+
 describe('UI determinista: pago simulado y recuperacion (no ledger real)', () => {
   beforeEach(mockBackend);
 
-  it('reutiliza clave al reintentar un pago fallido y bloquea una segunda confirmacion', () => {
+  it('consulta la clave tras perder la respuesta y nunca envia otro POST', () => {
     const { payment } = reachSubscription();
     let key: string;
     cy.intercept(
@@ -147,15 +161,19 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     cy.wait('@ambiguous').then(({ request }) => {
       key = String(request.headers['idempotency-key']);
     });
-    cy.contains('[role=alert]', 'No fue posible consultar o confirmar').should('be.visible');
+    cy.contains('[role=alert]', 'No fue posible obtener el resultado').should('be.visible');
     cy.contains('h3', 'Pago simulado confirmado').should('not.exist');
-    cy.intercept('POST', '/api/v1/solicitudes-cotizacion/*/pago-simulado', payment).as('retry');
-    cy.intercept('GET', '/api/v1/solicitudes-cotizacion/*/pago-simulado', payment);
-    cy.contains('button', 'Recuperar el mismo intento').click();
-    cy.wait('@retry').then(({ request }) => expect(request.headers['idempotency-key']).to.eq(key));
+    cy.intercept('POST', '/api/v1/solicitudes-cotizacion/*/pago-simulado', () => {
+      throw new Error('Recovery must not POST another payment.');
+    });
+    cy.intercept('GET', '/api/v1/solicitudes-cotizacion/*/pago-simulado', payment).as('recovery');
+    cy.contains('button', 'Consultar el mismo intento').click();
+    cy.wait('@recovery').then(({ request }) =>
+      expect(request.headers['idempotency-key']).to.eq(key),
+    );
     cy.contains('h3', 'Pago simulado confirmado').should('be.visible');
     cy.get('.confirm-payment').should('not.exist');
-    cy.get('@retry.all').should('have.length', 1);
+    cy.get('@ambiguous.all').should('have.length', 1);
   });
 
   it('no muestra exito si el importe recibido difiere de la oferta aceptada', () => {
@@ -165,8 +183,103 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
       importe: { monto: '1.00', moneda: 'COP' },
     });
     cy.contains('button', 'Confirmar pago simulado').click();
-    cy.contains('[role=alert]', 'No fue posible consultar o confirmar').should('be.visible');
+    cy.contains('[role=alert]', 'No fue posible obtener el resultado').should('be.visible');
     cy.contains('h3', 'Pago simulado confirmado').should('not.exist');
+  });
+
+  it('conserva pendiente tras recargar y consulta la misma clave sin repetir el POST', () => {
+    const { payment, subscription } = reachSubscription();
+    const pending = pendingPayment(payment, subscription);
+    const paymentPath = `/api/v1/solicitudes-cotizacion/${quoteId}/pago-simulado`;
+    let key: string;
+    let current: typeof pending | typeof payment = pending;
+    cy.get('.confirm-payment').should('be.enabled');
+    cy.intercept('POST', paymentPath, (request) => {
+      expect(key, 'only one POST').to.eq(undefined);
+      key = String(request.headers['idempotency-key']);
+      expect(request.body).to.deep.eq({});
+      request.reply(pending);
+    }).as('pendingPayment');
+    cy.intercept('GET', paymentPath, (request) => {
+      expect(request.headers['idempotency-key']).to.eq(key);
+      request.reply(current);
+    }).as('readAttempt');
+    cy.get('.confirm-payment').click();
+    cy.wait('@pendingPayment');
+    cy.get('.payment-pending').should(
+      'contain.text',
+      'Resultado del pago simulado aún no confirmado',
+    );
+    cy.get('.payment-section').should('not.contain.text', 'Fecha de confirmación');
+    cy.get('.payment-section').should('not.contain.text', 'Fecha de rechazo');
+    cy.get('.confirm-payment, .retry-issuance, .request-new-payment').should('not.exist');
+    cy.reload();
+    cy.wait('@readAttempt');
+    cy.get('.payment-pending').should('be.visible');
+    cy.get('.recover-payment').click();
+    cy.wait('@readAttempt');
+    cy.get('.payment-pending').should('be.visible');
+    cy.then(() => {
+      current = payment;
+    });
+    cy.get('.recover-payment').click();
+    cy.wait('@readAttempt');
+    cy.get('.payment-confirmation').should('be.visible');
+    cy.contains('Póliza emitida').should('not.exist');
+    cy.get('@pendingPayment.all').should('have.length', 1);
+  });
+
+  it('un404 de recuperacion exacta no inicia otro pago ni rota la clave', () => {
+    reachSubscription();
+    let key: string;
+    const paymentPath = `/api/v1/solicitudes-cotizacion/${quoteId}/pago-simulado`;
+    cy.get('.confirm-payment').should('be.enabled');
+    cy.intercept('POST', paymentPath, { statusCode: 503 }).as('lostPayment');
+    cy.get('.confirm-payment').click();
+    cy.wait('@lostPayment').then(({ request }) => {
+      key = String(request.headers['idempotency-key']);
+    });
+    cy.intercept('GET', paymentPath, (request) => {
+      expect(request.headers['idempotency-key']).to.eq(key);
+      request.reply({ statusCode: 404, body: { code: 'pago_no_encontrado' } });
+    }).as('unknownAttempt');
+    cy.get('.recover-payment').click();
+    cy.wait('@unknownAttempt');
+    cy.get('.payment-section [role=alert]').should('contain.text', 'No fue posible encontrar');
+    cy.get('.confirm-payment, .request-new-payment, .retry-issuance').should('not.exist');
+    cy.reload();
+    cy.wait('@unknownAttempt');
+    cy.get('.confirm-payment, .request-new-payment, .retry-issuance').should('not.exist');
+    cy.get('@lostPayment.all').should('have.length', 1);
+  });
+
+  it('el409 rival consulta el pago en curso sin atribuirle su clave ni reenviarla', () => {
+    const { payment, subscription } = reachSubscription();
+    const pending = pendingPayment(payment, subscription);
+    const paymentPath = `/api/v1/solicitudes-cotizacion/${quoteId}/pago-simulado`;
+    cy.get('.confirm-payment').should('be.enabled');
+    cy.intercept('POST', paymentPath, {
+      statusCode: 409,
+      headers: { Location: paymentPath },
+      body: { code: 'pago_en_proceso', pagoId: payment.id },
+    }).as('rivalPayment');
+    cy.get('.confirm-payment').click();
+    cy.wait('@rivalPayment');
+    cy.get('.payment-section [role=alert]').should(
+      'contain.text',
+      'Ya hay un pago simulado en proceso',
+    );
+    cy.intercept('GET', paymentPath, (request) => {
+      expect(request.headers['idempotency-key']).to.eq(undefined);
+      request.reply(pending);
+    }).as('activePayment');
+    cy.get('.recover-payment').click();
+    cy.wait('@activePayment');
+    cy.get('.payment-pending').should('be.visible');
+    cy.reload();
+    cy.wait('@activePayment');
+    cy.get('.confirm-payment, .request-new-payment, .retry-issuance').should('not.exist');
+    cy.get('@rivalPayment.all').should('have.length', 1);
   });
 
   it('recupera el acuse perdido de emisión con la misma clave y espera la saga autoritativa', () => {
@@ -203,7 +316,7 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
       originalKey = String(request.headers['idempotency-key']);
       expect(request.body).to.deep.eq({});
     });
-    cy.contains('[role=alert]', 'No fue posible consultar o confirmar').should('be.visible');
+    cy.contains('[role=alert]', 'No fue posible obtener el resultado').should('be.visible');
     cy.get('.payment-section').should('not.contain.text', 'rechazado');
     cy.contains('Póliza emitida').should('not.exist');
     cy.contains('button', 'Actualizar estado').click();
@@ -280,7 +393,7 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
       .should('be.visible')
       .and(
         'have.text',
-        'No fue posible consultar o confirmar el pago simulado. Actualiza el estado o reintenta la confirmación.',
+        'No fue posible obtener el resultado del pago simulado. Consulta o actualiza el estado; no se enviará otra confirmación mientras el intento siga sin resolver.',
       );
     cy.contains('Póliza emitida').should('not.exist');
     cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/suscripcion`, {
@@ -340,12 +453,10 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
       } else if (posts === 2) {
         newKey = String(request.headers['idempotency-key']);
         expect(newKey).not.to.eq(rejectedKey);
+        current = payment;
         request.reply({ statusCode: 503, body: { code: 'servicio_no_disponible' } });
       } else {
-        expect(posts).to.eq(3);
-        expect(request.headers['idempotency-key']).to.eq(newKey);
-        current = payment;
-        request.reply(payment);
+        throw new Error('An ambiguous payment must be recovered by GET, never a third POST.');
       }
     }).as('paymentAttempt');
     cy.intercept('GET', '/api/v1/clientes/me/dashboard', {
@@ -392,18 +503,18 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     cy.wait('@paymentAttempt').its('response.statusCode').should('eq', 503);
     cy.get('.request-new-payment').should('not.exist');
     cy.reload();
-    cy.wait('@latestPayment').its('response.body.estado').should('eq', 'rechazado');
-    cy.get('.payment-rejection').should('be.visible');
-    cy.get('.request-new-payment').should('not.exist');
-    cy.get('.recover-payment').should('be.enabled');
-    cy.get('@paymentAttempt.all').should('have.length', 2);
-    cy.get('.recover-payment').click();
-    cy.wait('@paymentAttempt').its('response.body.id').should('eq', payment.id);
     cy.get('.payment-confirmation').should('be.visible');
     cy.get('.request-new-payment').should('not.exist');
+    cy.get('.recover-payment').should('not.exist');
+    cy.get('@paymentAttempt.all').should('have.length', 2);
+    cy.get('@latestPayment.all').should((requests) => {
+      const last = requests[requests.length - 1];
+      expect(last.request.headers['idempotency-key']).to.eq(newKey);
+      expect(last.response?.body.id).to.eq(payment.id);
+    });
     cy.get('.payment-rejection').should('not.exist');
     cy.contains('Póliza emitida').should('not.exist');
-    cy.get('@paymentAttempt.all').should('have.length', 3);
+    cy.get('@paymentAttempt.all').should('have.length', 2);
   });
 
   for (const state of ['revision', 'rechazada']) {

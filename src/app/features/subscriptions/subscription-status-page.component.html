@@ -107,12 +107,17 @@
                 <div
                   [class.payment-confirmation]="payment.status === 'confirmed'"
                   [class.payment-rejection]="payment.status === 'rejected'"
+                  [class.payment-pending]="payment.status === 'pending'"
                   role="status"
                 >
                   <h3>
                     {{
-                      (payment.status === 'confirmed' ? 'payment.confirmed' : 'payment.rejected')
-                        | transloco
+                      (payment.status === 'confirmed'
+                        ? 'payment.confirmed'
+                        : payment.status === 'rejected'
+                          ? 'payment.rejected'
+                          : 'payment.resultPending'
+                      ) | transloco
                     }}
                   </h3>
                   <dl>
@@ -141,7 +146,7 @@
                           {{ payment.confirmedAt | date: 'medium' : undefined : market.locale }}
                         </dd>
                       </div>
-                    } @else {
+                    } @else if (payment.status === 'rejected') {
                       <div>
                         <dt>{{ 'payment.rejectedAt' | transloco }}</dt>
                         <dd>
@@ -151,6 +156,13 @@
                       <div>
                         <dt>{{ 'payment.rejectionReason' | transloco }}</dt>
                         <dd>{{ 'payment.rejectionReasons.' + payment.reason | transloco }}</dd>
+                      </div>
+                    } @else {
+                      <div>
+                        <dt>{{ 'payment.createdAt' | transloco }}</dt>
+                        <dd>
+                          {{ payment.createdAt | date: 'medium' : undefined : market.locale }}
+                        </dd>
                       </div>
                     }
                   </dl>
@@ -178,26 +190,6 @@
                   }
                 }
                 @if (payment.status === 'rejected') {
-                  @if (payments.unresolvedAttempt()) {
-                    <p role="status">{{ 'payment.unresolvedAttempt' | transloco }}</p>
-                  }
-                  @if (payments.canRecoverAttempt() || payments.confirming()) {
-                    <button
-                      mat-flat-button
-                      type="button"
-                      class="recover-payment"
-                      [disabled]="!payments.canRecoverAttempt()"
-                      [attr.aria-busy]="payments.confirming()"
-                      (click)="confirmPayment()"
-                    >
-                      {{
-                        (payments.confirming()
-                          ? 'payment.recoveringAttempt'
-                          : 'payment.recoverAttempt'
-                        ) | transloco
-                      }}
-                    </button>
-                  }
                   @if (payments.canStartNewAttempt()) {
                     <button
                       #newAttemptButton
@@ -249,22 +241,33 @@
                   </strong>
                   · {{ 'offers.premiumLabels.' + selection.periodicity | transloco }}
                 </p>
+                @if (!payments.unresolvedAttempt() || payments.confirming()) {
+                  <button
+                    mat-flat-button
+                    type="button"
+                    class="confirm-payment"
+                    [disabled]="!payments.canConfirm()"
+                    [attr.aria-busy]="payments.confirming()"
+                    (click)="confirmPayment()"
+                  >
+                    {{
+                      (payments.confirming() ? 'payment.confirming' : 'payment.confirmAction')
+                        | transloco
+                    }}
+                  </button>
+                }
+              }
+              @if (payments.unresolvedAttempt() || payments.canRecoverAttempt()) {
+                <p role="status">{{ 'payment.unresolvedAttempt' | transloco }}</p>
                 <button
                   mat-flat-button
                   type="button"
-                  class="confirm-payment"
-                  [disabled]="!payments.canConfirm()"
-                  [attr.aria-busy]="payments.confirming()"
+                  class="recover-payment"
+                  [disabled]="!payments.canRecoverAttempt()"
+                  [attr.aria-busy]="payments.loading()"
                   (click)="confirmPayment()"
                 >
-                  {{
-                    (payments.confirming()
-                      ? 'payment.confirming'
-                      : payments.unresolvedAttempt()
-                        ? 'payment.recoverAttempt'
-                        : 'payment.confirmAction'
-                    ) | transloco
-                  }}
+                  {{ 'payment.recoverAttempt' | transloco }}
                 </button>
               }
             }

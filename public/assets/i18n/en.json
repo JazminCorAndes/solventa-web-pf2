@@ -625,6 +625,8 @@
     "backendRequired": "Simulated payment requires a connection to the service.",
     "loading": "Loading the simulated payment amount and status.",
     "pending": "Simulated payment awaiting confirmation.",
+    "resultPending": "Simulated payment outcome is not yet confirmed",
+    "createdAt": "Attempt start date",
     "amount": "Amount",
     "confirmAction": "Confirm simulated payment",
     "confirming": "Confirming simulated payment…",
@@ -635,9 +637,9 @@
     "rejectedAt": "Rejection date",
     "rejectionReason": "Rejection reason",
     "rejectionReasons": { "rechazo_simulado": "Simulation rejection" },
-    "recoverAttempt": "Recover the same attempt",
+    "recoverAttempt": "Check the same attempt",
     "recoveringAttempt": "Processing the attempt…",
-    "unresolvedAttempt": "The displayed result is the last known one. An attempt still needs its response recovered with the same key; no other attempt will be started.",
+    "unresolvedAttempt": "The attempt outcome still needs to be checked. Checking or refreshing its status does not confirm another payment or start a new attempt.",
     "newAttempt": "Prepare a new attempt",
     "newAttemptTitle": "Confirm a new simulated attempt",
     "newAttemptBody": "The previous attempt was rejected. This action submits a new simulated evaluation with another key; the service decides its result. It does not recover the previous attempt or charge real money.",
@@ -648,12 +650,13 @@
     "retryIssuance": "Retry issuance",
     "retryingIssuance": "Retrying issuance…",
     "errors": {
+      "inProgress": "A simulated payment is already in progress. Check its status; this key was not linked to the active payment and will not be resubmitted.",
       "retryKeyUnavailable": "The original attempt key is unavailable in this tab. You can only refresh the status; no new payment will be created.",
       "session": "Your session could not be validated. Sign in again to continue.",
       "notFound": "This request could not be found for your session. Return to your quotes.",
       "conflict": "This simulated payment attempt could not be reconciled. Refresh the status before continuing.",
       "notAllowed": "Simulated payment is not allowed for the current request status. Refresh the status.",
-      "unavailable": "The simulated payment could not be loaded or confirmed. Refresh the status or retry confirmation."
+      "unavailable": "The simulated payment outcome could not be retrieved. Check or refresh its status; no further confirmation will be sent while the attempt remains unresolved."
     }
   },
   "advisorNavigation": {

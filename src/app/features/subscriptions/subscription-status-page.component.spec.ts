@@ -7,6 +7,7 @@ import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../../core/auth/auth.service';
 import es from '../../../../public/assets/i18n/es.json';
 import { OFFER_GATEWAY } from '../../core/offers/offer.gateway';
 import { SIMULATED_PAYMENT_GATEWAY } from '../../core/payments/simulated-payment.gateway';
@@ -15,6 +16,8 @@ import {
   CONFIRMED_PAYMENT,
   PAYMENT_SELECTION,
   REJECTED_PAYMENT,
+  PENDING_PAYMENT,
+  PAYMENT_OWNER_ID,
 } from '../../core/payments/simulated-payment.testing';
 import { SubscriptionRecord } from '../../core/subscriptions/subscription.models';
 import { SubscriptionService } from '../../core/subscriptions/subscription.service';
@@ -75,6 +78,7 @@ describe('SubscriptionStatusPageComponent', () => {
         provideRouter([]),
         { provide: SIMULATED_PAYMENT_GATEWAY, useValue: paymentGateway },
         { provide: OFFER_GATEWAY, useValue: offers },
+        { provide: AuthService, useValue: { user: signal({ id: PAYMENT_OWNER_ID }) } },
         {
           provide: SubscriptionService,
           useValue: { subscription, loading, error, load },
@@ -229,15 +233,19 @@ describe('SubscriptionStatusPageComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
       es.payment.errors.unavailable,
     );
-    expect(button.disabled).toBe(false);
+    expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
     expect(fixture.nativeElement.querySelector('.payment-confirmation')).toBeNull();
     expect(load).toHaveBeenCalledOnce();
 
-    button.click();
+    paymentGateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
+    fixture.nativeElement.querySelector('.recover-payment').click();
     fixture.detectChanges();
 
-    expect(paymentGateway.confirm).toHaveBeenCalledTimes(2);
-    expect(paymentGateway.confirm.mock.calls[0][1]).toBe(paymentGateway.confirm.mock.calls[1][1]);
+    expect(paymentGateway.confirm).toHaveBeenCalledOnce();
+    expect(paymentGateway.load).toHaveBeenLastCalledWith(
+      SUBSCRIPTION.quoteId,
+      paymentGateway.confirm.mock.calls[0][1],
+    );
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('.payment-confirmation')?.textContent).toContain(
       CONFIRMED_PAYMENT.reference,
@@ -258,6 +266,29 @@ describe('SubscriptionStatusPageComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Póliza emitida');
     expect(fixture.nativeElement.querySelector('.confirm-payment')).toBeNull();
     expect(paymentGateway.confirm).not.toHaveBeenCalled();
+  });
+
+  it('shows a pending result without confirmation, rejection or issuance and recovers with GET', () => {
+    paymentGateway.confirm.mockReturnValueOnce(of(PENDING_PAYMENT));
+    fixture.nativeElement.querySelector('.confirm-payment').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(es.payment.resultPending);
+    expect(fixture.nativeElement.textContent).toContain(es.payment.createdAt);
+    expect(fixture.nativeElement.textContent).not.toContain(es.payment.confirmedAt);
+    expect(fixture.nativeElement.textContent).not.toContain(es.payment.rejectedAt);
+    expect(fixture.nativeElement.textContent).not.toContain(es.subscription.sagaStatuses.issued);
+    expect(fixture.nativeElement.querySelector('.retry-issuance')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.request-new-payment')).toBeNull();
+    expect(load).toHaveBeenCalledOnce();
+    paymentGateway.load.mockReturnValue(of(PENDING_PAYMENT));
+    fixture.nativeElement.querySelector('.recover-payment').click();
+    fixture.detectChanges();
+    expect(paymentGateway.load).toHaveBeenLastCalledWith(
+      SUBSCRIPTION.quoteId,
+      paymentGateway.confirm.mock.calls[0][1],
+    );
+    expect(paymentGateway.confirm).toHaveBeenCalledOnce();
+    expect(fixture.nativeElement.querySelector('.payment-pending')).not.toBeNull();
   });
 
   it('retries the original operation after a lost issuance acknowledgement, not a new payment', () => {
