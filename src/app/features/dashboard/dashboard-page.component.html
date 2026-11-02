@@ -152,10 +152,27 @@
                   {{ payment.amount.currency }} ·
                   {{ 'offers.premiumLabels.' + payment.periodicity | transloco }}
                 </p>
-                <p>
-                  {{ 'dashboard.confirmedAt' | transloco }}:
-                  {{ payment.confirmedAt | date: 'medium' : undefined : dateLocale }}
-                </p>
+                @if (payment.status === 'confirmado') {
+                  <p>
+                    {{ 'dashboard.confirmedAt' | transloco }}:
+                    {{ payment.confirmedAt | date: 'medium' : undefined : dateLocale }}
+                  </p>
+                } @else if (payment.status === 'rechazado') {
+                  <p>
+                    {{ 'payment.rejectedAt' | transloco }}:
+                    {{ payment.rejectedAt | date: 'medium' : undefined : dateLocale }}
+                  </p>
+                  <p>
+                    {{ 'payment.rejectionReason' | transloco }}:
+                    {{ 'payment.rejectionReasons.' + payment.reason | transloco }}
+                  </p>
+                } @else {
+                  <p>
+                    {{ 'payment.createdAt' | transloco }}:
+                    {{ payment.createdAt | date: 'medium' : undefined : dateLocale }}
+                  </p>
+                  <p>{{ 'payment.unresolvedAttempt' | transloco }}</p>
+                }
               </li>
             } @empty {
               <li class="empty-state">{{ 'dashboard.emptyPayments' | transloco }}</li>

@@ -1,7 +1,7 @@
 const { defineConfig } = require('cypress');
 const fs = require('node:fs');
 const { join } = require('node:path');
-const { localUrl } = require('./run.cjs');
+const { localUrl, hu44Fixture } = require('./run.cjs');
 
 module.exports = defineConfig({
   video: false,
@@ -22,6 +22,10 @@ module.exports = defineConfig({
     specPattern: 'tests/cypress/ui/**/*.cy.ts',
     testIsolation: true,
     setupNodeEvents(on, config) {
+      if (config.env.suite === 'controlled') {
+        on('task', { hu44Fixture: () => hu44Fixture(true) });
+        return;
+      }
       if (config.env.suite !== 'integrated') return;
       on('task', {
         async registerCustomer(account) {

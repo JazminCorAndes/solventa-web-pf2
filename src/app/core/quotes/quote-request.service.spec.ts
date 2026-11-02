@@ -20,12 +20,14 @@ const PRODUCTS: InsuranceProduct[] = [
     name: 'Seguro Automotriz Total',
     description: 'Protección para el vehículo',
     available: true,
+    mainCoverages: [],
   },
   {
     id: 'life',
     name: 'Seguro de Vida',
     description: 'Próximamente',
     available: false,
+    mainCoverages: [],
   },
 ];
 
@@ -47,6 +49,8 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadProductDetail = vi.fn<QuoteRequestGateway['loadProductDetail']>();
+
   loadRequest(): Observable<QuoteRequestRecord> {
     return of(RECORD);
   }

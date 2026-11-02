@@ -12,8 +12,11 @@ import {
   DASHBOARD_RESPONSE,
   DASHBOARD_SNAPSHOT,
   EMPTY_DASHBOARD,
+  REJECTED_DASHBOARD_RESPONSE,
+  REJECTED_DASHBOARD_PAYMENT,
 } from '../../core/dashboard/dashboard.testing';
 import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
+import { PENDING_PAYMENT_RESPONSE } from '../../core/payments/simulated-payment.testing';
 import { HttpDashboardGateway } from './http-dashboard.gateway';
 import populatedReal from './testing/dashboard-populated-real.json';
 import emptyReal from './testing/dashboard-empty-real.json';
@@ -95,6 +98,66 @@ describe('HttpDashboardGateway', () => {
     const result = firstValueFrom(gateway.load());
     http.expectOne(URL).flush(EMPTY_RESPONSE);
     await expect(result).resolves.toEqual(EMPTY_DASHBOARD);
+  });
+
+  it('maps a definitive simulated rejection without a confirmation timestamp', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(URL).flush({ ...EMPTY_RESPONSE, pagos: [REJECTED_DASHBOARD_RESPONSE] });
+    const snapshot = await result;
+    expect(snapshot.payments).toEqual([REJECTED_DASHBOARD_PAYMENT]);
+    expect(snapshot.payments[0]).not.toHaveProperty('confirmedAt');
+  });
+
+  it('maps an unresolved payment without inventing a final outcome or policy', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(URL).flush({ ...EMPTY_RESPONSE, pagos: [PENDING_PAYMENT_RESPONSE] });
+    const snapshot = await result;
+    expect(snapshot.payments).toEqual([
+      {
+        id: PENDING_PAYMENT_RESPONSE.id,
+        requestId: PENDING_PAYMENT_RESPONSE.solicitudId,
+        subscriptionId: PENDING_PAYMENT_RESPONSE.suscripcionId,
+        status: 'pendiente',
+        simulated: true,
+        amount: { amount: '12345.67', currency: 'COP' },
+        periodicity: PENDING_PAYMENT_RESPONSE.periodicidad,
+        createdAt: PENDING_PAYMENT_RESPONSE.creadaEn,
+        code: 'resultado_no_confirmado',
+      },
+    ]);
+    expect(snapshot.payments[0]).not.toHaveProperty('confirmedAt');
+    expect(snapshot.payments[0]).not.toHaveProperty('rejectedAt');
+    expect(snapshot.policies).toEqual([]);
+  });
+
+  it.each([
+    { creadaEn: undefined },
+    { creadaEn: 'invalid' },
+    { creadaEn: '2026-10-01T10:00:00-05:00' },
+    { codigo: 'confirmed' },
+    { confirmadaEn: null },
+    { rechazadaEn: null },
+    { motivo: 'rechazo_simulado' },
+  ])('rejects inconsistent pending history %j', async (fields) => {
+    const result = firstValueFrom(gateway.load());
+    http
+      .expectOne(URL)
+      .flush({ ...EMPTY_RESPONSE, pagos: [{ ...PENDING_PAYMENT_RESPONSE, ...fields }] });
+    await expect(result).rejects.toThrow('The dashboard response is invalid.');
+  });
+
+  it.each([
+    { confirmadaEn: '2026-10-01T12:15:00Z' },
+    { confirmadaEn: null },
+    { rechazadaEn: undefined },
+    { rechazadaEn: '2026-10-01' },
+    { motivo: 'otro' },
+  ])('rejects inconsistent rejection history %j', async (fields) => {
+    const result = firstValueFrom(gateway.load());
+    http
+      .expectOne(URL)
+      .flush({ ...EMPTY_RESPONSE, pagos: [{ ...REJECTED_DASHBOARD_RESPONSE, ...fields }] });
+    await expect(result).rejects.toThrow('The dashboard response is invalid.');
   });
 
   it('propagates a network failure without presenting empty account records', async () => {

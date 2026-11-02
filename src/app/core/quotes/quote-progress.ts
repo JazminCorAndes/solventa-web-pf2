@@ -1,13 +1,18 @@
 import { DashboardSnapshot } from '../dashboard/dashboard.models';
 
 export function quoteProgress(requestId: string, snapshot: DashboardSnapshot, now = Date.now()) {
-  const quote = snapshot.quotes.find((item) => item.requestId === requestId);
-  const subscription = snapshot.subscriptions.find((item) => item.requestId === requestId);
+  const quote = snapshot.quotes.find((savedQuote) => savedQuote.requestId === requestId);
+  const subscription = snapshot.subscriptions.find(
+    (savedSubscription) => savedSubscription.requestId === requestId,
+  );
   const paid =
     !!subscription &&
     (['pago_confirmado', 'emitida'].includes(subscription.saga.status) ||
       snapshot.payments.some(
-        (payment) => payment.requestId === requestId && payment.subscriptionId === subscription.id,
+        (payment) =>
+          payment.status === 'confirmado' &&
+          payment.requestId === requestId &&
+          payment.subscriptionId === subscription.id,
       ));
   const expired = paid && !!subscription?.validUntil && Date.parse(subscription.validUntil) <= now;
   return {

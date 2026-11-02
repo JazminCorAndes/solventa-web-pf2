@@ -19,13 +19,13 @@ export class BrowserQuoteRequestStorage implements QuoteRequestStorage {
   private readonly storage = inject(DOCUMENT).defaultView?.sessionStorage;
 
   read(): QuoteRequestRecord | null {
-    const value = this.storage?.getItem(QUOTE_REQUEST_KEY);
-    if (!value) {
+    const storedJson = this.storage?.getItem(QUOTE_REQUEST_KEY);
+    if (!storedJson) {
       return null;
     }
 
     try {
-      const parsed: unknown = JSON.parse(value);
+      const parsed: unknown = JSON.parse(storedJson);
       if (isQuoteRequestRecord(parsed)) {
         return parsed;
       }

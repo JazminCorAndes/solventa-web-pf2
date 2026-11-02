@@ -7,7 +7,13 @@ import { environment } from '../../../environments/environment';
 import { authInterceptor } from '../../core/auth/auth.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
 import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
-import { CONFIRMED_PAYMENT } from '../../core/payments/simulated-payment.testing';
+import {
+  CONFIRMED_PAYMENT,
+  REJECTED_PAYMENT,
+  REJECTED_PAYMENT_RESPONSE,
+  PENDING_PAYMENT,
+  PENDING_PAYMENT_RESPONSE,
+} from '../../core/payments/simulated-payment.testing';
 import { HttpSimulatedPaymentGateway } from './http-simulated-payment.gateway';
 
 const RESPONSE = {
@@ -85,6 +91,97 @@ describe('HttpSimulatedPaymentGateway', () => {
     request.flush(RESPONSE);
 
     await expect(result).resolves.toEqual(CONFIRMED_PAYMENT);
+  });
+
+  it('recovers the exact pending attempt with the original UUID and JWT using only GET', async () => {
+    const result = firstValueFrom(gateway.load(RESPONSE.solicitudId, KEY));
+    const request = http.expectOne(URL);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.body).toBeNull();
+    expect(request.request.headers.get('Idempotency-Key')).toBe(KEY);
+    expect(request.request.headers.has('Authorization')).toBe(true);
+    request.flush(PENDING_PAYMENT_RESPONSE);
+    await expect(result).resolves.toEqual(PENDING_PAYMENT);
+  });
+
+  it('maps a pending POST without confirmation or rejection fields', async () => {
+    const result = firstValueFrom(gateway.confirm(RESPONSE.solicitudId, KEY));
+    const request = http.expectOne(URL);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush(PENDING_PAYMENT_RESPONSE);
+    await expect(result).resolves.toEqual(PENDING_PAYMENT);
+    expect(await result).not.toHaveProperty('confirmedAt');
+    expect(await result).not.toHaveProperty('rejectedAt');
+  });
+
+  it('does not turn a missing exact attempt into permission to create another', async () => {
+    const result = firstValueFrom(gateway.load(RESPONSE.solicitudId, KEY));
+    http
+      .expectOne(URL)
+      .flush({ code: 'pago_no_encontrado' }, { status: 404, statusText: 'Not Found' });
+    await expect(result).rejects.toMatchObject({ status: 404 });
+  });
+
+  it.each(['GET', 'POST'])('rejects a malformed %s attempt key before HTTP', async (method) => {
+    const result =
+      method === 'GET'
+        ? gateway.load(RESPONSE.solicitudId, 'not-a-uuid')
+        : gateway.confirm(RESPONSE.solicitudId, 'not-a-uuid');
+    await expect(firstValueFrom(result)).rejects.toThrow('must be a UUID');
+    http.expectNone(URL);
+  });
+
+  it.each([
+    { creadaEn: undefined },
+    { creadaEn: 'invalid' },
+    { creadaEn: '2026-10-01' },
+    { creadaEn: '2026-10-01T10:00:00-05:00' },
+    { codigo: 'confirmed' },
+    { confirmadaEn: null },
+    { rechazadaEn: null },
+    { motivo: 'rechazo_simulado' },
+    { saga: { ...PENDING_PAYMENT_RESPONSE.saga, version: 2 } },
+    { saga: { ...PENDING_PAYMENT_RESPONSE.saga, estado: 'pago_confirmado' } },
+  ])('rejects malformed or contradictory pending data %j', async (fields) => {
+    const result = firstValueFrom(gateway.load(RESPONSE.solicitudId, KEY));
+    http.expectOne(URL).flush({ ...PENDING_PAYMENT_RESPONSE, ...fields });
+    await expect(result).rejects.toThrow('The simulated payment response is invalid.');
+  });
+
+  it.each(['GET', 'POST'])(
+    'maps a definitive rejection from HTTP200 %s without a confirmation date',
+    async (method) => {
+      const result = firstValueFrom(
+        method === 'GET'
+          ? gateway.load(RESPONSE.solicitudId)
+          : gateway.confirm(RESPONSE.solicitudId, KEY),
+      );
+      const request = http.expectOne(URL);
+      expect(request.request.method).toBe(method);
+      if (method === 'POST') {
+        expect(request.request.body).toEqual({});
+        expect(request.request.headers.get('Idempotency-Key')).toBe(KEY);
+      }
+      request.flush(REJECTED_PAYMENT_RESPONSE);
+      await expect(result).resolves.toEqual(REJECTED_PAYMENT);
+      expect(await result).not.toHaveProperty('confirmedAt');
+    },
+  );
+
+  it.each([
+    { rechazadaEn: undefined },
+    { rechazadaEn: 'invalid' },
+    { rechazadaEn: '2026-10-01' },
+    { motivo: 'provider_selected_by_client' },
+    { confirmadaEn: RESPONSE.confirmadaEn },
+    { confirmadaEn: null },
+    { saga: { ...REJECTED_PAYMENT_RESPONSE.saga, estado: 'pago_confirmado' } },
+    { saga: { ...REJECTED_PAYMENT_RESPONSE.saga, version: 2 } },
+  ])('rejects an inconsistent rejection %j', async (fields) => {
+    const result = firstValueFrom(gateway.load(RESPONSE.solicitudId));
+    http.expectOne(URL).flush({ ...REJECTED_PAYMENT_RESPONSE, ...fields });
+    await expect(result).rejects.toThrow('The simulated payment response is invalid.');
   });
 
   it('treats only pago_no_encontrado as an expected missing payment', async () => {

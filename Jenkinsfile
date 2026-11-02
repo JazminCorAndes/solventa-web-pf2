@@ -43,7 +43,25 @@ pipeline {
             steps {
                 publishChecks name: 'Cobertura', status: 'IN_PROGRESS', conclusion: 'NONE', title: 'Analizando cobertura web', summary: 'Objetivo recomendado: 80 % en líneas y ramas. Medición Angular/Vitest V8.', detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks"
                 sh "python3 -m unittest discover -s scripts -p 'test_*summary.py'"
+                sh 'node --test scripts/*.test.cjs tests/cypress/runner.test.cjs'
                 sh 'mkdir -p reports && pnpm test:coverage'
+            }
+        }
+        stage('Pruebas integrales Frontend') {
+            steps {
+                script {
+                    env.CYPRESS_DIAGNOSTIC_RUN_ID = sh(
+                        returnStdout: true,
+                        script: 'node -p "require(\'node:crypto\').randomUUID()"'
+                    ).trim()
+                }
+                sh 'pnpm test:cypress:types'
+                sh 'pnpm test:cypress:ui'
+            }
+            post {
+                always {
+                    junit testResults: 'reports/cypress/ui/*.xml', allowEmptyResults: false, skipPublishingChecks: true
+                }
             }
         }
         stage('Compilación') {
@@ -57,9 +75,6 @@ pipeline {
         always {
             script {
                 try {
-                    if (fileExists('reports/unit-tests.xml')) {
-                        junit testResults: 'reports/unit-tests.xml', allowEmptyResults: false, skipPublishingChecks: true
-                    }
                     def result
                     withEnv(["JENKINS_OBSERVED_RESULT=${currentBuild.currentResult}"]) {
                         result = sh(returnStatus: true, script: '''python3 scripts/coverage_summary.py \
@@ -69,19 +84,30 @@ pipeline {
                             --revision "$(git rev-parse HEAD)" \
                             --build-number "$BUILD_NUMBER" \
                             --build-result "$JENKINS_OBSERVED_RESULT" \
-                            --build-url "$BUILD_URL"
+                            --build-url "$BUILD_URL" \
+                            --cypress-diagnostics 'reports/cypress/ui-run-diagnostics.json' \
+                            --cypress-run-id "$CYPRESS_DIAGNOSTIC_RUN_ID"
                         ''')
                     }
                     def summary = readFile(file: 'reports/coverage-summary.md', encoding: 'UTF-8')
                     publishChecks name: 'Cobertura', title: summary.readLines()[0], summary: summary,
                         detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks",
                         conclusion: result == 0 ? 'SUCCESS' : (currentBuild.currentResult == 'SUCCESS' ? 'FAILURE' : 'NEUTRAL')
+                    if (fileExists('reports/unit-tests.xml')) {
+                        junit testResults: 'reports/unit-tests.xml', allowEmptyResults: false, skipPublishingChecks: true
+                    }
                     if (result != 0 && currentBuild.currentResult == 'SUCCESS') {
                         error('Faltan reportes válidos de cobertura o pruebas')
                     }
                 } finally {
-                    archiveArtifacts artifacts: 'reports/unit-tests.xml,reports/coverage-summary.md,coverage/**', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'reports/unit-tests.xml,reports/coverage-summary.md,reports/cypress/ui/*.xml,reports/cypress/ui-run-diagnostics.json,reports/cypress/ui/angular-diagnostics.json,coverage/**', allowEmptyArchive: true
                 }
+            }
+        }
+        success {
+            script {
+                def artifact = sh(returnStdout: true, script: 'node scripts/prepare-frontend-artifact.cjs').trim()
+                archiveArtifacts artifacts: "${artifact}/**", allowEmptyArchive: false, fingerprint: true
             }
         }
         cleanup {

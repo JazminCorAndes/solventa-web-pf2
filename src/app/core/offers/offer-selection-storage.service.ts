@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, InjectionToken } from '@angular/core';
 import {
   isPremiumPeriodicity,
+  isProvisionalSelection,
   Money,
   PremiumPeriodicity,
   SelectedOfferRecord,
@@ -24,13 +25,13 @@ export class BrowserOfferSelectionStorage implements OfferSelectionStorage {
   private readonly storage = inject(DOCUMENT).defaultView?.sessionStorage;
 
   read(): SelectedOfferRecord | null {
-    const value = this.storage?.getItem(SELECTION_KEY);
-    if (!value) {
+    const storedJson = this.storage?.getItem(SELECTION_KEY);
+    if (!storedJson) {
       return null;
     }
 
     try {
-      const parsed: unknown = JSON.parse(value);
+      const parsed: unknown = JSON.parse(storedJson);
       const selection = toSelectionRecord(parsed);
       if (selection) {
         return selection;
@@ -57,7 +58,11 @@ function toSelectionRecord(value: unknown): SelectedOfferRecord | null {
     return null;
   }
 
-  const candidate = value as Partial<SelectedOfferRecord> & { monthlyPremium?: unknown };
+  const candidate = value as Partial<SelectedOfferRecord> & {
+    monthlyPremium?: unknown;
+    revision?: unknown;
+    validUntil?: unknown;
+  };
   if (
     typeof candidate.quoteId !== 'string' ||
     typeof candidate.offerId !== 'string' ||
@@ -85,7 +90,7 @@ function toSelectionRecord(value: unknown): SelectedOfferRecord | null {
     periodicity = 'mensual';
   }
 
-  return {
+  const selection: SelectedOfferRecord = {
     quoteId: candidate.quoteId,
     offerId: candidate.offerId,
     offerVersion: candidate.offerVersion,
@@ -93,8 +98,17 @@ function toSelectionRecord(value: unknown): SelectedOfferRecord | null {
     premium,
     periodicity,
     selectedAt: candidate.selectedAt,
-    confirmed: candidate.confirmed ?? true,
+    confirmed: candidate.confirmed === true,
   };
+  if (!selection.confirmed && ('revision' in candidate || 'validUntil' in candidate)) {
+    const provisional = {
+      ...selection,
+      revision: candidate.revision,
+      validUntil: candidate.validUntil,
+    };
+    return isProvisionalSelection(provisional) ? provisional : null;
+  }
+  return selection;
 }
 
 function isMoney(value: unknown): value is Money {

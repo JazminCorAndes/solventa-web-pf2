@@ -68,6 +68,9 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
   readonly incompleteEvidence = signal(false);
   readonly confirmingRevocation = signal(false);
   readonly consentExpired = signal(false);
+  readonly hasDefaultSources = computed(
+    () => this.profile()?.estadoFuentes?.some((state) => state.estado === 'default') ?? false,
+  );
   readonly requestIssues = computed(() =>
     consentRequestIssues(this.consentRequest(), this.clock.now()),
   );
@@ -132,6 +135,10 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
     return name === 'open_finance' || name === 'open_data'
       ? `profiling.source.${name}`
       : 'profiling.additionalSource';
+  }
+
+  sourceState(name: string) {
+    return this.profile()?.estadoFuentes?.find((state) => state.fuente === name)?.estado;
   }
 
   confirmRevocation(): void {

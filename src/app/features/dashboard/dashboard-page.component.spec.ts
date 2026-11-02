@@ -13,8 +13,12 @@ import { AuthUser } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { TEST_USER } from '../../core/auth/auth.testing';
 import { DASHBOARD_GATEWAY } from '../../core/dashboard/dashboard.gateway';
-import { DASHBOARD_RESPONSE } from '../../core/dashboard/dashboard.testing';
+import {
+  DASHBOARD_RESPONSE,
+  REJECTED_DASHBOARD_RESPONSE,
+} from '../../core/dashboard/dashboard.testing';
 import { HttpDashboardGateway } from '../../data-access/dashboard/http-dashboard.gateway';
+import { PENDING_PAYMENT_RESPONSE } from '../../core/payments/simulated-payment.testing';
 import populatedReal from '../../data-access/dashboard/testing/dashboard-populated-real.json';
 import emptyReal from '../../data-access/dashboard/testing/dashboard-empty-real.json';
 import policyIntegration from '../../data-access/dashboard/testing/dashboard-policies-integration.json';
@@ -106,6 +110,27 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     expect(elements('[role="alert"]')).toHaveLength(0);
   });
 
+  it.each(['es', 'en'])(
+    'shows the rejected outcome in %s without implying payment or issuance',
+    (lang) => {
+      TestBed.inject(TranslocoService).setActiveLang(lang);
+      const labels = lang === 'es' ? es : en;
+      http.expectOne(URL).flush({
+        ...DASHBOARD_RESPONSE,
+        suscripciones: [],
+        polizas: [],
+        pagos: [REJECTED_DASHBOARD_RESPONSE],
+      });
+      fixture.detectChanges();
+      const payment = elements('[data-testid="dashboard-payment"]')[0].textContent ?? '';
+      expect(payment).toContain(labels.payment.rejected);
+      expect(payment).toContain(labels.payment.rejectedAt);
+      expect(payment).toContain(labels.payment.rejectionReasons.rechazo_simulado);
+      expect(payment).not.toContain(labels.dashboard.confirmedAt);
+      expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
+    },
+  );
+
   it('counts only policies and preserves unknown policy types and states literally', () => {
     http.expectOne(URL).flush({
       ...DASHBOARD_RESPONSE,
@@ -121,6 +146,28 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     expect(text()).toContain('futuro');
     expect(text()).toContain('FUTURA');
   });
+
+  it.each(['es', 'en'])(
+    'shows pending payment as unresolved in %s without final dates or controls',
+    (lang) => {
+      TestBed.inject(TranslocoService).setActiveLang(lang);
+      const labels = lang === 'es' ? es : en;
+      http.expectOne(URL).flush({
+        ...DASHBOARD_RESPONSE,
+        suscripciones: [],
+        polizas: [],
+        pagos: [PENDING_PAYMENT_RESPONSE],
+      });
+      fixture.detectChanges();
+      const payment = elements('[data-testid="dashboard-payment"]')[0].textContent ?? '';
+      expect(payment).toContain(labels.payment.resultPending);
+      expect(payment).toContain(labels.payment.createdAt);
+      expect(payment).not.toContain(labels.dashboard.confirmedAt);
+      expect(payment).not.toContain(labels.payment.rejectedAt);
+      expect(elements('[data-testid="dashboard-payment"] button')).toHaveLength(0);
+      expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
+    },
+  );
 
   it.each(['programada', 'vigente', 'vencida'] as const)(
     'translates the persisted %s policy state without deriving it from dates',

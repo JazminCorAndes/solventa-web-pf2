@@ -90,6 +90,10 @@
             } @else {
               @if (payments.errorKey(); as error) {
                 <p role="alert">{{ error | transloco }}</p>
+              }
+              @if (
+                payments.errorKey() || (payments.payment() && subscription.saga.status !== 'issued')
+              ) {
                 <button
                   mat-stroked-button
                   type="button"
@@ -100,8 +104,22 @@
                 </button>
               }
               @if (payments.payment(); as payment) {
-                <div class="payment-confirmation" role="status">
-                  <h3>{{ 'payment.confirmed' | transloco }}</h3>
+                <div
+                  [class.payment-confirmation]="payment.status === 'confirmed'"
+                  [class.payment-rejection]="payment.status === 'rejected'"
+                  [class.payment-pending]="payment.status === 'pending'"
+                  role="status"
+                >
+                  <h3>
+                    {{
+                      (payment.status === 'confirmed'
+                        ? 'payment.confirmed'
+                        : payment.status === 'rejected'
+                          ? 'payment.rejected'
+                          : 'payment.resultPending'
+                      ) | transloco
+                    }}
+                  </h3>
                   <dl>
                     <div>
                       <dt>{{ 'payment.amount' | transloco }}</dt>
@@ -121,14 +139,96 @@
                       <dt>{{ 'payment.reference' | transloco }}</dt>
                       <dd>{{ payment.reference }}</dd>
                     </div>
-                    <div>
-                      <dt>{{ 'payment.confirmedAt' | transloco }}</dt>
-                      <dd>
-                        {{ payment.confirmedAt | date: 'medium' : undefined : market.locale }}
-                      </dd>
-                    </div>
+                    @if (payment.status === 'confirmed') {
+                      <div>
+                        <dt>{{ 'payment.confirmedAt' | transloco }}</dt>
+                        <dd>
+                          {{ payment.confirmedAt | date: 'medium' : undefined : market.locale }}
+                        </dd>
+                      </div>
+                    } @else if (payment.status === 'rejected') {
+                      <div>
+                        <dt>{{ 'payment.rejectedAt' | transloco }}</dt>
+                        <dd>
+                          {{ payment.rejectedAt | date: 'medium' : undefined : market.locale }}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{{ 'payment.rejectionReason' | transloco }}</dt>
+                        <dd>{{ 'payment.rejectionReasons.' + payment.reason | transloco }}</dd>
+                      </div>
+                    } @else {
+                      <div>
+                        <dt>{{ 'payment.createdAt' | transloco }}</dt>
+                        <dd>
+                          {{ payment.createdAt | date: 'medium' : undefined : market.locale }}
+                        </dd>
+                      </div>
+                    }
                   </dl>
                 </div>
+                @if (payment.status === 'confirmed' && subscription.saga.status !== 'issued') {
+                  <p class="issuance-pending" role="status">
+                    {{ 'payment.issuancePending' | transloco }}
+                  </p>
+                  @if (payments.canRetryIssuance() || payments.confirming()) {
+                    <button
+                      mat-flat-button
+                      type="button"
+                      class="retry-issuance"
+                      [disabled]="!payments.canRetryIssuance()"
+                      [attr.aria-busy]="payments.confirming()"
+                      (click)="confirmPayment()"
+                    >
+                      {{
+                        (payments.confirming()
+                          ? 'payment.retryingIssuance'
+                          : 'payment.retryIssuance'
+                        ) | transloco
+                      }}
+                    </button>
+                  }
+                }
+                @if (payment.status === 'rejected') {
+                  @if (payments.canStartNewAttempt()) {
+                    <button
+                      #newAttemptButton
+                      mat-stroked-button
+                      type="button"
+                      class="request-new-payment"
+                      [attr.aria-expanded]="!!newAttemptConfirmation()"
+                      (click)="requestNewAttempt()"
+                    >
+                      {{ 'payment.newAttempt' | transloco }}
+                    </button>
+                    @if (newAttemptConfirmation()) {
+                      <section
+                        role="group"
+                        class="new-payment-confirmation"
+                        [attr.aria-label]="'payment.newAttemptTitle' | transloco"
+                      >
+                        <h3>{{ 'payment.newAttemptTitle' | transloco }}</h3>
+                        <p>{{ 'payment.newAttemptBody' | transloco }}</p>
+                        <button
+                          mat-stroked-button
+                          type="button"
+                          class="cancel-new-payment"
+                          (click)="cancelNewAttempt(); newAttemptButton.focus()"
+                        >
+                          {{ 'payment.cancelNewAttempt' | transloco }}
+                        </button>
+                        <button
+                          mat-flat-button
+                          type="button"
+                          class="confirm-new-payment"
+                          (click)="confirmNewAttempt()"
+                        >
+                          {{ 'payment.confirmNewAttempt' | transloco }}
+                        </button>
+                      </section>
+                    }
+                  }
+                }
               } @else if (!detail && payments.selection(); as selection) {
                 <p role="status">{{ 'payment.pending' | transloco }}</p>
                 <p class="payment-amount">
@@ -141,18 +241,33 @@
                   </strong>
                   · {{ 'offers.premiumLabels.' + selection.periodicity | transloco }}
                 </p>
+                @if (!payments.unresolvedAttempt() || payments.confirming()) {
+                  <button
+                    mat-flat-button
+                    type="button"
+                    class="confirm-payment"
+                    [disabled]="!payments.canConfirm()"
+                    [attr.aria-busy]="payments.confirming()"
+                    (click)="confirmPayment()"
+                  >
+                    {{
+                      (payments.confirming() ? 'payment.confirming' : 'payment.confirmAction')
+                        | transloco
+                    }}
+                  </button>
+                }
+              }
+              @if (payments.unresolvedAttempt() || payments.canRecoverAttempt()) {
+                <p role="status">{{ 'payment.unresolvedAttempt' | transloco }}</p>
                 <button
                   mat-flat-button
                   type="button"
-                  class="confirm-payment"
-                  [disabled]="!payments.canConfirm()"
-                  [attr.aria-busy]="payments.confirming()"
+                  class="recover-payment"
+                  [disabled]="!payments.canRecoverAttempt()"
+                  [attr.aria-busy]="payments.loading()"
                   (click)="confirmPayment()"
                 >
-                  {{
-                    (payments.confirming() ? 'payment.confirming' : 'payment.confirmAction')
-                      | transloco
-                  }}
+                  {{ 'payment.recoverAttempt' | transloco }}
                 </button>
               }
             }
@@ -160,7 +275,7 @@
         }
         @if (detail) {
           <a mat-stroked-button routerLink="/app/cotizaciones">{{ 'offers.back' | transloco }}</a>
-        } @else if (paid()) {
+        } @else if (hasPayment()) {
           <a
             mat-flat-button
             routerLink="/app/cotizaciones/suscripcion/detalle"

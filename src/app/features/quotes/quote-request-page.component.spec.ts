@@ -2,8 +2,10 @@ import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
-import { TranslocoTestingModule } from '@jsverse/transloco';
+import { TranslocoService, TranslocoTestingModule } from '@jsverse/transloco';
 import { Observable, of, Subject, throwError } from 'rxjs';
+import es from '../../../../public/assets/i18n/es.json';
+import en from '../../../../public/assets/i18n/en.json';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthUser } from '../../core/auth/auth.models';
 import {
@@ -36,6 +38,7 @@ const PRODUCT: InsuranceProduct = {
   name: 'Seguro Automotriz Total',
   description: 'Protección para el vehículo',
   available: true,
+  mainCoverages: [],
 };
 
 const TRAVEL_PRODUCT: InsuranceProduct = {
@@ -43,6 +46,7 @@ const TRAVEL_PRODUCT: InsuranceProduct = {
   name: 'Seguro de Viaje',
   description: 'Protección para viajes',
   available: true,
+  mainCoverages: [],
 };
 
 const OTHER_PRODUCTS = [
@@ -52,7 +56,13 @@ const OTHER_PRODUCTS = [
   'parametric-weather',
   'payment-protection',
   'mortgage-life',
-].map((id): InsuranceProduct => ({ id, name: id, description: id, available: true }));
+].map((id): InsuranceProduct => ({
+  id,
+  name: id,
+  description: id,
+  available: true,
+  mainCoverages: [],
+}));
 
 const RECORD: QuoteRequestRecord = {
   id: 'AQT-2026-123456',
@@ -68,6 +78,8 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadProductDetail = vi.fn<QuoteRequestGateway['loadProductDetail']>();
+
   loadRequest(): Observable<QuoteRequestRecord> {
     return of(RECORD);
   }
@@ -134,8 +146,8 @@ describe('QuoteRequestPageComponent', () => {
       imports: [
         QuoteRequestPageComponent,
         TranslocoTestingModule.forRoot({
-          langs: { es: {} },
-          translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
+          langs: { es: {}, en: {} },
+          translocoConfig: { availableLangs: ['es', 'en'], defaultLang: 'es' },
         }),
       ],
       providers: [
@@ -167,6 +179,119 @@ describe('QuoteRequestPageComponent', () => {
 
   afterEach(() => {
     environment.dataAccessMode = originalMode;
+  });
+
+  it('shows an accessible empty catalog after a successful empty response', () => {
+    fillValidForm(component);
+    vi.spyOn(gateway, 'loadProducts').mockReturnValue(of([]));
+
+    component.quotes.loadProducts();
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector('.catalog-status[role="status"]');
+    expect(status).not.toBeNull();
+    expect(status.textContent).toContain('quoteRequest.emptyProducts');
+    expect(status.querySelector('mat-spinner')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.inline-alert[role="alert"]')).toBeNull();
+    expect(component.quotes.catalogStatus()).toBe('ready');
+    expect(component.quotes.products()).toEqual([]);
+    expect(component.selectedProduct()).toBeNull();
+
+    component.submit();
+    expect(gateway.submitCalls).toBe(0);
+  });
+
+  it('does not fabricate product details when running without the backend', () => {
+    fillValidForm(component);
+    fixture.detectChanges();
+    const overview = fixture.nativeElement.querySelector('.product-overview');
+    expect(overview.textContent).toContain('quoteRequest.productDetails.backendRequired');
+    expect(overview.querySelector('button')).toBeNull();
+    expect(overview.querySelector('.product-details')).toBeNull();
+    expect(gateway.loadProductDetail).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { lang: 'es', messages: es },
+    { lang: 'en', messages: en },
+  ])('translates the empty catalog message in $lang', async ({ lang, messages }) => {
+    const translations = TestBed.inject(TranslocoService);
+    translations.setTranslation(messages, lang);
+    translations.setActiveLang(lang);
+    vi.spyOn(gateway, 'loadProducts').mockReturnValue(of([]));
+
+    component.quotes.loadProducts();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('.catalog-status[role="status"]').textContent,
+    ).toContain(messages.quoteRequest.emptyProducts);
+  });
+
+  it('distinguishes a pending catalog load from an empty response', () => {
+    const pending = new Subject<InsuranceProduct[]>();
+    vi.spyOn(gateway, 'loadProducts').mockReturnValueOnce(of([])).mockReturnValueOnce(pending);
+    component.quotes.loadProducts();
+    component.quotes.loadProducts();
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector('.catalog-status[role="status"]');
+    expect(component.quotes.catalogStatus()).toBe('loading');
+    expect(component.quotes.products()).toEqual([]);
+    expect(status.textContent).toContain('quoteRequest.loadingProducts');
+    expect(status.textContent).not.toContain('quoteRequest.emptyProducts');
+    expect(status.querySelector('mat-spinner')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.inline-alert[role="alert"]')).toBeNull();
+
+    pending.next([PRODUCT]);
+    pending.complete();
+    fixture.detectChanges();
+    expect(component.quotes.catalogStatus()).toBe('ready');
+    expect(fixture.nativeElement.querySelector('.catalog-status')).toBeNull();
+  });
+
+  it('shows catalog errors instead of empty state and retries without losing selection', () => {
+    const error = new Error('Catalog network failure');
+    const logError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const loadProducts = vi
+      .spyOn(gateway, 'loadProducts')
+      .mockReturnValueOnce(of([]))
+      .mockReturnValueOnce(throwError(() => error))
+      .mockReturnValueOnce(of([PRODUCT]));
+    component.quotes.loadProducts();
+    component.quotes.loadProducts();
+    fixture.detectChanges();
+
+    const alert = fixture.nativeElement.querySelector('.inline-alert[role="alert"]');
+    expect(component.quotes.catalogStatus()).toBe('error');
+    expect(component.quotes.products()).toEqual([]);
+    expect(alert.textContent).toContain('quoteRequest.errors.products');
+    expect(fixture.nativeElement.querySelector('.catalog-status')).toBeNull();
+    expect(logError).toHaveBeenCalledExactlyOnceWith(
+      'Insurance products could not be loaded.',
+      error,
+    );
+    logError.mockRestore();
+
+    fillValidForm(component);
+    alert.querySelector('button').click();
+    fixture.detectChanges();
+
+    expect(loadProducts).toHaveBeenCalledTimes(3);
+    expect(component.selectedProduct()).toEqual(PRODUCT);
+    expect(fixture.nativeElement.querySelector('.product-copy strong').textContent).toContain(
+      PRODUCT.name,
+    );
+    expect(fixture.nativeElement.querySelector('.catalog-status')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.inline-alert[role="alert"]')).toBeNull();
+    component.submit();
+    expect(gateway.submitCalls).toBe(1);
+    expect(gateway.lastRequest).toEqual({
+      productId: PRODUCT.id,
+      productData: { vehiclePlate: 'ABC123' },
+    });
   });
 
   it('usa identidad de sesion sin pedir documento o contacto en modo backend', () => {

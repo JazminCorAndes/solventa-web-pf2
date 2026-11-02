@@ -13,3 +13,11 @@ export class InsuranceProductUnavailableError extends Error {
     super('The selected insurance product is unavailable');
   }
 }
+
+export class InsuranceProductNotFoundError extends Error {
+  override readonly name = 'InsuranceProductNotFoundError';
+
+  constructor() {
+    super('The requested insurance product was not found');
+  }
+}
