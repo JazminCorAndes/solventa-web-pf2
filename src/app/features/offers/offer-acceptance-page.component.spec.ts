@@ -369,6 +369,7 @@ describe('OfferAcceptancePageComponent', () => {
       fixture.componentInstance.confirm();
 
       expect(fixture.componentInstance.accepted()).toBe(false);
+      expect(checkbox.checked).toBe(false);
       expect(checkbox.disabled).toBe(true);
       expect(fixture.componentInstance.errorKey()).toBe(key);
       expect(actionButton().disabled).toBe(true);

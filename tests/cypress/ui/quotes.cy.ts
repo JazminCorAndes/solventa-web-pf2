@@ -212,7 +212,7 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
       '/app/cotizaciones/solicitar',
     );
     cy.contains('button', 'Confirmar selección').should('be.disabled');
-    cy.get('mat-checkbox input').uncheck().check();
+    cy.get('mat-checkbox input').should('not.be.checked').and('be.disabled');
     cy.contains('[role=alert]', 'El perfil venció').should('be.visible');
     cy.contains('button', 'Confirmar selección').should('be.disabled');
     cy.get('@expiredSelection.all').should('have.length', 1);
