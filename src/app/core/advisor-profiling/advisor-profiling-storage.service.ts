@@ -22,13 +22,13 @@ const STORAGE_KEY = 'solventa.advisor.mortgage-profiling-operation';
 @Injectable()
 export class BrowserAdvisorProfilingStorage implements AdvisorProfilingStorage {
   read(): PendingMortgageProfilingOperation | null {
-    const value = sessionStorage.getItem(STORAGE_KEY);
-    if (!value) {
+    const storedJson = sessionStorage.getItem(STORAGE_KEY);
+    if (!storedJson) {
       return null;
     }
 
     try {
-      const operation = JSON.parse(value) as Partial<PendingMortgageProfilingOperation>;
+      const operation = JSON.parse(storedJson) as Partial<PendingMortgageProfilingOperation>;
       if (
         operation &&
         typeof operation.ownerId === 'string' &&

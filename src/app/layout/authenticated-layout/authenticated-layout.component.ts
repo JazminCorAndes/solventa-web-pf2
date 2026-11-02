@@ -65,7 +65,7 @@ export class AuthenticatedLayoutComponent {
   readonly isHandset = toSignal(
     inject(BreakpointObserver)
       .observe('(max-width: 800px)')
-      .pipe(map((result) => result.matches)),
+      .pipe(map((breakpointState) => breakpointState.matches)),
     { initialValue: false },
   );
 

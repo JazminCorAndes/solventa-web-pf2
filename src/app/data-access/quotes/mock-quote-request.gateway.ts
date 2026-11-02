@@ -133,7 +133,7 @@ export class MockQuoteRequestGateway implements QuoteRequestGateway {
           throw new QuoteRequestUnavailableError();
         }
 
-        const product = PRODUCTS.find((item) => item.id === request.productId);
+        const product = PRODUCTS.find((catalogProduct) => catalogProduct.id === request.productId);
         if (!product?.available) {
           throw new InsuranceProductUnavailableError();
         }
