@@ -61,6 +61,30 @@ Después de nuevos commits, solicitar Jenkins otra vez. La aprobación del equip
 independiente. No repetir comentarios si ya hay un build en cola para el mismo commit.
 El agente tiene un ejecutor compartido con Android y backend: esperar en cola no es un fallo.
 
+### Diagnóstico de Cypress antes del reportero
+
+El pipeline asigna un UUID nuevo antes de los tipos y de la suite UI. El runner conserva
+`reports/cypress/ui-run-diagnostics.json`, fuera del directorio de XML que limpia,
+con ese identificador, fase, resultado, categoría de fallo, contadores y fallos de
+captura. Es un esquema fijo: no incorpora mensajes, stack, rutas, cuerpos, entorno
+ni credenciales. Las categorías proceden del error observado; un fallo desconocido
+permanece sin clasificar. No diagnostican retrospectivamente ejecuciones anteriores.
+
+El publicador **Cobertura** existente añade ese diagnóstico al resumen visible en
+GitHub, incluso cuando Cypress no alcanza a escribir XML. No añade Apps, permisos ni
+contextos requeridos. Rechaza datos de otro UUID, selectores parciales, esquemas inválidos,
+archivos de más de 4096 bytes y conteos XML discordantes. Si no se confirmó la limpieza de los XML,
+no reutiliza sus conteos. Un diagnóstico ausente, incompleto o fallido no se presenta
+como éxito: el resumen es neutral si el pipeline ya falló, y hace fallar un pipeline
+que de otro modo figuraría correcto. Se conserva el fallo original de Cypress y el
+JUnit sigue siendo obligatorio, sin reintentos ni ampliación de límites.
+
+Los dos diagnósticos JSON (runner y Angular) se archivan junto a los XML. El de
+Angular mantiene su alcance y límites propios; pasar los tests no implica consola
+global limpia. Si la etapa no comenzó o el proceso terminó antes de completar la
+captura, el resumen lo identifica como no acreditado. La publicación continúa usando
+el mecanismo de checks ya instalado en Jenkins, no sus enlaces privados `localhost`.
+
 ## Leer Jenkins
 
 ### Resúmenes de resultados

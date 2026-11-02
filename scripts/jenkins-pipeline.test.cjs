@@ -55,3 +55,27 @@ test('solo un pipeline exitoso conserva el compilado de su revisión antes de li
   assert.doesNotMatch(block('always {'), /prepare-frontend-artifact/);
   assert.match(block('cleanup {'), /deleteDir\(\)/);
 });
+
+test('publica diagnostico de esta corrida en Cobertura aun sin XML Cypress', () => {
+  const stage = block("stage('Pruebas integrales Frontend')");
+  assert.match(stage, /CYPRESS_DIAGNOSTIC_RUN_ID = sh/);
+  assert.match(stage, /randomUUID/);
+  assert.ok(stage.indexOf('randomUUID') < stage.indexOf("sh 'pnpm test:cypress:types'"));
+  assert.match(pipeline, /--cypress-diagnostics 'reports\/cypress\/ui-run-diagnostics\.json'/);
+  assert.match(pipeline, /--cypress-run-id "\$CYPRESS_DIAGNOSTIC_RUN_ID"/);
+  assert.match(pipeline, /publishChecks name: 'Cobertura', title: summary/);
+  assert.ok(
+    pipeline.indexOf("publishChecks name: 'Cobertura', title: summary") <
+      pipeline.indexOf("junit testResults: 'reports/unit-tests.xml'"),
+  );
+  assert.match(
+    pipeline,
+    /reports\/cypress\/ui-run-diagnostics\.json,reports\/cypress\/ui\/angular-diagnostics\.json/,
+  );
+  assert.match(
+    pipeline,
+    /result == 0 \? 'SUCCESS' : \(currentBuild.currentResult == 'SUCCESS' \? 'FAILURE' : 'NEUTRAL'\)/,
+  );
+  assert.match(pipeline, /if \(result != 0 && currentBuild.currentResult == 'SUCCESS'\)/);
+  assert.doesNotMatch(stage, /allowEmptyResults:\s*true|catchError|warnError|retry\(/);
+});

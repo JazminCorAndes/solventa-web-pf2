@@ -117,6 +117,16 @@ captura, escritura o limpieza; si no puede escribir el archivo, lo informa en la
 salida. Esos diagnósticos no reemplazan el resultado/exit original de Cypress.
 `captureComplete: false` impide atribuir una captura completa o ausencia de errores,
 aunque Cypress haya pasado. No permite reconstruir el buffer perdido de un run previo.
+
+Además, `reports/cypress/<suite>-run-diagnostics.json` registra la fase y una categoría
+fija del fallo incluso antes del reportero JUnit. Se escribe desde el inicio y queda
+fuera del directorio de XML que se limpia. No guarda mensajes, stack, rutas, datos de
+peticiones ni entorno. Incluye un UUID nuevo (o el `CYPRESS_DIAGNOSTIC_RUN_ID` válido
+de Jenkins), contadores acotados y errores explícitos de captura, sin reemplazar el
+resultado original. Un proceso interrumpido puede dejar una fase sin resultado final;
+eso no es éxito. Jenkins coteja el UUID y los XML actuales antes de publicar el
+diagnóstico mediante su check **Cobertura** existente; ver `docs/ci.md`.
+
 Para ejecutar solo el recorrido de catálogo, usar `node tests/cypress/run.cjs integrated catalog.cy.ts`
 con `CYPRESS_WEB_PORT` en un puerto libre propio. El tercer argumento acepta un único nombre
 `.cy.ts` de la suite, sin rutas ni comodines; no ejecuta los demás specs.

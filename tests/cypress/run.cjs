@@ -6,6 +6,7 @@ const files = require('node:fs/promises');
 const path = require('node:path');
 const net = require('node:net');
 const { setTimeout: delay } = require('node:timers/promises');
+const { createRunDiagnostics } = require('./run-diagnostics.cjs');
 
 function localUrl(value) {
   const url = new URL(value);
@@ -256,6 +257,19 @@ function angularDiagnostics(server) {
 }
 
 async function main() {
+  const diagnostics = createRunDiagnostics(process.argv[2], process.argv[3]);
+  await diagnostics.start();
+  try {
+    await execute(diagnostics);
+  } catch (error) {
+    diagnostics.fail(error);
+    throw error;
+  } finally {
+    await diagnostics.finish();
+  }
+}
+
+async function execute(runDiagnostics) {
   const mode = process.argv[2];
   const file = process.argv[3];
   const specPattern = selectedSpec(mode, file);
@@ -274,6 +288,7 @@ async function main() {
     if (process.env.CYPRESS_DISPOSABLE_BACKEND !== '1') {
       throw new Error('Confirma backend local desechable con CYPRESS_DISPOSABLE_BACKEND=1.');
     }
+    await runDiagnostics.advance('backend-preflight');
     const response = await fetch(`${backend}/v1/productos-seguro`, {
       signal: AbortSignal.timeout(5000),
     });
@@ -292,6 +307,7 @@ async function main() {
       throw new Error(`BFF no disponible: HTTP ${response.status}. No se omiten pruebas.`);
     }
   }
+  await runDiagnostics.advance('port-check');
   await new Promise((resolve, reject) => {
     const probe = net.createServer();
     probe.once('error', reject);
@@ -305,7 +321,9 @@ async function main() {
     mode,
     ...(file ? [file.replace(/\.cy\.ts$/, '')] : []),
   );
+  await runDiagnostics.advance('workspace-preparation');
   await files.rm(reports, { recursive: true, force: true });
+  runDiagnostics.clearedReports();
   await files.mkdir(dir, { recursive: true });
   await files.writeFile(
     proxy,
@@ -313,6 +331,7 @@ async function main() {
       '/api': { target: backend, secure: false, pathRewrite: { '^/api': '' } },
     }),
   );
+  await runDiagnostics.advance('angular-start');
   const server = childProcess.spawn(
     process.execPath,
     [
@@ -354,6 +373,7 @@ async function main() {
   process.once('SIGINT', interrupt);
   process.once('SIGTERM', interrupt);
   try {
+    await runDiagnostics.advance('angular-readiness');
     const baseUrl = `http://127.0.0.1:${port}`;
     const deadline = Date.now() + 120000;
     let ready = false;
@@ -374,6 +394,7 @@ async function main() {
     console.log(`Angular Cypress listo: PID ${server.pid}; puerto ${port}.`);
     // Electron must start as a browser, not inherit a desktop host's Node mode.
     delete process.env.ELECTRON_RUN_AS_NODE;
+    await runDiagnostics.advance('cypress-run');
     const result = await require('cypress').run({
       configFile: 'tests/cypress/cypress.config.cjs',
       config: { baseUrl, specPattern },
@@ -381,6 +402,7 @@ async function main() {
       env: { suite: mode },
     });
     if (result.status === 'failed') throw new Error(result.message);
+    runDiagnostics.result(result);
     console.log(
       `Cypress ${mode}: ${result.totalPassed}/${result.totalTests} aprobadas; ${result.totalFailed} fallidas.`,
     );
