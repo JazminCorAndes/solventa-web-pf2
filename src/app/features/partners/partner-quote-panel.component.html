@@ -58,7 +58,8 @@
   </div>
   @if (operationId(); as id) {
     <p>
-      {{ 'partnerQuote.operation' | transloco }}: <code>{{ id }}</code>
+      {{ 'partnerQuote.operation' | transloco }}:
+      <code data-testid="partner-operation-id">{{ id }}</code>
     </p>
     <p>{{ 'partnerQuote.recoveryNote' | transloco }}</p>
   }
@@ -90,6 +91,12 @@
     <h3 role="status">
       {{ (offerExpired() ? 'partnerQuote.offerExpired' : 'partnerQuote.completed') | transloco }}
     </h3>
+    <dl>
+      <dt>{{ 'partnerQuote.profileReference' | transloco }}</dt>
+      <dd>
+        <code data-testid="partner-profile-reference">{{ result.perfilamientoReferencia }}</code>
+      </dd>
+    </dl>
     @if (offerExpired()) {
       <p>{{ 'partnerQuote.historicalOffer' | transloco }}</p>
     }

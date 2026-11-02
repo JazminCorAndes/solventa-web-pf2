@@ -118,6 +118,7 @@ describe('UI determinista: autenticacion y dashboard (HTTP controlado)', () => {
   });
 
   it('recupera dashboard tras 503, renueva al recargar y limpia sesion al salir', () => {
+    cy.expectConsoleError('Dashboard data could not be loaded.', 503);
     cy.intercept('GET', '/api/v1/clientes/me/dashboard', { statusCode: 503 }).as('failedDashboard');
     login(syntheticUser.correo, password);
     cy.get('[role=alert]').should('contain.text', 'No fue posible cargar');

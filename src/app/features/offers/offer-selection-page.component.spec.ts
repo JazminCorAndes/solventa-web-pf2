@@ -1,5 +1,6 @@
 import { registerLocaleData } from '@angular/common';
 import localeEsCo from '@angular/common/locales/es-CO';
+import { signal } from '@angular/core';
 import { HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -95,7 +96,13 @@ describe('OfferSelectionPageComponent', () => {
         provideRouter([]),
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { getAccessToken: () => of('test-access-token') } },
+        {
+          provide: AuthService,
+          useValue: {
+            getAccessToken: () => of('test-access-token'),
+            user: signal({ id: 'customer-1' }),
+          },
+        },
         { provide: OFFER_GATEWAY, useClass: HttpOfferGateway },
         { provide: QUOTE_REQUEST_STORAGE, useValue: quoteStorage },
         {
@@ -128,9 +135,16 @@ describe('OfferSelectionPageComponent', () => {
     expect(request.request.method).toBe('GET');
     expect(request.request.headers.get('Authorization')).toBe('Bearer test-access-token');
     request.flush(response);
-    const storedSelection = http.expectOne(`${apiUrl}/${response.solicitudId}/seleccion`);
+    const storedSelection = http.expectOne(
+      `${apiUrl}/${response.solicitudId}/seleccion-provisional`,
+    );
     expect(storedSelection.request.headers.get('Authorization')).toBe('Bearer test-access-token');
-    storedSelection.flush(null, { status: 404, statusText: 'Not Found' });
+    storedSelection.flush({
+      solicitudId: response.solicitudId,
+      seleccion: null,
+      aceptacion: null,
+      estadoOferta: null,
+    });
     fixture.detectChanges();
   }
 
@@ -156,6 +170,49 @@ describe('OfferSelectionPageComponent', () => {
     button.click();
     fixture.detectChanges();
 
+    expect(navigate).not.toHaveBeenCalled();
+    expect(service.saving()).toBe(true);
+    expect(button.disabled).toBe(true);
+    const url = `${apiUrl}/${REQUEST.id}/seleccion-provisional`;
+    http.expectOne(url).flush({
+      solicitudId: REQUEST.id,
+      seleccion: null,
+      aceptacion: null,
+      estadoOferta: null,
+    });
+    const save = http.expectOne(url);
+    expect(save.request.method).toBe('PUT');
+    expect(save.request.body).toEqual({
+      ofertaId: OFFER.id,
+      version: OFFER.version,
+      revisionEsperada: 0,
+    });
+    expect(save.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/i);
+    const receipt = {
+      solicitudId: REQUEST.id,
+      ofertaId: OFFER.id,
+      version: OFFER.version,
+      nombreOferta: OFFER.nombre,
+      prima: OFFER.prima,
+      periodicidad: OFFER.periodicidad,
+      primaMensual: OFFER.prima,
+      seleccionadaEn: '2026-11-01T00:00:00Z',
+      revision: 1,
+      vigenteHasta: OFFER.vigenteHasta,
+    };
+    save.flush(receipt);
+    expect(navigate).not.toHaveBeenCalled();
+    const canonical = http.expectOne(url);
+    expect(canonical.request.method).toBe('GET');
+    canonical.flush({
+      solicitudId: REQUEST.id,
+      seleccion: receipt,
+      aceptacion: null,
+      estadoOferta: 'disponible',
+    });
+    fixture.detectChanges();
+    http.expectNone(`${apiUrl}/${REQUEST.id}/seleccion`);
+    http.expectNone(`${apiUrl}/${REQUEST.id}/suscripcion`);
     expect(selection).toMatchObject({
       quoteId: REQUEST.id,
       offerId: OFFER.id,
@@ -163,10 +220,28 @@ describe('OfferSelectionPageComponent', () => {
       premium: { amount: 48_000, currency: 'COP' },
       periodicity: 'mensual',
       confirmed: false,
+      revision: 1,
     });
+
     expect(service.canContinue()).toBe(true);
     expect(button.disabled).toBe(true);
     expect(navigate).toHaveBeenCalledWith(['/app/cotizaciones/aceptacion']);
+  });
+
+  it('no sustituye una ruta provisional ausente por una selección local o histórica', () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    http.expectOne(`${apiUrl}/${REQUEST.id}/ofertas`).flush(CALCULATION);
+    http
+      .expectOne(`${apiUrl}/${REQUEST.id}/seleccion-provisional`)
+      .flush({}, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    expect(service.status()).toBe('error');
+    expect(selection).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
+    expect(log).toHaveBeenCalledOnce();
+    http.expectNone(`${apiUrl}/${REQUEST.id}/seleccion`);
+    expect(navigate).not.toHaveBeenCalled();
+    log.mockRestore();
   });
 
   it('muestra el estado vacio si el backend no devuelve planes', () => {

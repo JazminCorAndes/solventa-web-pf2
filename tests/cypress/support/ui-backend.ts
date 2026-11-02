@@ -96,9 +96,29 @@ export const offers = () => ({
   })),
 });
 
+function provisionalReceipt(offer: ReturnType<typeof offers>['ofertas'][number], revision: number) {
+  return {
+    solicitudId: quoteId,
+    ofertaId: offer.id,
+    version: offer.version,
+    nombreOferta: offer.nombre,
+    prima: offer.prima,
+    periodicidad: offer.periodicidad,
+    primaMensual: offer.periodicidad === 'mensual' ? offer.prima : null,
+    seleccionadaEn: new Date().toISOString(),
+    revision,
+    vigenteHasta: offer.vigenteHasta,
+  };
+}
+
 /** Only used by ui specs. Unmatched calls fail instead of reaching a real backend. */
 export function mockBackend() {
   let savedConsent: ProfilingConsent | null = null;
+  let provisional: ReturnType<typeof provisionalReceipt> | null = null;
+  const receipts = new Map<
+    string,
+    { body: string; receipt: ReturnType<typeof provisionalReceipt> }
+  >();
   let privateKey: CryptoKey;
   let publicJwk: JWK;
   let challengeId: string;
@@ -151,7 +171,13 @@ export function mockBackend() {
   cy.intercept('DELETE', '/api/v1/sesiones/actual', { statusCode: 204, log: false }).as('logout');
   cy.intercept('GET', '/api/v1/clientes/me/dashboard', { body: emptyDashboard }).as('dashboard');
   cy.intercept('GET', '/api/v1/productos-seguro', {
-    productos: products.map(({ id }) => ({ id, nombre: id, descripcion: id, disponible: true })),
+    productos: products.map(({ id }) => ({
+      id,
+      nombre: id,
+      descripcion: id,
+      disponible: true,
+      coberturasPrincipales: [],
+    })),
   }).as('catalog');
   cy.intercept('GET', '/api/v1/destinos-viaje', { destinos: [{ codigo: 'ES', nombre: 'España' }] });
   cy.intercept('GET', '/api/v1/consentimientos/perfilamiento', (request) => {
@@ -188,6 +214,43 @@ export function mockBackend() {
     'offers',
   );
   cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion`, { statusCode: 404 });
+  cy.intercept(
+    'GET',
+    `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion-provisional`,
+    (request) => {
+      request.reply({
+        solicitudId: quoteId,
+        seleccion: provisional,
+        aceptacion: null,
+        estadoOferta: provisional ? 'disponible' : null,
+      });
+    },
+  ).as('provisionalState');
+  cy.intercept(
+    'PUT',
+    `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion-provisional`,
+    (request) => {
+      const key = String(request.headers['idempotency-key']);
+      expect(key).to.match(/^[0-9a-f-]{36}$/i);
+      const body = JSON.stringify(request.body);
+      const receipt = receipts.get(key);
+      if (receipt) {
+        expect(body, 'reintento con el mismo cuerpo').to.eq(receipt.body);
+        request.reply(receipt.receipt);
+        return;
+      }
+      const offer = offers().ofertas.find((item) => item.id === request.body.ofertaId);
+      expect(offer?.estado).to.eq('disponible');
+      expect(request.body).to.deep.eq({
+        ofertaId: offer!.id,
+        version: offer!.version,
+        revisionEsperada: provisional?.revision ?? 0,
+      });
+      provisional = provisionalReceipt(offer!, (provisional?.revision ?? 0) + 1);
+      receipts.set(key, { body, receipt: provisional });
+      request.reply(provisional);
+    },
+  ).as('provisionalSelection');
   cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/perfilamiento`, (request) => {
     request.reply(
       savedConsent?.estado === 'autorizado'

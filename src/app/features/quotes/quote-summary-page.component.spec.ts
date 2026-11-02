@@ -44,6 +44,8 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadProductDetail = vi.fn<QuoteRequestGateway['loadProductDetail']>();
+
   loadRequest(id: string): Observable<QuoteRequestRecord> {
     return of({ ...RECORD, id });
   }
@@ -54,6 +56,7 @@ class TestQuoteRequestGateway implements QuoteRequestGateway {
         name: 'Seguro Automotriz Total',
         description: 'Protección para el vehículo',
         available: true,
+        mainCoverages: [],
       },
     ]);
   }
@@ -164,6 +167,24 @@ describe('QuoteSummaryPageComponent', () => {
     expect(
       fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
     ).not.toBeNull();
+  });
+
+  it('muestra la referencia hipotecaria del contrato con su etiqueta traducida', () => {
+    const request: QuoteRequestRecord = {
+      ...RECORD,
+      productId: 'mortgage-life',
+      productData: { mortgageBalance: '180000000', referenciaCredito: 'WEB-E2E-HIPOTECA' },
+    };
+    vi.spyOn(TestBed.inject(QUOTE_REQUEST_GATEWAY), 'loadRequest').mockReturnValue(of(request));
+    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(es.quoteRequest.fields.creditReference);
+    expect(fixture.nativeElement.textContent).toContain('WEB-E2E-HIPOTECA');
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'quoteRequest.fields.referenciaCredito',
+    );
+    expect(request.productData['referenciaCredito']).toBe('WEB-E2E-HIPOTECA');
   });
 
   it('does not link an expired unselected profile to offers or renew consent', () => {

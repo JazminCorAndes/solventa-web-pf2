@@ -128,17 +128,49 @@ function subscription(value: unknown): DashboardSubscription {
 
 function payment(value: unknown): DashboardPayment {
   const fields = record(value);
-  if (fields['estado'] !== 'confirmado' || fields['simulada'] !== true) {
+  if (
+    !['confirmado', 'rechazado', 'pendiente'].includes(String(fields['estado'])) ||
+    fields['simulada'] !== true
+  ) {
     invalid();
   }
-  return {
+  const common = {
     id: text(fields['id']),
     requestId: text(fields['solicitudId']),
     subscriptionId: text(fields['suscripcionId']),
-    status: 'confirmado',
-    simulated: true,
     amount: money(fields['importe'], true),
     periodicity: periodicity(fields['periodicidad']),
+  };
+  if (fields['estado'] === 'pendiente') {
+    const createdAt = date(fields['creadaEn']);
+    if (
+      fields['codigo'] !== 'resultado_no_confirmado' ||
+      !/(?:Z|\+00:00)$/.test(createdAt) ||
+      ['confirmadaEn', 'rechazadaEn', 'motivo'].some((field) => field in fields)
+    )
+      invalid();
+    return {
+      ...common,
+      status: 'pendiente',
+      simulated: true,
+      createdAt,
+      code: 'resultado_no_confirmado',
+    };
+  }
+  if (fields['estado'] === 'rechazado') {
+    if (fields['motivo'] !== 'rechazo_simulado' || 'confirmadaEn' in fields) invalid();
+    return {
+      ...common,
+      status: 'rechazado',
+      simulated: true,
+      rejectedAt: date(fields['rechazadaEn']),
+      reason: 'rechazo_simulado',
+    };
+  }
+  return {
+    ...common,
+    status: 'confirmado',
+    simulated: true,
     confirmedAt: date(fields['confirmadaEn']),
   };
 }

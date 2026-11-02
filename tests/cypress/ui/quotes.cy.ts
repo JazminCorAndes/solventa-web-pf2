@@ -185,7 +185,7 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     cy.contains('button', 'Confirmar selección').click();
     cy.wait('@selection')
       .its('request.body')
-      .should('deep.eq', { ofertaId: 'offer-0', version: 1 });
+      .should('deep.eq', { ofertaId: 'offer-0', version: 1, revisionSeleccion: 1 });
     cy.contains('[role=alert]', 'La oferta cambió o venció').should('be.visible');
     cy.location('pathname').should('eq', '/app/cotizaciones/aceptacion');
   });
@@ -212,7 +212,7 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
       '/app/cotizaciones/solicitar',
     );
     cy.contains('button', 'Confirmar selección').should('be.disabled');
-    cy.get('mat-checkbox input').uncheck().check();
+    cy.get('mat-checkbox input').should('not.be.checked').and('be.disabled');
     cy.contains('[role=alert]', 'El perfil venció').should('be.visible');
     cy.contains('button', 'Confirmar selección').should('be.disabled');
     cy.get('@expiredSelection.all').should('have.length', 1);
@@ -222,6 +222,7 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
   });
 
   it('no abre planes de una solicitud cuyo perfil ya vencio al recuperarla', () => {
+    cy.expectConsoleError('The quote process could not be recovered.', 422, 'perfil_vencido');
     cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}`, {
       id: quoteId,
       productoId: 'travel',
@@ -237,7 +238,7 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/suscripcion`, {
       statusCode: 404,
     });
-    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion`, {
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/seleccion-provisional`, {
       statusCode: 422,
       body: { code: 'perfil_vencido' },
     });

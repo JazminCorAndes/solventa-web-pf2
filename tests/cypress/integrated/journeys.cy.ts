@@ -26,6 +26,9 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
           token = value;
         });
         cy.intercept('POST', '/api/v1/solicitudes-cotizacion').as('realQuote');
+        cy.intercept('PUT', '/api/v1/solicitudes-cotizacion/*/seleccion-provisional').as(
+          'realProvisional',
+        );
         cy.intercept('PUT', '/api/v1/solicitudes-cotizacion/*/seleccion').as('realSelection');
         cy.intercept('POST', '/api/v1/solicitudes-cotizacion/*/suscripcion').as('realSubscription');
         cy.intercept('POST', '/api/v1/solicitudes-cotizacion/*/pago-simulado').as('realPayment');
@@ -54,10 +57,26 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
           expect(Date.parse(body.vigenteHasta)).to.be.greaterThan(Date.now());
         });
         cy.contains('button', 'Seleccionar oferta').first().click();
+        cy.wait('@realProvisional', { log: false }).then(({ request, response }) => {
+          expect(response?.statusCode).to.eq(200);
+          expect(request.body).to.deep.eq({
+            ofertaId: response!.body.ofertaId,
+            version: response!.body.version,
+            revisionEsperada: 0,
+          });
+          expect(response!.body.revision).to.eq(1);
+        });
+        cy.get('@realSelection.all').should('have.length', 0);
+        cy.get('@realSubscription.all').should('have.length', 0);
         cy.get('mat-checkbox input').check();
         cy.contains('button', 'Confirmar selección').click();
-        cy.wait('@realSelection', { log: false }).then(({ response }) => {
+        cy.wait('@realSelection', { log: false }).then(({ request, response }) => {
           expect(response?.statusCode).to.be.oneOf([200, 201]);
+          expect(request.body).to.deep.eq({
+            ofertaId: response!.body.ofertaId,
+            version: response!.body.version,
+            revisionSeleccion: 1,
+          });
           premium = response!.body.prima;
           expect(Number(premium.monto)).to.be.greaterThan(0);
         });
@@ -134,6 +153,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
         requestId = response!.body.id;
       });
       cy.location('pathname').should('eq', '/app/cotizaciones/ofertas');
+      cy.get('.plan-card').first().should('be.visible');
       cy.contains('button', 'Cerrar sesión').click();
     });
     register().then((stranger) => {
@@ -145,6 +165,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
           '',
           '/ofertas',
           '/seleccion',
+          '/seleccion-provisional',
           '/suscripcion',
           '/perfilamiento',
           '/pago-simulado',
@@ -160,6 +181,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
           expect(body.polizas).to.deep.eq([]);
         });
       });
+      cy.expectConsoleError('The quote process could not be recovered.', 404);
       cy.then(() => cy.visit(`/app/cotizaciones/ofertas?solicitud=${requestId}`));
       cy.location('pathname').should('eq', '/app/cotizaciones');
       cy.location('search').should('include', 'error=resume');
@@ -185,6 +207,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
         requestId = response!.body.id;
       });
       cy.location('pathname').should('eq', '/app/cotizaciones/ofertas');
+      cy.get('.plan-card').first().should('be.visible');
       cy.visit('/app/cotizaciones/solicitar?producto=automotive');
       cy.intercept('PUT', '/api/v1/consentimientos/perfilamiento').as('realRevocation');
       cy.contains('button', 'Revocar autorización').click();

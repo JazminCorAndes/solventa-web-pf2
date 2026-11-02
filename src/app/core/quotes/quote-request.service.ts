@@ -4,6 +4,7 @@ import { OFFER_SELECTION_STORAGE } from '../offers/offer-selection-storage.servi
 import { QUOTE_REQUEST_GATEWAY } from './quote-request.gateway';
 import {
   InsuranceProduct,
+  InsuranceProductDetail,
   QuoteRequestDraft,
   QuoteRequestRecord,
   TravelDestination,
@@ -31,6 +32,10 @@ export class QuoteRequestService {
   readonly availableProducts = computed(() =>
     this.productsState().filter((product) => product.available),
   );
+
+  loadProductDetail(id: string): Observable<InsuranceProductDetail> {
+    return this.gateway.loadProductDetail(id);
+  }
 
   loadProducts(): void {
     if (this.catalogStatusState() === 'loading') {

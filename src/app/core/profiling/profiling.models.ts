@@ -96,7 +96,7 @@ export interface RiskProfile {
   }[];
   estadoFuentes?: {
     fuente: string;
-    estado: 'disponible' | 'cache' | 'fallida';
+    estado: 'disponible' | 'cache' | 'default' | 'fallida';
     intentos: number;
     motivo: string | null;
   }[];
@@ -208,12 +208,13 @@ function profileSourceStatesMatch(profile: RiskProfile): boolean {
       (state) =>
         !!state &&
         profile.fuentes.some((source) => source.nombre === state.fuente) &&
-        (state.estado === 'disponible' || state.estado === 'cache') &&
+        (state.estado === 'disponible' || state.estado === 'cache' || state.estado === 'default') &&
         Number.isInteger(state.intentos) &&
         state.intentos >= 0 &&
         state.intentos <= 2 &&
         (state.motivo === null || typeof state.motivo === 'string'),
     ) &&
-    profile.fallbackUsed === states.some((state) => state.estado === 'cache')
+    profile.fallbackUsed ===
+      states.some((state) => state.estado === 'cache' || state.estado === 'default')
   );
 }

@@ -51,7 +51,7 @@ describe('BrowserOfferSelectionStorage', () => {
       }),
     );
 
-    expect(storage.read()).toEqual(SELECTION);
+    expect(storage.read()).toEqual({ ...SELECTION, confirmed: false });
   });
 
   it('conserva una selección sin confirmar al recargar', () => {
@@ -61,12 +61,23 @@ describe('BrowserOfferSelectionStorage', () => {
     expect(storage.read()).toEqual(selection);
   });
 
-  it('migra las selecciones previas sin el indicador de confirmación', () => {
+  it('no inventa aceptación para selecciones antiguas sin confirmación explícita', () => {
     const { confirmed, ...legacy } = SELECTION;
     expect(confirmed).toBe(true);
     window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
 
-    expect(storage.read()).toEqual(SELECTION);
+    expect(storage.read()).toEqual({ ...SELECTION, confirmed: false });
+  });
+
+  it('conserva revisión y vigencia de la preselección sin marcarla aceptada', () => {
+    const selection = {
+      ...SELECTION,
+      confirmed: false as const,
+      revision: 2,
+      validUntil: '2030-01-01T00:00:00Z',
+    };
+    storage.write(selection);
+    expect(storage.read()).toEqual(selection);
   });
 
   it.each([

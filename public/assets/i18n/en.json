@@ -24,6 +24,7 @@
     "phoneInvalid": "Enter +57 followed by 10 digits.",
     "versionInvalid": "Enter an integer version of at least 1.",
     "operation": "Operation identifier",
+    "profileReference": "Confirmed profiling reference",
     "recoveryNote": "This page address retains only the operation and organization. Reloading retrieves its result; if a retry is needed, enter exactly the same details. Documents and phone numbers are not stored in the browser.",
     "recover": "Retrieve result",
     "retryAfter": "Wait {{ seconds }} seconds before retrying.",
@@ -144,6 +145,14 @@
     "consultedAt": "Query date",
     "evidence": "Consulted sources",
     "newConsultation": "New query",
+    "review": {
+      "title": "Query review status",
+      "decision": "Backoffice decision",
+      "noData": "No authorized result retrieved",
+      "awaitingRead": "Waiting to recover the current status",
+      "refresh": "Read current status",
+      "readOnly": "Reading status does not repeat the operation. Data is retrieved only after application completes and current consent is checked."
+    },
     "data": {
       "indicadorRiesgo": "Risk indicator"
     },
@@ -152,6 +161,7 @@
       "document": "The number does not match the selected document type.",
       "consent": "The client does not have current consent covering this query.",
       "client": "The selected client is not registered.",
+      "operation": "No available result was found for this operation.",
       "forbidden": "The partner, product, or purpose is not authorized.",
       "conflict": "The operation identifier was already used with different data.",
       "unavailable": "Not all sources could be queried. Partial data is not shown."
@@ -253,6 +263,23 @@
     "changeInsurance": "Choose insurance",
     "unavailableProduct": "Unavailable for quotes",
     "loadingProducts": "Loading available insurance",
+    "emptyProducts": "There are no insurance products available at this time.",
+    "productDetails": {
+      "mainCoverages": "Main coverages",
+      "view": "View coverages and conditions",
+      "title": "Insurance details",
+      "loading": "Loading insurance details",
+      "error": "The details could not be loaded. Retry before continuing.",
+      "notFound": "This insurance product no longer exists. Retry or select another product.",
+      "coverages": "Coverages",
+      "conditions": "Conditions",
+      "noCoverages": "The service does not report coverages for this product.",
+      "noConditions": "The service does not report conditions for this product.",
+      "insuredAmount": "Insured amount",
+      "deductible": "Deductible",
+      "validity": "Validity",
+      "backendRequired": "Details require a backend connection; coverages and conditions are not simulated."
+    },
     "documentType": "Document type",
     "documentTypes": {
       "cc": "Citizenship ID",
@@ -343,6 +370,12 @@
   "profiling": {
     "additionalSource": "Additional adapter: {{ name }}",
     "cachedEvidence": "The server reused cached evidence that is still current and linked to the current consent. Sources remain simulated.",
+    "defaultEvidence": "This profile includes model defaults, not current results from those sources. Review each source's status in the details.",
+    "sourceState": {
+      "disponible": "Status: available",
+      "cache": "Status: current authorized cache",
+      "default": "Status: model default"
+    },
     "sessionIdentity": "Your identity and contact details come from your authenticated session. You do not need to enter them again.",
     "title": "Profiling information",
     "detail": "Profile and source details",
@@ -473,6 +506,8 @@
     "title": "Choose your plan",
     "subtitle": "Compare coverage and select the option that best fits your needs.",
     "loading": "Updating available offers",
+    "savingSelection": "Saving provisional selection",
+    "refreshSelection": "Refresh selection",
     "recommendedPlan": "Recommended plan",
     "premiumLabels": {
       "mensual": "Monthly premium",
@@ -525,6 +560,8 @@
       "loadTitle": "We could not load the offers",
       "loadBody": "Try again to retrieve the available options.",
       "unavailable": "The selected offer changed or expired. Review the updated options.",
+      "selectionSave": "The provisional selection could not be saved. Retry or check its current state.",
+      "selectionChanged": "The selection changed or has already been accepted. Review the updated state.",
       "confirmation": "The selection could not be confirmed. Please try again."
     }
   },
@@ -547,6 +584,8 @@
     "backToOffers": "Back to offers",
     "errors": {
       "unavailable": "The offer changed or expired. Return to the offers to select an available option.",
+      "selectionChanged": "The selection changed or has already been accepted. Review its current state before continuing.",
+      "selectionMissing": "No offer is available to review for this quote. Return to the offers.",
       "confirmation": "The selection could not be confirmed. Please try again.",
       "subscription": "The subscription could not be processed. Please try again."
     }
@@ -582,23 +621,42 @@
   },
   "payment": {
     "title": "Simulated payment",
-    "disclaimer": "This operation is a simulation: it does not charge money, request card details or issue a policy.",
+    "disclaimer": "This simulation does not charge money or request card details. Academic policy issuance requires confirmation from the service; it provides no real coverage, document or signature.",
     "backendRequired": "Simulated payment requires a connection to the service.",
     "loading": "Loading the simulated payment amount and status.",
     "pending": "Simulated payment awaiting confirmation.",
+    "resultPending": "Simulated payment outcome is not yet confirmed",
+    "createdAt": "Attempt start date",
     "amount": "Amount",
     "confirmAction": "Confirm simulated payment",
     "confirming": "Confirming simulated payment…",
     "confirmed": "Simulated payment confirmed",
     "reference": "Simulation reference",
     "confirmedAt": "Confirmation date",
+    "rejected": "Simulated payment rejected",
+    "rejectedAt": "Rejection date",
+    "rejectionReason": "Rejection reason",
+    "rejectionReasons": { "rechazo_simulado": "Simulation rejection" },
+    "recoverAttempt": "Check the same attempt",
+    "recoveringAttempt": "Processing the attempt…",
+    "unresolvedAttempt": "The attempt outcome still needs to be checked. Checking or refreshing its status does not confirm another payment or start a new attempt.",
+    "newAttempt": "Prepare a new attempt",
+    "newAttemptTitle": "Confirm a new simulated attempt",
+    "newAttemptBody": "The previous attempt was rejected. This action submits a new simulated evaluation with another key; the service decides its result. It does not recover the previous attempt or charge real money.",
+    "confirmNewAttempt": "Confirm new attempt",
+    "cancelNewAttempt": "Cancel",
     "refresh": "Refresh status",
+    "issuancePending": "Payment is confirmed, but issuance has not yet been confirmed by the service. Refresh the status or retry the same operation if available.",
+    "retryIssuance": "Retry issuance",
+    "retryingIssuance": "Retrying issuance…",
     "errors": {
+      "inProgress": "A simulated payment is already in progress. Check its status; this key was not linked to the active payment and will not be resubmitted.",
+      "retryKeyUnavailable": "The original attempt key is unavailable in this tab. You can only refresh the status; no new payment will be created.",
       "session": "Your session could not be validated. Sign in again to continue.",
       "notFound": "This request could not be found for your session. Return to your quotes.",
       "conflict": "This simulated payment attempt could not be reconciled. Refresh the status before continuing.",
       "notAllowed": "Simulated payment is not allowed for the current request status. Refresh the status.",
-      "unavailable": "The simulated payment could not be loaded or confirmed. Refresh the status or retry confirmation."
+      "unavailable": "The simulated payment outcome could not be retrieved. Check or refresh its status; no further confirmation will be sent while the attempt remains unresolved."
     }
   },
   "advisorNavigation": {
@@ -657,6 +715,33 @@
     "resolutionSaved": "The service confirmed the decision.",
     "actor": "Responsible advisor",
     "resolvedAt": "Resolved",
+    "application": {
+      "title": "Application to the requesting process",
+      "filter": "Filter by application status",
+      "pendingDecisions": "Pending decisions",
+      "requester": "Requester identifier",
+      "product": "Product",
+      "updatedAt": "Application updated",
+      "attempts": "Confirmed applications",
+      "code": "Result code",
+      "ack": "Application acknowledgment",
+      "ackNotice": "This acknowledgment confirms durable application, not receipt by the requester.",
+      "noAck": "No confirmed application acknowledgment.",
+      "apply": "Recover pending application",
+      "refresh": "Refresh case status",
+      "legacy": "Historical case without a verified linked process. It cannot resume an operation.",
+      "uncertain": "The response could not be verified. Read the saved status; do not record another decision.",
+      "decisionNotice": "The decision does not confirm a successful query or extend consent.",
+      "emptyTitle": "No cases with this application status",
+      "emptyBody": "Try another filter to find pending decisions or applications.",
+      "status": {
+        "esperando_decision": "Query blocked: waiting for a decision",
+        "pendiente": "Decision saved: application pending",
+        "completada": "Application completed: result subject to current consent",
+        "bloqueada": "Application blocked: no result available; no reapplication",
+        "detenida": "Operation stopped after rejection: no sources are queried"
+      }
+    },
     "validation": {
       "reason": "Enter a non-empty reason containing 3 to 500 characters."
     },
@@ -664,14 +749,19 @@
       "advisor_context_unavailable": "This page is available only to advisors with authorized partners in their session.",
       "sesion_invalida": "Your session is invalid. Sign in again.",
       "socio_no_autorizado": "You are not authorized to view or resolve exceptions for this partner.",
+      "actor_no_autorizado": "The actor is no longer authorized for this operation.",
       "alcance_insuficiente": "Your session does not have the required scope for this action.",
       "excepcion_no_encontrada": "The requested exception was not found for this partner.",
       "excepcion_ya_resuelta": "This exception has already been resolved. Refresh before continuing.",
+      "decision_pendiente": "The decision is still pending. Refresh the case before applying it.",
+      "excepcion_sin_operacion": "This case has no linked operation that can be resumed.",
+      "conflicto_idempotencia": "The service has an operation with different data. Read its status before continuing.",
+      "version_no_soportada": "The service does not support this contract version.",
       "solicitud_invalida": "The request is invalid. Check the decision reason and try again.",
-      "servicio_no_disponible": "The service is unavailable. You can retry the request or decision.",
+      "servicio_no_disponible": "The response could not be confirmed. Read the saved status before continuing.",
       "consentimiento_ausente": "There is no current consent associated with this operation. The exception was not approved.",
       "consentimiento_no_vigente": "The consent is no longer current. The exception was not approved.",
-      "respuesta_invalida": "The service returned an incomplete or invalid response. The decision was not confirmed."
+      "respuesta_invalida": "The service response could not be verified. Read the saved status before continuing."
     }
   },
   "mortgageProfiling": {

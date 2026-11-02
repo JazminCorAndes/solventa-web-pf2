@@ -1,8 +1,150 @@
+import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from coverage_summary import counters, summarize, junit_counts, jenkins_evidence
+from coverage_summary import counters, summarize, junit_counts, jenkins_evidence, cypress_diagnostics
+
+
+class CypressDiagnosticsSummaryTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.path = self.root / "ui-run-diagnostics.json"
+        self.run_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        self.record = {
+            "kind": "cypress-run-diagnostics", "schemaVersion": 1, "runId": self.run_id,
+            "suite": "ui", "fullSuite": True, "phase": "complete", "outcome": "passed", "cause": "none",
+            "reportsCleared": True, "tests": {"total": 1, "passed": 1, "failed": 0},
+            "captureFailures": [],
+        }
+        self.xml = self.root / "ui" / "results-current.xml"
+        self.xml.parent.mkdir()
+        self.xml.write_text("<testsuite><testcase/></testsuite>", encoding="utf-8")
+
+    def render(self) -> tuple[str, bool]:
+        self.path.write_text(json.dumps(self.record), encoding="utf-8")
+        return cypress_diagnostics(self.path, self.run_id)
+
+    def test_current_success_requires_matching_junit(self) -> None:
+        summary, complete = self.render()
+        self.assertTrue(complete)
+        self.assertIn("1 correctas, 0 fallidas, 0 omitidas", summary)
+        self.xml.unlink()
+        summary, complete = self.render()
+        self.assertFalse(complete)
+        self.assertIn("XML Cypress ausentes o inválidos", summary)
+        self.assertNotIn("0 correctas", summary)
+
+    def test_launch_failure_remains_visible_without_xml(self) -> None:
+        self.xml.unlink()
+        self.record.update(phase="cypress-run", outcome="failed", cause="xvfb-missing", tests=None)
+        summary, complete = self.render()
+        self.assertFalse(complete)
+        self.assertIn("Estado:** Falló", summary)
+        self.assertIn("ausencia de Xvfb", summary)
+        self.assertIn("XML Cypress ausentes", summary)
+        self.assertNotIn("0 fallidas", summary)
+
+    def test_does_not_read_old_xml_before_cleanup_or_another_run(self) -> None:
+        self.record.update(phase="port-check", outcome="failed", cause="port-in-use",
+                           reportsCleared=False, tests=None)
+        summary, complete = self.render()
+        self.assertFalse(complete)
+        self.assertIn("Puerto ocupado", summary)
+        self.assertIn("retirada de informes anteriores", summary)
+        self.assertNotIn("JUnit cotejado", summary)
+        self.record["runId"] = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+        summary, complete = self.render()
+        self.assertFalse(complete)
+        self.assertIn("otra ejecución", summary)
+        self.assertNotIn("Puerto ocupado", summary)
+
+    def test_incomplete_capture_and_interrupted_run_are_not_success(self) -> None:
+        self.record["captureFailures"] = ["report-write-failed", "report-log-failed"]
+        summary, complete = self.render()
+        self.assertFalse(complete)
+        self.assertIn("Captura incompleta", summary)
+        self.record.update(phase="angular-readiness", outcome="running", tests=None)
+        summary, complete = self.render()
+        self.assertFalse(complete)
+        self.assertIn("Sin resultado final", summary)
+        self.assertIn("XML parciales", summary)
+
+    def test_partial_selector_cannot_reuse_full_suite_xml(self) -> None:
+        self.record["fullSuite"] = False
+        summary, complete = self.render()
+        self.assertFalse(complete)
+        self.assertIn("selector parcial", summary)
+        self.assertNotIn("JUnit cotejado", summary)
+
+    def test_failed_or_mismatched_results_never_become_success(self) -> None:
+        self.record.update(phase="cypress-results", outcome="failed", cause="tests-failed",
+                           tests={"total": 1, "passed": 0, "failed": 1})
+        summary, complete = self.render()
+        self.assertFalse(complete)
+        self.assertIn("no coinciden", summary)
+        self.xml.write_text("<testsuite><testcase><failure/></testcase></testsuite>")
+        summary, complete = self.render()
+        self.assertFalse(complete)
+        self.assertIn("0 correctas, 1 fallidas, 0 omitidas", summary)
+
+    def test_missing_corrupt_oversized_and_untrusted_fields_are_not_echoed(self) -> None:
+        secret = "PRIVATE-CREDENTIAL-DO-NOT-EXPORT"
+        records = [
+            {"message": secret, **self.record},
+            {**self.record, "cause": secret},
+            {**self.record, "phase": [secret]},
+            {**self.record, "captureFailures": [secret]},
+            {**self.record, "tests": {"total": True, "passed": 1, "failed": 0}},
+            {**self.record, "outcome": "passed", "cause": "no-tests"},
+        ]
+        payloads = [None, "{broken", secret * 200, "[" * 1100 + "]" * 1100]
+        payloads.extend(json.dumps(record) for record in records)
+        for payload in payloads:
+            with self.subTest(payload=str(payload)[:35]):
+                if payload is None:
+                    self.path.unlink(missing_ok=True)
+                else:
+                    self.path.write_text(payload, encoding="utf-8")
+                summary, complete = cypress_diagnostics(self.path, self.run_id)
+                self.assertFalse(complete)
+                self.assertNotIn(secret, summary)
+                self.assertIn("No acredita una ejecución correcta", summary)
+        for run_id in (None, "", secret):
+            summary, complete = cypress_diagnostics(self.path, run_id)
+            self.assertFalse(complete)
+            self.assertNotIn(secret, summary)
+
+    def test_existing_cli_publishes_safe_failure_summary_without_cypress_xml(self) -> None:
+        self.xml.unlink()
+        self.record.update(phase="cypress-run", outcome="failed",
+                           cause="cypress-binary-missing", tests=None)
+        self.render()
+        coverage = self.root / "coverage.xml"
+        coverage.write_text('<coverage lines-covered="1" lines-valid="1" '
+                            'branches-covered="1" branches-valid="1"/>')
+        unit = self.root / "unit.xml"
+        unit.write_text("<testsuite><testcase/></testsuite>")
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve().with_name("coverage_summary.py")),
+             "--coverage", f"Web={coverage}", "--tests", str(unit), "--scope", "V8",
+             "--revision", "a" * 40, "--build-number", "2", "--build-result", "FAILURE",
+             "--build-url", "http://localhost:8080/job/web/2/",
+             "--cypress-diagnostics", str(self.path), "--cypress-run-id", self.run_id],
+            cwd=self.root, capture_output=True, encoding="utf-8",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        summary = (self.root / "reports" / "coverage-summary.md").read_text(encoding="utf-8")
+        self.assertIn("resultado observado **FAILURE**", summary)
+        self.assertIn("ausencia del binario Cypress", summary)
+        self.assertIn("XML Cypress ausentes", summary)
+        self.assertEqual(result.stdout.strip(), summary.strip())
 
 
 class CoverageSummaryTest(unittest.TestCase):
