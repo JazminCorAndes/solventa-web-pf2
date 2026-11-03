@@ -86,6 +86,43 @@
       "unexpected": "Ocurrió un error inesperado. Inténtalo nuevamente."
     }
   },
+  "registration": {
+    "title": "Registrarse",
+    "introduction": "Crea tu cuenta de cliente con los datos de identidad y contacto que usarán tus cotizaciones. Los datos específicos de cada seguro se solicitan al cotizar.",
+    "name": "Nombre completo",
+    "documentType": "Tipo de documento",
+    "documentNumber": "Número de documento",
+    "phone": "Teléfono",
+    "birthDate": "Fecha de nacimiento",
+    "confirmPassword": "Confirmar contraseña",
+    "submit": "Crear cuenta",
+    "processing": "Creando cuenta",
+    "haveAccount": "¿Ya tienes una cuenta?",
+    "success": "Tu cuenta fue creada y tu decisión de consentimiento quedó registrada. Inicia sesión para continuar.",
+    "consent": {
+      "title": "Autorización de datos",
+      "scope": "Alcances y fuentes: Open Finance y Open Data. Dato utilizado: indicador de riesgo, para calcular el perfil de tu cotización.",
+      "duration": "Si autorizas, la autorización durará 30 días desde el registro, salvo que la revoques antes desde la sección Consentimiento de tu cuenta.",
+      "optional": "Puedes crear tu cuenta sin autorizar. No se consultarán las fuentes ni podrás cotizar hasta otorgar una autorización vigente.",
+      "authorize": "Autorizo el uso de datos descrito durante 30 días.",
+      "decline": "No autorizo por ahora.",
+      "management": "Consulta la vigencia de tu autorización y revócala cuando quieras. Entrar a esta sección no renueva ni amplía los 30 días; una nueva autorización requiere tu decisión explícita."
+    },
+    "validation": {
+      "name": "Ingresa tu nombre completo (máximo 120 caracteres).",
+      "documentType": "Selecciona un tipo de documento.",
+      "birthDate": "Ingresa una fecha de nacimiento válida anterior a hoy.",
+      "password": "Usa entre 8 y 128 caracteres.",
+      "passwordMismatch": "Las contraseñas no coinciden.",
+      "consent": "Selecciona si autorizas o no el uso de datos."
+    },
+    "errors": {
+      "duplicate": "Ya existe una cuenta con ese correo o documento. Inicia sesión o revisa tus datos.",
+      "encryptionUnavailable": "Abre el sitio con HTTPS (o localhost para desarrollo) y usa un navegador actualizado con Web Crypto para registrar tu cuenta. La contraseña no se enviará sin cifrar.",
+      "invalid": "El servicio rechazó los datos de registro. Revisa los campos y tu decisión de consentimiento.",
+      "unavailable": "No se pudo confirmar el registro. Si ya creaste la cuenta, inicia sesión; de lo contrario, reintenta cuando el servicio esté disponible."
+    }
+  },
   "partners": {
     "title": "Portal de socios",
     "subtitle": "Organizaciones habilitadas para tu sesión autenticada.",
@@ -182,6 +219,7 @@
     "dashboard": "Inicio",
     "clients": "Clientes",
     "quotes": "Cotizaciones",
+    "consent": "Consentimiento",
     "requests": "Solicitudes",
     "settings": "Configuración",
     "policies": "Mis seguros",

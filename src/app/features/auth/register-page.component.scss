@@ -1,0 +1,39 @@
+.registration-card {
+  width: min(100%, 760px);
+}
+
+.registration-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--solventa-space-4);
+}
+
+.consent-section {
+  margin: var(--solventa-space-5) 0;
+  padding: var(--solventa-space-4);
+  border: 1px solid var(--solventa-color-border);
+  border-radius: var(--solventa-radius-sm);
+}
+
+mat-radio-group {
+  display: grid;
+  gap: var(--solventa-space-2);
+}
+
+h2 {
+  font-size: 1.1rem;
+}
+
+p {
+  line-height: 1.5;
+}
+
+.validation-error {
+  color: var(--mat-sys-error, #ba1a1a);
+}
+
+@media (max-width: 600px) {
+  .registration-fields {
+    grid-template-columns: 1fr;
+  }
+}

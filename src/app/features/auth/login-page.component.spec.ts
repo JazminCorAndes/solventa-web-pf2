@@ -6,7 +6,7 @@ import { Observable, of, Subject, throwError } from 'rxjs';
 import {
   AccessDeniedError,
   InvalidCredentialsError,
-  LoginEncryptionUnavailableError,
+  CredentialEncryptionUnavailableError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { AUTH_GATEWAY } from '../../core/auth/auth.gateway';
@@ -124,7 +124,7 @@ describe('LoginPageComponent', () => {
   });
 
   it('shows an actionable crypto error and keeps the form available for retry', () => {
-    gateway.loginResult = () => throwError(() => new LoginEncryptionUnavailableError());
+    gateway.loginResult = () => throwError(() => new CredentialEncryptionUnavailableError());
     component.form.setValue({ email: 'cliente@solventa.co', password: 'Solventa123!' });
 
     component.submit();

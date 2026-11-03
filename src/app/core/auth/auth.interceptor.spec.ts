@@ -61,6 +61,7 @@ describe('authInterceptor', () => {
   it.each([
     ['login', `${API}/v1/sesiones`, 'POST'],
     ['login challenge', `${API}/v1/sesiones/desafio`, 'GET'],
+    ['registration challenge', `${API}/v1/usuarios/desafio`, 'GET'],
     ['renew', `${API}/v1/sesiones/renovar`, 'POST'],
     ['register', `${API}/v1/usuarios`, 'POST'],
   ])('does not add the token to %s', (_name, url, method) => {
@@ -82,15 +83,20 @@ describe('authInterceptor', () => {
     }
   });
 
-  it('does not renew or redirect when the public login challenge is rejected', async () => {
-    const url = `${API}/v1/sesiones/desafio`;
-    const response = firstValueFrom(client.get(url)).catch((error: unknown) => error);
-    http.expectOne(url).flush({}, UNAUTHORIZED);
+  it.each(['/v1/sesiones/desafio', '/v1/usuarios/desafio', '/v1/usuarios'])(
+    'does not renew or redirect when public auth rejects %s',
+    async (path) => {
+      const url = `${API}${path}`;
+      const response = firstValueFrom(
+        client.request(path.endsWith('/desafio') ? 'GET' : 'POST', url),
+      ).catch((error: unknown) => error);
+      http.expectOne(url).flush({}, UNAUTHORIZED);
 
-    expect(await response).toBeInstanceOf(HttpErrorResponse);
-    expect(gateway.refreshCalls).toEqual([]);
-    expect(navigate).not.toHaveBeenCalled();
-  });
+      expect(await response).toBeInstanceOf(HttpErrorResponse);
+      expect(gateway.refreshCalls).toEqual([]);
+      expect(navigate).not.toHaveBeenCalled();
+    },
+  );
 
   it('does not touch requests outside the API', () => {
     client.get('/assets/i18n/es.json').subscribe();
