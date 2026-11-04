@@ -42,6 +42,13 @@ navegador Cypress. En Linux usar un runner con las dependencias oficiales de Cyp
 y Xvfb (GitHub `ubuntu-latest`). Cypress está fijado a 16.2.0; usa su Electron incluido.
 Esa versión avisa que Electron está deprecado: revisar navegador al actualizar Cypress.
 
+Para validar únicamente SOL-175 en navegador local:
+`node tests/cypress/run.cjs ui claims.cy.ts`. Cubre campos obligatorios, fecha,
+doble clic, procesamiento, confirmación con ID y estado, consulta al recargar,
+rechazo corregible y reintento con la misma operación tras un 503, aun si la póliza
+ya no aparece vigente. Usa HTTP controlado; no acredita el recorrido a servicios
+ni persistencia reales de SOL-313.
+
 ```sh
 pnpm install --frozen-lockfile
 pnpm test:cypress:types
