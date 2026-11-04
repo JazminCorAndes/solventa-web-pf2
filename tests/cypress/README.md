@@ -15,9 +15,10 @@ adaptadores y casos de borde; Cypress añade interacción real del navegador.
 
 `integrated/` no importa fixtures de `ui/` ni reemplaza respuestas de negocio.
 Los interceptores de esa suite observan peticiones para correlacionar sus resultados.
-El setup registra cuentas sintéticas por la API de Identidad, con documento, fecha
-de nacimiento y teléfono. El registro del BFF web solo admite nombre, correo y
-contraseña; no permite preparar el perfil completo que exige la cotización.
+El setup de las suites existentes registra cuentas sintéticas por la API de
+Identidad, con documento, fecha de nacimiento y teléfono. El caso
+`integrated/registration.cy.ts` no usa ese setup: crea las cuentas desde el formulario
+web y el BFF, con datos maestros y decisión explícita de consentimiento.
 Cada caso usa correo único `cypress-<uuid>@example.com` y contraseña aleatoria;
 no necesita cuentas preexistentes ni secretos productivos.
 
@@ -27,7 +28,12 @@ el login con su clave privada de prueba. Comprueba el correo vinculado, la contr
 recuperable y su ausencia del cuerpo HTTP. También cubre desafío inválido/vencido,
 503 y falta de Web Crypto sin POST ni fallback; el reintento obtiene otro desafío.
 La suite integrada observa el formato JWE de los logins válidos e inválidos, sin
-reemplazar el backend. El registro de cuentas sintéticas conserva su contrato existente.
+reemplazar el backend. El registro web usa un desafío independiente
+`GET /v1/usuarios/desafio`, `typ: solventa-register+jwe` y `credencialCifrada`,
+sin `contrasena` en el POST. `ui/registration.cy.ts` descifra con una clave efímera
+de prueba y cubre errores, falta de Web Crypto y reintentos sin degradación.
+El setup directo de Identidad para otras suites conserva su contrato legacy;
+la prueba de duplicados del BFF también usa el formulario web cifrado.
 
 ## Ejecución
 
@@ -150,6 +156,32 @@ La tarea Node de Cypress comprueba que Identidad y el navegador pertenezcan al
 mismo entorno desechable antes de registrar clientes; no sigue redirecciones.
 No arrancar dos helpers en el mismo checkout. Para cerrarlo, usar Ctrl+C o eliminar
 ese manifiesto temporal y esperar su salida; no matar solo el proceso padre de Python.
+
+### Registro web y consentimiento de 30 días
+
+Con un backend desechable compatible con el registro completo del BFF y login
+cifrado, ejecuta `node tests\cypress\run.cjs integrated registration.cy.ts` con
+`CYPRESS_DISPOSABLE_BACKEND=1`, `CYPRESS_BACKEND_URL` apuntando a ese BFF local y
+`CYPRESS_WEB_PORT` en un puerto libre. En Windows, usa la caché corta indicada arriba
+si la caché por defecto no contiene un binario válido.
+
+El caso autorizado recorre el enlace **Registrarse**, completa el formulario real,
+obtiene un desafío y verifica el JWE del POST sin contraseña visible,
+registra usuario/consentimiento, inicia sesión con JWE, consulta la decisión y
+comprueba exactamente 30 días entre `efectivaEn` y `vigenteHasta`. Una recarga no
+altera la decisión. Crea una cotización con esos datos maestros, recibe ofertas y
+revoca desde el menú **Consentimiento**; comprueba el estado persistido tras recarga
+y el 403 al intentar otra cotización. El segundo caso usa ancho móvil y rechazo
+explícito: crea la cuenta, permite login, conserva el rechazo y no permite cotizar.
+No llama al helper de altas directas de Identidad, ni sustituye respuestas del BFF.
+Ambos desafíos (login y registro) requieren `ENCRYPTED_LOGIN_ENABLED=true`.
+
+Los XML y las evidencias JSON sin credenciales quedan en
+`reports/cypress/integrated/registration/`. No captura imágenes ni video.
+La revisión backend fijada en el workflow histórico no acredita este contrato
+nuevo: antes de ejecutar la suite completa en CI se debe fijar una revisión
+publicada compatible. Las pruebas locales sobre ambos worktrees no equivalen a
+una ejecución de ese workflow ni a un despliegue.
 
 ### Muestra HU44 con fallo de despacho controlado
 

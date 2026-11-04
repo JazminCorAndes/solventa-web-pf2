@@ -12,14 +12,14 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { finalize, take } from 'rxjs';
 import {
   AccessDeniedError,
   AuthenticationUnavailableError,
   InvalidCredentialsError,
-  LoginEncryptionUnavailableError,
+  CredentialEncryptionUnavailableError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { AuthService } from '../../core/auth/auth.service';
@@ -37,6 +37,7 @@ import { BrandComponent } from '../../shared/brand/brand.component';
     MatInputModule,
     MatProgressSpinnerModule,
     ReactiveFormsModule,
+    RouterLink,
     TranslocoPipe,
   ],
   templateUrl: './login-page.component.html',
@@ -50,6 +51,7 @@ export class LoginPageComponent {
   private readonly alert = viewChild<ElementRef<HTMLElement>>('authAlert');
 
   readonly loading = signal(false);
+  readonly returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
   readonly passwordVisible = signal(false);
   readonly errorKey = signal<string | null>(null);
   readonly form = this.formBuilder.nonNullable.group({
@@ -92,7 +94,7 @@ export class LoginPageComponent {
                 ? 'auth.errors.tooManyAttempts'
                 : error instanceof AccessDeniedError
                   ? 'partners.errors.forbidden'
-                  : error instanceof LoginEncryptionUnavailableError
+                  : error instanceof CredentialEncryptionUnavailableError
                     ? 'auth.errors.encryptionUnavailable'
                     : error instanceof AuthenticationUnavailableError
                       ? 'auth.errors.unavailable'

@@ -10,7 +10,8 @@ import {
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
-  LoginEncryptionUnavailableError,
+  InvalidRegistrationError,
+  CredentialEncryptionUnavailableError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { HttpAuthGateway } from './http-auth.gateway';
@@ -370,7 +371,7 @@ describe('HttpAuthGateway', () => {
         if (failure === 'insecure') vi.stubGlobal('isSecureContext', false);
         else vi.stubGlobal('crypto', { getRandomValues: crypto.getRandomValues.bind(crypto) });
         await expect(firstValueFrom(gateway.login(credentials))).rejects.toBeInstanceOf(
-          LoginEncryptionUnavailableError,
+          CredentialEncryptionUnavailableError,
         );
         http.expectNone(`${SESSIONS}/desafio`);
         http.expectNone(SESSIONS);
@@ -521,17 +522,78 @@ describe('HttpAuthGateway', () => {
   });
 
   describe('register', () => {
-    const DATA = { name: 'Ana Cliente', email: 'ana@solventa.co', password: 'Solventa123!' };
+    let privateKey: CryptoKey;
+    let publicJwk: JWK;
+    const challenge = (id = 'register-challenge') => ({
+      desafioId: id,
+      clavePublica: { ...publicJwk, alg: 'RSA-OAEP-256', use: 'enc', kid: 'register-key' },
+      expiraEn: new Date(Date.now() + 60000).toISOString(),
+    });
+    const flushChallenge = async (id?: string) => {
+      const request = http.expectOne(`${USERS}/desafio`);
+      expect(request.request.method).toBe('GET');
+      expect(request.request.body).toBeNull();
+      expect(request.request.withCredentials).toBe(false);
+      request.flush(challenge(id));
+      return vi.waitFor(() => http.expectOne(USERS), { timeout: 2000 });
+    };
 
-    it('creates a user', async () => {
-      const result = firstValueFrom(gateway.register(DATA));
-      const request = http.expectOne(USERS);
+    beforeAll(async () => {
+      const pair = await generateKeyPair('RSA-OAEP-256', { extractable: true });
+      privateKey = pair.privateKey;
+      publicJwk = await exportJWK(pair.publicKey);
+    });
+    beforeEach(() => {
+      vi.stubGlobal('isSecureContext', true);
+      vi.stubGlobal('Uint8Array', new TextEncoder().encode('').constructor);
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    const DATA = {
+      name: 'Ana Cliente',
+      email: 'ana@solventa.co',
+      password: 'Solventa123!',
+      documentType: 'cc' as const,
+      documentNumber: '1023456789',
+      phone: '+573001234567',
+      birthDate: '1990-01-15',
+      consent: { authorized: true, termsVersion: '1.0' as const },
+    };
+
+    it.each([true, false])('creates a user with explicit consent %s', async (authorized) => {
+      const result = firstValueFrom(
+        gateway.register({ ...DATA, consent: { ...DATA.consent, authorized } }),
+      );
+      const request = await flushChallenge();
 
       expect(request.request.method).toBe('POST');
+      expect(request.request.withCredentials).toBe(false);
       expect(request.request.body).toEqual({
         nombre: 'Ana Cliente',
         correo: 'ana@solventa.co',
-        contrasena: 'Solventa123!',
+        credencialCifrada: expect.any(String),
+        tipoDocumento: 'cc',
+        numeroDocumento: '1023456789',
+        telefono: '+573001234567',
+        fechaNacimiento: '1990-01-15',
+        consentimiento: { autorizado: authorized, versionTerminos: '1.0' },
+      });
+      expect(JSON.stringify(request.request.body)).not.toContain(DATA.password);
+      expect(request.request.body).not.toHaveProperty('contrasena');
+      const { plaintext, protectedHeader } = await compactDecrypt(
+        request.request.body.credencialCifrada,
+        privateKey,
+      );
+      expect(protectedHeader).toEqual({
+        alg: 'RSA-OAEP-256',
+        enc: 'A256GCM',
+        kid: 'register-key',
+        typ: 'solventa-register+jwe',
+      });
+      expect(JSON.parse(new TextDecoder().decode(plaintext))).toEqual({
+        desafioId: 'register-challenge',
+        correo: DATA.email,
+        contrasena: DATA.password,
       });
       request.flush({ usuario: USER_RESPONSE }, { status: 201, statusText: 'Created' });
 
@@ -539,14 +601,91 @@ describe('HttpAuthGateway', () => {
     });
 
     it.each([
+      [400, InvalidRegistrationError],
+      [401, AuthenticationUnavailableError],
       [409, EmailAlreadyRegisteredError],
       [429, TooManyAttemptsError],
       [503, AuthenticationUnavailableError],
     ])('maps HTTP %s', async (status, expected) => {
       const result = firstValueFrom(gateway.register(DATA));
-      http.expectOne(USERS).flush({}, { status, statusText: 'Error' });
+      const request = await flushChallenge();
+      request.flush({}, { status, statusText: 'Error' });
 
       await expect(result).rejects.toBeInstanceOf(expected);
+    });
+
+    it.each([
+      null,
+      { desafioId: '' },
+      { expiraEn: new Date(0).toISOString() },
+      { expiraEn: 'invalid' },
+      { clavePublica: { kty: 'oct', k: 'secret' } },
+    ])('does not send registration after an invalid challenge: %j', async (fields) => {
+      const result = firstValueFrom(gateway.register(DATA));
+      const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+      http
+        .expectOne(`${USERS}/desafio`)
+        .flush(fields === null ? null : { ...challenge(), ...fields });
+      await rejected;
+      http.expectNone(USERS);
+      http.expectNone(`${SESSIONS}/desafio`);
+    });
+
+    it.each([
+      [404, HttpErrorResponse],
+      [429, TooManyAttemptsError],
+      [503, AuthenticationUnavailableError],
+    ])('never falls back to plaintext after challenge HTTP %s', async (status, expected) => {
+      const result = firstValueFrom(gateway.register(DATA));
+      const rejected = expect(result).rejects.toBeInstanceOf(expected);
+      http.expectOne(`${USERS}/desafio`).flush({}, { status, statusText: 'Error' });
+      await rejected;
+      http.expectNone(USERS);
+    });
+
+    it.each(['insecure', 'missing-subtle'] as const)(
+      'does not make any registration requests without safe crypto: %s',
+      async (failure) => {
+        if (failure === 'insecure') vi.stubGlobal('isSecureContext', false);
+        else vi.stubGlobal('crypto', { getRandomValues: crypto.getRandomValues.bind(crypto) });
+        await expect(firstValueFrom(gateway.register(DATA))).rejects.toBeInstanceOf(
+          CredentialEncryptionUnavailableError,
+        );
+        http.expectNone(`${USERS}/desafio`);
+        http.expectNone(USERS);
+      },
+    );
+
+    it('never sends registration when encryption fails', async () => {
+      const encrypt = vi.spyOn(crypto.subtle, 'encrypt').mockRejectedValue(new Error('crypto'));
+      try {
+        const result = firstValueFrom(gateway.register(DATA));
+        const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+        http.expectOne(`${USERS}/desafio`).flush(challenge());
+        await rejected;
+        http.expectNone(USERS);
+      } finally {
+        encrypt.mockRestore();
+      }
+    });
+
+    it('gets a new single-use challenge and ciphertext on every explicit retry', async () => {
+      let firstCiphertext: string | undefined;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const result = firstValueFrom(gateway.register(DATA));
+        const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+        const pending = await flushChallenge(`register-${attempt}`);
+        const ciphertext: string = pending.request.body.credencialCifrada;
+        const { plaintext } = await compactDecrypt(ciphertext, privateKey);
+        expect(JSON.parse(new TextDecoder().decode(plaintext)).desafioId).toBe(
+          `register-${attempt}`,
+        );
+        expect(ciphertext).not.toBe(firstCiphertext);
+        firstCiphertext = ciphertext;
+        pending.flush({}, { status: 401, statusText: 'Expired challenge' });
+        await rejected;
+        http.expectNone(USERS);
+      }
     });
   });
 });

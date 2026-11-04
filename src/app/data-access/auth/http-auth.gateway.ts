@@ -6,10 +6,11 @@ import { environment } from '../../../environments/environment';
 import {
   AccessDeniedError,
   AuthenticationUnavailableError,
+  CredentialEncryptionUnavailableError,
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
-  LoginEncryptionUnavailableError,
+  InvalidRegistrationError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { AuthGateway } from '../../core/auth/auth.gateway';
@@ -56,31 +57,44 @@ export class HttpAuthGateway implements AuthGateway {
   private readonly usersUrl = `${environment.apiBaseUrl}/v1/usuarios`;
 
   register(data: RegistrationData): Observable<AuthUser> {
-    return this.http
-      .post<{ usuario: UserResponse }>(this.usersUrl, {
-        nombre: data.name,
-        correo: data.email,
-        contrasena: data.password,
-      })
-      .pipe(
-        map((response) => toUser(response.usuario)),
-        catchError((error: unknown) => {
-          if (error instanceof HttpErrorResponse && error.status === 409) {
-            return throwError(() => new EmailAlreadyRegisteredError());
-          }
-          return this.mapCommonError(error);
+    return this.requestEncryptedCredentials(this.usersUrl, data, 'solventa-register+jwe').pipe(
+      switchMap((credencialCifrada) =>
+        this.http.post<{ usuario: UserResponse }>(this.usersUrl, {
+          nombre: data.name,
+          correo: data.email,
+          credencialCifrada,
+          tipoDocumento: data.documentType,
+          numeroDocumento: data.documentNumber,
+          telefono: data.phone,
+          fechaNacimiento: data.birthDate,
+          consentimiento: {
+            autorizado: data.consent.authorized,
+            versionTerminos: data.consent.termsVersion,
+          },
         }),
-      );
+      ),
+      map((response) => toUser(response.usuario)),
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          return throwError(() => new AuthenticationUnavailableError());
+        }
+        if (error instanceof HttpErrorResponse && error.status === 400) {
+          return throwError(() => new InvalidRegistrationError());
+        }
+        if (error instanceof HttpErrorResponse && error.status === 409) {
+          return throwError(() => new EmailAlreadyRegisteredError());
+        }
+        return this.mapCommonError(error);
+      }),
+    );
   }
 
   login(credentials: LoginCredentials): Observable<AuthGrant> {
-    return defer(() => {
-      if (globalThis.isSecureContext !== true || !globalThis.crypto?.subtle) {
-        throw new LoginEncryptionUnavailableError();
-      }
-      return this.http.get<unknown>(`${this.sessionsUrl}/desafio`);
-    }).pipe(
-      switchMap((challenge) => encryptCredentials(challenge, credentials)),
+    return this.requestEncryptedCredentials(
+      this.sessionsUrl,
+      credentials,
+      'solventa-login+jwe',
+    ).pipe(
       switchMap((credencialCifrada) =>
         this.http.post<TokenResponse>(this.sessionsUrl, {
           correo: credentials.email,
@@ -140,6 +154,19 @@ export class HttpAuthGateway implements AuthGateway {
       );
   }
 
+  private requestEncryptedCredentials(
+    baseUrl: string,
+    credentials: LoginCredentials,
+    type: CredentialType,
+  ): Observable<string> {
+    return defer(() => {
+      if (globalThis.isSecureContext !== true || !globalThis.crypto?.subtle) {
+        throw new CredentialEncryptionUnavailableError();
+      }
+      return this.http.get<unknown>(`${baseUrl}/desafio`);
+    }).pipe(switchMap((challenge) => encryptCredentials(challenge, credentials, type)));
+  }
+
   private mapCommonError(error: unknown): Observable<never> {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 403) {
@@ -156,9 +183,12 @@ export class HttpAuthGateway implements AuthGateway {
   }
 }
 
+type CredentialType = 'solventa-login+jwe' | 'solventa-register+jwe';
+
 async function encryptCredentials(
   response: unknown,
   credentials: LoginCredentials,
+  type: CredentialType,
 ): Promise<string> {
   try {
     if (!response || typeof response !== 'object') {
@@ -203,7 +233,7 @@ async function encryptCredentials(
         alg: 'RSA-OAEP-256',
         enc: 'A256GCM',
         kid: key['kid'],
-        typ: 'solventa-login+jwe',
+        typ: type,
       })
       .encrypt(publicKey);
     if (expiresAt <= Date.now()) {

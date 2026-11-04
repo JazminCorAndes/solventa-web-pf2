@@ -86,6 +86,43 @@
       "unexpected": "An unexpected error occurred. Please try again."
     }
   },
+  "registration": {
+    "title": "Sign up",
+    "introduction": "Create your customer account with the identity and contact information used for your quotes. Insurance-specific details are requested when you get a quote.",
+    "name": "Full name",
+    "documentType": "Document type",
+    "documentNumber": "Document number",
+    "phone": "Phone",
+    "birthDate": "Date of birth",
+    "confirmPassword": "Confirm password",
+    "submit": "Create account",
+    "processing": "Creating account",
+    "haveAccount": "Already have an account?",
+    "success": "Your account was created and your consent decision was recorded. Sign in to continue.",
+    "consent": {
+      "title": "Data authorization",
+      "scope": "Scopes and sources: Open Finance and Open Data. Data used: risk indicator, to calculate the profile for your quote.",
+      "duration": "If you authorize, consent lasts 30 days from registration, unless you revoke it earlier in your account's Consent section.",
+      "optional": "You can create your account without authorizing. Sources will not be queried and you cannot get quotes until you grant valid consent.",
+      "authorize": "I authorize the described use of data for 30 days.",
+      "decline": "I do not authorize at this time.",
+      "management": "Check when your consent expires and revoke it at any time. Visiting this section does not renew or extend the 30 days; a new authorization requires your explicit decision."
+    },
+    "validation": {
+      "name": "Enter your full name (up to 120 characters).",
+      "documentType": "Select a document type.",
+      "birthDate": "Enter a valid date of birth earlier than today.",
+      "password": "Use between 8 and 128 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "consent": "Choose whether to authorize the use of data."
+    },
+    "errors": {
+      "duplicate": "An account with that email or document already exists. Sign in or review your details.",
+      "encryptionUnavailable": "Open the site over HTTPS (or localhost for development) and use an up-to-date browser with Web Crypto to register. Your password will not be sent unencrypted.",
+      "invalid": "The service rejected the registration data. Review the fields and your consent decision.",
+      "unavailable": "Registration could not be confirmed. If you already created the account, sign in; otherwise retry when the service is available."
+    }
+  },
   "partners": {
     "title": "Partner portal",
     "subtitle": "Organizations authorized for your authenticated session.",
@@ -182,6 +219,7 @@
     "dashboard": "Home",
     "clients": "Clients",
     "quotes": "Quotes",
+    "consent": "Consent",
     "requests": "Requests",
     "settings": "Settings",
     "policies": "My insurance",
