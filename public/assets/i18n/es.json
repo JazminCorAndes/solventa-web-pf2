@@ -636,7 +636,9 @@
     "rejected": "Pago simulado rechazado",
     "rejectedAt": "Fecha de rechazo",
     "rejectionReason": "Motivo del rechazo",
-    "rejectionReasons": { "rechazo_simulado": "Rechazo de la simulación" },
+    "rejectionReasons": {
+      "rechazo_simulado": "Rechazo de la simulación"
+    },
     "recoverAttempt": "Consultar el mismo intento",
     "recoveringAttempt": "Procesando el intento…",
     "unresolvedAttempt": "El resultado del intento aún debe consultarse. Consultar o actualizar el estado no confirma otro pago ni inicia un nuevo intento.",
@@ -829,6 +831,41 @@
       "rate_limited": "El socio alcanzó el límite de solicitudes. Espera antes de reintentar la misma operación.",
       "advisor_context_unavailable": "No puedes enviar un perfilamiento: esta sesión web no dispone del contexto autorizado del asesor y su socio.",
       "unexpected": "No fue posible iniciar el perfilamiento. Puedes reintentar sin crear otra operación."
+    }
+  },
+  "claims": {
+    "eyebrow": "Seguimiento",
+    "title": "Estado de mi siniestro",
+    "subtitle": "Consulta el estado vigente y el historial de tu caso. Solventa actualiza el estado; aquí solo se muestra.",
+    "refresh": "Actualizar",
+    "lookupLabel": "Número de siniestro",
+    "lookupHint": "Lo recibiste al reportar el siniestro.",
+    "lookupInvalid": "Ingresa un número de siniestro válido.",
+    "lookupSubmit": "Consultar",
+    "currentState": "Estado vigente",
+    "updatedAt": "Última actualización",
+    "type": "Tipo",
+    "occurredAt": "Fecha del evento",
+    "reportedAt": "Fecha de reporte",
+    "claimId": "Número de siniestro",
+    "policyId": "Póliza",
+    "history": "Historial del caso",
+    "loading": "Consultando el estado del siniestro…",
+    "notFound": "No encontramos un siniestro con ese número disponible para tu cuenta.",
+    "error": "No fue posible consultar el estado del siniestro. No se muestra información desactualizada; intenta nuevamente.",
+    "types": {
+      "asistido": "Asistido",
+      "parametrico": "Paramétrico"
+    },
+    "states": {
+      "reportado": "Reportado",
+      "en_evaluacion": "En evaluación",
+      "en_revision": "En revisión",
+      "en_inspeccion": "En inspección",
+      "aprobado": "Aprobado",
+      "rechazado": "Rechazado",
+      "pagado": "Pagado",
+      "cerrado": "Cerrado"
     }
   }
 }
