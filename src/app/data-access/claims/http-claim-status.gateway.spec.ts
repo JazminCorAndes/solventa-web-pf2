@@ -58,6 +58,12 @@ describe('HttpClaimStatusGateway', () => {
     await expect(result).rejects.toBeInstanceOf(ClaimNotFoundError);
   });
 
+  it('preserves an explicitly unclassified claim without inventing a type', async () => {
+    const result = firstValueFrom(gateway.load(CLAIM_ID));
+    http.expectOne(URL).flush({ ...CLAIM_STATUS_RESPONSE, tipo: null });
+    await expect(result).resolves.toEqual({ ...CLAIM_STATUS, type: null });
+  });
+
   it.each([
     [404, { code: 'otra_ruta' }],
     [503, { code: 'servicio_no_disponible' }],
@@ -70,6 +76,7 @@ describe('HttpClaimStatusGateway', () => {
   it.each([
     ['unknown state', { estado: 'inventado' }],
     ['unknown type', { tipo: 'otro' }],
+    ['missing type', { tipo: undefined }],
     ['empty history', { historial: [] }],
     ['current state outside history', { estado: 'aprobado' }],
     ['update date outside history', { actualizadoEn: '2026-11-01T19:00:00Z' }],

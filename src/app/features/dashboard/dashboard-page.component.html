@@ -126,6 +126,15 @@
                   {{ 'dashboard.endDate' | transloco }}:
                   {{ policy.endDate | date: 'mediumDate' : undefined : dateLocale }}
                 </p>
+                @if (policy.status === 'vigente') {
+                  <a
+                    mat-stroked-button
+                    routerLink="/app/siniestros/reportar"
+                    [queryParams]="{ polizaId: policy.id }"
+                  >
+                    {{ 'claims.title' | transloco }}
+                  </a>
+                }
               </li>
             } @empty {
               <li class="empty-state">{{ 'dashboard.emptyPolicies' | transloco }}</li>

@@ -1,4 +1,51 @@
 {
+  "claims": {
+    "title": "Report a claim",
+    "instructions": "Select an active policy and describe the event. Registration is only confirmed when the server returns its identifier and status.",
+    "back": "Back to dashboard",
+    "policy": "Policy",
+    "policyHint": "Only your active policies are shown.",
+    "refreshPolicies": "Refresh policies",
+    "eventDate": "Event date and time",
+    "dateHint": "Enter the event's local time. Policy coverage is checked by UTC calendar day.",
+    "eventType": "Event type",
+    "place": "Event location",
+    "description": "Description",
+    "descriptionHint": "10 to 5000 characters. Include only information necessary for this report.",
+    "submit": "Submit report",
+    "loading": "Loading active policies…",
+    "submitting": "Waiting for server confirmation…",
+    "emptyPolicies": "You have no active policies available to report a claim.",
+    "confirmed": "Claim registered",
+    "id": "Claim identifier",
+    "status": "Status",
+    "registered": "Registered",
+    "registeredAt": "Registration date",
+    "confirmationNote": "Registration does not imply coverage approval or compensation.",
+    "newReport": "Create a different report",
+    "operation": "Operation identifier",
+    "pendingNote": "A report is awaiting confirmation. Its data and operation are kept in this tab. Retry without changing them to avoid duplicates, even after signing in again.",
+    "retry": "Retry the same report",
+    "validation": {
+      "policy": "Select an active policy.",
+      "date": "Enter a valid date and time, not in the future and within the policy coverage period.",
+      "type": "Describe the event type (1 to 100 characters).",
+      "place": "Enter the location (1 to 300 characters).",
+      "description": "Description must contain 10 to 5000 characters."
+    },
+    "errors": {
+      "policies": "We could not load your policies. Retry when the connection is restored.",
+      "invalid": "Check the details and event date. The server has not confirmed the report.",
+      "session": "Your session is unavailable. Sign in again to recover and retry the same report.",
+      "forbidden": "Your session is not allowed to perform this operation. The report has not been confirmed.",
+      "notFound": "The policy or report was not found in your account. Check the details.",
+      "policyExpired": "The policy is no longer active. Refresh the policies and select an active one.",
+      "conflict": "The operation is associated with different data. Do not change its identifier or start another attempt; keep this context to investigate the conflict.",
+      "response": "The response does not match your report. Registration is not confirmed; retry the same operation.",
+      "storage": "We cannot safely preserve the operation in this tab. No new attempt will be sent. Enable session storage and reopen this screen; do not delete a pending operation.",
+      "unconfirmed": "The result could not be confirmed. We kept the original data and identifier so you can retry without duplicating the report."
+    }
+  },
   "partnerQuote": {
     "title": "Customer and quote authorization",
     "instructions": "Find the customer by document. The system identifies their record and automatically verifies whether consent is current.",
@@ -871,7 +918,7 @@
       "unexpected": "Profiling could not be started. You can retry without creating another operation."
     }
   },
-  "claims": {
+  "claimStatus": {
     "eyebrow": "Tracking",
     "title": "My claim status",
     "subtitle": "Check the current status and history of your case. Solventa updates the status; this page only displays it.",
@@ -893,7 +940,8 @@
     "error": "The claim status could not be loaded. No outdated information is shown; please try again.",
     "types": {
       "asistido": "Assisted",
-      "parametrico": "Parametric"
+      "parametrico": "Parametric",
+      "unclassified": "Unclassified"
     },
     "states": {
       "reportado": "Reported",

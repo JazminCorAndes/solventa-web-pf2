@@ -1,9 +1,10 @@
 <section class="claim-status">
   <header class="claim-heading">
     <div>
-      <span class="eyebrow">{{ 'claims.eyebrow' | transloco }}</span>
-      <h1>{{ 'claims.title' | transloco }}</h1>
-      <p>{{ 'claims.subtitle' | transloco }}</p>
+      <span class="eyebrow">{{ 'claimStatus.eyebrow' | transloco }}</span>
+      <h1>{{ 'claimStatus.title' | transloco }}</h1>
+      <p>{{ 'claimStatus.subtitle' | transloco }}</p>
+      <a mat-button routerLink="/app/siniestros/reportar">{{ 'claims.title' | transloco }}</a>
     </div>
     @if (claimId()) {
       <button
@@ -13,20 +14,20 @@
         (click)="refresh()"
         [disabled]="claims.status() === 'loading'"
       >
-        {{ 'claims.refresh' | transloco }}
+        {{ 'claimStatus.refresh' | transloco }}
       </button>
     }
   </header>
 
   <form class="claim-lookup" [formGroup]="lookupForm" (ngSubmit)="search()" novalidate>
     <mat-form-field appearance="outline">
-      <mat-label>{{ 'claims.lookupLabel' | transloco }}</mat-label>
+      <mat-label>{{ 'claimStatus.lookupLabel' | transloco }}</mat-label>
       <input matInput formControlName="claimId" autocomplete="off" data-testid="claim-id-input" />
-      <mat-hint>{{ 'claims.lookupHint' | transloco }}</mat-hint>
-      <mat-error>{{ 'claims.lookupInvalid' | transloco }}</mat-error>
+      <mat-hint>{{ 'claimStatus.lookupHint' | transloco }}</mat-hint>
+      <mat-error>{{ 'claimStatus.lookupInvalid' | transloco }}</mat-error>
     </mat-form-field>
     <button mat-flat-button type="submit" [disabled]="claims.status() === 'loading'">
-      {{ 'claims.lookupSubmit' | transloco }}
+      {{ 'claimStatus.lookupSubmit' | transloco }}
     </button>
   </form>
 
@@ -36,36 +37,36 @@
         @if (claims.claim(); as claim) {
           <mat-card appearance="raised" class="claim-summary" data-testid="claim-summary">
             <mat-card-content>
-              <span class="eyebrow">{{ 'claims.currentState' | transloco }}</span>
+              <span class="eyebrow">{{ 'claimStatus.currentState' | transloco }}</span>
               <h2 [class]="'state-badge state-' + claim.state">
-                {{ 'claims.states.' + claim.state | transloco }}
+                {{ 'claimStatus.states.' + claim.state | transloco }}
               </h2>
               <p>{{ claim.description }}</p>
               <dl>
                 <div>
-                  <dt>{{ 'claims.updatedAt' | transloco }}</dt>
+                  <dt>{{ 'claimStatus.updatedAt' | transloco }}</dt>
                   <dd data-testid="claim-updated-at">
                     {{ claim.updatedAt | date: 'medium' : undefined : dateLocale }}
                   </dd>
                 </div>
                 <div>
-                  <dt>{{ 'claims.type' | transloco }}</dt>
-                  <dd>{{ 'claims.types.' + claim.type | transloco }}</dd>
+                  <dt>{{ 'claimStatus.type' | transloco }}</dt>
+                  <dd>{{ 'claimStatus.types.' + (claim.type ?? 'unclassified') | transloco }}</dd>
                 </div>
                 <div>
-                  <dt>{{ 'claims.occurredAt' | transloco }}</dt>
+                  <dt>{{ 'claimStatus.occurredAt' | transloco }}</dt>
                   <dd>{{ claim.occurredAt | date: 'medium' : undefined : dateLocale }}</dd>
                 </div>
                 <div>
-                  <dt>{{ 'claims.reportedAt' | transloco }}</dt>
+                  <dt>{{ 'claimStatus.reportedAt' | transloco }}</dt>
                   <dd>{{ claim.reportedAt | date: 'medium' : undefined : dateLocale }}</dd>
                 </div>
                 <div>
-                  <dt>{{ 'claims.claimId' | transloco }}</dt>
+                  <dt>{{ 'claimStatus.claimId' | transloco }}</dt>
                   <dd>{{ claim.id }}</dd>
                 </div>
                 <div>
-                  <dt>{{ 'claims.policyId' | transloco }}</dt>
+                  <dt>{{ 'claimStatus.policyId' | transloco }}</dt>
                   <dd>{{ claim.policyId }}</dd>
                 </div>
               </dl>
@@ -74,13 +75,13 @@
 
           <mat-card appearance="raised">
             <mat-card-header>
-              <mat-card-title>{{ 'claims.history' | transloco }}</mat-card-title>
+              <mat-card-title>{{ 'claimStatus.history' | transloco }}</mat-card-title>
             </mat-card-header>
             <mat-card-content>
               <ol class="timeline">
                 @for (entry of claim.history; track $index; let last = $last) {
                   <li data-testid="claim-history-entry" [class.current]="last">
-                    <strong>{{ 'claims.states.' + entry.state | transloco }}</strong>
+                    <strong>{{ 'claimStatus.states.' + entry.state | transloco }}</strong>
                     <span>{{ entry.description }}</span>
                     <time [attr.datetime]="entry.occurredAt">
                       {{ entry.occurredAt | date: 'medium' : undefined : dateLocale }}
@@ -94,12 +95,12 @@
       }
       @case ('not-found') {
         <div class="state-panel" role="alert" data-testid="claim-not-found">
-          <p>{{ 'claims.notFound' | transloco }}</p>
+          <p>{{ 'claimStatus.notFound' | transloco }}</p>
         </div>
       }
       @case ('error') {
         <div class="state-panel" role="alert" data-testid="claim-error">
-          <p>{{ 'claims.error' | transloco }}</p>
+          <p>{{ 'claimStatus.error' | transloco }}</p>
           <button mat-stroked-button type="button" (click)="refresh()">
             {{ 'common.retry' | transloco }}
           </button>
@@ -108,7 +109,7 @@
       @default {
         <div class="state-panel" role="status">
           <mat-spinner diameter="36" />
-          <span>{{ 'claims.loading' | transloco }}</span>
+          <span>{{ 'claimStatus.loading' | transloco }}</span>
         </div>
       }
     }

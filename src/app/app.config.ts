@@ -17,6 +17,8 @@ import { AuthService } from './core/auth/auth.service';
 import { AUTH_GATEWAY } from './core/auth/auth.gateway';
 import { AUTH_STORAGE, BrowserAuthStorage } from './core/auth/auth-storage.service';
 import { DASHBOARD_GATEWAY } from './core/dashboard/dashboard.gateway';
+import { CLAIM_GATEWAY } from './core/claims/claim.gateway';
+import { HttpClaimGateway } from './data-access/claims/http-claim.gateway';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
 import { OFFER_GATEWAY } from './core/offers/offer.gateway';
 import {
@@ -76,6 +78,7 @@ export const appConfig: ApplicationConfig = {
     { provide: AUTH_STORAGE, useClass: BrowserAuthStorage },
     { provide: DASHBOARD_GATEWAY, useClass: HttpDashboardGateway },
     { provide: CLAIM_STATUS_GATEWAY, useClass: HttpClaimStatusGateway },
+    { provide: CLAIM_GATEWAY, useClass: HttpClaimGateway },
     { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
     {

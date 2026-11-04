@@ -68,8 +68,8 @@ function state(value: unknown): ClaimState {
   return isClaimState(value) ? value : invalid();
 }
 
-function claimType(value: unknown): ClaimType {
-  return value === 'asistido' || value === 'parametrico' ? value : invalid();
+function claimType(value: unknown): ClaimType | null {
+  return value === null || value === 'asistido' || value === 'parametrico' ? value : invalid();
 }
 
 function toHistoryEntry(value: unknown): ClaimHistoryEntry {

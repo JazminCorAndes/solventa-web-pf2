@@ -57,12 +57,22 @@
           </a>
           <a
             mat-list-item
-            routerLink="/app/siniestros"
+            routerLink="/app/siniestros/reportar"
             routerLinkActive="active-link"
             (click)="closeMobileMenu()"
           >
             <app-icon matListItemIcon name="claim" />
-            <span matListItemTitle>{{ 'navigation.claims' | transloco }}</span>
+            <span matListItemTitle>{{ 'claims.title' | transloco }}</span>
+          </a>
+          <a
+            mat-list-item
+            routerLink="/app/siniestros"
+            routerLinkActive="active-link"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMobileMenu()"
+          >
+            <app-icon matListItemIcon name="claim" />
+            <span matListItemTitle>{{ 'claimStatus.title' | transloco }}</span>
           </a>
           <a
             mat-list-item

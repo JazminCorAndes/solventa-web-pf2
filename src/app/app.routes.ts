@@ -78,6 +78,14 @@ export const routes: Routes = [
         title: 'Portal de socios | Solventa',
       },
       {
+        path: 'siniestros/reportar',
+        loadComponent: () =>
+          import('./features/claims/claim-report-page.component').then(
+            (component) => component.ClaimReportPageComponent,
+          ),
+        title: 'Reportar siniestro | Solventa',
+      },
+      {
         path: 'dashboard',
         loadComponent: () =>
           import('./features/dashboard/dashboard-page.component').then(

@@ -74,25 +74,34 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
 
   it('shows the current state, update date and allowed history from the backend', async () => {
     await setup(CLAIM_ID);
-    expect(text()).toContain(es.claims.loading);
+    expect(text()).toContain(es.claimStatus.loading);
 
     http.expectOne(URL).flush(CLAIM_STATUS_RESPONSE);
     render();
 
     expect(find('[data-testid="claim-summary"]')?.textContent).toContain(
-      es.claims.states.en_inspeccion,
+      es.claimStatus.states.en_inspeccion,
     );
     expect(find('[data-testid="claim-updated-at"]')?.textContent?.trim()).not.toBe('');
     const history = root().querySelectorAll('[data-testid="claim-history-entry"]');
     expect(
       Array.from(history, (entry) => entry.querySelector('strong')?.textContent?.trim()),
     ).toEqual([
-      es.claims.states.reportado,
-      es.claims.states.en_evaluacion,
-      es.claims.states.en_inspeccion,
+      es.claimStatus.states.reportado,
+      es.claimStatus.states.en_evaluacion,
+      es.claimStatus.states.en_inspeccion,
     ]);
     expect(history[2].classList).toContain('current');
-    expect(text()).toContain(es.claims.types.asistido);
+    expect(text()).toContain(es.claimStatus.types.asistido);
+  });
+
+  it('shows unclassified and preserves access to the report form', async () => {
+    await setup(CLAIM_ID);
+    http.expectOne(URL).flush({ ...CLAIM_STATUS_RESPONSE, tipo: null });
+    render();
+    expect(text()).toContain(es.claimStatus.types.unclassified);
+    expect(text()).not.toContain(es.claimStatus.types.asistido);
+    expect(find('a[href="/app/siniestros/reportar"]')?.textContent).toContain(es.claims.title);
   });
 
   it('refreshes from the backend and never keeps the previous state after a failure', async () => {
@@ -104,7 +113,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     find('[data-testid="claim-refresh"]')?.click();
     render();
     expect(find('[data-testid="claim-summary"]')).toBeNull();
-    expect(text()).toContain(es.claims.loading);
+    expect(text()).toContain(es.claimStatus.loading);
 
     http.expectOne(URL).flush(
       { code: 'servicio_no_disponible' },
@@ -115,7 +124,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     );
     render();
 
-    expect(find('[data-testid="claim-error"]')?.textContent).toContain(es.claims.error);
+    expect(find('[data-testid="claim-error"]')?.textContent).toContain(es.claimStatus.error);
     expect(find('[data-testid="claim-summary"]')).toBeNull();
     expect(find('[data-testid="claim-history-entry"]')).toBeNull();
 
@@ -130,7 +139,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     http.expectOne(URL).flush(CLAIM_NOT_FOUND_PROBLEM, { status: 404, statusText: 'Not Found' });
     render();
 
-    expect(find('[data-testid="claim-not-found"]')?.textContent).toContain(es.claims.notFound);
+    expect(find('[data-testid="claim-not-found"]')?.textContent).toContain(es.claimStatus.notFound);
     expect(find('[data-testid="claim-summary"]')).toBeNull();
   });
 
@@ -156,7 +165,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     form.dispatchEvent(new Event('submit'));
     render();
     expect(navigate).not.toHaveBeenCalled();
-    expect(text()).toContain(es.claims.lookupInvalid);
+    expect(text()).toContain(es.claimStatus.lookupInvalid);
 
     input.value = ` ${CLAIM_ID} `;
     input.dispatchEvent(new Event('input'));
@@ -166,7 +175,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
 
   it('does not query a malformed identifier coming from the URL', async () => {
     await setup('no-es-un-numero');
-    expect(text()).toContain(es.claims.lookupInvalid);
+    expect(text()).toContain(es.claimStatus.lookupInvalid);
     http.expectNone(() => true);
   });
 });

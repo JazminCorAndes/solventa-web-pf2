@@ -14,7 +14,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { CLAIM_ID_PATTERN } from '../../core/claims/claim-status.models';
 import { ClaimStatusService } from '../../core/claims/claim-status.service';
@@ -30,6 +30,7 @@ import { ClaimStatusService } from '../../core/claims/claim-status.service';
     MatInputModule,
     MatProgressSpinnerModule,
     ReactiveFormsModule,
+    RouterLink,
     TranslocoPipe,
   ],
   templateUrl: './claim-status-page.component.html',

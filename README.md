@@ -75,6 +75,52 @@ El tablero de inicio es una excepción: no tiene adaptador simulado y requiere u
 del backend. En este modo informa el error de conexión en lugar de mostrar datos ficticios.
 Para consultar el resumen real, usa el modo con backend.
 
+### Reportar un siniestro (SOL-175)
+
+El menú **Reportar siniestro** y las pólizas vigentes del inicio abren
+`/app/siniestros/reportar`, protegido por la sesión de cliente existente. Este flujo
+usa exclusivamente el backend, también al ejecutar el frontend en modo de desarrollo:
+no confirma reportes con mocks ni datos locales.
+
+Requiere el contrato de siniestros del BFF: `GET /v1/siniestros/polizas` devuelve
+`{polizas:[{id,tipo,fechaInicio,fechaFin,estado:'vigente'}]}`; las fechas de vigencia
+son `YYYY-MM-DD`. `POST /v1/siniestros` recibe `Idempotency-Key` UUID y
+`{polizaId,fechaEvento,tipoEvento,descripcion,lugar}`; la fecha del evento es un
+timestamp ISO con zona. Una creación responde 201 y su reintento 200 con
+`{id,estado:'registrado',polizaId,fechaEvento,tipoEvento,descripcion,lugar,registradoEn}`.
+`GET /v1/siniestros/:id` recupera esa misma representación.
+
+El formulario valida obligatoriedad, longitudes y fecha no futura dentro de la
+vigencia, con ambos días límite incluidos en UTC, igual que el backend. La fecha
+y hora se ingresan en la zona local del navegador y se envían normalizadas a UTC.
+Un envío pendiente bloquea el doble clic y la edición. El identificador
+de operación y su payload se guardan en `sessionStorage`, separados por usuario,
+antes del POST. Ante una respuesta incierta se conserva exactamente ese intento,
+incluso al recargar la pestaña o volver a iniciar sesión con la misma cuenta.
+No se genera otra clave automáticamente. Solo un rechazo definitivo de datos o
+póliza permite corregir; un conflicto de idempotencia conserva el contexto.
+No borres el almacenamiento ni cierres la pestaña mientras exista una operación
+sin confirmar. El navegador no es la fuente de verdad: únicamente se presenta
+éxito con ID, estado y datos validados del backend.
+
+### Consultar estado e historial (SOL-177)
+
+El menú **Estado de mi siniestro** abre `/app/siniestros`. Desde la confirmación
+del reporte se puede consultar el mismo número sin volver a escribirlo.
+`GET /v1/clientes/me/siniestros/:id` devuelve estado, fechas e historial permitido;
+el frontend no decide transiciones. El acuse `registrado` del formulario conserva
+su contrato y no sustituye esta consulta del estado vigente.
+
+El contrato admite `tipo: null` cuando el backend aún no tiene una clasificación
+real; la interfaz muestra **Sin clasificar**, sin asumir «asistido» o «paramétrico».
+Un tipo desconocido, una respuesta incoherente o un error impiden mostrar un
+estado como actualizado. Un 404 solo se trata como caso no disponible cuando
+incluye `code=siniestro_no_encontrado`.
+
+Los textos de registro usan `claims` y los de consulta `claimStatus`; no se deben
+fusionar bajo una clave JSON duplicada. Las pruebas de ambas pantallas y sus
+adaptadores están en `src/app/**/claims/*.spec.ts`.
+
 Credenciales del adaptador simulado:
 
 ```text

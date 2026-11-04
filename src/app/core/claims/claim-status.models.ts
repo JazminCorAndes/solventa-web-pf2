@@ -22,7 +22,7 @@ export interface ClaimHistoryEntry {
 export interface ClaimStatus {
   id: string;
   policyId: string;
-  type: ClaimType;
+  type: ClaimType | null;
   state: ClaimState;
   description: string;
   occurredAt: string;
