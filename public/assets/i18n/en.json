@@ -7,6 +7,7 @@
     "policyHint": "Only your active policies are shown.",
     "refreshPolicies": "Refresh policies",
     "eventDate": "Event date and time",
+    "dateHint": "Enter the event's local time. Policy coverage is checked by UTC calendar day.",
     "eventType": "Event type",
     "place": "Event location",
     "description": "Description",

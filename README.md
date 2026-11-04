@@ -91,7 +91,9 @@ timestamp ISO con zona. Una creación responde 201 y su reintento 200 con
 `GET /v1/siniestros/:id` recupera esa misma representación.
 
 El formulario valida obligatoriedad, longitudes y fecha no futura dentro de la
-vigencia. Un envío pendiente bloquea el doble clic y la edición. El identificador
+vigencia, con ambos días límite incluidos en UTC, igual que el backend. La fecha
+y hora se ingresan en la zona local del navegador y se envían normalizadas a UTC.
+Un envío pendiente bloquea el doble clic y la edición. El identificador
 de operación y su payload se guardan en `sessionStorage`, separados por usuario,
 antes del POST. Ante una respuesta incierta se conserva exactamente ese intento,
 incluso al recargar la pestaña o volver a iniciar sesión con la misma cuenta.

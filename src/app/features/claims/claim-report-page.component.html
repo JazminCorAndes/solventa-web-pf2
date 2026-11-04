@@ -111,6 +111,7 @@
           <mat-form-field appearance="outline">
             <mat-label>{{ 'claims.eventDate' | transloco }}</mat-label>
             <input matInput type="datetime-local" formControlName="fechaEvento" required />
+            <mat-hint>{{ 'claims.dateHint' | transloco }}</mat-hint>
             <mat-error>{{ 'claims.validation.date' | transloco }}</mat-error>
           </mat-form-field>
           @if (form.hasError('eventDate') && form.controls.fechaEvento.touched) {

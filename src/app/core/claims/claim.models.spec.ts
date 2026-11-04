@@ -62,10 +62,16 @@ describe('Claim contract validation', () => {
   });
 
   it('includes both policy coverage boundary days', () => {
-    expect(eventWithinPolicy(policy, new Date(2025, 0, 10, 0, 0))).toBe(true);
-    expect(eventWithinPolicy(policy, new Date(2025, 0, 11, 23, 59))).toBe(true);
-    expect(eventWithinPolicy(policy, new Date(2025, 0, 9, 23, 59))).toBe(false);
-    expect(eventWithinPolicy(policy, new Date(2025, 0, 12, 0, 0))).toBe(false);
+    expect(eventWithinPolicy(policy, new Date('2025-01-10T00:00:00Z'))).toBe(true);
+    expect(eventWithinPolicy(policy, new Date('2025-01-11T23:59:59Z'))).toBe(true);
+    expect(eventWithinPolicy(policy, new Date('2025-01-09T23:59:59Z'))).toBe(false);
+    expect(eventWithinPolicy(policy, new Date('2025-01-12T00:00:00Z'))).toBe(false);
     expect(eventWithinPolicy(policy, new Date('invalid'))).toBe(false);
+  });
+
+  it('uses the UTC coverage day instead of the event local calendar day', () => {
+    expect(eventWithinPolicy(policy, new Date('2025-01-09T23:30:00-05:00'))).toBe(true);
+    expect(eventWithinPolicy(policy, new Date('2025-01-11T23:30:00-05:00'))).toBe(false);
+    expect(eventWithinPolicy(policy, new Date('2025-01-10T00:30:00+05:00'))).toBe(false);
   });
 });

@@ -7,6 +7,7 @@
     "policyHint": "Solo se muestran tus pólizas vigentes.",
     "refreshPolicies": "Actualizar pólizas",
     "eventDate": "Fecha y hora del evento",
+    "dateHint": "Ingresa la hora local del evento. La vigencia de la póliza se verifica por día UTC.",
     "eventType": "Tipo de evento",
     "place": "Lugar del evento",
     "description": "Descripción",

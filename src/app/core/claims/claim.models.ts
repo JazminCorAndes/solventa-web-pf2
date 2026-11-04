@@ -84,7 +84,7 @@ export function isClaimRecord(value: unknown): value is ClaimRecord {
 
 export function eventWithinPolicy(policy: ClaimPolicy | undefined, date: Date): boolean {
   if (!policy || !Number.isFinite(date.getTime()) || date.getTime() > Date.now()) return false;
-  const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const day = date.toISOString().slice(0, 10);
   return day >= policy.fechaInicio && day <= policy.fechaFin;
 }
 
