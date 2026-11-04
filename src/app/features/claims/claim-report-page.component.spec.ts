@@ -149,6 +149,10 @@ describe('ClaimReportPageComponent with authenticated HTTP', () => {
     expect(text()).toContain(es.claims.confirmed);
     expect(text()).toContain(record.id);
     expect(text()).toContain('registrado');
+    expect(text()).toContain(es.claims.title);
+    expect(
+      fixture.nativeElement.querySelector(`a[href="/app/siniestros/${record.id}"]`)?.textContent,
+    ).toContain(es.claimStatus.title);
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
   });
 

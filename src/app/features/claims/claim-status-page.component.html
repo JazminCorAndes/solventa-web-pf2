@@ -1,0 +1,117 @@
+<section class="claim-status">
+  <header class="claim-heading">
+    <div>
+      <span class="eyebrow">{{ 'claimStatus.eyebrow' | transloco }}</span>
+      <h1>{{ 'claimStatus.title' | transloco }}</h1>
+      <p>{{ 'claimStatus.subtitle' | transloco }}</p>
+      <a mat-button routerLink="/app/siniestros/reportar">{{ 'claims.title' | transloco }}</a>
+    </div>
+    @if (claimId()) {
+      <button
+        mat-stroked-button
+        type="button"
+        data-testid="claim-refresh"
+        (click)="refresh()"
+        [disabled]="claims.status() === 'loading'"
+      >
+        {{ 'claimStatus.refresh' | transloco }}
+      </button>
+    }
+  </header>
+
+  <form class="claim-lookup" [formGroup]="lookupForm" (ngSubmit)="search()" novalidate>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'claimStatus.lookupLabel' | transloco }}</mat-label>
+      <input matInput formControlName="claimId" autocomplete="off" data-testid="claim-id-input" />
+      <mat-hint>{{ 'claimStatus.lookupHint' | transloco }}</mat-hint>
+      <mat-error>{{ 'claimStatus.lookupInvalid' | transloco }}</mat-error>
+    </mat-form-field>
+    <button mat-flat-button type="submit" [disabled]="claims.status() === 'loading'">
+      {{ 'claimStatus.lookupSubmit' | transloco }}
+    </button>
+  </form>
+
+  @if (claimId()) {
+    @switch (claims.status()) {
+      @case ('ready') {
+        @if (claims.claim(); as claim) {
+          <mat-card appearance="raised" class="claim-summary" data-testid="claim-summary">
+            <mat-card-content>
+              <span class="eyebrow">{{ 'claimStatus.currentState' | transloco }}</span>
+              <h2 [class]="'state-badge state-' + claim.state">
+                {{ 'claimStatus.states.' + claim.state | transloco }}
+              </h2>
+              <p>{{ claim.description }}</p>
+              <dl>
+                <div>
+                  <dt>{{ 'claimStatus.updatedAt' | transloco }}</dt>
+                  <dd data-testid="claim-updated-at">
+                    {{ claim.updatedAt | date: 'medium' : undefined : dateLocale }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ 'claimStatus.type' | transloco }}</dt>
+                  <dd>{{ 'claimStatus.types.' + (claim.type ?? 'unclassified') | transloco }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'claimStatus.occurredAt' | transloco }}</dt>
+                  <dd>{{ claim.occurredAt | date: 'medium' : undefined : dateLocale }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'claimStatus.reportedAt' | transloco }}</dt>
+                  <dd>{{ claim.reportedAt | date: 'medium' : undefined : dateLocale }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'claimStatus.claimId' | transloco }}</dt>
+                  <dd>{{ claim.id }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'claimStatus.policyId' | transloco }}</dt>
+                  <dd>{{ claim.policyId }}</dd>
+                </div>
+              </dl>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card appearance="raised">
+            <mat-card-header>
+              <mat-card-title>{{ 'claimStatus.history' | transloco }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <ol class="timeline">
+                @for (entry of claim.history; track $index; let last = $last) {
+                  <li data-testid="claim-history-entry" [class.current]="last">
+                    <strong>{{ 'claimStatus.states.' + entry.state | transloco }}</strong>
+                    <span>{{ entry.description }}</span>
+                    <time [attr.datetime]="entry.occurredAt">
+                      {{ entry.occurredAt | date: 'medium' : undefined : dateLocale }}
+                    </time>
+                  </li>
+                }
+              </ol>
+            </mat-card-content>
+          </mat-card>
+        }
+      }
+      @case ('not-found') {
+        <div class="state-panel" role="alert" data-testid="claim-not-found">
+          <p>{{ 'claimStatus.notFound' | transloco }}</p>
+        </div>
+      }
+      @case ('error') {
+        <div class="state-panel" role="alert" data-testid="claim-error">
+          <p>{{ 'claimStatus.error' | transloco }}</p>
+          <button mat-stroked-button type="button" (click)="refresh()">
+            {{ 'common.retry' | transloco }}
+          </button>
+        </div>
+      }
+      @default {
+        <div class="state-panel" role="status">
+          <mat-spinner diameter="36" />
+          <span>{{ 'claimStatus.loading' | transloco }}</span>
+        </div>
+      }
+    }
+  }
+</section>

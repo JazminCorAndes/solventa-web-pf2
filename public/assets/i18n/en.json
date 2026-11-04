@@ -721,7 +721,9 @@
     "rejected": "Simulated payment rejected",
     "rejectedAt": "Rejection date",
     "rejectionReason": "Rejection reason",
-    "rejectionReasons": { "rechazo_simulado": "Simulation rejection" },
+    "rejectionReasons": {
+      "rechazo_simulado": "Simulation rejection"
+    },
     "recoverAttempt": "Check the same attempt",
     "recoveringAttempt": "Processing the attempt…",
     "unresolvedAttempt": "The attempt outcome still needs to be checked. Checking or refreshing its status does not confirm another payment or start a new attempt.",
@@ -914,6 +916,42 @@
       "rate_limited": "The partner has reached the request limit. Wait before retrying the same operation.",
       "advisor_context_unavailable": "You cannot submit a profiling request: this web session does not have the authorized advisor and partner context.",
       "unexpected": "Profiling could not be started. You can retry without creating another operation."
+    }
+  },
+  "claimStatus": {
+    "eyebrow": "Tracking",
+    "title": "My claim status",
+    "subtitle": "Check the current status and history of your case. Solventa updates the status; this page only displays it.",
+    "refresh": "Refresh",
+    "lookupLabel": "Claim number",
+    "lookupHint": "You received it when you reported the claim.",
+    "lookupInvalid": "Enter a valid claim number.",
+    "lookupSubmit": "Look up",
+    "currentState": "Current status",
+    "updatedAt": "Last updated",
+    "type": "Type",
+    "occurredAt": "Event date",
+    "reportedAt": "Reported on",
+    "claimId": "Claim number",
+    "policyId": "Policy",
+    "history": "Case history",
+    "loading": "Checking the claim status…",
+    "notFound": "We could not find a claim with that number for your account.",
+    "error": "The claim status could not be loaded. No outdated information is shown; please try again.",
+    "types": {
+      "asistido": "Assisted",
+      "parametrico": "Parametric",
+      "unclassified": "Unclassified"
+    },
+    "states": {
+      "reportado": "Reported",
+      "en_evaluacion": "Under evaluation",
+      "en_revision": "Under review",
+      "en_inspeccion": "Under inspection",
+      "aprobado": "Approved",
+      "rechazado": "Rejected",
+      "pagado": "Paid",
+      "cerrado": "Closed"
     }
   }
 }

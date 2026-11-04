@@ -77,7 +77,7 @@ Para consultar el resumen real, usa el modo con backend.
 
 ### Reportar un siniestro (SOL-175)
 
-El menú **Siniestros** y las pólizas vigentes del inicio abren
+El menú **Reportar siniestro** y las pólizas vigentes del inicio abren
 `/app/siniestros/reportar`, protegido por la sesión de cliente existente. Este flujo
 usa exclusivamente el backend, también al ejecutar el frontend en modo de desarrollo:
 no confirma reportes con mocks ni datos locales.
@@ -102,6 +102,24 @@ póliza permite corregir; un conflicto de idempotencia conserva el contexto.
 No borres el almacenamiento ni cierres la pestaña mientras exista una operación
 sin confirmar. El navegador no es la fuente de verdad: únicamente se presenta
 éxito con ID, estado y datos validados del backend.
+
+### Consultar estado e historial (SOL-177)
+
+El menú **Estado de mi siniestro** abre `/app/siniestros`. Desde la confirmación
+del reporte se puede consultar el mismo número sin volver a escribirlo.
+`GET /v1/clientes/me/siniestros/:id` devuelve estado, fechas e historial permitido;
+el frontend no decide transiciones. El acuse `registrado` del formulario conserva
+su contrato y no sustituye esta consulta del estado vigente.
+
+El contrato admite `tipo: null` cuando el backend aún no tiene una clasificación
+real; la interfaz muestra **Sin clasificar**, sin asumir «asistido» o «paramétrico».
+Un tipo desconocido, una respuesta incoherente o un error impiden mostrar un
+estado como actualizado. Un 404 solo se trata como caso no disponible cuando
+incluye `code=siniestro_no_encontrado`.
+
+Los textos de registro usan `claims` y los de consulta `claimStatus`; no se deben
+fusionar bajo una clave JSON duplicada. Las pruebas de ambas pantallas y sus
+adaptadores están en `src/app/**/claims/*.spec.ts`.
 
 Credenciales del adaptador simulado:
 

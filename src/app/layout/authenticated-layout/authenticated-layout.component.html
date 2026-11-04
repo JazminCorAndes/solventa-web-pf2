@@ -66,6 +66,16 @@
           </a>
           <a
             mat-list-item
+            routerLink="/app/siniestros"
+            routerLinkActive="active-link"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMobileMenu()"
+          >
+            <app-icon matListItemIcon name="claim" />
+            <span matListItemTitle>{{ 'claimStatus.title' | transloco }}</span>
+          </a>
+          <a
+            mat-list-item
             routerLink="/app/consentimiento"
             routerLinkActive="active-link"
             (click)="closeMobileMenu()"

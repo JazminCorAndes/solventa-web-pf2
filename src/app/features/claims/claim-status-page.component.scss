@@ -1,0 +1,122 @@
+.claim-status {
+  display: grid;
+  gap: var(--solventa-space-5);
+  max-width: var(--solventa-content-max-width);
+  margin: 0 auto;
+}
+
+.claim-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--solventa-space-6);
+}
+
+.eyebrow {
+  color: var(--solventa-color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: var(--solventa-space-2) 0;
+  font-size: clamp(1.7rem, 4vw, 2.25rem);
+}
+
+.claim-heading p,
+.claim-summary p {
+  margin: 0;
+  color: var(--solventa-color-text-secondary);
+}
+
+.claim-lookup {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--solventa-space-3);
+}
+
+.claim-lookup mat-form-field {
+  flex: 1;
+  max-width: 32rem;
+}
+
+.claim-lookup button {
+  margin-top: var(--solventa-space-2);
+}
+
+.claim-summary mat-card-content {
+  display: grid;
+  gap: var(--solventa-space-3);
+  padding: var(--solventa-space-5);
+  border-top: 2px solid var(--solventa-color-primary);
+}
+
+.state-badge {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--solventa-space-4);
+  margin: var(--solventa-space-2) 0 0;
+}
+
+dt {
+  color: var(--solventa-color-text-secondary);
+  font-size: 0.85rem;
+}
+
+dd {
+  margin: var(--solventa-space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+
+mat-card-header {
+  padding: var(--solventa-space-5) var(--solventa-space-5) var(--solventa-space-2);
+}
+
+.timeline {
+  display: grid;
+  gap: var(--solventa-space-4);
+  margin: 0;
+  padding: 0 0 0 var(--solventa-space-5);
+  border-left: 2px solid var(--solventa-color-border);
+  list-style: none;
+}
+
+.timeline li {
+  display: grid;
+  gap: var(--solventa-space-1);
+}
+
+.timeline li.current strong {
+  color: var(--solventa-color-primary);
+}
+
+.timeline span,
+.timeline time {
+  color: var(--solventa-color-text-secondary);
+}
+
+.state-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--solventa-space-4);
+  padding: var(--solventa-space-6);
+}
+
+@media (max-width: 720px) {
+  .claim-heading,
+  .claim-lookup {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  dl {
+    grid-template-columns: 1fr;
+  }
+}

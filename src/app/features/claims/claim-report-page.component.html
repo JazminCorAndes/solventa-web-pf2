@@ -37,6 +37,9 @@
           <dd>{{ record.registradoEn | date: 'medium' : undefined : dateLocale }}</dd>
         </dl>
         <p>{{ 'claims.confirmationNote' | transloco }}</p>
+        <a mat-button [routerLink]="['/app/siniestros', record.id]">
+          {{ 'claimStatus.title' | transloco }}
+        </a>
         <button mat-stroked-button type="button" (click)="newReport()">
           {{ 'claims.newReport' | transloco }}
         </button>

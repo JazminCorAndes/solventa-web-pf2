@@ -94,6 +94,22 @@ export const routes: Routes = [
         title: 'Inicio | Solventa',
       },
       {
+        path: 'siniestros/:claimId',
+        loadComponent: () =>
+          import('./features/claims/claim-status-page.component').then(
+            (component) => component.ClaimStatusPageComponent,
+          ),
+        title: 'Estado del siniestro | Solventa',
+      },
+      {
+        path: 'siniestros',
+        loadComponent: () =>
+          import('./features/claims/claim-status-page.component').then(
+            (component) => component.ClaimStatusPageComponent,
+          ),
+        title: 'Siniestros | Solventa',
+      },
+      {
         path: 'cotizaciones',
         pathMatch: 'full',
         loadComponent: () =>
