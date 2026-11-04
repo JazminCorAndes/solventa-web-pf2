@@ -32,6 +32,7 @@ describe('HttpClaimGateway', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        HttpClaimGateway,
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
         provideRouter([]),

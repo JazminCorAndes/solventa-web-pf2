@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { defer, map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { ClaimGateway } from '../../core/claims/claim.gateway';
 import {
   CLAIM_UUID,
   ClaimInput,
@@ -12,8 +13,8 @@ import {
   isPolicyDate,
 } from '../../core/claims/claim.models';
 
-@Injectable({ providedIn: 'root' })
-export class HttpClaimGateway {
+@Injectable()
+export class HttpClaimGateway implements ClaimGateway {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiBaseUrl}/v1/siniestros`;
 

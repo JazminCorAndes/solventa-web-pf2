@@ -2,8 +2,8 @@ import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, OnDestroy, signal, untracked } from '@angular/core';
 import { defer, finalize, Subject, takeUntil } from 'rxjs';
-import { HttpClaimGateway } from '../../data-access/claims/http-claim.gateway';
 import { AuthService } from '../auth/auth.service';
+import { CLAIM_GATEWAY } from './claim.gateway';
 import {
   CLAIM_UUID,
   ClaimAttempt,
@@ -17,7 +17,7 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class ClaimService implements OnDestroy {
-  private readonly gateway = inject(HttpClaimGateway);
+  private readonly gateway = inject(CLAIM_GATEWAY);
   private readonly auth = inject(AuthService);
   private readonly document = inject(DOCUMENT);
   private readonly cancelled = new Subject<void>();
@@ -176,7 +176,10 @@ export class ClaimService implements OnDestroy {
   }
 
   private accept(record: ClaimRecord, attempt: ClaimAttempt): void {
-    if (!sameClaimInput(record, attempt.payload)) {
+    if (
+      !sameClaimInput(record, attempt.payload) ||
+      (attempt.claimId !== undefined && attempt.claimId !== record.id)
+    ) {
       this.errorKey.set('claims.errors.response');
       return;
     }

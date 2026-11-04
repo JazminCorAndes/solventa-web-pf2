@@ -27,10 +27,16 @@ export interface ClaimAttempt {
 }
 
 export const CLAIM_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
 
 export function isTimestamp(value: unknown): value is string {
-  return typeof value === 'string' && TIMESTAMP.test(value) && Number.isFinite(Date.parse(value));
+  return (
+    typeof value === 'string' &&
+    TIMESTAMP.test(value) &&
+    isPolicyDate(value.slice(0, 10)) &&
+    Number.isFinite(Date.parse(value))
+  );
 }
 
 export function isPolicyDate(value: unknown): value is string {

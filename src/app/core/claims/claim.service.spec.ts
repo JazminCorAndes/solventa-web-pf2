@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
-import { HttpClaimGateway } from '../../data-access/claims/http-claim.gateway';
+import { CLAIM_GATEWAY } from './claim.gateway';
 import { AuthUser } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
 import { TEST_USER } from '../auth/auth.testing';
@@ -51,7 +51,7 @@ describe('ClaimService', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: { user } },
-        { provide: HttpClaimGateway, useValue: gateway },
+        { provide: CLAIM_GATEWAY, useValue: gateway },
       ],
     });
     service = TestBed.inject(ClaimService);
@@ -150,6 +150,17 @@ describe('ClaimService', () => {
     service.retry();
     expect(service.attempt()?.claimId).toBe(record.id);
     expect(service.locked()).toBe(true);
+  });
+
+  it('rejects a different ID when retrying an already known confirmation', () => {
+    service.report(input);
+    gateway.load.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+    service.load();
+    gateway.report.mockReturnValue(of({ ...record, id: crypto.randomUUID() }));
+    service.retry();
+    expect(service.record()).toBeNull();
+    expect(service.errorKey()).toBe('claims.errors.response');
+    expect(service.attempt()?.claimId).toBe(record.id);
   });
 
   it('fails closed without sending when session storage cannot preserve an operation', () => {

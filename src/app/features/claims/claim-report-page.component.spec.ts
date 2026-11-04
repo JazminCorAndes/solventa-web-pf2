@@ -13,6 +13,8 @@ import { AuthUser } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { TEST_USER } from '../../core/auth/auth.testing';
 import { ClaimRecord } from '../../core/claims/claim.models';
+import { CLAIM_GATEWAY } from '../../core/claims/claim.gateway';
+import { HttpClaimGateway } from '../../data-access/claims/http-claim.gateway';
 import { ClaimReportPageComponent } from './claim-report-page.component';
 
 const policy = {
@@ -54,6 +56,7 @@ describe('ClaimReportPageComponent with authenticated HTTP', () => {
         }),
       ],
       providers: [
+        { provide: CLAIM_GATEWAY, useClass: HttpClaimGateway },
         provideRouter([]),
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
