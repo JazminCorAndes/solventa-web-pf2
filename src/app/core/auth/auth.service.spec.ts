@@ -241,7 +241,16 @@ describe('AuthService', () => {
     const service = createService();
 
     const user = await firstValueFrom(
-      service.register({ name: 'Ana', email: 'ana@solventa.co', password: 'Solventa123!' }),
+      service.register({
+        name: 'Ana',
+        email: 'ana@solventa.co',
+        password: 'Solventa123!',
+        documentType: 'cc',
+        documentNumber: '1023456789',
+        phone: '+573001234567',
+        birthDate: '1990-01-15',
+        consent: { authorized: true, termsVersion: '1.0' },
+      }),
     );
 
     expect(user.email).toBe('ana@solventa.co');

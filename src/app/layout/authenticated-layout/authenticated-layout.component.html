@@ -64,6 +64,15 @@
             <app-icon matListItemIcon name="claim" />
             <span matListItemTitle>{{ 'navigation.claims' | transloco }}</span>
           </a>
+          <a
+            mat-list-item
+            routerLink="/app/consentimiento"
+            routerLinkActive="active-link"
+            (click)="closeMobileMenu()"
+          >
+            <app-icon matListItemIcon name="shield" />
+            <span matListItemTitle>{{ 'navigation.consent' | transloco }}</span>
+          </a>
         } @else {
           @if (partners.context()?.alcances?.includes('clientes:consultar')) {
             <a

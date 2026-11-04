@@ -7,6 +7,14 @@ export interface RegistrationData {
   name: string;
   email: string;
   password: string;
+  documentType: DocumentType;
+  documentNumber: string;
+  phone: string;
+  birthDate: string;
+  consent: {
+    authorized: boolean;
+    termsVersion: '1.0';
+  };
 }
 export type DocumentType = 'cc' | 'ce' | 'passport' | 'ppt';
 
