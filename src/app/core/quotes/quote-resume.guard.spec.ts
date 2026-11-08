@@ -30,7 +30,7 @@ import { of } from 'rxjs';
 class FlowPage {}
 
 const REQUEST = {
-  id: 'historical-request',
+  id: 'AQT-2026-HISTORY123',
   productoId: 'automotive',
   tipoCliente: 'persona_natural',
   tipoDocumento: 'cc',

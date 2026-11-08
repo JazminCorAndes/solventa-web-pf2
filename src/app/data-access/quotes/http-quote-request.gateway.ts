@@ -18,19 +18,6 @@ import {
 } from '../../core/quotes/quote-request.models';
 import { profilingErrorKey } from '../../core/profiling/profiling.errors';
 
-interface QuoteRequestResponse {
-  id: string;
-  productoId: string;
-  tipoCliente: 'persona_natural';
-  tipoDocumento: DocumentType;
-  identificacion: string;
-  datosProducto: Record<string, string>;
-  correo: string;
-  telefono: string;
-  estado: 'recibida';
-  creadaEn: string;
-}
-
 interface TravelDestinationsResponse {
   destinos: Array<{
     codigo: string;
@@ -45,8 +32,8 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
 
   loadRequest(id: string): Observable<QuoteRequestRecord> {
     return this.http
-      .get<QuoteRequestResponse>(`${this.apiUrl}/solicitudes-cotizacion/${encodeURIComponent(id)}`)
-      .pipe(map(toQuoteRequest));
+      .get<unknown>(`${this.apiUrl}/solicitudes-cotizacion/${encodeURIComponent(id)}`)
+      .pipe(map((response) => toQuoteRequest(response, { id })));
   }
 
   loadProducts(): Observable<InsuranceProduct[]> {
@@ -92,7 +79,7 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
 
   submitRequest(request: QuoteRequestDraft): Observable<QuoteRequestRecord> {
     return this.http
-      .post<QuoteRequestResponse>(
+      .post<unknown>(
         `${this.apiUrl}/solicitudes-cotizacion`,
         {
           productoId: request.productId,
@@ -103,7 +90,7 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
         },
       )
       .pipe(
-        map(toQuoteRequest),
+        map((response) => toQuoteRequest(response, request)),
         catchError((error: unknown) => {
           if (profilingErrorKey(error)) {
             return throwError(() => error);
@@ -195,17 +182,59 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
-function toQuoteRequest(response: QuoteRequestResponse): QuoteRequestRecord {
+function toQuoteRequest(
+  response: unknown,
+  expected: QuoteRequestDraft | { id: string },
+): QuoteRequestRecord {
+  if (
+    !isRecord(response) ||
+    !nonempty(response['id']) ||
+    !/^AQT-[0-9]{4}-[A-Z0-9]{6,12}$/.test(response['id']) ||
+    !nonempty(response['productoId']) ||
+    response['tipoCliente'] !== 'persona_natural' ||
+    !isDocumentType(response['tipoDocumento']) ||
+    !nonempty(response['identificacion']) ||
+    !nonempty(response['correo']) ||
+    !nonempty(response['telefono']) ||
+    response['estado'] !== 'recibida' ||
+    !nonempty(response['creadaEn']) ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(
+      response['creadaEn'],
+    ) ||
+    !Number.isFinite(Date.parse(response['creadaEn'])) ||
+    !isRecord(response['datosProducto']) ||
+    !Object.values(response['datosProducto']).every((value) => typeof value === 'string')
+  ) {
+    throw new QuoteRequestUnavailableError();
+  }
+  const productData = response['datosProducto'] as Record<string, string>;
+  if (
+    ('id' in expected && response['id'] !== expected.id) ||
+    ('productId' in expected &&
+      (response['productoId'] !== expected.productId ||
+        Object.keys(productData).length !== Object.keys(expected.productData).length ||
+        !Object.entries(expected.productData).every(([key, value]) => productData[key] === value)))
+  ) {
+    throw new QuoteRequestUnavailableError();
+  }
   return {
-    id: response.id,
-    productId: response.productoId,
+    id: response['id'],
+    productId: response['productoId'],
     customerType: 'natural',
-    documentType: response.tipoDocumento,
-    nationalId: response.identificacion,
-    productData: response.datosProducto,
-    email: response.correo,
-    phone: response.telefono,
+    documentType: response['tipoDocumento'],
+    nationalId: response['identificacion'],
+    productData,
+    email: response['correo'],
+    phone: response['telefono'],
     status: 'received',
-    createdAt: response.creadaEn,
+    createdAt: response['creadaEn'],
   };
+}
+
+function nonempty(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isDocumentType(value: unknown): value is DocumentType {
+  return value === 'cc' || value === 'ce' || value === 'passport' || value === 'ppt';
 }

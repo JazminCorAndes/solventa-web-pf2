@@ -37,6 +37,33 @@ la prueba de duplicados del BFF también usa el formulario web cifrado.
 
 ## Ejecución
 
+### Integración de evidencias (opt-in, SOL-176)
+
+`evidence/claim-evidence.cy.ts` usa un helper backend local desechable con Identidad
+(JWE/JWT), Pólizas y Siniestros reales, SQLite migrado y archivos privados. La
+fixture privada, fuera del repositorio, contiene
+`{webUrl,identityUrl,claimId,customer:{id,email,password}}` con cuenta sintética y
+caso autorizado. No se versionan credenciales, bytes privados ni esa fixture.
+El login vuelve por la ruta principal al detalle del siniestro. El navegador genera
+un PNG, lo envía desde el selector y verifica confirmación, recarga y descarga con
+los mismos bytes. No reemplaza respuestas de negocio ni inyecta tokens en Angular.
+
+```powershell
+$env:CYPRESS_DISPOSABLE_BACKEND='1'
+$env:CYPRESS_BACKEND_URL='http://127.0.0.1:PUERTO_BFF'
+$env:CYPRESS_EVIDENCE_FIXTURE_FILE='C:\ruta-privada-de-sesion\fixture.json'
+$env:CYPRESS_WEB_PORT='PUERTO_WEB_LIBRE'
+node tests\cypress\run.cjs evidence claim-evidence.cy.ts
+```
+
+Ambos puertos deben ser números locales asignados al helper y al frontend, no
+proxies hacia producción. El runner rechaza destinos no loopback y exige elegir
+ese spec explícitamente; no se añade a la suite integrada fijada a otro backend.
+Conserva XML/diagnósticos y descarga en `reports/cypress/evidence/`, ignorado por Git,
+y cierra Angular al terminar. Detén también el helper desechable propietario.
+La prueba no acredita producción, firma legal, Redis productivo ni cortes TCP;
+las interrupciones y reintentos se verifican en las regresiones HTTP unitarias.
+
 Requisitos: Node según `.nvmrc`, pnpm según `package.json` y dependencias del
 navegador Cypress. En Linux usar un runner con las dependencias oficiales de Cypress
 y Xvfb (GitHub `ubuntu-latest`). Cypress está fijado a 16.2.0; usa su Electron incluido.

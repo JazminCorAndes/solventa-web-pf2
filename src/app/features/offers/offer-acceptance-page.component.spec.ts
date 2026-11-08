@@ -246,6 +246,32 @@ describe('OfferAcceptancePageComponent', () => {
     expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/cotizaciones/suscripcion']);
   });
 
+  it.each([false, true])(
+    'bloquea el pago y ofrece nueva cotización ante oferta vencida (recuperada=%s)',
+    (restored) => {
+      startSubscription.mockReturnValueOnce(throwError(() => new OfferUnavailableError()));
+      if (restored) {
+        confirmedSelection.set(CONFIRMED_SELECTION);
+        fixture.detectChanges();
+        fixture.componentInstance.continueWithSubscription();
+      } else {
+        acceptAndConfirm();
+      }
+      fixture.detectChanges();
+      expect(fixture.componentInstance.errorKey()).toBe('acceptance.errors.unavailable');
+      expect(actionButton().disabled).toBe(true);
+      expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+        es.acceptance.errors.unavailable,
+      );
+      expect(fixture.nativeElement.querySelector('[role="alert"] a')?.getAttribute('href')).toBe(
+        '/app/cotizaciones/solicitar',
+      );
+      expect(navigate).not.toHaveBeenCalled();
+      fixture.componentInstance.continueWithSubscription();
+      expect(startSubscription).toHaveBeenCalledOnce();
+    },
+  );
+
   it('shows errors and blocks duplicate requests while retrying a restored acceptance', () => {
     confirmedSelection.set(CONFIRMED_SELECTION);
     const pending = new Subject<SubscriptionRecord>();

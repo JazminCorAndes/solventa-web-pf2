@@ -122,6 +122,78 @@ describe('Catalogo integrado con el formulario y HTTP autenticado', () => {
     environment.dataAccessMode = originalMode;
   });
 
+  it.each([
+    {},
+    { id: 'synthetic-audit', estado: 'rechazada' },
+    {
+      id: 'AQT-2026-ABCDEF1234',
+      productoId: 'automotive',
+      tipoCliente: 'persona_natural',
+      tipoDocumento: 'cc',
+      identificacion: '1023456789',
+      datosProducto: { vehiclePlate: 'ABC123' },
+      correo: 'cliente@example.com',
+      telefono: '+573001234567',
+      estado: 'fallida',
+      creadaEn: '2026-10-11T18:00:00Z',
+    },
+    {
+      id: 'AQT-2026-ABCDEF1234',
+      productoId: 'automotive',
+      tipoCliente: 'persona_natural',
+      tipoDocumento: 'cc',
+      identificacion: '1023456789',
+      datosProducto: { vehiclePlate: 'ABC123' },
+      correo: 'cliente@example.com',
+      telefono: '+573001234567',
+      estado: 'sin_ofertas',
+      creadaEn: '2026-10-11T18:00:00Z',
+    },
+    {
+      id: 'AQT-2026-ABCDEF1234',
+      productoId: 'travel',
+      tipoCliente: 'persona_natural',
+      tipoDocumento: 'cc',
+      identificacion: '1023456789',
+      datosProducto: { vehiclePlate: 'XYZ999' },
+      correo: 'cliente@example.com',
+      telefono: '+573001234567',
+      estado: 'recibida',
+      creadaEn: '2026-10-11T18:00:00Z',
+    },
+  ])('no persiste ni navega con un recibo inválido y permite reintentar %#', async (response) => {
+    await select.clickOptions({ text: product.nombre });
+    page.form.patchValue({ vehiclePlate: 'ABC123' });
+    page.profilingReady.set(true);
+    page.submit();
+    http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion`).flush(response);
+    fixture.detectChanges();
+    expect(page.errorKey()).toBe('quoteRequest.errors.unavailable');
+    expect(page.form.enabled).toBe(true);
+    expect(page.form.controls.vehiclePlate.value).toBe('ABC123');
+    expect(page.submittedRequest()).toBeNull();
+    expect(TestBed.inject(QUOTE_REQUEST_STORAGE).write).not.toHaveBeenCalled();
+    expect(TestBed.inject(OFFER_SELECTION_STORAGE).clear).not.toHaveBeenCalled();
+    expect(TestBed.inject(Router).navigate).not.toHaveBeenCalled();
+
+    page.submit();
+    http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion`).flush({
+      id: 'AQT-2026-ABCDEF1234',
+      productoId: 'automotive',
+      tipoCliente: 'persona_natural',
+      tipoDocumento: 'cc',
+      identificacion: '1023456789',
+      datosProducto: { vehiclePlate: 'ABC123' },
+      correo: 'cliente@example.com',
+      telefono: '+573001234567',
+      estado: 'recibida',
+      creadaEn: '2026-10-11T18:00:00Z',
+    });
+    expect(page.submittedRequest()?.status).toBe('received');
+    expect(TestBed.inject(QUOTE_REQUEST_STORAGE).write).toHaveBeenCalledOnce();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/app/cotizaciones/ofertas']);
+  });
+
   it('muestra el resumen recibido y consulta el detalle real del producto seleccionado', async () => {
     await select.clickOptions({ text: product.nombre });
     fixture.detectChanges();

@@ -121,6 +121,52 @@ Los textos de registro usan `claims` y los de consulta `claimStatus`; no se debe
 fusionar bajo una clave JSON duplicada. Las pruebas de ambas pantallas y sus
 adaptadores están en `src/app/**/claims/*.spec.ts`.
 
+### Adjuntar evidencias privadas (SOL-176)
+
+Desde el detalle autorizado `/app/siniestros/:id`, **Consultar evidencias y límites**
+carga la política vigente y los metadatos confirmados. No hay un listado general
+nuevo ni un adaptador simulado. El selector acepta los MIME, tamaños, cantidad y
+duración MP4 declarados por `GET /v1/siniestros/configuracion-evidencias`, sin
+sustituir una política inválida por valores locales.
+
+Cada archivo conserva SHA-256 y un UUID estable en `sessionStorage`, separados
+por actor y siniestro, **antes** del inicio de carga. Los bytes solo viven en memoria;
+al recargar hay que volver a seleccionar el archivo original. No cierres la pestaña
+ni borres su almacenamiento si necesitas recuperar una operación incierta.
+El cliente repite el mismo `POST /:id/cargas` y consulta `GET /:id/cargas/:cargaId`
+antes de continuar desde el offset confirmado. Los fragmentos se envían con
+`PUT /:id/cargas/:cargaId/contenido`, `application/octet-stream` y `Upload-Offset`;
+el navegador fija `Content-Length`. No se usan multipart, FormData ni base64.
+
+El progreso indica bytes reconocidos, no evidencia confirmada. Solo una carga
+`confirmada` con `evidenciaId` y tamaño completo permite mostrar éxito después de
+`POST /:id/cargas/:cargaId/confirmacion`. Los errores conservan archivo y operación
+para reintentar; no generan otra clave automáticamente. Cambiar de actor o salir
+del detalle oculta la selección y cancela peticiones pendientes.
+`GET /:id/evidencias/:evidenciaId/contenido` se descarga como blob por el interceptor
+Bearer existente y se verifica su tamaño, MIME y SHA-256; no se publica una URL
+del backend ni se persisten bytes o tokens en el almacenamiento de evidencias.
+
+### Recibos de cotización (SOL-162)
+
+El consumidor de solicitudes valida el ID `AQT`, el estado autoritativo, los campos
+requeridos y la correspondencia exacta del producto y sus datos antes de guardar,
+confirmar o navegar. Solo acepta `estado: recibida`, emitido por el productor real;
+no convierte un estado diferente en «recibida». HTTP 200 con un objeto vacío,
+estado diferente o datos ajenos deja
+el formulario reintentable, sin sobrescribir la solicitud ni la selección previa.
+
+La emisión continúa siendo académica/simulada. SOL-168 CA4 (número y acceso a
+documento firmado) no se declara cumplido: el backend no ofrece ese documento
+ni existe un proveedor de firma configurado y autorizado. No se fabrican enlaces,
+números de póliza ni documentos para sustituir ese contrato pendiente.
+
+El rechazo `422 oferta_no_disponible` al iniciar una suscripción (SOL-167) reutiliza
+el error de oferta existente: descarta la aprobación cacheada, impide continuar al
+pago y ofrece crear una nueva cotización. No se transforma en aprobación ni se
+reintenta automáticamente con una clave nueva. Los errores de perfilamiento
+conservan sus mensajes y recuperación propios.
+
 Credenciales del adaptador simulado:
 
 ```text

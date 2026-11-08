@@ -41,7 +41,7 @@ function failureCause(phase, error) {
 
 function createRunDiagnostics(mode, spec) {
   const suppliedId = process.env.CYPRESS_DIAGNOSTIC_RUN_ID;
-  const suite = ['ui', 'integrated', 'controlled'].includes(mode) ? mode : 'invalid';
+  const suite = ['ui', 'integrated', 'controlled', 'evidence'].includes(mode) ? mode : 'invalid';
   const record = {
     kind: 'cypress-run-diagnostics',
     schemaVersion: 1,

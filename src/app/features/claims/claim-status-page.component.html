@@ -91,6 +91,8 @@
               </ol>
             </mat-card-content>
           </mat-card>
+
+          <app-claim-evidence-panel [claimId]="claim.id" />
         }
       }
       @case ('not-found') {

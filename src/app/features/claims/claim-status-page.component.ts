@@ -18,11 +18,13 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { CLAIM_ID_PATTERN } from '../../core/claims/claim-status.models';
 import { ClaimStatusService } from '../../core/claims/claim-status.service';
+import { ClaimEvidencePanelComponent } from './claim-evidence-panel.component';
 
 @Component({
   selector: 'app-claim-status-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ClaimEvidencePanelComponent,
     DatePipe,
     MatButtonModule,
     MatCardModule,
