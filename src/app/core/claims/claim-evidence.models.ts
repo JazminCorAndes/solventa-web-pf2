@@ -31,6 +31,7 @@ export interface ClaimEvidence extends EvidenceUploadBody {
 export interface PendingEvidence {
   key: string;
   body: EvidenceUploadBody;
+  disposition?: 'local' | 'remote' | 'rejected';
 }
 
 export interface EvidenceFile extends PendingEvidence {

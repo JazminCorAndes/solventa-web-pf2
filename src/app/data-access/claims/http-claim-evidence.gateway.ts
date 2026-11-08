@@ -97,6 +97,14 @@ export class HttpClaimEvidenceGateway {
       .pipe(map((response) => upload(response, claimId, request, id)));
   }
 
+  cancel(claimId: string, id: string): Observable<void> {
+    return this.http.delete<unknown>(this.uploadUrl(claimId, id), { observe: 'response' }).pipe(
+      map((response) => {
+        if (response.status !== 204 || response.body !== null) invalid();
+      }),
+    );
+  }
+
   content(claimId: string, evidence: ClaimEvidence): Observable<Blob> {
     return this.http
       .get(`${this.claimUrl(claimId)}/evidencias/${encodeURIComponent(evidence.id)}/contenido`, {

@@ -45,8 +45,12 @@ fixture privada, fuera del repositorio, contiene
 `{webUrl,identityUrl,claimId,customer:{id,email,password}}` con cuenta sintética y
 caso autorizado. No se versionan credenciales, bytes privados ni esa fixture.
 El login vuelve por la ruta principal al detalle del siniestro. El navegador genera
-un PNG, lo envía desde el selector y verifica confirmación, recarga y descarga con
-los mismos bytes. No reemplaza respuestas de negocio ni inyecta tokens en Angular.
+un PNG y retira una selección no enviada. Con `maxCantidad=1` real, crea la carga
+en el servidor y corta solo su respuesta para simular ACK perdido; después de
+recargar, retira el mismo UUID mediante replay, GET, DELETE y GET `cancelada`.
+Reemplaza con el mismo SHA y una clave nueva, verifica confirmación, recarga y
+descarga con los mismos bytes. No reemplaza éxitos/respuestas de negocio ni
+inyecta tokens en Angular.
 
 ```powershell
 $env:CYPRESS_DISPOSABLE_BACKEND='1'
@@ -61,8 +65,10 @@ proxies hacia producción. El runner rechaza destinos no loopback y exige elegir
 ese spec explícitamente; no se añade a la suite integrada fijada a otro backend.
 Conserva XML/diagnósticos y descarga en `reports/cypress/evidence/`, ignorado por Git,
 y cierra Angular al terminar. Detén también el helper desechable propietario.
-La prueba no acredita producción, firma legal, Redis productivo ni cortes TCP;
-las interrupciones y reintentos se verifican en las regresiones HTTP unitarias.
+La prueba no acredita producción, firma legal, Redis productivo ni cortes TCP
+entre servicios: se corta el ACK al navegador después del POST real. Los fallos
+de DELETE, su ACK perdido, confirmación concurrente y cambios de actor/caso se
+verifican además en las regresiones HTTP unitarias.
 
 Requisitos: Node según `.nvmrc`, pnpm según `package.json` y dependencias del
 navegador Cypress. En Linux usar un runner con las dependencias oficiales de Cypress

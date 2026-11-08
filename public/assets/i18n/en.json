@@ -927,6 +927,8 @@
     "bytes": "bytes",
     "select": "Select files",
     "upload": "Attach",
+    "remove": "Remove file",
+    "removeHelp": "You can remove unsent or rejected selections. If the upload may have reached the server, we verify and cancel only pending uploads before releasing the attempt. Confirmed evidence is not deleted.",
     "confirmed": "Confirmed evidence",
     "empty": "No confirmed evidence.",
     "download": "Download private file",
@@ -945,6 +947,8 @@
       "count": "The selection exceeds the allowed count, including pending uploads.",
       "duplicate": "This file is already selected or confirmed for this claim.",
       "cancelled": "This upload was cancelled on the server and cannot continue.",
+      "confirmed": "The server already confirmed this evidence. It was not deleted; you can download it from the list.",
+      "rejected": "The server definitively rejected starting this upload. Remove the selection to choose another file.",
       "access": "Access to this evidence could not be authorized. Check your session and claim.",
       "unavailable": "The operation could not be completed or verified. The selection and original key are retained for retry; evidence is not established without confirmation."
     }

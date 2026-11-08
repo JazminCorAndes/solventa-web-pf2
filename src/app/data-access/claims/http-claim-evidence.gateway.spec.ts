@@ -124,6 +124,32 @@ describe('HttpClaimEvidenceGateway', () => {
     await expect(result).resolves.toMatchObject({ estado: 'confirmada', evidenciaId: evidenceId });
   });
 
+  it('cancela por DELETE autorizado sin cuerpo y exige HTTP 204', async () => {
+    const result = firstValueFrom(gateway.cancel(claimId, uploadId));
+    const request = http.expectOne(`${base}/${claimId}/cargas/${uploadId}`);
+    expect(request.request.method).toBe('DELETE');
+    expect(request.request.body).toBeNull();
+    expect(request.request.headers.has('Authorization')).toBe(true);
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await expect(result).resolves.toBeUndefined();
+  });
+
+  it('rechaza éxito ficticio de cancelación HTTP 200', async () => {
+    const result = firstValueFrom(gateway.cancel(claimId, uploadId));
+    const assertion = expect(result).rejects.toThrow('Invalid claim evidence response.');
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush({ estado: 'cancelada' });
+    await assertion;
+  });
+
+  it.each([403, 409, 503])('preserva rechazo del DELETE HTTP %s', async (status) => {
+    const result = firstValueFrom(gateway.cancel(claimId, uploadId));
+    const assertion = expect(result).rejects.toMatchObject({ status });
+    http
+      .expectOne(`${base}/${claimId}/cargas/${uploadId}`)
+      .flush({ code: 'carga_confirmada' }, { status, statusText: 'Error' });
+    await assertion;
+  });
+
   it.each([403, 404, 409, 422, 503])('preserva el error identificable HTTP %s', async (status) => {
     const result = firstValueFrom(gateway.start(claimId, body, uploadId));
     const assertion = expect(result).rejects.toMatchObject({

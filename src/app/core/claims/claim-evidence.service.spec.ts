@@ -79,6 +79,345 @@ describe('ClaimEvidenceService with HTTP and retry storage', () => {
     return [result];
   }
 
+  async function recreate(): Promise<void> {
+    service = TestBed.runInInjectionContext(() => new ClaimEvidenceService());
+    service.connect(claimId);
+    await ready({ maxCantidad: 1 });
+  }
+
+  const stored = () => TestBed.inject(ClaimEvidenceStorage).read(TEST_USER.id, claimId);
+
+  it.each([false, true])(
+    'retira selección nunca enviada y permite reemplazo; recarga=%s',
+    async (reload) => {
+      await ready({ maxCantidad: 1 });
+      await service.select([file()]);
+      const key = service.files()[0].key;
+      expect(stored()[0].disposition).toBe('local');
+      if (reload) await recreate();
+      await service.remove(key);
+      expect(stored()).toEqual([]);
+      expect(service.files()).toEqual([]);
+      expect(service.needsReselection()).toBe(false);
+      await service.select([file()]);
+      expect(service.files()[0].key).not.toBe(key);
+      expect(service.errorKey()).toBeNull();
+      http.expectNone(`${base}/${claimId}/cargas`);
+    },
+  );
+
+  it.each([false, true])(
+    'libera POST422 definitivo para reemplazar con maxCantidad=1; recarga=%s',
+    async (reload) => {
+      await ready({ maxCantidad: 1 });
+      await service.select([file()]);
+      const original = service.files()[0];
+      const result = service.upload(original.key);
+      expect(stored()[0].disposition).toBe('remote');
+      http
+        .expectOne(`${base}/${claimId}/cargas`)
+        .flush(
+          { code: 'ubicacion_no_autorizada' },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+      await result;
+      expect(stored()[0].disposition).toBe('rejected');
+      if (reload) await recreate();
+      await service.remove(original.key);
+      expect(stored()).toEqual([]);
+      await service.select([file([2])]);
+      expect(service.files()).toHaveLength(1);
+      expect(service.files()[0].key).not.toBe(original.key);
+      expect(service.errorKey()).toBeNull();
+      http.expectNone(`${base}/${claimId}/cargas`);
+    },
+  );
+
+  it.each([false, true])(
+    'reconcilia cancelación tras inicio incierto; ACK perdido=%s',
+    async (lostAck) => {
+      await ready({ maxCantidad: 1 });
+      await service.select([file()]);
+      const original = service.files()[0];
+      const wire = receipt(0);
+      const first = service.upload(original.key);
+      http.expectOne(`${base}/${claimId}/cargas`).error(new ProgressEvent('error'));
+      await first;
+      await recreate();
+      await service.select([file([2])]);
+      expect(service.errorKey()).toBe('claimEvidence.errors.count');
+      const removal = service.remove(original.key);
+      const replay = http.expectOne(`${base}/${claimId}/cargas`);
+      expect(replay.request.headers.get('Idempotency-Key')).toBe(original.key);
+      expect(replay.request.body).toEqual(original.body);
+      replay.flush(wire);
+      await tick();
+      http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(wire);
+      await tick();
+      const cancellation = http.expectOne(`${base}/${claimId}/cargas/${uploadId}`);
+      expect(cancellation.request.method).toBe('DELETE');
+      if (lostAck) cancellation.error(new ProgressEvent('error'));
+      else cancellation.flush(null, { status: 204, statusText: 'No Content' });
+      await tick();
+      expect(stored()[0].key).toBe(original.key);
+      http
+        .expectOne(`${base}/${claimId}/cargas/${uploadId}`)
+        .flush({ ...wire, estado: 'cancelada' });
+      await removal;
+      expect(stored()).toEqual([]);
+      expect(service.restored()).toEqual([]);
+      await service.select([file()]);
+      expect(service.files()[0].key).not.toBe(original.key);
+      expect(service.errorKey()).toBeNull();
+    },
+  );
+
+  it('conserva reserva ante DELETE rechazado y recupera una cancelación ya realizada', async () => {
+    await ready({ maxCantidad: 1 });
+    await service.select([file()]);
+    const key = service.files()[0].key;
+    const wire = receipt(0);
+    const first = service.upload(key);
+    http.expectOne(`${base}/${claimId}/cargas`).error(new ProgressEvent('error'));
+    await first;
+    const removal = service.remove(key);
+    http.expectOne(`${base}/${claimId}/cargas`).flush(wire);
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(wire);
+    await tick();
+    http
+      .expectOne(`${base}/${claimId}/cargas/${uploadId}`)
+      .flush({ code: 'acceso_denegado' }, { status: 403, statusText: 'Forbidden' });
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(wire);
+    await removal;
+    expect(service.errorKey()).toBe('claimEvidence.errors.access');
+    expect(stored()[0].key).toBe(key);
+    await service.select([file([2])]);
+    expect(service.errorKey()).toBe('claimEvidence.errors.count');
+    await recreate();
+    const retry = service.remove(key);
+    http.expectOne(`${base}/${claimId}/cargas`).flush({ ...wire, estado: 'cancelada' });
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush({ ...wire, estado: 'cancelada' });
+    await retry;
+    expect(stored()).toEqual([]);
+    await service.select([file([2])]);
+    expect(service.errorKey()).toBeNull();
+  });
+
+  it('no libera cuota por ACK204 si falla consultar la cancelación', async () => {
+    await ready({ maxCantidad: 1 });
+    await service.select([file()]);
+    const key = service.files()[0].key;
+    const wire = receipt(0);
+    const first = service.upload(key);
+    http.expectOne(`${base}/${claimId}/cargas`).error(new ProgressEvent('error'));
+    await first;
+    const removal = service.remove(key);
+    http.expectOne(`${base}/${claimId}/cargas`).flush(wire);
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(wire);
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(null, {
+      status: 204,
+      statusText: 'No Content',
+    });
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).error(new ProgressEvent('error'));
+    await removal;
+    expect(stored()[0].disposition).toBe('remote');
+    await recreate();
+    await service.select([file([2])]);
+    expect(service.errorKey()).toBe('claimEvidence.errors.count');
+    expect(stored()[0].key).toBe(key);
+  });
+
+  it.each([false, true])(
+    'protege evidencia confirmada antes/durante DELETE; carrera=%s',
+    async (race) => {
+      await ready({ maxCantidad: 1 });
+      await service.select([file()]);
+      const key = service.files()[0].key;
+      const wire = receipt(0);
+      const confirmed = receipt(4, 'confirmada', evidenceId);
+      const first = service.upload(key);
+      http.expectOne(`${base}/${claimId}/cargas`).error(new ProgressEvent('error'));
+      await first;
+      const removal = service.remove(key);
+      http.expectOne(`${base}/${claimId}/cargas`).flush(race ? wire : confirmed);
+      await tick();
+      http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(race ? wire : confirmed);
+      await tick();
+      if (race) {
+        http
+          .expectOne(`${base}/${claimId}/cargas/${uploadId}`)
+          .flush({ code: 'carga_confirmada' }, { status: 409, statusText: 'Conflict' });
+        await tick();
+        http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(confirmed);
+        await tick();
+      }
+      http.expectOne(`${base}/${claimId}/evidencias`).flush({
+        evidencias: [
+          {
+            ...wire,
+            id: evidenceId,
+            siniestroId: claimId,
+            creadaEn: '2026-11-08T10:00:00Z',
+          },
+        ],
+      });
+      await removal;
+      expect(service.files()[0].state).toBe('confirmed');
+      expect(service.evidences()[0].id).toBe(evidenceId);
+      expect(service.errorKey()).toBe('claimEvidence.errors.confirmed');
+      await service.select([file([2])]);
+      expect(service.errorKey()).toBe('claimEvidence.errors.count');
+      await service.remove(key);
+      http.expectNone(`${base}/${claimId}/cargas`);
+    },
+  );
+
+  it.each([
+    ['rejection', true],
+    ['rejection', false],
+    ['cancellation', true],
+    ['cancellation', false],
+  ])('descarta %s tardía; cambio de actor=%s', async (phase, actor) => {
+    await ready({ maxCantidad: 1 });
+    await service.select([file()]);
+    const key = service.files()[0].key;
+    const wire = receipt(0);
+    const first = service.upload(key);
+    const changeContext = () => {
+      if (actor) {
+        user.set({ ...TEST_USER, id: 'otro-cliente' });
+        service.connect(claimId);
+      } else {
+        service.connect(evidenceId);
+      }
+    };
+    if (phase === 'rejection') {
+      http
+        .expectOne(`${base}/${claimId}/cargas`)
+        .flush({ code: 'ubicacion_no_autorizada' }, { status: 422, statusText: 'Error' });
+      changeContext();
+      await first;
+    } else {
+      http.expectOne(`${base}/${claimId}/cargas`).error(new ProgressEvent('error'));
+      await first;
+      const removal = service.remove(key);
+      http.expectOne(`${base}/${claimId}/cargas`).flush(wire);
+      await tick();
+      http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(wire);
+      await tick();
+      http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(null, {
+        status: 204,
+        statusText: 'No Content',
+      });
+      await tick();
+      http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush({
+        ...wire,
+        estado: 'cancelada',
+      });
+      changeContext();
+      await removal;
+    }
+    expect(service.files()).toEqual([]);
+    expect(service.restored()).toEqual([]);
+    expect(stored()[0]).toMatchObject({ key, disposition: 'remote' });
+    expect(
+      TestBed.inject(ClaimEvidenceStorage).read(
+        actor ? 'otro-cliente' : TEST_USER.id,
+        actor ? claimId : evidenceId,
+      ),
+    ).toEqual([]);
+  });
+
+  it('reconcilia entrada legada sin tratarla como selección local', async () => {
+    await ready({ maxCantidad: 1 });
+    await service.select([file()]);
+    const { key, body } = service.files()[0];
+    TestBed.inject(ClaimEvidenceStorage).write(TEST_USER.id, claimId, [{ key, body }]);
+    await recreate();
+    const removal = service.remove(key);
+    http
+      .expectOne(`${base}/${claimId}/cargas`)
+      .flush({ code: 'ubicacion_no_autorizada' }, { status: 422, statusText: 'Error' });
+    await removal;
+    expect(stored()).toEqual([]);
+    expect(service.errorKey()).toBeNull();
+  });
+
+  it('no envía POST si falla persistir la marca de intento ni pierde selección al retirar', async () => {
+    await ready({ maxCantidad: 1 });
+    await service.select([file()]);
+    const key = service.files()[0].key;
+    vi.spyOn(TestBed.inject(ClaimEvidenceStorage), 'write').mockImplementation(() => {
+      throw new Error('storage unavailable');
+    });
+    await service.upload(key);
+    http.expectNone(`${base}/${claimId}/cargas`);
+    expect(stored()[0].disposition).toBe('local');
+    await service.remove(key);
+    expect(service.files()[0].key).toBe(key);
+    expect(stored()[0].key).toBe(key);
+    expect(service.errorKey()).toBe('claimEvidence.errors.unavailable');
+  });
+
+  it('conserva UUID cuando falla guardar cancelación y lo recupera sin otro DELETE', async () => {
+    await ready({ maxCantidad: 1 });
+    await service.select([file()]);
+    const key = service.files()[0].key;
+    const wire = receipt(0);
+    const first = service.upload(key);
+    http.expectOne(`${base}/${claimId}/cargas`).error(new ProgressEvent('error'));
+    await first;
+    const removal = service.remove(key);
+    http.expectOne(`${base}/${claimId}/cargas`).flush(wire);
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(wire);
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(null, {
+      status: 204,
+      statusText: 'No Content',
+    });
+    await tick();
+    const write = vi.spyOn(TestBed.inject(ClaimEvidenceStorage), 'write').mockImplementation(() => {
+      throw new Error('storage unavailable');
+    });
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush({ ...wire, estado: 'cancelada' });
+    await removal;
+    expect(stored()[0]).toMatchObject({ key, disposition: 'remote' });
+    expect(service.files()[0].key).toBe(key);
+    expect(service.errorKey()).toBe('claimEvidence.errors.unavailable');
+    write.mockRestore();
+    await recreate();
+    const retry = service.remove(key);
+    http.expectOne(`${base}/${claimId}/cargas`).flush({ ...wire, estado: 'cancelada' });
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush({ ...wire, estado: 'cancelada' });
+    await retry;
+    expect(stored()).toEqual([]);
+    await service.select([file([2])]);
+    expect(service.errorKey()).toBeNull();
+  });
+
+  it('rechaza disposición persistida desconocida sin asumir que nunca hubo POST', async () => {
+    await ready({ maxCantidad: 1 });
+    await service.select([file()]);
+    const entry = stored()[0];
+    sessionStorage.setItem(
+      `solventa.evidence.${encodeURIComponent(TEST_USER.id)}.${claimId}`,
+      JSON.stringify([{ ...entry, disposition: 'unknown' }]),
+    );
+    await recreate();
+    expect(service.policy()).toBeNull();
+    expect(service.files()).toEqual([]);
+    expect(service.errorKey()).toBe('claimEvidence.errors.unavailable');
+    http.expectNone(`${base}/${claimId}/cargas`);
+  });
+
   it('valida política, conserva selección y confirma después del último fragmento', async () => {
     await ready();
     await service.select([file()]);
@@ -321,7 +660,9 @@ describe('ClaimEvidenceService with HTTP and retry storage', () => {
       expect(service.errorKey()).toBe(
         [403, 404].includes(status)
           ? 'claimEvidence.errors.access'
-          : 'claimEvidence.errors.unavailable',
+          : status === 422
+            ? 'claimEvidence.errors.rejected'
+            : 'claimEvidence.errors.unavailable',
       );
     },
   );

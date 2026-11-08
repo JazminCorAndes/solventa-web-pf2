@@ -41,6 +41,10 @@ function isPendingEvidence(value: unknown): value is PendingEvidence {
   return (
     typeof entry.key === 'string' &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entry.key) &&
+    (entry.disposition === undefined ||
+      entry.disposition === 'local' ||
+      entry.disposition === 'remote' ||
+      entry.disposition === 'rejected') &&
     !!body &&
     EVIDENCE_MIMES.includes(body.mimeType) &&
     Number.isSafeInteger(body.tamanoBytes) &&

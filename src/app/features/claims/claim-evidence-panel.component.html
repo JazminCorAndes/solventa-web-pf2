@@ -36,6 +36,7 @@
       @if (evidence.needsReselection()) {
         <p role="status">{{ 'claimEvidence.reselect' | transloco }}</p>
       }
+      <p>{{ 'claimEvidence.removeHelp' | transloco }}</p>
       <label>
         {{ 'claimEvidence.select' | transloco }}
         <input
@@ -48,6 +49,24 @@
         />
       </label>
       <ul>
+        @for (entry of evidence.restored(); track entry.key) {
+          <li data-testid="evidence-restored">
+            {{ entry.body.mimeType }} · {{ entry.body.tamanoBytes }}
+            {{ 'claimEvidence.bytes' | transloco }}
+            @if (evidence.isRejected(entry.key)) {
+              <p role="alert">{{ 'claimEvidence.errors.rejected' | transloco }}</p>
+            }
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="evidence.busy()"
+              (click)="evidence.remove(entry.key)"
+              data-testid="evidence-remove"
+            >
+              {{ 'claimEvidence.remove' | transloco }}
+            </button>
+          </li>
+        }
         @for (file of evidence.files(); track file.key) {
           <li data-testid="evidence-file">
             <strong>{{ file.file.name }}</strong>
@@ -65,14 +84,27 @@
               <p role="alert">{{ fileError | transloco }}</p>
             }
             @if (file.state !== 'confirmed') {
+              @if (!evidence.isRejected(file.key)) {
+                <button
+                  mat-flat-button
+                  type="button"
+                  [disabled]="evidence.busy()"
+                  (click)="evidence.upload(file.key)"
+                  data-testid="evidence-upload"
+                >
+                  {{
+                    (file.state === 'error' ? 'common.retry' : 'claimEvidence.upload') | transloco
+                  }}
+                </button>
+              }
               <button
-                mat-flat-button
+                mat-stroked-button
                 type="button"
                 [disabled]="evidence.busy()"
-                (click)="evidence.upload(file.key)"
-                data-testid="evidence-upload"
+                (click)="evidence.remove(file.key)"
+                data-testid="evidence-remove"
               >
-                {{ (file.state === 'error' ? 'common.retry' : 'claimEvidence.upload') | transloco }}
+                {{ 'claimEvidence.remove' | transloco }}
               </button>
             }
           </li>

@@ -23,7 +23,7 @@ export class ClaimEvidenceService {
   private generation = 0;
   private readonly owner = signal<string | null>(null);
   private claimId: string | null = null;
-  private pending: PendingEvidence[] = [];
+  private readonly pendingState = signal<PendingEvidence[]>([]);
   private readonly policyState = signal<EvidencePolicy | null>(null);
   private readonly filesState = signal<EvidenceFile[]>([]);
   private readonly evidenceState = signal<ClaimEvidence[]>([]);
@@ -36,7 +36,12 @@ export class ClaimEvidenceService {
   readonly evidences = computed(() => (this.active() ? this.evidenceState() : []));
   readonly errorKey = computed(() => (this.active() ? this.errorState() : null));
   readonly busy = computed(() => this.active() && this.busyState());
-  readonly needsReselection = signal(false);
+  readonly restored = computed(() =>
+    this.active()
+      ? this.pendingState().filter((entry) => !this.files().some((file) => file.key === entry.key))
+      : [],
+  );
+  readonly needsReselection = computed(() => this.restored().length > 0);
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -53,13 +58,12 @@ export class ClaimEvidenceService {
     this.stopped.next();
     this.owner.set(owner);
     this.claimId = claimId;
-    this.pending = [];
+    this.pendingState.set([]);
     this.policyState.set(null);
     this.filesState.set([]);
     this.evidenceState.set([]);
     this.errorState.set(null);
     this.busyState.set(false);
-    this.needsReselection.set(false);
   }
 
   async load(): Promise<void> {
@@ -75,13 +79,20 @@ export class ClaimEvidenceService {
       );
       if (!this.current(generation)) return;
       const pending = this.storage.read(this.owner()!, this.claimId);
-      this.pending = pending.filter(
-        (entry) => !result.evidence.some((evidence) => evidence.sha256 === entry.body.sha256),
+      this.savePending(
+        pending.filter(
+          (entry) => !result.evidence.some((evidence) => evidence.sha256 === entry.body.sha256),
+        ),
       );
-      this.persist();
-      this.needsReselection.set(this.pending.length > 0 && this.filesState().length === 0);
       this.policyState.set(result.policy);
       this.evidenceState.set(result.evidence);
+      this.filesState.update((files) =>
+        files.map((file) =>
+          result.evidence.some((evidence) => evidence.sha256 === file.body.sha256)
+            ? { ...file, state: 'confirmed', offset: file.body.tamanoBytes, errorKey: null }
+            : file,
+        ),
+      );
     } catch (error: unknown) {
       if (this.current(generation)) this.fail(error);
     } finally {
@@ -109,7 +120,7 @@ export class ClaimEvidenceService {
         ) {
           throw new EvidenceValidationError('claimEvidence.errors.duplicate');
         }
-        const existing = this.pending.find(
+        const existing = this.pendingState().find(
           (entry) =>
             entry.body.sha256 === body.sha256 &&
             entry.body.mimeType === body.mimeType &&
@@ -120,25 +131,27 @@ export class ClaimEvidenceService {
           body: existing?.body ?? body,
           file,
           offset: 0,
-          state: 'selected',
-          errorKey: null,
+          state: existing?.disposition === 'rejected' ? 'error' : 'selected',
+          errorKey: existing?.disposition === 'rejected' ? 'claimEvidence.errors.rejected' : null,
         });
       }
       const next = [
-        ...this.pending,
+        ...this.pendingState(),
         ...selected
-          .filter((entry) => !this.pending.some((pending) => pending.key === entry.key))
-          .map(({ key, body }) => ({ key, body })),
+          .filter((entry) => !this.pendingState().some((pending) => pending.key === entry.key))
+          .map(({ key, body }): PendingEvidence => ({ key, body, disposition: 'local' })),
       ];
-      if (next.length + this.evidences().length > policy.maxCantidad) {
+      const confirmedNotListed = this.files().filter(
+        (file) =>
+          file.state === 'confirmed' &&
+          !next.some((entry) => entry.key === file.key) &&
+          !this.evidences().some((evidence) => evidence.sha256 === file.body.sha256),
+      ).length;
+      if (next.length + this.evidences().length + confirmedNotListed > policy.maxCantidad) {
         throw new EvidenceValidationError('claimEvidence.errors.count');
       }
-      this.storage.write(this.owner()!, this.claimId!, next);
-      this.pending = next;
+      this.savePending(next);
       this.filesState.update((entries) => [...entries, ...selected]);
-      this.needsReselection.set(
-        this.pending.some((entry) => !this.files().some((file) => file.key === entry.key)),
-      );
     } catch (error: unknown) {
       if (this.current(generation)) this.fail(error);
     } finally {
@@ -151,12 +164,17 @@ export class ClaimEvidenceService {
     const policy = this.policy();
     const claimId = this.claimId;
     if (!entry || !policy || !claimId || this.busy() || entry.state === 'confirmed') return;
+    if (this.isRejected(key)) {
+      this.fail(new EvidenceValidationError('claimEvidence.errors.rejected'));
+      return;
+    }
     const generation = this.generation;
     this.busyState.set(true);
     this.errorState.set(null);
     this.update(key, { state: 'uploading', errorKey: null });
     let upload: EvidenceUpload | undefined;
     try {
+      this.setDisposition(key, 'remote');
       upload = await this.request(this.gateway.start(claimId, entry.body, key));
       if (!this.current(generation)) return;
       upload = await this.request(this.gateway.load(claimId, upload.id, entry.body));
@@ -189,8 +207,7 @@ export class ClaimEvidenceService {
         throw new Error('The evidence upload was not confirmed.');
       }
       this.update(key, { state: 'confirmed', offset: upload.offset });
-      this.pending = this.pending.filter((pending) => pending.key !== key);
-      this.persist();
+      this.savePending(this.pendingState().filter((pending) => pending.key !== key));
       const evidences = await this.request(this.gateway.list(claimId));
       if (this.current(generation)) this.evidenceState.set(evidences);
     } catch (error: unknown) {
@@ -198,6 +215,15 @@ export class ClaimEvidenceService {
       this.fail(error);
       if (this.files().find((file) => file.key === key)?.state !== 'confirmed') {
         this.update(key, { state: 'error', errorKey: this.errorState() });
+        if (!upload && startRejected(error)) {
+          try {
+            this.setDisposition(key, 'rejected');
+            this.errorState.set('claimEvidence.errors.rejected');
+            this.update(key, { errorKey: this.errorState() });
+          } catch (storageError: unknown) {
+            this.fail(storageError);
+          }
+        }
         if (upload) {
           try {
             const current = await this.request(this.gateway.load(claimId, upload.id, entry.body));
@@ -208,6 +234,73 @@ export class ClaimEvidenceService {
           }
         }
       }
+    } finally {
+      if (this.current(generation)) this.busyState.set(false);
+    }
+  }
+
+  isRejected(key: string): boolean {
+    return (
+      this.active() &&
+      this.pendingState().some((entry) => entry.key === key && entry.disposition === 'rejected')
+    );
+  }
+
+  async remove(key: string): Promise<void> {
+    const entry = this.pendingState().find((pending) => pending.key === key);
+    const claimId = this.claimId;
+    if (!this.active() || !entry || !claimId || this.busy()) return;
+    const generation = this.generation;
+    this.busyState.set(true);
+    this.errorState.set(null);
+    try {
+      if (this.files().some((file) => file.key === key && file.state === 'confirmed')) {
+        throw new EvidenceValidationError('claimEvidence.errors.confirmed');
+      }
+      if (entry.disposition !== 'local' && entry.disposition !== 'rejected') {
+        // Legacy entries and lost acknowledgements may already reserve remote quota.
+        let upload: EvidenceUpload;
+        try {
+          upload = await this.request(this.gateway.start(claimId, entry.body, key));
+        } catch (error: unknown) {
+          if (!this.current(generation)) return;
+          if (!startRejected(error)) throw error;
+          this.setDisposition(key, 'rejected');
+          this.discard(key);
+          return;
+        }
+        if (!this.current(generation)) return;
+        upload = await this.request(this.gateway.load(claimId, upload.id, entry.body));
+        if (!this.current(generation)) return;
+        if (upload.estado === 'pendiente') {
+          let cancellationError: unknown;
+          try {
+            await this.request(this.gateway.cancel(claimId, upload.id));
+          } catch (error: unknown) {
+            cancellationError = error;
+          }
+          if (!this.current(generation)) return;
+          upload = await this.request(this.gateway.load(claimId, upload.id, entry.body));
+          if (!this.current(generation)) return;
+          if (upload.estado === 'pendiente') {
+            throw cancellationError ?? new Error('The evidence cancellation was not confirmed.');
+          }
+        }
+        if (upload.estado === 'confirmada') {
+          this.update(key, { state: 'confirmed', offset: upload.offset });
+          const evidences = await this.request(this.gateway.list(claimId));
+          if (!this.current(generation)) return;
+          if (!evidences.some((evidence) => evidence.id === upload.evidenciaId)) {
+            throw new Error('The confirmed evidence is missing from the list.');
+          }
+          this.evidenceState.set(evidences);
+          this.savePending(this.pendingState().filter((pending) => pending.key !== key));
+          throw new EvidenceValidationError('claimEvidence.errors.confirmed');
+        }
+      }
+      this.discard(key);
+    } catch (error: unknown) {
+      if (this.current(generation)) this.fail(error);
     } finally {
       if (this.current(generation)) this.busyState.set(false);
     }
@@ -240,8 +333,20 @@ export class ClaimEvidenceService {
     return this.generation === generation && this.active();
   }
 
-  private persist(): void {
-    this.storage.write(this.owner()!, this.claimId!, this.pending);
+  private savePending(entries: PendingEvidence[]): void {
+    this.storage.write(this.owner()!, this.claimId!, entries);
+    this.pendingState.set(entries);
+  }
+
+  private setDisposition(key: string, disposition: PendingEvidence['disposition']): void {
+    this.savePending(
+      this.pendingState().map((entry) => (entry.key === key ? { ...entry, disposition } : entry)),
+    );
+  }
+
+  private discard(key: string): void {
+    this.savePending(this.pendingState().filter((entry) => entry.key !== key));
+    this.filesState.update((files) => files.filter((file) => file.key !== key));
   }
 
   private update(key: string, changes: Partial<EvidenceFile>): void {
@@ -260,4 +365,17 @@ export class ClaimEvidenceService {
           : 'claimEvidence.errors.unavailable',
     );
   }
+}
+
+function startRejected(error: unknown): boolean {
+  if (!(error instanceof HttpErrorResponse)) return false;
+  const body: unknown = error.error;
+  return (
+    [400, 413, 415, 422].includes(error.status) ||
+    (error.status === 409 &&
+      body !== null &&
+      typeof body === 'object' &&
+      'code' in body &&
+      body.code === 'limite_cantidad')
+  );
 }

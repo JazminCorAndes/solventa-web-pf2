@@ -147,6 +147,17 @@ del detalle oculta la selección y cancela peticiones pendientes.
 Bearer existente y se verifica su tamaño, MIME y SHA-256; no se publica una URL
 del backend ni se persisten bytes o tokens en el almacenamiento de evidencias.
 
+**Retirar archivo** libera localmente selecciones nunca enviadas y rechazos
+definitivos del inicio (incluido HTTP 422), también después de recargar, sin
+crear ni cancelar una carga remota. El almacenamiento marca el intento antes
+del POST; una entrada legada sin esa marca se considera incierta, no local.
+Para retirar un intento incierto se repite la misma clave y cuerpo, se consulta
+su estado y se usa únicamente `DELETE /:id/cargas/:cargaId` si sigue pendiente.
+Solo `cancelada` verificado por GET libera la reserva local, incluso si se pierde
+el ACK del DELETE. Los fallos conservan UUID y reserva para reconciliar otra vez.
+Si la confirmación ganó la carrera, no se elimina la evidencia ni se libera su
+cuota: se recupera el listado confirmado y se explica el resultado.
+
 ### Recibos de cotización (SOL-162)
 
 El consumidor de solicitudes valida el ID `AQT`, el estado autoritativo, los campos
