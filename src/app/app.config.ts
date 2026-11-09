@@ -17,6 +17,8 @@ import { AuthService } from './core/auth/auth.service';
 import { AUTH_GATEWAY } from './core/auth/auth.gateway';
 import { AUTH_STORAGE, BrowserAuthStorage } from './core/auth/auth-storage.service';
 import { DASHBOARD_GATEWAY } from './core/dashboard/dashboard.gateway';
+import { CLAIM_GATEWAY } from './core/claims/claim.gateway';
+import { HttpClaimGateway } from './data-access/claims/http-claim.gateway';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
 import { OFFER_GATEWAY } from './core/offers/offer.gateway';
 import {
@@ -56,6 +58,8 @@ import {
 } from './core/advisor-profiling/advisor-profiling-storage.service';
 import { MockAdvisorProfilingGateway } from './data-access/advisor-profiling/mock-advisor-profiling.gateway';
 import { HttpAdvisorProfilingGateway } from './data-access/advisor-profiling/http-advisor-profiling.gateway';
+import { CLAIM_STATUS_GATEWAY } from './core/claims/claim-status.gateway';
+import { HttpClaimStatusGateway } from './data-access/claims/http-claim-status.gateway';
 import { ADVISOR_EXCEPTIONS_GATEWAY } from './core/advisor-exceptions/advisor-exceptions.gateway';
 import { HttpAdvisorExceptionsGateway } from './data-access/advisor-exceptions/http-advisor-exceptions.gateway';
 import { MockAdvisorExceptionsGateway } from './data-access/advisor-exceptions/mock-advisor-exceptions.gateway';
@@ -73,6 +77,8 @@ export const appConfig: ApplicationConfig = {
     { provide: AUTH_GATEWAY, useClass: backendMode ? HttpAuthGateway : MockAuthGateway },
     { provide: AUTH_STORAGE, useClass: BrowserAuthStorage },
     { provide: DASHBOARD_GATEWAY, useClass: HttpDashboardGateway },
+    { provide: CLAIM_STATUS_GATEWAY, useClass: HttpClaimStatusGateway },
+    { provide: CLAIM_GATEWAY, useClass: HttpClaimGateway },
     { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
     {

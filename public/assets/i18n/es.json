@@ -1,4 +1,51 @@
 {
+  "claims": {
+    "title": "Reportar siniestro",
+    "instructions": "Selecciona una póliza vigente y describe lo ocurrido. El registro solo se confirma cuando el servidor devuelve su identificador y estado.",
+    "back": "Volver al inicio",
+    "policy": "Póliza",
+    "policyHint": "Solo se muestran tus pólizas vigentes.",
+    "refreshPolicies": "Actualizar pólizas",
+    "eventDate": "Fecha y hora del evento",
+    "dateHint": "Ingresa la hora local del evento. La vigencia de la póliza se verifica por día UTC.",
+    "eventType": "Tipo de evento",
+    "place": "Lugar del evento",
+    "description": "Descripción",
+    "descriptionHint": "Entre 10 y 5000 caracteres. Incluye únicamente información necesaria para el reporte.",
+    "submit": "Enviar reporte",
+    "loading": "Consultando pólizas vigentes…",
+    "submitting": "Esperando confirmación del servidor…",
+    "emptyPolicies": "No tienes pólizas vigentes disponibles para reportar un siniestro.",
+    "confirmed": "Siniestro registrado",
+    "id": "Identificador del siniestro",
+    "status": "Estado",
+    "registered": "Registrado",
+    "registeredAt": "Fecha de registro",
+    "confirmationNote": "Este registro no implica aprobación de cobertura ni indemnización.",
+    "newReport": "Crear un reporte diferente",
+    "operation": "Identificador de operación",
+    "pendingNote": "Hay un reporte pendiente de confirmar. Conservamos los datos y la operación en esta pestaña. Reintenta sin modificarlos para evitar duplicados, incluso si vuelves a iniciar sesión.",
+    "retry": "Reintentar el mismo reporte",
+    "validation": {
+      "policy": "Selecciona una póliza vigente.",
+      "date": "Ingresa una fecha y hora válidas, no futuras y dentro de la vigencia de la póliza.",
+      "type": "Describe el tipo de evento (1 a 100 caracteres).",
+      "place": "Ingresa el lugar (1 a 300 caracteres).",
+      "description": "La descripción debe tener entre 10 y 5000 caracteres."
+    },
+    "errors": {
+      "policies": "No pudimos consultar tus pólizas. Reintenta cuando se restablezca la conexión.",
+      "invalid": "Revisa los datos y la fecha del evento. El servidor no ha confirmado el reporte.",
+      "session": "Tu sesión no está disponible. Inicia sesión nuevamente para recuperar y reintentar el mismo reporte.",
+      "forbidden": "Tu sesión no tiene permiso para esta operación. No se ha confirmado el reporte.",
+      "notFound": "No se encontró la póliza o el reporte en tu cuenta. Verifica los datos.",
+      "policyExpired": "La póliza ya no está vigente. Actualiza las pólizas y selecciona una vigente.",
+      "conflict": "La operación está asociada a otros datos. No cambies su identificador ni crees un nuevo intento; conserva este contexto para revisar el conflicto.",
+      "response": "La respuesta no corresponde al reporte enviado. No se confirma el registro; reintenta la misma operación.",
+      "storage": "No podemos conservar de forma segura la operación en esta pestaña. No se enviará un nuevo intento. Habilita el almacenamiento de sesión y vuelve a abrir esta pantalla; no borres una operación pendiente.",
+      "unconfirmed": "No se pudo confirmar el resultado. Conservamos los datos y el identificador original para reintentar sin duplicar el reporte."
+    }
+  },
   "partnerQuote": {
     "title": "Cliente y autorización para cotizar",
     "instructions": "Busca al cliente por su documento. El sistema identifica su registro y verifica automáticamente si el consentimiento está vigente.",
@@ -84,6 +131,43 @@
       "unavailable": "No fue posible iniciar sesión en este momento. Inténtalo nuevamente.",
       "encryptionUnavailable": "Abre el sitio con HTTPS (o localhost para desarrollo) y usa un navegador actualizado con Web Crypto para iniciar sesión.",
       "unexpected": "Ocurrió un error inesperado. Inténtalo nuevamente."
+    }
+  },
+  "registration": {
+    "title": "Registrarse",
+    "introduction": "Crea tu cuenta de cliente con los datos de identidad y contacto que usarán tus cotizaciones. Los datos específicos de cada seguro se solicitan al cotizar.",
+    "name": "Nombre completo",
+    "documentType": "Tipo de documento",
+    "documentNumber": "Número de documento",
+    "phone": "Teléfono",
+    "birthDate": "Fecha de nacimiento",
+    "confirmPassword": "Confirmar contraseña",
+    "submit": "Crear cuenta",
+    "processing": "Creando cuenta",
+    "haveAccount": "¿Ya tienes una cuenta?",
+    "success": "Tu cuenta fue creada y tu decisión de consentimiento quedó registrada. Inicia sesión para continuar.",
+    "consent": {
+      "title": "Autorización de datos",
+      "scope": "Alcances y fuentes: Open Finance y Open Data. Dato utilizado: indicador de riesgo, para calcular el perfil de tu cotización.",
+      "duration": "Si autorizas, la autorización durará 30 días desde el registro, salvo que la revoques antes desde la sección Consentimiento de tu cuenta.",
+      "optional": "Puedes crear tu cuenta sin autorizar. No se consultarán las fuentes ni podrás cotizar hasta otorgar una autorización vigente.",
+      "authorize": "Autorizo el uso de datos descrito durante 30 días.",
+      "decline": "No autorizo por ahora.",
+      "management": "Consulta la vigencia de tu autorización y revócala cuando quieras. Entrar a esta sección no renueva ni amplía los 30 días; una nueva autorización requiere tu decisión explícita."
+    },
+    "validation": {
+      "name": "Ingresa tu nombre completo (máximo 120 caracteres).",
+      "documentType": "Selecciona un tipo de documento.",
+      "birthDate": "Ingresa una fecha de nacimiento válida anterior a hoy.",
+      "password": "Usa entre 8 y 128 caracteres.",
+      "passwordMismatch": "Las contraseñas no coinciden.",
+      "consent": "Selecciona si autorizas o no el uso de datos."
+    },
+    "errors": {
+      "duplicate": "Ya existe una cuenta con ese correo o documento. Inicia sesión o revisa tus datos.",
+      "encryptionUnavailable": "Abre el sitio con HTTPS (o localhost para desarrollo) y usa un navegador actualizado con Web Crypto para registrar tu cuenta. La contraseña no se enviará sin cifrar.",
+      "invalid": "El servicio rechazó los datos de registro. Revisa los campos y tu decisión de consentimiento.",
+      "unavailable": "No se pudo confirmar el registro. Si ya creaste la cuenta, inicia sesión; de lo contrario, reintenta cuando el servicio esté disponible."
     }
   },
   "partners": {
@@ -182,6 +266,7 @@
     "dashboard": "Inicio",
     "clients": "Clientes",
     "quotes": "Cotizaciones",
+    "consent": "Consentimiento",
     "requests": "Solicitudes",
     "settings": "Configuración",
     "policies": "Mis seguros",
@@ -636,7 +721,9 @@
     "rejected": "Pago simulado rechazado",
     "rejectedAt": "Fecha de rechazo",
     "rejectionReason": "Motivo del rechazo",
-    "rejectionReasons": { "rechazo_simulado": "Rechazo de la simulación" },
+    "rejectionReasons": {
+      "rechazo_simulado": "Rechazo de la simulación"
+    },
     "recoverAttempt": "Consultar el mismo intento",
     "recoveringAttempt": "Procesando el intento…",
     "unresolvedAttempt": "El resultado del intento aún debe consultarse. Consultar o actualizar el estado no confirma otro pago ni inicia un nuevo intento.",
@@ -829,6 +916,42 @@
       "rate_limited": "El socio alcanzó el límite de solicitudes. Espera antes de reintentar la misma operación.",
       "advisor_context_unavailable": "No puedes enviar un perfilamiento: esta sesión web no dispone del contexto autorizado del asesor y su socio.",
       "unexpected": "No fue posible iniciar el perfilamiento. Puedes reintentar sin crear otra operación."
+    }
+  },
+  "claimStatus": {
+    "eyebrow": "Seguimiento",
+    "title": "Estado de mi siniestro",
+    "subtitle": "Consulta el estado vigente y el historial de tu caso. Solventa actualiza el estado; aquí solo se muestra.",
+    "refresh": "Actualizar",
+    "lookupLabel": "Número de siniestro",
+    "lookupHint": "Lo recibiste al reportar el siniestro.",
+    "lookupInvalid": "Ingresa un número de siniestro válido.",
+    "lookupSubmit": "Consultar",
+    "currentState": "Estado vigente",
+    "updatedAt": "Última actualización",
+    "type": "Tipo",
+    "occurredAt": "Fecha del evento",
+    "reportedAt": "Fecha de reporte",
+    "claimId": "Número de siniestro",
+    "policyId": "Póliza",
+    "history": "Historial del caso",
+    "loading": "Consultando el estado del siniestro…",
+    "notFound": "No encontramos un siniestro con ese número disponible para tu cuenta.",
+    "error": "No fue posible consultar el estado del siniestro. No se muestra información desactualizada; intenta nuevamente.",
+    "types": {
+      "asistido": "Asistido",
+      "parametrico": "Paramétrico",
+      "unclassified": "Sin clasificar"
+    },
+    "states": {
+      "reportado": "Reportado",
+      "en_evaluacion": "En evaluación",
+      "en_revision": "En revisión",
+      "en_inspeccion": "En inspección",
+      "aprobado": "Aprobado",
+      "rechazado": "Rechazado",
+      "pagado": "Pagado",
+      "cerrado": "Cerrado"
     }
   }
 }

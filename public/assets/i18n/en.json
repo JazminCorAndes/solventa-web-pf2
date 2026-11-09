@@ -1,4 +1,51 @@
 {
+  "claims": {
+    "title": "Report a claim",
+    "instructions": "Select an active policy and describe the event. Registration is only confirmed when the server returns its identifier and status.",
+    "back": "Back to dashboard",
+    "policy": "Policy",
+    "policyHint": "Only your active policies are shown.",
+    "refreshPolicies": "Refresh policies",
+    "eventDate": "Event date and time",
+    "dateHint": "Enter the event's local time. Policy coverage is checked by UTC calendar day.",
+    "eventType": "Event type",
+    "place": "Event location",
+    "description": "Description",
+    "descriptionHint": "10 to 5000 characters. Include only information necessary for this report.",
+    "submit": "Submit report",
+    "loading": "Loading active policies…",
+    "submitting": "Waiting for server confirmation…",
+    "emptyPolicies": "You have no active policies available to report a claim.",
+    "confirmed": "Claim registered",
+    "id": "Claim identifier",
+    "status": "Status",
+    "registered": "Registered",
+    "registeredAt": "Registration date",
+    "confirmationNote": "Registration does not imply coverage approval or compensation.",
+    "newReport": "Create a different report",
+    "operation": "Operation identifier",
+    "pendingNote": "A report is awaiting confirmation. Its data and operation are kept in this tab. Retry without changing them to avoid duplicates, even after signing in again.",
+    "retry": "Retry the same report",
+    "validation": {
+      "policy": "Select an active policy.",
+      "date": "Enter a valid date and time, not in the future and within the policy coverage period.",
+      "type": "Describe the event type (1 to 100 characters).",
+      "place": "Enter the location (1 to 300 characters).",
+      "description": "Description must contain 10 to 5000 characters."
+    },
+    "errors": {
+      "policies": "We could not load your policies. Retry when the connection is restored.",
+      "invalid": "Check the details and event date. The server has not confirmed the report.",
+      "session": "Your session is unavailable. Sign in again to recover and retry the same report.",
+      "forbidden": "Your session is not allowed to perform this operation. The report has not been confirmed.",
+      "notFound": "The policy or report was not found in your account. Check the details.",
+      "policyExpired": "The policy is no longer active. Refresh the policies and select an active one.",
+      "conflict": "The operation is associated with different data. Do not change its identifier or start another attempt; keep this context to investigate the conflict.",
+      "response": "The response does not match your report. Registration is not confirmed; retry the same operation.",
+      "storage": "We cannot safely preserve the operation in this tab. No new attempt will be sent. Enable session storage and reopen this screen; do not delete a pending operation.",
+      "unconfirmed": "The result could not be confirmed. We kept the original data and identifier so you can retry without duplicating the report."
+    }
+  },
   "partnerQuote": {
     "title": "Customer and quote authorization",
     "instructions": "Find the customer by document. The system identifies their record and automatically verifies whether consent is current.",
@@ -84,6 +131,43 @@
       "unavailable": "Sign in is currently unavailable. Please try again.",
       "encryptionUnavailable": "Open the site over HTTPS (or localhost for development) and use an up-to-date browser with Web Crypto to sign in.",
       "unexpected": "An unexpected error occurred. Please try again."
+    }
+  },
+  "registration": {
+    "title": "Sign up",
+    "introduction": "Create your customer account with the identity and contact information used for your quotes. Insurance-specific details are requested when you get a quote.",
+    "name": "Full name",
+    "documentType": "Document type",
+    "documentNumber": "Document number",
+    "phone": "Phone",
+    "birthDate": "Date of birth",
+    "confirmPassword": "Confirm password",
+    "submit": "Create account",
+    "processing": "Creating account",
+    "haveAccount": "Already have an account?",
+    "success": "Your account was created and your consent decision was recorded. Sign in to continue.",
+    "consent": {
+      "title": "Data authorization",
+      "scope": "Scopes and sources: Open Finance and Open Data. Data used: risk indicator, to calculate the profile for your quote.",
+      "duration": "If you authorize, consent lasts 30 days from registration, unless you revoke it earlier in your account's Consent section.",
+      "optional": "You can create your account without authorizing. Sources will not be queried and you cannot get quotes until you grant valid consent.",
+      "authorize": "I authorize the described use of data for 30 days.",
+      "decline": "I do not authorize at this time.",
+      "management": "Check when your consent expires and revoke it at any time. Visiting this section does not renew or extend the 30 days; a new authorization requires your explicit decision."
+    },
+    "validation": {
+      "name": "Enter your full name (up to 120 characters).",
+      "documentType": "Select a document type.",
+      "birthDate": "Enter a valid date of birth earlier than today.",
+      "password": "Use between 8 and 128 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "consent": "Choose whether to authorize the use of data."
+    },
+    "errors": {
+      "duplicate": "An account with that email or document already exists. Sign in or review your details.",
+      "encryptionUnavailable": "Open the site over HTTPS (or localhost for development) and use an up-to-date browser with Web Crypto to register. Your password will not be sent unencrypted.",
+      "invalid": "The service rejected the registration data. Review the fields and your consent decision.",
+      "unavailable": "Registration could not be confirmed. If you already created the account, sign in; otherwise retry when the service is available."
     }
   },
   "partners": {
@@ -182,6 +266,7 @@
     "dashboard": "Home",
     "clients": "Clients",
     "quotes": "Quotes",
+    "consent": "Consent",
     "requests": "Requests",
     "settings": "Settings",
     "policies": "My insurance",
@@ -636,7 +721,9 @@
     "rejected": "Simulated payment rejected",
     "rejectedAt": "Rejection date",
     "rejectionReason": "Rejection reason",
-    "rejectionReasons": { "rechazo_simulado": "Simulation rejection" },
+    "rejectionReasons": {
+      "rechazo_simulado": "Simulation rejection"
+    },
     "recoverAttempt": "Check the same attempt",
     "recoveringAttempt": "Processing the attempt…",
     "unresolvedAttempt": "The attempt outcome still needs to be checked. Checking or refreshing its status does not confirm another payment or start a new attempt.",
@@ -829,6 +916,42 @@
       "rate_limited": "The partner has reached the request limit. Wait before retrying the same operation.",
       "advisor_context_unavailable": "You cannot submit a profiling request: this web session does not have the authorized advisor and partner context.",
       "unexpected": "Profiling could not be started. You can retry without creating another operation."
+    }
+  },
+  "claimStatus": {
+    "eyebrow": "Tracking",
+    "title": "My claim status",
+    "subtitle": "Check the current status and history of your case. Solventa updates the status; this page only displays it.",
+    "refresh": "Refresh",
+    "lookupLabel": "Claim number",
+    "lookupHint": "You received it when you reported the claim.",
+    "lookupInvalid": "Enter a valid claim number.",
+    "lookupSubmit": "Look up",
+    "currentState": "Current status",
+    "updatedAt": "Last updated",
+    "type": "Type",
+    "occurredAt": "Event date",
+    "reportedAt": "Reported on",
+    "claimId": "Claim number",
+    "policyId": "Policy",
+    "history": "Case history",
+    "loading": "Checking the claim status…",
+    "notFound": "We could not find a claim with that number for your account.",
+    "error": "The claim status could not be loaded. No outdated information is shown; please try again.",
+    "types": {
+      "asistido": "Assisted",
+      "parametrico": "Parametric",
+      "unclassified": "Unclassified"
+    },
+    "states": {
+      "reportado": "Reported",
+      "en_evaluacion": "Under evaluation",
+      "en_revision": "Under review",
+      "en_inspeccion": "Under inspection",
+      "aprobado": "Approved",
+      "rechazado": "Rejected",
+      "pagado": "Paid",
+      "cerrado": "Closed"
     }
   }
 }

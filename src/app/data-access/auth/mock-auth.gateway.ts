@@ -6,13 +6,7 @@ import {
   InvalidRefreshTokenError,
 } from '../../core/auth/auth.errors';
 import { AuthGateway } from '../../core/auth/auth.gateway';
-import {
-  AuthGrant,
-  AuthSession,
-  AuthUser,
-  LoginCredentials,
-  RegistrationData,
-} from '../../core/auth/auth.models';
+import { AuthGrant, AuthSession, AuthUser, LoginCredentials } from '../../core/auth/auth.models';
 
 const DEMO_EMAIL = 'cliente@solventa.co';
 const DEMO_PASSWORD = 'Solventa123!';
@@ -22,16 +16,8 @@ const MOCK_REFRESH_TOKEN = 'mock-refresh-token';
 export class MockAuthGateway implements AuthGateway {
   private activeSession: AuthSession | null = null;
 
-  register(data: RegistrationData): Observable<AuthUser> {
-    return of({
-      id: 'client-002',
-      name: data.name,
-      email: data.email,
-      role: 'client' as const,
-      documentType: 'cc' as const,
-      nationalId: '',
-      phone: '',
-    });
+  register(): Observable<AuthUser> {
+    return throwError(() => new AuthenticationUnavailableError());
   }
 
   login(credentials: LoginCredentials): Observable<AuthGrant> {

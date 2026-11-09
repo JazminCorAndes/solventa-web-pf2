@@ -1,0 +1,165 @@
+<section class="claim-page">
+  <header>
+    <span class="eyebrow">{{ 'navigation.claims' | transloco }}</span>
+    <h1>{{ 'claims.title' | transloco }}</h1>
+    <p>{{ 'claims.instructions' | transloco }}</p>
+    <a mat-button routerLink="/app/dashboard">{{ 'claims.back' | transloco }}</a>
+  </header>
+
+  @if (claims.errorKey(); as error) {
+    <div class="notice" role="alert">
+      <p>{{ error | transloco }}</p>
+    </div>
+  }
+
+  @if (claims.record(); as record) {
+    <mat-card appearance="raised" data-testid="claim-confirmation">
+      <mat-card-header>
+        <mat-card-title>{{ 'claims.confirmed' | transloco }}</mat-card-title>
+      </mat-card-header>
+      <mat-card-content aria-live="polite">
+        <dl>
+          <dt>{{ 'claims.id' | transloco }}</dt>
+          <dd>{{ record.id }}</dd>
+          <dt>{{ 'claims.status' | transloco }}</dt>
+          <dd>{{ 'claims.registered' | transloco }} ({{ record.estado }})</dd>
+          <dt>{{ 'claims.policy' | transloco }}</dt>
+          <dd>{{ record.polizaId }}</dd>
+          <dt>{{ 'claims.eventDate' | transloco }}</dt>
+          <dd>{{ record.fechaEvento | date: 'medium' : undefined : dateLocale }}</dd>
+          <dt>{{ 'claims.eventType' | transloco }}</dt>
+          <dd>{{ record.tipoEvento }}</dd>
+          <dt>{{ 'claims.place' | transloco }}</dt>
+          <dd>{{ record.lugar }}</dd>
+          <dt>{{ 'claims.description' | transloco }}</dt>
+          <dd>{{ record.descripcion }}</dd>
+          <dt>{{ 'claims.registeredAt' | transloco }}</dt>
+          <dd>{{ record.registradoEn | date: 'medium' : undefined : dateLocale }}</dd>
+        </dl>
+        <p>{{ 'claims.confirmationNote' | transloco }}</p>
+        <a mat-button [routerLink]="['/app/siniestros', record.id]">
+          {{ 'claimStatus.title' | transloco }}
+        </a>
+        <button mat-stroked-button type="button" (click)="newReport()">
+          {{ 'claims.newReport' | transloco }}
+        </button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    @if (claims.loading() || claims.submitting()) {
+      <div class="progress" role="status">
+        <mat-spinner diameter="28" />
+        <span>{{
+          (claims.submitting() ? 'claims.submitting' : 'claims.loading') | transloco
+        }}</span>
+      </div>
+    }
+
+    @if (claims.policyError(); as error) {
+      <div class="notice" role="alert">
+        <p>{{ error | transloco }}</p>
+        <button mat-stroked-button type="button" (click)="claims.loadPolicies()">
+          {{ 'common.retry' | transloco }}
+        </button>
+      </div>
+    } @else if (!claims.loading() && !claims.policies().length && !claims.attempt()) {
+      <div class="notice" role="status">
+        <p>{{ 'claims.emptyPolicies' | transloco }}</p>
+        <button mat-stroked-button type="button" (click)="claims.loadPolicies()">
+          {{ 'common.retry' | transloco }}
+        </button>
+      </div>
+    }
+
+    @if (claims.attempt(); as attempt) {
+      <div class="notice" role="status">
+        <p>{{ 'claims.pendingNote' | transloco }}</p>
+        <p>{{ 'claims.operation' | transloco }}: {{ attempt.key }}</p>
+        <p>{{ 'claims.policy' | transloco }}: {{ attempt.payload.polizaId }}</p>
+        <button
+          mat-flat-button
+          type="button"
+          (click)="claims.retry()"
+          [disabled]="claims.submitting() || claims.errorKey() === 'claims.errors.storage'"
+        >
+          {{ 'claims.retry' | transloco }}
+        </button>
+      </div>
+    }
+
+    <mat-card appearance="raised">
+      <mat-card-content>
+        @if (!claims.locked()) {
+          <button
+            mat-button
+            type="button"
+            [disabled]="claims.loading()"
+            (click)="claims.loadPolicies()"
+          >
+            {{ 'claims.refreshPolicies' | transloco }}
+          </button>
+        }
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'claims.policy' | transloco }}</mat-label>
+            <mat-select formControlName="polizaId" required>
+              @for (policy of claims.policies(); track policy.id) {
+                <mat-option [value]="policy.id"> {{ policy.tipo }} · {{ policy.id }} </mat-option>
+              }
+            </mat-select>
+            <mat-hint>{{ 'claims.policyHint' | transloco }}</mat-hint>
+            <mat-error>{{ 'claims.validation.policy' | transloco }}</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'claims.eventDate' | transloco }}</mat-label>
+            <input matInput type="datetime-local" formControlName="fechaEvento" required />
+            <mat-hint>{{ 'claims.dateHint' | transloco }}</mat-hint>
+            <mat-error>{{ 'claims.validation.date' | transloco }}</mat-error>
+          </mat-form-field>
+          @if (form.hasError('eventDate') && form.controls.fechaEvento.touched) {
+            <p class="validation-error" role="alert">{{ 'claims.validation.date' | transloco }}</p>
+          }
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'claims.eventType' | transloco }}</mat-label>
+            <input matInput formControlName="tipoEvento" maxlength="100" required />
+            <mat-error>{{ 'claims.validation.type' | transloco }}</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'claims.place' | transloco }}</mat-label>
+            <input matInput formControlName="lugar" maxlength="300" required />
+            <mat-error>{{ 'claims.validation.place' | transloco }}</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'claims.description' | transloco }}</mat-label>
+            <textarea
+              matInput
+              formControlName="descripcion"
+              rows="5"
+              maxlength="5000"
+              required
+            ></textarea>
+            <mat-hint>{{ 'claims.descriptionHint' | transloco }}</mat-hint>
+            <mat-error>{{ 'claims.validation.description' | transloco }}</mat-error>
+          </mat-form-field>
+
+          <button
+            mat-flat-button
+            type="submit"
+            [disabled]="
+              claims.locked() ||
+              claims.loading() ||
+              !claims.policies().length ||
+              !!claims.policyError()
+            "
+          >
+            {{ 'claims.submit' | transloco }}
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+</section>

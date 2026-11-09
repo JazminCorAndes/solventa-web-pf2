@@ -75,6 +75,52 @@ El tablero de inicio es una excepción: no tiene adaptador simulado y requiere u
 del backend. En este modo informa el error de conexión en lugar de mostrar datos ficticios.
 Para consultar el resumen real, usa el modo con backend.
 
+### Reportar un siniestro (SOL-175)
+
+El menú **Reportar siniestro** y las pólizas vigentes del inicio abren
+`/app/siniestros/reportar`, protegido por la sesión de cliente existente. Este flujo
+usa exclusivamente el backend, también al ejecutar el frontend en modo de desarrollo:
+no confirma reportes con mocks ni datos locales.
+
+Requiere el contrato de siniestros del BFF: `GET /v1/siniestros/polizas` devuelve
+`{polizas:[{id,tipo,fechaInicio,fechaFin,estado:'vigente'}]}`; las fechas de vigencia
+son `YYYY-MM-DD`. `POST /v1/siniestros` recibe `Idempotency-Key` UUID y
+`{polizaId,fechaEvento,tipoEvento,descripcion,lugar}`; la fecha del evento es un
+timestamp ISO con zona. Una creación responde 201 y su reintento 200 con
+`{id,estado:'registrado',polizaId,fechaEvento,tipoEvento,descripcion,lugar,registradoEn}`.
+`GET /v1/siniestros/:id` recupera esa misma representación.
+
+El formulario valida obligatoriedad, longitudes y fecha no futura dentro de la
+vigencia, con ambos días límite incluidos en UTC, igual que el backend. La fecha
+y hora se ingresan en la zona local del navegador y se envían normalizadas a UTC.
+Un envío pendiente bloquea el doble clic y la edición. El identificador
+de operación y su payload se guardan en `sessionStorage`, separados por usuario,
+antes del POST. Ante una respuesta incierta se conserva exactamente ese intento,
+incluso al recargar la pestaña o volver a iniciar sesión con la misma cuenta.
+No se genera otra clave automáticamente. Solo un rechazo definitivo de datos o
+póliza permite corregir; un conflicto de idempotencia conserva el contexto.
+No borres el almacenamiento ni cierres la pestaña mientras exista una operación
+sin confirmar. El navegador no es la fuente de verdad: únicamente se presenta
+éxito con ID, estado y datos validados del backend.
+
+### Consultar estado e historial (SOL-177)
+
+El menú **Estado de mi siniestro** abre `/app/siniestros`. Desde la confirmación
+del reporte se puede consultar el mismo número sin volver a escribirlo.
+`GET /v1/clientes/me/siniestros/:id` devuelve estado, fechas e historial permitido;
+el frontend no decide transiciones. El acuse `registrado` del formulario conserva
+su contrato y no sustituye esta consulta del estado vigente.
+
+El contrato admite `tipo: null` cuando el backend aún no tiene una clasificación
+real; la interfaz muestra **Sin clasificar**, sin asumir «asistido» o «paramétrico».
+Un tipo desconocido, una respuesta incoherente o un error impiden mostrar un
+estado como actualizado. Un 404 solo se trata como caso no disponible cuando
+incluye `code=siniestro_no_encontrado`.
+
+Los textos de registro usan `claims` y los de consulta `claimStatus`; no se deben
+fusionar bajo una clave JSON duplicada. Las pruebas de ambas pantallas y sus
+adaptadores están en `src/app/**/claims/*.spec.ts`.
+
 Credenciales del adaptador simulado:
 
 ```text
@@ -118,24 +164,37 @@ a `http://127.0.0.1:15001` y utiliza ese mismo origen al registrar la cuenta.
 No se usa la antigua autenticación
 por cookie ni `AUTH_DEVELOPMENT_USERS_JSON`: identidad emite tokens Bearer.
 
-### 2. Crear una cuenta local
+### 2. Registro y consentimiento
 
-Si aún no existe un usuario de pruebas, regístralo mediante el BFF. En PowerShell:
+Con el frontend conectado, abre **Registrarse** desde el inicio de sesión.
+El registro público crea clientes; no provisiona socios ni asesores. Pide nombre,
+correo, contraseña de 8–128 caracteres, tipo y número de documento, teléfono
+`+57` seguido de 10 dígitos y fecha de nacimiento anterior a hoy.
+Los datos específicos del seguro se mantienen en el formulario de cotización.
 
-```powershell
-$credential = Get-Credential -Message "Correo y contraseña de la nueva cuenta local"
-$body = @{
-  nombre = Read-Host "Nombre del cliente"
-  correo = $credential.UserName
-  contrasena = $credential.GetNetworkCredential().Password
-} | ConvertTo-Json
-Invoke-RestMethod -Uri "http://localhost:5001/v1/usuarios" `
-  -Method Post -ContentType "application/json" -Body $body | Select-Object id
-Remove-Variable body, credential
-```
+La decisión de consentimiento no viene seleccionada. Puedes autorizar Open Finance
+y Open Data para usar el indicador de riesgo al cotizar, o crear la cuenta sin
+autorizar (las cotizaciones siguen bloqueadas hasta tener autorización vigente).
+Las fuentes actuales son simuladas. El backend guarda usuario y decisión inicial
+en una transacción; fija la vigencia en **30 días desde el registro** con su reloj.
+Después del éxito, inicia sesión por el flujo cifrado existente.
 
-Usa un correo nuevo y una contraseña que cumpla las reglas de identidad. Las credenciales
-del adaptador mock no crean automáticamente una cuenta en el backend.
+Desde el menú **Consentimiento** (`/app/consentimiento`) puedes consultar el estado
+y vencimiento, y revocar con confirmación. Se reutiliza el mismo panel y API de
+cotizaciones; visitar o recargar la sección no renueva el permiso.
+
+Requiere un BFF compatible con `POST /v1/usuarios` y los campos `nombre`, `correo`,
+`credencialCifrada`, `tipoDocumento`, `numeroDocumento`, `telefono`, `fechaNacimiento` y
+`consentimiento: {autorizado: boolean, versionTerminos: "1.0"}`. Responde `201
+{usuario}` sin iniciar sesión automáticamente. La consulta y revocación utilizan
+`GET/PUT /v1/consentimientos/perfilamiento`; revocar envía
+`{autorizado: false, version}` con el token del cliente.
+Antes de enviar el registro, la web obtiene `GET /v1/usuarios/desafio` y cifra la
+contraseña como se detalla abajo; `contrasena` no aparece en el cuerpo HTTP del alta.
+Un backend anterior que ignore los campos nuevos no es compatible con esta pantalla.
+
+El registro requiere backend real: el modo mock no crea cuentas ni presenta un
+registro ficticio como exitoso. No uses cuentas reales para verificar esta rama.
 
 ### 3. Ejecutar el frontend conectado
 
@@ -163,7 +222,7 @@ No hay proxy ni cookies: la autenticación usa tokens JWT.
 Esta configuración apunta al entorno desplegado, pero esta rama **no acredita ni
 habilita su despliegue**. No la uses para comprobar el cambio con cuentas reales.
 
-### Login cifrado de esta rama
+### Login y registro cifrados de esta rama
 
 En modo HTTP, cada intento explícito consulta `GET /v1/sesiones/desafio` sin token.
 El backend responde con `Cache-Control: no-store`, un `desafioId`, una clave pública RSA
@@ -181,6 +240,17 @@ interrumpen el intento; el frontend no reintenta con contraseña en claro. Un nu
 clic obtiene otro desafío. Se conservan los errores 401/429/503 y el reintento visible.
 No se guarda la contraseña en sesión ni se registra en consola.
 
+El registro reutiliza esa implementación criptográfica, pero solicita
+`GET /v1/usuarios/desafio` y usa `typ: solventa-register+jwe`. El contenido cifrado
+es también `{desafioId, correo, contrasena}` y el cuerpo de `POST /v1/usuarios`
+incluye `credencialCifrada` junto con los datos maestros y la decisión de consentimiento,
+**nunca `contrasena` ni la confirmación de contraseña en claro**.
+El backend separa los desafíos de registro y login, verifica el correo vinculado
+y consume cada desafío una sola vez. BFF e Identidad reciben el JWE del registro.
+El alta no inicia sesión: después del éxito se conserva el login cifrado existente.
+Si el desafío vence, falla el cifrado o el backend rechaza el intento, no se hace
+fallback ni reenvío automático; un nuevo intento explícito obtiene otro desafío.
+
 Necesitas HTTPS y un navegador con Web Crypto en un contexto seguro. Para desarrollo,
 los navegadores permiten `http://localhost` y loopback; un origen HTTP de la red local
 puede bloquear el cifrado. La pantalla indica cómo corregirlo, sin usar aleatoriedad
@@ -189,15 +259,16 @@ navegador, a extensiones con acceso ni a código ejecutado por XSS; siguen siend
 necesarios HTTPS, protección frente a XSS y validación/replay autoritativos en el backend.
 No acredita el transporte entre servicios internos.
 
-El alcance es **solo login web**. Registro continúa enviando `contrasena` mediante
-su contrato existente y exige HTTPS fuera de desarrollo local. No cambian móvil,
+El alcance es **login y registro web** y exige HTTPS fuera de desarrollo local. No cambian móvil,
 refresh, logout, la gestión de sesión ni los adaptadores mock sin HTTP.
+`ENCRYPTED_LOGIN_ENABLED` activa ambos contratos en el backend compatible; con el flag
+activo, el BFF rechaza `contrasena` y cuerpos que mezclen contraseña en claro y JWE.
 Para rollout, prepara primero el backend compatible y coordina la activación del flag
 con la publicación del frontend cifrado: al activarlo, los clientes web antiguos
-dejan de poder iniciar sesión. No publiques este frontend contra el backend legado
+dejan de poder iniciar sesión o registrarse. No publiques este frontend contra el backend legado
 ni lo soluciones con downgrade automático. El pin de CI integrado también necesita
 una revisión backend compatible antes de ejecutar ese workflow.
-API Gateway debe exponer `GET /v1/sesiones/desafio` como ruta pública explícita;
+API Gateway debe exponer `GET /v1/sesiones/desafio` y `GET /v1/usuarios/desafio` como rutas públicas explícitas;
 el proxy autenticado actual no basta. Esta rama no modifica infraestructura.
 
 El backend compatible debe conservar `usuario.rol: "socio"` y `usuario.socios`

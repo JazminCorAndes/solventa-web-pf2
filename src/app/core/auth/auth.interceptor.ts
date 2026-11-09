@@ -58,7 +58,7 @@ function isProtectedApiRequest(request: HttpRequest<unknown>): boolean {
   }
   const path = request.url.slice(base.length).split('?')[0];
   const isPublic =
-    (path === '/v1/sesiones/desafio' && request.method === 'GET') ||
+    (['/v1/sesiones/desafio', '/v1/usuarios/desafio'].includes(path) && request.method === 'GET') ||
     (PUBLIC_PATHS.includes(path) && (path !== '/v1/sesiones' || request.method === 'POST'));
   return !isPublic;
 }

@@ -5,6 +5,15 @@ import { quoteResumeGuard } from './core/quotes/quote-resume.guard';
 
 export const routes: Routes = [
   {
+    path: 'registrarse',
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./features/auth/register-page.component').then(
+        (component) => component.RegisterPageComponent,
+      ),
+    title: 'Registrarse | Solventa',
+  },
+  {
     path: 'acceso-no-disponible',
     loadComponent: () =>
       import('./features/auth/access-unavailable-page.component').then(
@@ -30,6 +39,14 @@ export const routes: Routes = [
         (component) => component.AuthenticatedLayoutComponent,
       ),
     children: [
+      {
+        path: 'consentimiento',
+        loadComponent: () =>
+          import('./features/auth/consent-page.component').then(
+            (component) => component.ConsentPageComponent,
+          ),
+        title: 'Consentimiento | Solventa',
+      },
       {
         path: 'socios/clientes/consultar',
         canActivate: [partnerGuard],
@@ -61,12 +78,36 @@ export const routes: Routes = [
         title: 'Portal de socios | Solventa',
       },
       {
+        path: 'siniestros/reportar',
+        loadComponent: () =>
+          import('./features/claims/claim-report-page.component').then(
+            (component) => component.ClaimReportPageComponent,
+          ),
+        title: 'Reportar siniestro | Solventa',
+      },
+      {
         path: 'dashboard',
         loadComponent: () =>
           import('./features/dashboard/dashboard-page.component').then(
             (component) => component.DashboardPageComponent,
           ),
         title: 'Inicio | Solventa',
+      },
+      {
+        path: 'siniestros/:claimId',
+        loadComponent: () =>
+          import('./features/claims/claim-status-page.component').then(
+            (component) => component.ClaimStatusPageComponent,
+          ),
+        title: 'Estado del siniestro | Solventa',
+      },
+      {
+        path: 'siniestros',
+        loadComponent: () =>
+          import('./features/claims/claim-status-page.component').then(
+            (component) => component.ClaimStatusPageComponent,
+          ),
+        title: 'Siniestros | Solventa',
       },
       {
         path: 'cotizaciones',

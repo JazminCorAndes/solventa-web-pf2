@@ -1,0 +1,183 @@
+<main class="login-page">
+  <mat-card class="login-card registration-card" appearance="raised">
+    <mat-card-header><app-brand /></mat-card-header>
+    <mat-card-content>
+      <h1>{{ 'registration.title' | transloco }}</h1>
+      @if (completed()) {
+        <p role="status">{{ 'registration.success' | transloco }}</p>
+        <a mat-flat-button routerLink="/iniciar-sesion" [queryParams]="{ returnUrl }">
+          {{ 'auth.submit' | transloco }}
+        </a>
+      } @else {
+        <p>{{ 'registration.introduction' | transloco }}</p>
+        @if (errorKey(); as key) {
+          <div #registrationAlert class="auth-alert" role="alert" tabindex="-1">
+            {{ key | transloco }}
+          </div>
+        }
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="registration-fields">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'registration.name' | transloco }}</mat-label>
+              <input
+                matInput
+                id="register-name"
+                formControlName="name"
+                autocomplete="name"
+                maxlength="120"
+              />
+              <mat-error>{{ 'registration.validation.name' | transloco }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'auth.email.label' | transloco }}</mat-label>
+              <input
+                matInput
+                id="register-email"
+                type="email"
+                formControlName="email"
+                autocomplete="email"
+                maxlength="254"
+              />
+              <mat-error>{{ 'auth.validation.emailInvalid' | transloco }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'registration.documentType' | transloco }}</mat-label>
+              <mat-select id="register-document-type" formControlName="documentType">
+                @for (type of documentTypes; track type) {
+                  <mat-option [value]="type">{{
+                    'quoteRequest.documentTypes.' + type | transloco
+                  }}</mat-option>
+                }
+              </mat-select>
+              <mat-error>{{ 'registration.validation.documentType' | transloco }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'registration.documentNumber' | transloco }}</mat-label>
+              <input
+                matInput
+                id="register-document"
+                formControlName="documentNumber"
+                [appInputFilter]="documentNumberFilter(form.controls.documentType.value)"
+                [attr.inputmode]="
+                  form.controls.documentType.value === 'passport' ? 'text' : 'numeric'
+                "
+                maxlength="16"
+              />
+              <mat-error>{{ 'partnerQuote.documentInvalid' | transloco }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'registration.phone' | transloco }}</mat-label>
+              <input
+                matInput
+                id="register-phone"
+                type="tel"
+                formControlName="phone"
+                autocomplete="tel"
+                placeholder="+573001234567"
+                maxlength="13"
+              />
+              <mat-hint>{{ 'partnerQuote.phoneInvalid' | transloco }}</mat-hint>
+              <mat-error>{{ 'partnerQuote.phoneInvalid' | transloco }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'registration.birthDate' | transloco }}</mat-label>
+              <input
+                matInput
+                id="register-birth-date"
+                type="date"
+                formControlName="birthDate"
+                autocomplete="bday"
+              />
+              <mat-error>{{ 'registration.validation.birthDate' | transloco }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'auth.password.label' | transloco }}</mat-label>
+              <input
+                matInput
+                id="register-password"
+                [type]="passwordVisible() ? 'text' : 'password'"
+                formControlName="password"
+                autocomplete="new-password"
+                maxlength="128"
+              />
+              <button
+                mat-button
+                matSuffix
+                type="button"
+                class="password-toggle"
+                (click)="passwordVisible.set(!passwordVisible())"
+                [attr.aria-label]="
+                  (passwordVisible() ? 'auth.password.hide' : 'auth.password.show') | transloco
+                "
+              >
+                {{ (passwordVisible() ? 'auth.password.hide' : 'auth.password.show') | transloco }}
+              </button>
+              <mat-hint>{{ 'registration.validation.password' | transloco }}</mat-hint>
+              <mat-error>{{ 'registration.validation.password' | transloco }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'registration.confirmPassword' | transloco }}</mat-label>
+              <input
+                matInput
+                id="register-confirm-password"
+                [type]="passwordVisible() ? 'text' : 'password'"
+                formControlName="confirmPassword"
+                autocomplete="new-password"
+                maxlength="128"
+                aria-describedby="password-match-error"
+              />
+              <mat-error>{{ 'auth.validation.passwordRequired' | transloco }}</mat-error>
+            </mat-form-field>
+          </div>
+          @if (form.controls.confirmPassword.touched && form.hasError('passwordMismatch')) {
+            <p id="password-match-error" class="validation-error" role="alert">
+              {{ 'registration.validation.passwordMismatch' | transloco }}
+            </p>
+          }
+          <section aria-labelledby="registration-consent-title" class="consent-section">
+            <h2 id="registration-consent-title">{{ 'registration.consent.title' | transloco }}</h2>
+            <p>{{ 'profiling.decision.purpose' | transloco }}</p>
+            <p>{{ 'registration.consent.scope' | transloco }}</p>
+            <p>{{ 'profiling.simulated' | transloco }}</p>
+            <p>
+              <strong>{{ 'registration.consent.duration' | transloco }}</strong>
+            </p>
+            <p>{{ 'registration.consent.optional' | transloco }}</p>
+            <p>{{ 'profiling.decision.terms' | transloco }} 1.0.</p>
+            <mat-radio-group
+              formControlName="authorized"
+              aria-labelledby="registration-consent-title"
+              aria-describedby="registration-consent-error"
+            >
+              <mat-radio-button [value]="true">{{
+                'registration.consent.authorize' | transloco
+              }}</mat-radio-button>
+              <mat-radio-button [value]="false">{{
+                'registration.consent.decline' | transloco
+              }}</mat-radio-button>
+            </mat-radio-group>
+            @if (form.controls.authorized.touched && form.controls.authorized.invalid) {
+              <p id="registration-consent-error" class="validation-error" role="alert">
+                {{ 'registration.validation.consent' | transloco }}
+              </p>
+            }
+          </section>
+          <button mat-flat-button type="submit" class="submit-button" [disabled]="loading()">
+            @if (loading()) {
+              <mat-spinner diameter="20" aria-hidden="true" />
+            }
+            {{ (loading() ? 'registration.processing' : 'registration.submit') | transloco }}
+          </button>
+        </form>
+      }
+    </mat-card-content>
+    @if (!completed()) {
+      <mat-card-footer>
+        <span>{{ 'registration.haveAccount' | transloco }}</span>
+        <a class="pending-link" routerLink="/iniciar-sesion" [queryParams]="{ returnUrl }">{{
+          'auth.submit' | transloco
+        }}</a>
+      </mat-card-footer>
+    }
+  </mat-card>
+</main>

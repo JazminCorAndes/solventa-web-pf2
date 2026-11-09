@@ -83,7 +83,9 @@
 
     <mat-card-footer>
       <span>{{ 'auth.noAccount' | transloco }}</span>
-      <span class="pending-link" aria-disabled="true">{{ 'auth.contact' | transloco }}</span>
+      <a class="pending-link" routerLink="/registrarse" [queryParams]="{ returnUrl }">{{
+        'registration.title' | transloco
+      }}</a>
     </mat-card-footer>
   </mat-card>
 </main>
