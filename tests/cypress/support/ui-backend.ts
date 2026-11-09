@@ -23,7 +23,7 @@ export const emptyDashboard = {
   polizas: [],
   notificaciones: { disponibilidad: 'no_implementado' },
 };
-export const quoteId = 'AQT-CYPRESS-UI';
+export const quoteId = 'AQT-2026-CYPRESSUI';
 export const consent = (): ProfilingConsent => ({
   consentimientoId: 'consent-ui',
   clienteId: syntheticUser.id,
