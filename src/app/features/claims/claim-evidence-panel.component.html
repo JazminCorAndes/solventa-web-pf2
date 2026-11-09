@@ -1,0 +1,133 @@
+<mat-card appearance="raised" data-testid="claim-evidence-panel" [attr.aria-busy]="evidence.busy()">
+  <mat-card-header>
+    <mat-card-title>{{ 'claimEvidence.title' | transloco }}</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <p>{{ 'claimEvidence.subtitle' | transloco }}</p>
+    <button
+      mat-stroked-button
+      type="button"
+      (click)="evidence.load()"
+      [disabled]="evidence.busy()"
+      data-testid="evidence-load"
+    >
+      {{ 'claimEvidence.refresh' | transloco }}
+    </button>
+    @if (evidence.errorKey(); as errorKey) {
+      <p role="alert" data-testid="evidence-error">{{ errorKey | transloco }}</p>
+    }
+    @if (evidence.busy()) {
+      <p role="status">{{ 'claimEvidence.working' | transloco }}</p>
+    }
+    @if (evidence.policy(); as policy) {
+      <p>
+        {{
+          'claimEvidence.limits'
+            | transloco: { count: policy.maxCantidad, seconds: policy.maxVideoSeconds }
+        }}
+      </p>
+      <ul>
+        @for (format of policy.formatos; track format.mimeType) {
+          <li>
+            {{ format.mimeType }}: {{ format.maxBytes }} {{ 'claimEvidence.bytes' | transloco }}
+          </li>
+        }
+      </ul>
+      @if (evidence.needsReselection()) {
+        <p role="status">{{ 'claimEvidence.reselect' | transloco }}</p>
+      }
+      <p>{{ 'claimEvidence.removeHelp' | transloco }}</p>
+      <label>
+        {{ 'claimEvidence.select' | transloco }}
+        <input
+          type="file"
+          multiple
+          [accept]="accept()"
+          [disabled]="evidence.busy()"
+          (change)="select($event)"
+          data-testid="evidence-files"
+        />
+      </label>
+      <ul>
+        @for (entry of evidence.restored(); track entry.key) {
+          <li data-testid="evidence-restored">
+            {{ entry.body.mimeType }} · {{ entry.body.tamanoBytes }}
+            {{ 'claimEvidence.bytes' | transloco }}
+            @if (evidence.isRejected(entry.key)) {
+              <p role="alert">{{ 'claimEvidence.errors.rejected' | transloco }}</p>
+            }
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="evidence.busy()"
+              (click)="evidence.remove(entry.key)"
+              data-testid="evidence-remove"
+            >
+              {{ 'claimEvidence.remove' | transloco }}
+            </button>
+          </li>
+        }
+        @for (file of evidence.files(); track file.key) {
+          <li data-testid="evidence-file">
+            <strong>{{ file.file.name }}</strong>
+            <span>{{ 'claimEvidence.states.' + file.state | transloco }}</span>
+            <progress
+              [value]="file.offset"
+              [max]="file.file.size"
+              [attr.aria-label]="file.file.name"
+            ></progress>
+            <span aria-live="polite"
+              >{{ file.offset }} / {{ file.file.size }}
+              {{ 'claimEvidence.bytes' | transloco }}</span
+            >
+            @if (file.errorKey; as fileError) {
+              <p role="alert">{{ fileError | transloco }}</p>
+            }
+            @if (file.state !== 'confirmed') {
+              @if (!evidence.isRejected(file.key)) {
+                <button
+                  mat-flat-button
+                  type="button"
+                  [disabled]="evidence.busy()"
+                  (click)="evidence.upload(file.key)"
+                  data-testid="evidence-upload"
+                >
+                  {{
+                    (file.state === 'error' ? 'common.retry' : 'claimEvidence.upload') | transloco
+                  }}
+                </button>
+              }
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="evidence.busy()"
+                (click)="evidence.remove(file.key)"
+                data-testid="evidence-remove"
+              >
+                {{ 'claimEvidence.remove' | transloco }}
+              </button>
+            }
+          </li>
+        }
+      </ul>
+      <h3>{{ 'claimEvidence.confirmed' | transloco }}</h3>
+      @if (evidence.evidences().length === 0) {
+        <p>{{ 'claimEvidence.empty' | transloco }}</p>
+      }
+      @for (item of evidence.evidences(); track item.id) {
+        <p>
+          {{ item.mimeType }} · {{ item.tamanoBytes }} {{ 'claimEvidence.bytes' | transloco }}
+          <button
+            mat-button
+            type="button"
+            (click)="download(item)"
+            [disabled]="evidence.busy()"
+            data-testid="evidence-download"
+          >
+            {{ 'claimEvidence.download' | transloco }}
+          </button>
+        </p>
+      }
+    }
+  </mat-card-content>
+</mat-card>

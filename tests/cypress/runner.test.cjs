@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
-const { localUrl, selectedSpec, hu44Fixture, main } = require('./run.cjs');
+const { localUrl, selectedSpec, hu44Fixture, evidenceFixture, main } = require('./run.cjs');
 const config = require('./cypress.config.cjs');
 const fs = require('node:fs');
 
@@ -552,6 +552,12 @@ test('selecciona solo un spec sin ampliar su alcance ni mezclar suites', () => {
   );
   assert.throws(() => selectedSpec('controlled'), /exige seleccionar/);
   assert.throws(() => selectedSpec('controlled', 'catalog.cy.ts'), /exige seleccionar/);
+  assert.equal(
+    selectedSpec('evidence', 'claim-evidence.cy.ts'),
+    'tests/cypress/evidence/claim-evidence.cy.ts',
+  );
+  assert.throws(() => selectedSpec('evidence'), /exige seleccionar/);
+  assert.throws(() => selectedSpec('evidence', 'catalog.cy.ts'), /exige seleccionar/);
   for (const file of [
     '',
     '*.cy.ts',
@@ -563,6 +569,55 @@ test('selecciona solo un spec sin ampliar su alcance ni mezclar suites', () => {
     assert.throws(() => selectedSpec('integrated', file), /un solo archivo/);
   }
   assert.throws(() => selectedSpec('../ui', 'catalog.cy.ts'), /ui\|integrated/);
+});
+
+test('evidencias exige fixture privado y backend loopback explícito, sin filtrar datos en errores', (t) => {
+  const { tmpdir } = require('node:os');
+  const keys = [
+    'CYPRESS_DISPOSABLE_BACKEND',
+    'CYPRESS_BACKEND_URL',
+    'CYPRESS_EVIDENCE_FIXTURE_FILE',
+  ];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  t.after(() => {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  });
+  const fixture = {
+    webUrl: 'http://127.0.0.1:5000',
+    identityUrl: 'http://127.0.0.1:5002',
+    claimId: '11111111-1111-4111-8111-111111111111',
+    customer: {
+      id: '22222222-2222-4222-8222-222222222222',
+      email: 'synthetic@example.com',
+      password: 'synthetic-only',
+    },
+  };
+  process.env.CYPRESS_DISPOSABLE_BACKEND = '1';
+  process.env.CYPRESS_BACKEND_URL = fixture.webUrl;
+  process.env.CYPRESS_EVIDENCE_FIXTURE_FILE = join(tmpdir(), 'evidence-private.json');
+  t.mock.method(fs, 'readFileSync', () => JSON.stringify(fixture));
+  assert.deepEqual(evidenceFixture(), fixture);
+  process.env.CYPRESS_DISPOSABLE_BACKEND = '0';
+  assert.throws(() => evidenceFixture(), /disposable local backend/);
+  process.env.CYPRESS_DISPOSABLE_BACKEND = '1';
+  process.env.CYPRESS_EVIDENCE_FIXTURE_FILE = join(__dirname, 'fixture.json');
+  assert.throws(() => evidenceFixture(), /outside the repository/);
+  process.env.CYPRESS_EVIDENCE_FIXTURE_FILE = join(tmpdir(), 'evidence-private.json');
+  process.env.CYPRESS_BACKEND_URL = 'https://example.com';
+  assert.throws(() => evidenceFixture(), /local desechable/);
+  process.env.CYPRESS_BACKEND_URL = 'http://127.0.0.1:6000';
+  assert.throws(() => evidenceFixture(), /does not match/);
+  process.env.CYPRESS_BACKEND_URL = fixture.webUrl;
+  fs.readFileSync = t.mock.fn(() => {
+    throw new Error('synthetic-only');
+  });
+  assert.throws(
+    () => evidenceFixture(),
+    /^Error: The private evidence fixture could not be read as JSON\.$/,
+  );
 });
 
 test('HU44 valida procedencia, contrato, huellas y credenciales sin iniciar servicios', (t) => {

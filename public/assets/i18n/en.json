@@ -918,6 +918,41 @@
       "unexpected": "Profiling could not be started. You can retry without creating another operation."
     }
   },
+  "claimEvidence": {
+    "title": "Claim evidence",
+    "subtitle": "Attach files to your authorized claim. Only server confirmation establishes evidence; partial chunks are not evidence.",
+    "refresh": "Load evidence and limits",
+    "working": "Processing evidence…",
+    "limits": "Up to {{count}} files per claim. Videos must not exceed {{seconds}} seconds.",
+    "bytes": "bytes",
+    "select": "Select files",
+    "upload": "Attach",
+    "remove": "Remove file",
+    "removeHelp": "You can remove unsent or rejected selections. If the upload may have reached the server, we verify and cancel only pending uploads before releasing the attempt. Confirmed evidence is not deleted.",
+    "confirmed": "Confirmed evidence",
+    "empty": "No confirmed evidence.",
+    "download": "Download private file",
+    "reselect": "This session has pending uploads. Select the original files again to recover the same upload without duplicating it.",
+    "states": {
+      "selected": "Ready to attach",
+      "uploading": "Uploading; awaiting confirmation",
+      "confirmed": "Confirmed by the server",
+      "error": "Unconfirmed; you can retry"
+    },
+    "errors": {
+      "format": "The current policy does not allow this format.",
+      "size": "The file is empty or exceeds the size allowed for its format.",
+      "duration": "The video exceeds the allowed duration.",
+      "video": "The MP4 video duration could not be verified.",
+      "count": "The selection exceeds the allowed count, including pending uploads.",
+      "duplicate": "This file is already selected or confirmed for this claim.",
+      "cancelled": "This upload was cancelled on the server and cannot continue.",
+      "confirmed": "The server already confirmed this evidence. It was not deleted; you can download it from the list.",
+      "rejected": "The server definitively rejected starting this upload. Remove the selection to choose another file.",
+      "access": "Access to this evidence could not be authorized. Check your session and claim.",
+      "unavailable": "The operation could not be completed or verified. The selection and original key are retained for retry; evidence is not established without confirmation."
+    }
+  },
   "claimStatus": {
     "eyebrow": "Tracking",
     "title": "My claim status",

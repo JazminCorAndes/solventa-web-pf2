@@ -25,6 +25,62 @@ describe('HttpQuoteRequestGateway', () => {
 
   afterEach(() => http.verify());
 
+  const receipt = {
+    id: 'AQT-2026-ABCDEF1234',
+    productoId: 'automotive',
+    tipoCliente: 'persona_natural',
+    tipoDocumento: 'cc',
+    identificacion: '1023456789',
+    datosProducto: { vehiclePlate: 'ABC123' },
+    correo: 'cliente@solventa.co',
+    telefono: '+573001234567',
+    estado: 'recibida',
+    creadaEn: '2026-10-11T18:00:00Z',
+  };
+
+  it.each([
+    {},
+    null,
+    { ...receipt, id: '' },
+    { ...receipt, id: 'synthetic-audit' },
+    { ...receipt, estado: 'rechazada' },
+    { ...receipt, estado: 'calculada' },
+    { ...receipt, estado: 'fallida' },
+    { ...receipt, estado: 'sin_ofertas' },
+    { ...receipt, productoId: 'travel' },
+    { ...receipt, datosProducto: { vehiclePlate: 'XYZ999' } },
+    { ...receipt, datosProducto: {} },
+    { ...receipt, datosProducto: { vehiclePlate: 'ABC123', extra: 'ajeno' } },
+    { ...receipt, tipoCliente: 'empresa' },
+    { ...receipt, tipoDocumento: 'inventado' },
+    { ...receipt, creadaEn: 'no-es-fecha' },
+    { ...receipt, correo: undefined },
+  ])('rechaza un recibo vacío, inválido o ajeno con HTTP 200 %#', async (body) => {
+    const result = firstValueFrom(
+      gateway.submitRequest({ productId: 'automotive', productData: { vehiclePlate: 'ABC123' } }),
+    );
+    const assertion = expect(result).rejects.toBeInstanceOf(QuoteRequestUnavailableError);
+    http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion`).flush(body);
+    await assertion;
+  });
+
+  it('rechaza una solicitud recuperada con identificador ajeno', async () => {
+    const result = firstValueFrom(gateway.loadRequest('otra-solicitud'));
+    const assertion = expect(result).rejects.toBeInstanceOf(QuoteRequestUnavailableError);
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion/otra-solicitud`)
+      .flush(receipt);
+    await assertion;
+  });
+
+  it('acepta únicamente el recibo autoritativo recibida del productor real', async () => {
+    const result = firstValueFrom(
+      gateway.submitRequest({ productId: 'automotive', productData: { vehiclePlate: 'ABC123' } }),
+    );
+    http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion`).flush(receipt);
+    await expect(result).resolves.toMatchObject({ status: 'received' });
+  });
+
   it.each([
     [403, 'consentimiento_ausente'],
     [403, 'consentimiento_no_vigente'],
@@ -284,7 +340,7 @@ describe('HttpQuoteRequestGateway', () => {
     expect(request.request.body).toEqual({ productoId: productId, datosProducto: productData });
     expect(request.request.headers.get('Idempotency-Key')).toBeTruthy();
     request.flush({
-      id: 'cotizacion-prueba',
+      id: 'AQT-2026-ABCDEF1234',
       productoId: productId,
       datosProducto: productData,
       tipoCliente: 'persona_natural',

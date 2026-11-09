@@ -65,7 +65,10 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     render();
   }
 
-  beforeEach(() => user.set(TEST_USER));
+  beforeEach(() => {
+    sessionStorage.clear();
+    user.set(TEST_USER);
+  });
 
   afterEach(() => {
     http.verify();
@@ -93,7 +96,144 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     ]);
     expect(history[2].classList).toContain('current');
     expect(text()).toContain(es.claimStatus.types.asistido);
+    expect(find('[data-testid="claim-evidence-panel"]')).not.toBeNull();
+    expect(find('[data-testid="evidence-files"]')).toBeNull();
   });
+
+  it('adjunta evidencia desde el detalle autorizado y muestra solo éxito confirmado', async () => {
+    await setup(CLAIM_ID);
+    http.expectOne(URL).flush(CLAIM_STATUS_RESPONSE);
+    render();
+    const base = `${environment.apiBaseUrl}/v1/siniestros/${CLAIM_ID}`;
+    const uploadId = '22222222-2222-4222-8222-222222222222';
+    const evidenceId = '33333333-3333-4333-8333-333333333333';
+    find('[data-testid="evidence-load"]')?.click();
+    http.expectOne(`${environment.apiBaseUrl}/v1/siniestros/configuracion-evidencias`).flush({
+      maxCantidad: 1,
+      maxChunkBytes: 2,
+      maxVideoSeconds: 120,
+      formatos: [{ mimeType: 'image/png', maxBytes: 2 }],
+    });
+    http.expectOne(`${base}/evidencias`).flush({ evidencias: [] });
+    await fixture.whenStable();
+    render();
+    const input = find('[data-testid="evidence-files"]') as HTMLInputElement;
+    expect(input.accept).toBe('image/png');
+    const file = new File([new Uint8Array([1, 2])], 'photo.png', { type: 'image/png' });
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: async () => new Uint8Array([1, 2]).buffer,
+    });
+    Object.defineProperty(input, 'files', { value: [file] });
+    input.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => {
+      render();
+      expect(input.disabled).toBe(false);
+    });
+    expect(text()).toContain('photo.png');
+    expect(text()).toContain(es.claimEvidence.states.selected);
+    find('[data-testid="evidence-upload"]')?.click();
+    const start = http.expectOne(`${base}/cargas`);
+    const body = start.request.body;
+    const receipt = {
+      ...body,
+      id: uploadId,
+      siniestroId: CLAIM_ID,
+      estado: 'pendiente',
+      offset: 0,
+      evidenciaId: null,
+    };
+    start.flush(receipt);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne(`${base}/cargas/${uploadId}`).flush(receipt);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne(`${base}/cargas/${uploadId}/contenido`).flush({ ...receipt, offset: 2 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    render();
+    expect(text()).toContain(es.claimEvidence.states.uploading);
+    expect(text()).not.toContain(es.claimEvidence.states.confirmed);
+    http.expectOne(`${base}/cargas/${uploadId}/confirmacion`).flush({
+      ...receipt,
+      offset: 2,
+      estado: 'confirmada',
+      evidenciaId: evidenceId,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.expectOne(`${base}/evidencias`).flush({
+      evidencias: [
+        { ...body, id: evidenceId, siniestroId: CLAIM_ID, creadaEn: '2026-11-08T10:00:00Z' },
+      ],
+    });
+    await fixture.whenStable();
+    render();
+    expect(text()).toContain(es.claimEvidence.states.confirmed);
+    expect(find('[data-testid="evidence-download"]')).not.toBeNull();
+    expect(find('[data-testid="evidence-upload"]')).toBeNull();
+  });
+
+  it.each([false, true])(
+    'permite retirar POST422 y reemplazar desde el panel; recarga=%s',
+    async (reload) => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      await setup(CLAIM_ID);
+      http.expectOne(URL).flush(CLAIM_STATUS_RESPONSE);
+      render();
+      const base = `${environment.apiBaseUrl}/v1/siniestros`;
+      const loadPanel = async () => {
+        find('[data-testid="evidence-load"]')?.click();
+        http.expectOne(`${base}/configuracion-evidencias`).flush({
+          maxCantidad: 1,
+          maxChunkBytes: 2,
+          maxVideoSeconds: 120,
+          formatos: [{ mimeType: 'image/png', maxBytes: 2 }],
+        });
+        http.expectOne(`${base}/${CLAIM_ID}/evidencias`).flush({ evidencias: [] });
+        await fixture.whenStable();
+        render();
+      };
+      const choose = async (name: string, bytes: number[]) => {
+        const input = find('[data-testid="evidence-files"]') as HTMLInputElement;
+        const file = new File([new Uint8Array(bytes)], name, { type: 'image/png' });
+        Object.defineProperty(file, 'arrayBuffer', {
+          value: async () => new Uint8Array(bytes).buffer,
+        });
+        Object.defineProperty(input, 'files', { value: [file], configurable: true });
+        input.dispatchEvent(new Event('change'));
+        await vi.waitFor(() => {
+          render();
+          expect(input.disabled).toBe(false);
+        });
+      };
+      await loadPanel();
+      await choose('A.png', [1]);
+      find('[data-testid="evidence-upload"]')?.click();
+      http
+        .expectOne(`${base}/${CLAIM_ID}/cargas`)
+        .flush({ code: 'ubicacion_no_autorizada' }, { status: 422, statusText: 'Error' });
+      await fixture.whenStable();
+      render();
+      expect(find('[data-testid="evidence-error"]')).not.toBeNull();
+      expect(find('[data-testid="evidence-remove"]')).not.toBeNull();
+      if (reload) {
+        fixture.destroy();
+        fixture = TestBed.createComponent(ClaimStatusPageComponent);
+        render();
+        http.expectOne(URL).flush(CLAIM_STATUS_RESPONSE);
+        render();
+        await loadPanel();
+        expect(find('[data-testid="evidence-restored"]')).not.toBeNull();
+      }
+      find('[data-testid="evidence-remove"]')?.click();
+      await fixture.whenStable();
+      render();
+      expect(find('[data-testid="evidence-file"]')).toBeNull();
+      expect(find('[data-testid="evidence-restored"]')).toBeNull();
+      await choose('B.png', [2]);
+      expect(find('[data-testid="evidence-file"]')?.textContent).toContain('B.png');
+      expect(find('[data-testid="evidence-error"]')).toBeNull();
+      expect(find('[data-testid="evidence-upload"]')).not.toBeNull();
+      http.expectNone(`${base}/${CLAIM_ID}/cargas`);
+    },
+  );
 
   it('shows unclassified and preserves access to the report form', async () => {
     await setup(CLAIM_ID);
@@ -141,6 +281,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
 
     expect(find('[data-testid="claim-not-found"]')?.textContent).toContain(es.claimStatus.notFound);
     expect(find('[data-testid="claim-summary"]')).toBeNull();
+    expect(find('[data-testid="claim-evidence-panel"]')).toBeNull();
   });
 
   it('treats a response outside the contract as an error, not as a valid state', async () => {

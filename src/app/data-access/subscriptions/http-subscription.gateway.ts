@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SubscriptionGateway } from '../../core/subscriptions/subscription.gateway';
+import { offerUnavailableError } from '../../core/offers/offer.errors';
 import {
   IssuanceSagaStatus,
   SubscriptionRecord,
@@ -47,7 +48,10 @@ export class HttpSubscriptionGateway implements SubscriptionGateway {
           headers: new HttpHeaders({ 'Idempotency-Key': crypto.randomUUID() }),
         },
       )
-      .pipe(map(toSubscription));
+      .pipe(
+        map(toSubscription),
+        catchError((error: unknown) => throwError(() => offerUnavailableError(error) ?? error)),
+      );
   }
 
   load(quoteId: string): Observable<SubscriptionRecord | null> {

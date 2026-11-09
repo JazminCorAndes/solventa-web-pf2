@@ -2,7 +2,11 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { OfferSelectionChangedError, OfferUnavailableError } from '../../core/offers/offer.errors';
+import {
+  offerUnavailableError,
+  OfferSelectionChangedError,
+  OfferUnavailableError,
+} from '../../core/offers/offer.errors';
 import { OfferGateway } from '../../core/offers/offer.gateway';
 import {
   InsuranceOffer,
@@ -292,9 +296,7 @@ function selectionError(error: unknown): unknown {
   ) {
     return new OfferSelectionChangedError();
   }
-  return error.status === 422 && body.code === 'oferta_no_disponible'
-    ? new OfferUnavailableError()
-    : error;
+  return offerUnavailableError(error) ?? error;
 }
 
 function toPremium(response: PremiumResponse): {

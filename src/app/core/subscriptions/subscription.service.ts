@@ -19,6 +19,8 @@ export class SubscriptionService {
     const quoteId = this.requiredQuoteId();
     this.loading.set(true);
     this.error.set(false);
+    this.subscription.set(null);
+    this.storage.clear();
     return this.gateway.start(quoteId).pipe(
       tap((subscription) => this.store(subscription)),
       tap({
