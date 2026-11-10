@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { HttpSubscriptionGateway } from './http-subscription.gateway';
+import { OfferUnavailableError } from '../../core/offers/offer.errors';
 
 const RESPONSE = {
   id: '30000000-0000-4000-8000-000000000001',
@@ -40,6 +41,31 @@ describe('HttpSubscriptionGateway', () => {
   });
 
   afterEach(() => http.verify());
+
+  it('rechaza oferta_no_disponible HTTP 422 sin aprobación ni saga inventadas', async () => {
+    const result = firstValueFrom(gateway.start(RESPONSE.solicitudId));
+    const assertion = expect(result).rejects.toBeInstanceOf(OfferUnavailableError);
+    http
+      .expectOne(
+        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${RESPONSE.solicitudId}/suscripcion`,
+      )
+      .flush({ code: 'oferta_no_disponible' }, { status: 422, statusText: 'Unprocessable Entity' });
+    await assertion;
+  });
+
+  it('conserva otros rechazos 422 para el mapper de perfilamiento existente', async () => {
+    const result = firstValueFrom(gateway.start(RESPONSE.solicitudId));
+    const assertion = expect(result).rejects.toMatchObject({
+      status: 422,
+      error: { code: 'perfil_vencido' },
+    });
+    http
+      .expectOne(
+        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${RESPONSE.solicitudId}/suscripcion`,
+      )
+      .flush({ code: 'perfil_vencido' }, { status: 422, statusText: 'Unprocessable Entity' });
+    await assertion;
+  });
 
   it('starts and maps an approved subscription', async () => {
     const result = firstValueFrom(gateway.start(RESPONSE.solicitudId));

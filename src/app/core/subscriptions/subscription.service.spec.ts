@@ -5,6 +5,7 @@ import { SUBSCRIPTION_GATEWAY } from './subscription.gateway';
 import { IssuanceSagaStatus, SubscriptionRecord, SubscriptionStatus } from './subscription.models';
 import { SubscriptionService } from './subscription.service';
 import { BrowserSubscriptionStorage, SUBSCRIPTION_STORAGE } from './subscription-storage.service';
+import { OfferUnavailableError } from '../offers/offer.errors';
 
 const STORAGE_KEY = 'solventa.subscription';
 const SUBSCRIPTION: SubscriptionRecord = {
@@ -116,6 +117,16 @@ describe('SubscriptionService', () => {
     expect(service.subscription()).toEqual(current);
     expect(service.loading()).toBe(false);
     expect(storage.write).toHaveBeenCalledWith(current);
+  });
+
+  it('elimina aprobación cacheada al rechazar el inicio por una oferta no disponible', async () => {
+    gateway.start.mockReturnValueOnce(throwError(() => new OfferUnavailableError()));
+    await expect(firstValueFrom(service.start())).rejects.toBeInstanceOf(OfferUnavailableError);
+    expect(service.subscription()).toBeNull();
+    expect(service.error()).toBe(true);
+    expect(service.loading()).toBe(false);
+    expect(storage.clear).toHaveBeenCalledOnce();
+    expect(storage.write).not.toHaveBeenCalled();
   });
 
   it('does not preserve cached approval after an error and supports retry', () => {

@@ -171,6 +171,39 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     cy.location('pathname').should('eq', '/app/cotizaciones/ofertas');
   });
 
+  it('rechaza un recibo con ID inválido sin guardar ni navegar y permite reintentar', () => {
+    openQuote(products[0]);
+    fillProduct(products[0]);
+    cy.intercept({ method: 'POST', url: '/api/v1/solicitudes-cotizacion', times: 1 }, (request) => {
+      request.reply({
+        id: 'AQT-CYPRESS-UI',
+        ...request.body,
+        tipoCliente: 'persona_natural',
+        tipoDocumento: 'cc',
+        identificacion: syntheticUser.identificacion,
+        correo: syntheticUser.correo,
+        telefono: syntheticUser.telefono,
+        estado: 'recibida',
+        creadaEn: new Date().toISOString(),
+      });
+    }).as('invalidReceipt');
+    cy.get('button[type=submit]').click();
+    cy.wait('@invalidReceipt').its('response.statusCode').should('eq', 200);
+    cy.contains('[role=alert]', 'No fue posible enviar').should('be.visible');
+    cy.location('pathname').should('eq', '/app/cotizaciones/solicitar');
+    cy.get('#vehicle-plate').should('have.value', products[0].data.vehiclePlate);
+    cy.window().then((win) => {
+      expect(win.sessionStorage.getItem('solventa.quote.request')).to.eq(null);
+    });
+    cy.get('@offers.all').should('have.length', 0);
+    cy.get('button[type=submit]').should('be.enabled').click();
+    cy.wait('@quote').its('response.body.id').should('eq', quoteId);
+    cy.location('pathname').should('eq', '/app/cotizaciones/ofertas');
+    cy.window().then((win) => {
+      expect(JSON.parse(win.sessionStorage.getItem('solventa.quote.request')!).id).to.eq(quoteId);
+    });
+  });
+
   it('exige aceptar condiciones y muestra error si la oferta cambia', () => {
     openQuote(products[0]);
     fillProduct(products[0]);

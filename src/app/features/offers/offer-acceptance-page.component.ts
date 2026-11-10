@@ -61,7 +61,8 @@ export class OfferAcceptancePageComponent implements OnInit, OnDestroy {
   readonly flowInvalidated = computed(
     () =>
       this.errorKey() === 'profiling.errors.expired' ||
-      this.errorKey() === 'profiling.errors.consent',
+      this.errorKey() === 'profiling.errors.consent' ||
+      this.errorKey() === 'acceptance.errors.unavailable',
   );
   readonly request = this.quotes.latestRequest;
   readonly selectedOffer = this.offers.selectedOffer;

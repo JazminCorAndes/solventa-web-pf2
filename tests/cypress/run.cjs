@@ -25,8 +25,11 @@ function localUrl(value) {
 }
 
 function selectedSpec(mode, file) {
-  if (!['ui', 'integrated', 'controlled'].includes(mode))
-    throw new Error('Usa run.cjs ui|integrated|controlled');
+  if (!['ui', 'integrated', 'controlled', 'evidence'].includes(mode))
+    throw new Error('Usa run.cjs ui|integrated|controlled|evidence');
+  if (mode === 'evidence' && file !== 'claim-evidence.cy.ts') {
+    throw new Error('La integración de evidencias exige seleccionar claim-evidence.cy.ts.');
+  }
   if (mode === 'controlled' && file !== 'open-finance-review.cy.ts') {
     throw new Error('La muestra controlada exige seleccionar open-finance-review.cy.ts.');
   }
@@ -157,6 +160,38 @@ function hu44Fixture(includeCredentials = false) {
   return { fixture, readiness, credentials };
 }
 
+function evidenceFixture() {
+  if (process.env.CYPRESS_DISPOSABLE_BACKEND !== '1') {
+    throw new Error('Evidence requires a disposable local backend.');
+  }
+  const file = process.env.CYPRESS_EVIDENCE_FIXTURE_FILE;
+  const root = path.resolve(__dirname, '../..');
+  if (!file || !path.isAbsolute(file) || path.resolve(file).startsWith(`${root}${path.sep}`)) {
+    throw new Error('Evidence requires a private absolute fixture path outside the repository.');
+  }
+  let fixture;
+  try {
+    fixture = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    throw new Error('The private evidence fixture could not be read as JSON.');
+  }
+  const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+  if (
+    !fixture ||
+    localUrl(fixture.webUrl) !== localUrl(process.env.CYPRESS_BACKEND_URL) ||
+    !uuid.test(fixture.claimId) ||
+    !uuid.test(fixture.customer?.id) ||
+    typeof fixture.customer?.email !== 'string' ||
+    typeof fixture.customer?.password !== 'string' ||
+    !fixture.customer.email ||
+    !fixture.customer.password
+  ) {
+    throw new Error('Evidence fixture does not match the local backend and its synthetic actor.');
+  }
+  localUrl(fixture.identityUrl);
+  return fixture;
+}
+
 function angularDiagnostics(server) {
   const limit = 12000;
   let output = '';
@@ -284,12 +319,15 @@ async function execute(runDiagnostics) {
     throw new Error('La muestra controlada requiere un puerto web propio distinto de 4200/4300.');
   }
   if (mode === 'controlled') hu44Fixture(true);
+  if (mode === 'evidence') evidenceFixture();
   if (mode !== 'ui') {
     if (process.env.CYPRESS_DISPOSABLE_BACKEND !== '1') {
       throw new Error('Confirma backend local desechable con CYPRESS_DISPOSABLE_BACKEND=1.');
     }
     await runDiagnostics.advance('backend-preflight');
-    const response = await fetch(`${backend}/v1/productos-seguro`, {
+    const preflight =
+      mode === 'evidence' ? '/v1/siniestros/configuracion-evidencias' : '/v1/productos-seguro';
+    const response = await fetch(`${backend}${preflight}`, {
       signal: AbortSignal.timeout(5000),
     });
     if (mode === 'controlled') {
@@ -397,7 +435,11 @@ async function execute(runDiagnostics) {
     await runDiagnostics.advance('cypress-run');
     const result = await require('cypress').run({
       configFile: 'tests/cypress/cypress.config.cjs',
-      config: { baseUrl, specPattern },
+      config: {
+        baseUrl,
+        specPattern,
+        ...(mode === 'evidence' ? { downloadsFolder: path.join(reports, 'downloads') } : {}),
+      },
       reporterOptions: { mochaFile: path.join(reports, 'results-[hash].xml'), toConsole: false },
       env: { suite: mode },
     });
@@ -420,7 +462,7 @@ async function execute(runDiagnostics) {
   }
 }
 
-module.exports = { localUrl, selectedSpec, hu44Fixture, main };
+module.exports = { localUrl, selectedSpec, hu44Fixture, evidenceFixture, main };
 if (require.main === module) {
   main().catch((error) => {
     console.error(error.message);
