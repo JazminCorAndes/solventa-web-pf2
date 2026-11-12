@@ -37,12 +37,16 @@ export interface PendingEvidence {
 export interface EvidenceFile extends PendingEvidence {
   file: File;
   offset: number;
-  state: 'selected' | 'uploading' | 'confirmed' | 'error';
+  state: 'selected' | 'uploading' | 'verifying' | 'confirmed' | 'error';
   errorKey: string | null;
+  errorParams?: Record<string, string>;
 }
 
 export class EvidenceValidationError extends Error {
-  constructor(readonly key: string) {
+  constructor(
+    readonly key: string,
+    readonly params: Record<string, string> = {},
+  ) {
     super(key);
   }
 }
