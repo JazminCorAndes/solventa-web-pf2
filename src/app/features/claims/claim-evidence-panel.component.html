@@ -1,9 +1,9 @@
-<mat-card appearance="raised" data-testid="claim-evidence-panel" [attr.aria-busy]="evidence.busy()">
-  <mat-card-header>
-    <mat-card-title>{{ 'claimEvidence.title' | transloco }}</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
-    <p>{{ 'claimEvidence.subtitle' | transloco }}</p>
+<section class="evidence-panel" data-testid="claim-evidence-panel" aria-labelledby="evidence-title">
+  <header class="evidence-heading">
+    <div>
+      <h2 id="evidence-title">{{ 'claimEvidence.title' | transloco }}</h2>
+      <p>{{ 'claimEvidence.subtitle' | transloco }}</p>
+    </div>
     <button
       mat-stroked-button
       type="button"
@@ -11,51 +11,83 @@
       [disabled]="evidence.busy()"
       data-testid="evidence-load"
     >
-      {{ 'claimEvidence.refresh' | transloco }}
+      {{ (evidence.policy() ? 'claimEvidence.refresh' : 'claimEvidence.open') | transloco }}
     </button>
-    @if (evidence.errorKey(); as errorKey) {
-      <p role="alert" data-testid="evidence-error">{{ errorKey | transloco }}</p>
-    }
-    @if (evidence.busy()) {
-      <p role="status">{{ 'claimEvidence.working' | transloco }}</p>
-    }
-    @if (evidence.policy(); as policy) {
-      <p>
-        {{
-          'claimEvidence.limits'
-            | transloco: { count: policy.maxCantidad, seconds: policy.maxVideoSeconds }
-        }}
-      </p>
-      <ul>
+  </header>
+
+  @if (generalError(); as errorKey) {
+    <p class="evidence-error" role="alert" id="evidence-input-error" data-testid="evidence-error">
+      @if (evidence.selectionFileName(); as fileName) {
+        <strong class="file-name">{{ fileName }}:</strong>
+      }
+      {{ errorKey | transloco: evidence.errorParams() }}
+    </p>
+  }
+  @if (evidence.busy() && visibleFiles().length === 0) {
+    <p class="working" role="status">
+      <span class="spinner" aria-hidden="true"></span>{{ 'claimEvidence.working' | transloco }}
+    </p>
+  }
+  @if (evidence.policy(); as policy) {
+    <div class="evidence-picker">
+      <div class="picker-heading">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          aria-hidden="true"
+        >
+          <path
+            d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <div>
+          <label for="evidence-files">{{ 'claimEvidence.select' | transloco }}</label>
+          <p id="evidence-limits">
+            {{ 'claimEvidence.limits' | transloco: { count: policy.maxCantidad } }}
+          </p>
+        </div>
+      </div>
+      <ul class="format-limits" id="evidence-formats">
         @for (format of policy.formatos; track format.mimeType) {
           <li>
-            {{ format.mimeType }}: {{ format.maxBytes }} {{ 'claimEvidence.bytes' | transloco }}
+            <strong>{{ formats[format.mimeType].label }}</strong> {{ size(format.maxBytes) }}
+            @if (format.mimeType === 'video/mp4') {
+              · {{ duration() }}
+            }
           </li>
         }
       </ul>
-      @if (evidence.needsReselection()) {
-        <p role="status">{{ 'claimEvidence.reselect' | transloco }}</p>
-      }
-      <p>{{ 'claimEvidence.removeHelp' | transloco }}</p>
-      <label>
-        {{ 'claimEvidence.select' | transloco }}
-        <input
-          type="file"
-          multiple
-          [accept]="accept()"
-          [disabled]="evidence.busy()"
-          (change)="select($event)"
-          data-testid="evidence-files"
-        />
-      </label>
-      <ul>
+      <input
+        id="evidence-files"
+        type="file"
+        multiple
+        [accept]="accept()"
+        [disabled]="evidence.busy()"
+        aria-describedby="evidence-limits evidence-formats"
+        [attr.aria-invalid]="generalError() ? true : null"
+        [attr.aria-errormessage]="generalError() ? 'evidence-input-error' : null"
+        (change)="select($event)"
+        data-testid="evidence-files"
+      />
+    </div>
+    @if (evidence.needsReselection()) {
+      <p class="recovery-note" role="status">{{ 'claimEvidence.reselect' | transloco }}</p>
+    }
+    @if (evidence.restored().length || visibleFiles().length) {
+      <ul class="evidence-list" aria-label="{{ 'claimEvidence.pending' | transloco }}">
         @for (entry of evidence.restored(); track entry.key) {
-          <li data-testid="evidence-restored">
-            {{ entry.body.mimeType }} · {{ entry.body.tamanoBytes }}
-            {{ 'claimEvidence.bytes' | transloco }}
-            @if (evidence.isRejected(entry.key)) {
-              <p role="alert">{{ 'claimEvidence.errors.rejected' | transloco }}</p>
-            }
+          <li class="file-row" data-testid="evidence-restored">
+            <div class="file-info">
+              <strong
+                >{{ formats[entry.body.mimeType].label }} ·
+                {{ size(entry.body.tamanoBytes) }}</strong
+              >
+              <span>{{ 'claimEvidence.reselectShort' | transloco }}</span>
+            </div>
             <button
               mat-stroked-button
               type="button"
@@ -67,67 +99,111 @@
             </button>
           </li>
         }
-        @for (file of evidence.files(); track file.key) {
-          <li data-testid="evidence-file">
-            <strong>{{ file.file.name }}</strong>
-            <span>{{ 'claimEvidence.states.' + file.state | transloco }}</span>
-            <progress
-              [value]="file.offset"
-              [max]="file.file.size"
-              [attr.aria-label]="file.file.name"
-            ></progress>
-            <span aria-live="polite"
-              >{{ file.offset }} / {{ file.file.size }}
-              {{ 'claimEvidence.bytes' | transloco }}</span
-            >
-            @if (file.errorKey; as fileError) {
-              <p role="alert">{{ fileError | transloco }}</p>
-            }
+        @for (file of visibleFiles(); track file.key) {
+          <li
+            class="file-row"
+            [class.file-error]="file.state === 'error'"
+            data-testid="evidence-file"
+          >
+            <div class="file-info">
+              <strong class="file-name">{{ file.file.name }}</strong>
+              <span>{{ formats[file.body.mimeType].label }} · {{ size(file.file.size) }}</span>
+              <span class="file-status" [class.success]="file.state === 'confirmed'" role="status">
+                @if (file.state === 'uploading' || file.state === 'verifying') {
+                  <span class="spinner" aria-hidden="true"></span>
+                }
+                {{ 'claimEvidence.states.' + file.state | transloco }}
+              </span>
+              @if (file.state === 'uploading' || file.state === 'verifying' || file.offset > 0) {
+                <progress
+                  [value]="file.offset"
+                  [max]="file.file.size"
+                  [attr.aria-label]="file.file.name"
+                  [attr.aria-valuetext]="size(file.offset) + ' / ' + size(file.file.size)"
+                ></progress>
+                <span class="file-progress"
+                  >{{ size(file.offset) }} / {{ size(file.file.size) }}</span
+                >
+              }
+              @if (file.errorKey; as fileError) {
+                <p class="evidence-error" role="alert" data-testid="evidence-file-error">
+                  {{ fileError | transloco: file.errorParams ?? {} }}
+                </p>
+              }
+            </div>
             @if (file.state !== 'confirmed') {
-              @if (!evidence.isRejected(file.key)) {
+              <div class="file-actions">
+                @if (
+                  !evidence.isRejected(file.key) && !replacementErrors.has(file.errorKey ?? '')
+                ) {
+                  <button
+                    mat-flat-button
+                    type="button"
+                    [disabled]="evidence.busy()"
+                    (click)="evidence.upload(file.key)"
+                    data-testid="evidence-upload"
+                  >
+                    {{
+                      (file.state === 'error' ? 'common.retry' : 'claimEvidence.upload') | transloco
+                    }}
+                  </button>
+                }
                 <button
-                  mat-flat-button
+                  mat-button
                   type="button"
                   [disabled]="evidence.busy()"
-                  (click)="evidence.upload(file.key)"
-                  data-testid="evidence-upload"
+                  (click)="evidence.remove(file.key)"
+                  data-testid="evidence-remove"
                 >
-                  {{
-                    (file.state === 'error' ? 'common.retry' : 'claimEvidence.upload') | transloco
-                  }}
+                  {{ 'claimEvidence.remove' | transloco }}
                 </button>
-              }
-              <button
-                mat-stroked-button
-                type="button"
-                [disabled]="evidence.busy()"
-                (click)="evidence.remove(file.key)"
-                data-testid="evidence-remove"
-              >
-                {{ 'claimEvidence.remove' | transloco }}
-              </button>
+              </div>
             }
           </li>
         }
       </ul>
-      <h3>{{ 'claimEvidence.confirmed' | transloco }}</h3>
-      @if (evidence.evidences().length === 0) {
-        <p>{{ 'claimEvidence.empty' | transloco }}</p>
-      }
-      @for (item of evidence.evidences(); track item.id) {
-        <p>
-          {{ item.mimeType }} · {{ item.tamanoBytes }} {{ 'claimEvidence.bytes' | transloco }}
-          <button
-            mat-button
-            type="button"
-            (click)="download(item)"
-            [disabled]="evidence.busy()"
-            data-testid="evidence-download"
-          >
-            {{ 'claimEvidence.download' | transloco }}
-          </button>
-        </p>
-      }
     }
-  </mat-card-content>
-</mat-card>
+    <div class="confirmed-heading">
+      <h3>{{ 'claimEvidence.confirmed' | transloco }}</h3>
+      <span>{{ evidence.evidences().length }} / {{ policy.maxCantidad }}</span>
+    </div>
+    @if (evidence.evidences().length === 0) {
+      <p class="empty-evidence">{{ 'claimEvidence.empty' | transloco }}</p>
+    } @else {
+      <ul class="evidence-list">
+        @for (item of evidence.evidences(); track item.id; let index = $index) {
+          <li class="file-row confirmed-row">
+            <div class="file-info">
+              <strong
+                >{{ 'claimEvidence.document' | transloco: { number: index + 1 } }} ·
+                {{ formats[item.mimeType].label }}</strong
+              >
+              <span
+                >{{ size(item.tamanoBytes) }} ·
+                <span class="success">{{
+                  'claimEvidence.states.confirmed' | transloco
+                }}</span></span
+              >
+            </div>
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="download(item)"
+              [disabled]="evidence.busy()"
+              [attr.aria-label]="
+                ('claimEvidence.download' | transloco) +
+                ' ' +
+                ('claimEvidence.document' | transloco: { number: index + 1 }) +
+                ' ' +
+                formats[item.mimeType].label
+              "
+              data-testid="evidence-download"
+            >
+              {{ 'claimEvidence.download' | transloco }}
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

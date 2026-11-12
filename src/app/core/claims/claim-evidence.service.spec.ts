@@ -435,7 +435,7 @@ describe('ClaimEvidenceService with HTTP and retry storage', () => {
     expect(last.request.headers.get('Upload-Offset')).toBe('2');
     last.flush(receipt(4));
     await tick();
-    expect(service.files()[0].state).toBe('uploading');
+    expect(service.files()[0].state).toBe('verifying');
     http
       .expectOne(`${base}/${claimId}/cargas/${uploadId}/confirmacion`)
       .flush(receipt(4, 'confirmada', evidenceId));
@@ -459,7 +459,7 @@ describe('ClaimEvidenceService with HTTP and retry storage', () => {
   });
 
   it.each([
-    [() => file([], 'image/png'), 'size'],
+    [() => file([], 'image/png'), 'empty'],
     [() => file([1, 2, 3, 4, 5]), 'size'],
     [() => file([1], 'text/html'), 'format'],
   ])('rechaza archivos fuera de política antes de crear carga %#', async (create, error) => {
@@ -548,6 +548,41 @@ describe('ClaimEvidenceService with HTTP and retry storage', () => {
     expect(service.files()[0].offset).toBe(0);
     expect(service.evidences()).toEqual([]);
     expect(TestBed.inject(ClaimEvidenceStorage).read(TEST_USER.id, claimId)).toHaveLength(1);
+  });
+
+  it.each([
+    ['formato_invalido', 'unreadable'],
+    ['ubicacion_no_autorizada', 'location'],
+    ['integridad_invalida', 'integrity'],
+    ['video_fuera_limite', 'duration'],
+    ['carga_incompleta', 'incomplete'],
+    ['limite_cantidad', 'count'],
+    ['servicio_no_disponible', 'service'],
+    ['unknown_code', 'unavailable'],
+  ])('explica %s sin acreditar éxito ni liberar reserva pendiente', async (code, key) => {
+    await ready();
+    await service.select([file()]);
+    const selected = service.files()[0];
+    const [result] = await begin(4);
+    expect(service.files()[0].state).toBe('verifying');
+    http
+      .expectOne(`${base}/${claimId}/cargas/${uploadId}/confirmacion`)
+      .flush({ code, detail: '<script>untrusted</script>' }, { status: 422, statusText: 'Error' });
+    await tick();
+    http.expectOne(`${base}/${claimId}/cargas/${uploadId}`).flush(receipt(0));
+    await result;
+    expect(service.files()[0]).toMatchObject({
+      key: selected.key,
+      file: selected.file,
+      state: 'error',
+      offset: 0,
+      errorKey: `claimEvidence.errors.${key}`,
+      errorParams: { format: 'PNG' },
+    });
+    expect(stored()).toHaveLength(1);
+    expect(stored()[0]).toMatchObject({ key: selected.key, disposition: 'remote' });
+    expect(service.evidences()).toEqual([]);
+    expect(service.errorKey()).not.toContain('untrusted');
   });
 
   it('recupera UUID y hash al recargar y volver a seleccionar el archivo original', async () => {
@@ -660,9 +695,7 @@ describe('ClaimEvidenceService with HTTP and retry storage', () => {
       expect(service.errorKey()).toBe(
         [403, 404].includes(status)
           ? 'claimEvidence.errors.access'
-          : status === 422
-            ? 'claimEvidence.errors.rejected'
-            : 'claimEvidence.errors.unavailable',
+          : 'claimEvidence.errors.unavailable',
       );
     },
   );

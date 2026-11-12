@@ -118,7 +118,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     await fixture.whenStable();
     render();
     const input = find('[data-testid="evidence-files"]') as HTMLInputElement;
-    expect(input.accept).toBe('image/png');
+    expect(input.accept).toBe('image/png,.png');
     const file = new File([new Uint8Array([1, 2])], 'photo.png', { type: 'image/png' });
     Object.defineProperty(file, 'arrayBuffer', {
       value: async () => new Uint8Array([1, 2]).buffer,
@@ -149,7 +149,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     http.expectOne(`${base}/cargas/${uploadId}/contenido`).flush({ ...receipt, offset: 2 });
     await new Promise((resolve) => setTimeout(resolve, 0));
     render();
-    expect(text()).toContain(es.claimEvidence.states.uploading);
+    expect(text()).toContain(es.claimEvidence.states.verifying);
     expect(text()).not.toContain(es.claimEvidence.states.confirmed);
     http.expectOne(`${base}/cargas/${uploadId}/confirmacion`).flush({
       ...receipt,
@@ -167,6 +167,9 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     render();
     expect(text()).toContain(es.claimEvidence.states.confirmed);
     expect(find('[data-testid="evidence-download"]')).not.toBeNull();
+    expect(find('[data-testid="evidence-download"]')?.getAttribute('aria-label')).toBe(
+      'Descargar Archivo 1 PNG',
+    );
     expect(find('[data-testid="evidence-upload"]')).toBeNull();
   });
 
@@ -211,7 +214,8 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
         .flush({ code: 'ubicacion_no_autorizada' }, { status: 422, statusText: 'Error' });
       await fixture.whenStable();
       render();
-      expect(find('[data-testid="evidence-error"]')).not.toBeNull();
+      expect(find('[data-testid="evidence-file-error"]')).not.toBeNull();
+      expect(find('[data-testid="evidence-error"]')).toBeNull();
       expect(find('[data-testid="evidence-remove"]')).not.toBeNull();
       if (reload) {
         fixture.destroy();
@@ -234,6 +238,58 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
       http.expectNone(`${base}/${CLAIM_ID}/cargas`);
     },
   );
+
+  it('identifica la selección inválida aunque una carga anterior tenga el mismo error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await setup(CLAIM_ID);
+    http.expectOne(URL).flush(CLAIM_STATUS_RESPONSE);
+    render();
+    const base = `${environment.apiBaseUrl}/v1/siniestros`;
+    find('[data-testid="evidence-load"]')?.click();
+    http.expectOne(`${base}/configuracion-evidencias`).flush({
+      maxCantidad: 5,
+      maxChunkBytes: 2,
+      maxVideoSeconds: 120,
+      formatos: [{ mimeType: 'image/png', maxBytes: 2 }],
+    });
+    http.expectOne(`${base}/${CLAIM_ID}/evidencias`).flush({ evidencias: [] });
+    await fixture.whenStable();
+    render();
+    const input = find('[data-testid="evidence-files"]') as HTMLInputElement;
+    const choose = async (files: File[]) => {
+      Object.defineProperty(input, 'files', { value: files, configurable: true });
+      input.dispatchEvent(new Event('change'));
+      await vi.waitFor(() => {
+        render();
+        expect(input.disabled).toBe(false);
+      });
+    };
+    const png = (name: string, value: number) => {
+      const file = new File([new Uint8Array([value])], name, { type: 'image/png' });
+      Object.defineProperty(file, 'arrayBuffer', {
+        value: async () => new Uint8Array([value]).buffer,
+      });
+      return file;
+    };
+    await choose([png('A.png', 1)]);
+    find('[data-testid="evidence-upload"]')?.click();
+    http
+      .expectOne(`${base}/${CLAIM_ID}/cargas`)
+      .flush(
+        { code: 'formato_no_permitido' },
+        { status: 415, statusText: 'Unsupported Media Type' },
+      );
+    await fixture.whenStable();
+    render();
+    expect(find('[data-testid="evidence-file-error"]')).not.toBeNull();
+    expect(find('[data-testid="evidence-error"]')).toBeNull();
+    await choose([png('C.png', 2), new File(['invalid'], 'B.txt', { type: 'text/plain' })]);
+    const error = find('[data-testid="evidence-error"]');
+    expect(error?.textContent).toContain('B.txt');
+    expect(error?.textContent).toContain(es.claimEvidence.errors.format);
+    expect(root().querySelectorAll('[data-testid="evidence-file"]')).toHaveLength(1);
+    expect(text()).not.toContain('C.png');
+  });
 
   it('shows unclassified and preserves access to the report form', async () => {
     await setup(CLAIM_ID);

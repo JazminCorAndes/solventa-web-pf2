@@ -1,7 +1,6 @@
 <section class="claim-status">
   <header class="claim-heading">
     <div>
-      <span class="eyebrow">{{ 'claimStatus.eyebrow' | transloco }}</span>
       <h1>{{ 'claimStatus.title' | transloco }}</h1>
       <p>{{ 'claimStatus.subtitle' | transloco }}</p>
       <a mat-button routerLink="/app/siniestros/reportar">{{ 'claims.title' | transloco }}</a>
@@ -37,7 +36,7 @@
         @if (claims.claim(); as claim) {
           <mat-card appearance="raised" class="claim-summary" data-testid="claim-summary">
             <mat-card-content>
-              <span class="eyebrow">{{ 'claimStatus.currentState' | transloco }}</span>
+              <span class="summary-label">{{ 'claimStatus.currentState' | transloco }}</span>
               <h2 [class]="'state-badge state-' + claim.state">
                 {{ 'claimStatus.states.' + claim.state | transloco }}
               </h2>

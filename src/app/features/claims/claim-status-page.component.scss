@@ -12,17 +12,15 @@
   gap: var(--solventa-space-6);
 }
 
-.eyebrow {
+.summary-label {
   color: var(--solventa-color-text-secondary);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 h1 {
   margin: var(--solventa-space-2) 0;
-  font-size: clamp(1.7rem, 4vw, 2.25rem);
+  font-size: clamp(1.5rem, 4vw, 2rem);
 }
 
 .claim-heading p,
@@ -100,6 +98,14 @@ mat-card-header {
 .timeline span,
 .timeline time {
   color: var(--solventa-color-text-secondary);
+}
+
+mat-card {
+  box-shadow: none;
+}
+
+.timeline {
+  margin-bottom: var(--solventa-space-4);
 }
 
 .state-panel {

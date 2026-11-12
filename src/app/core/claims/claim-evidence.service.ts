@@ -3,7 +3,7 @@ import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core'
 import { firstValueFrom, forkJoin, Observable, Subject, takeUntil } from 'rxjs';
 import { HttpClaimEvidenceGateway } from '../../data-access/claims/http-claim-evidence.gateway';
 import { AuthService } from '../auth/auth.service';
-import { evidenceHash, validateEvidenceFile } from './claim-evidence-file';
+import { EVIDENCE_FORMATS, evidenceHash, validateEvidenceFile } from './claim-evidence-file';
 import {
   ClaimEvidence,
   EvidenceFile,
@@ -28,6 +28,9 @@ export class ClaimEvidenceService {
   private readonly filesState = signal<EvidenceFile[]>([]);
   private readonly evidenceState = signal<ClaimEvidence[]>([]);
   private readonly errorState = signal<string | null>(null);
+  private readonly errorParamsState = signal<Record<string, string>>({});
+  private readonly errorFileKeyState = signal<string | null>(null);
+  private readonly selectionFileNameState = signal<string | null>(null);
   private readonly busyState = signal(false);
   private readonly active = computed(() => !!this.owner() && this.owner() === this.auth.user()?.id);
 
@@ -35,6 +38,11 @@ export class ClaimEvidenceService {
   readonly files = computed(() => (this.active() ? this.filesState() : []));
   readonly evidences = computed(() => (this.active() ? this.evidenceState() : []));
   readonly errorKey = computed(() => (this.active() ? this.errorState() : null));
+  readonly errorParams = computed(() => (this.active() ? this.errorParamsState() : {}));
+  readonly errorFileKey = computed(() => (this.active() ? this.errorFileKeyState() : null));
+  readonly selectionFileName = computed(() =>
+    this.active() ? this.selectionFileNameState() : null,
+  );
   readonly busy = computed(() => this.active() && this.busyState());
   readonly restored = computed(() =>
     this.active()
@@ -106,12 +114,14 @@ export class ClaimEvidenceService {
     const generation = this.generation;
     this.busyState.set(true);
     this.errorState.set(null);
+    let selectedFileName: string | null = null;
     try {
       if (files.length > policy.maxCantidad) {
         throw new EvidenceValidationError('claimEvidence.errors.count');
       }
       const selected: EvidenceFile[] = [];
       for (const file of files) {
+        selectedFileName = file.name;
         const body = await validateEvidenceFile(file, policy);
         if (!this.current(generation)) return;
         if (
@@ -135,6 +145,7 @@ export class ClaimEvidenceService {
           errorKey: existing?.disposition === 'rejected' ? 'claimEvidence.errors.rejected' : null,
         });
       }
+      selectedFileName = null;
       const next = [
         ...this.pendingState(),
         ...selected
@@ -153,7 +164,7 @@ export class ClaimEvidenceService {
       this.savePending(next);
       this.filesState.update((entries) => [...entries, ...selected]);
     } catch (error: unknown) {
-      if (this.current(generation)) this.fail(error);
+      if (this.current(generation)) this.fail(error, { selectedFileName });
     } finally {
       if (this.current(generation)) this.busyState.set(false);
     }
@@ -200,6 +211,7 @@ export class ClaimEvidenceService {
         this.update(key, { offset: ack.offset });
       }
       if (upload.estado === 'pendiente') {
+        this.update(key, { state: 'verifying' });
         upload = await this.request(this.gateway.confirm(claimId, upload.id, entry.body));
       }
       if (!this.current(generation)) return;
@@ -212,14 +224,16 @@ export class ClaimEvidenceService {
       if (this.current(generation)) this.evidenceState.set(evidences);
     } catch (error: unknown) {
       if (!this.current(generation)) return;
-      this.fail(error);
+      this.fail(error, { mime: entry.body.mimeType, fileKey: key });
       if (this.files().find((file) => file.key === key)?.state !== 'confirmed') {
-        this.update(key, { state: 'error', errorKey: this.errorState() });
+        this.update(key, {
+          state: 'error',
+          errorKey: this.errorState(),
+          errorParams: this.errorParams(),
+        });
         if (!upload && startRejected(error)) {
           try {
             this.setDisposition(key, 'rejected');
-            this.errorState.set('claimEvidence.errors.rejected');
-            this.update(key, { errorKey: this.errorState() });
           } catch (storageError: unknown) {
             this.fail(storageError);
           }
@@ -355,16 +369,59 @@ export class ClaimEvidenceService {
     );
   }
 
-  private fail(error: unknown): void {
+  private fail(
+    error: unknown,
+    context: {
+      mime?: keyof typeof EVIDENCE_FORMATS;
+      fileKey?: string;
+      selectedFileName?: string | null;
+    } = {},
+  ): void {
     console.error('Claim evidence operation failed.', error);
+    this.errorFileKeyState.set(context.fileKey ?? null);
+    this.selectionFileNameState.set(context.selectedFileName ?? null);
+    this.errorParamsState.set(
+      error instanceof EvidenceValidationError
+        ? error.params
+        : {
+            format: context.mime ? EVIDENCE_FORMATS[context.mime].label : '',
+          },
+    );
     this.errorState.set(
       error instanceof EvidenceValidationError
         ? error.key
-        : error instanceof HttpErrorResponse && [401, 403, 404].includes(error.status)
-          ? 'claimEvidence.errors.access'
+        : error instanceof HttpErrorResponse
+          ? httpEvidenceError(error)
           : 'claimEvidence.errors.unavailable',
     );
   }
+}
+
+function httpEvidenceError(error: HttpErrorResponse): string {
+  if (error.status === 401) return 'claimEvidence.errors.session';
+  if ([403, 404].includes(error.status)) return 'claimEvidence.errors.access';
+  if (error.status === 0) return 'claimEvidence.errors.network';
+  if (error.status === 413) return 'claimEvidence.errors.serverSize';
+  if (error.status === 415) return 'claimEvidence.errors.format';
+  const body: unknown = error.error;
+  const code = body && typeof body === 'object' && 'code' in body ? body.code : null;
+  const keys: Record<string, string> = {
+    limite_cantidad: 'count',
+    limite_tamano: 'serverSize',
+    formato_no_permitido: 'format',
+    formato_invalido: 'unreadable',
+    integridad_invalida: 'integrity',
+    ubicacion_no_autorizada: 'location',
+    video_fuera_limite: 'duration',
+    carga_cancelada: 'cancelled',
+    carga_incompleta: 'incomplete',
+    offset_conflictivo: 'incomplete',
+    idempotencia_conflictiva: 'conflict',
+    servicio_no_disponible: 'service',
+  };
+  return typeof code === 'string' && Object.hasOwn(keys, code)
+    ? `claimEvidence.errors.${keys[code]}`
+    : 'claimEvidence.errors.unavailable';
 }
 
 function startRejected(error: unknown): boolean {

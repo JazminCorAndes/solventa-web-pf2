@@ -9,29 +9,61 @@ import {
   untracked,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../../core/auth/auth.service';
 import { ClaimEvidence } from '../../core/claims/claim-evidence.models';
+import { EVIDENCE_FORMATS, evidenceSize } from '../../core/claims/claim-evidence-file';
 import { ClaimEvidenceService } from '../../core/claims/claim-evidence.service';
 
 @Component({
   selector: 'app-claim-evidence-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatCardModule, TranslocoPipe],
+  imports: [MatButtonModule, TranslocoPipe],
   providers: [ClaimEvidenceService],
   templateUrl: './claim-evidence-panel.component.html',
+  styleUrl: './claim-evidence-panel.component.scss',
 })
 export class ClaimEvidencePanelComponent {
   readonly claimId = input.required<string>();
   readonly evidence = inject(ClaimEvidenceService);
   private readonly auth = inject(AuthService);
   private readonly document = inject(DOCUMENT);
+  readonly formats = EVIDENCE_FORMATS;
+  readonly size = evidenceSize;
+  readonly replacementErrors = new Set([
+    'claimEvidence.errors.location',
+    'claimEvidence.errors.unreadable',
+    'claimEvidence.errors.format',
+    'claimEvidence.errors.serverSize',
+    'claimEvidence.errors.duration',
+  ]);
+  readonly visibleFiles = computed(() =>
+    this.evidence
+      .files()
+      .filter(
+        (file) => !this.evidence.evidences().some((entry) => entry.sha256 === file.body.sha256),
+      ),
+  );
+  readonly generalError = computed(() => {
+    const key = this.evidence.errorKey();
+    return this.visibleFiles().some(
+      (file) => file.key === this.evidence.errorFileKey() && file.errorKey === key,
+    )
+      ? null
+      : key;
+  });
+  readonly duration = computed(() => {
+    const seconds = this.evidence.policy()?.maxVideoSeconds ?? 0;
+    return seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`;
+  });
   readonly accept = computed(
     () =>
       this.evidence
         .policy()
-        ?.formatos.map((format) => format.mimeType)
+        ?.formatos.flatMap((format) => [
+          format.mimeType,
+          EVIDENCE_FORMATS[format.mimeType].extensions,
+        ])
         .join(',') ?? '',
   );
 
