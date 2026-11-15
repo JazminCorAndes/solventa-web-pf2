@@ -1044,5 +1044,66 @@
       "notRenewable": "La póliza ya no cumple las condiciones para renovarse.",
       "unconfirmed": "No pudimos confirmar la renovación. Tu póliza no muestra cambios; consulta el resultado antes de intentar de nuevo."
     }
+  },
+  "policyModification": {
+    "action": "Modificar póliza",
+    "title": "Modificar mi póliza",
+    "subtitle": "Ajusta el plan y las coberturas opcionales permitidas y revisa el impacto antes de confirmar.",
+    "back": "Volver al inicio",
+    "loading": "Consultando las condiciones de tu póliza…",
+    "invalid": "El identificador de la póliza no es válido.",
+    "notFound": "No encontramos esta póliza disponible para tu cuenta.",
+    "error": "No fue posible consultar la póliza. No se muestra información desactualizada.",
+    "retry": "Reintentar",
+    "currentVersion": "Condiciones vigentes",
+    "monthly": "mensual",
+    "period": "Vigencia",
+    "notIncluded": "no incluida",
+    "changeTitle": "Cambios permitidos",
+    "plan": "Plan",
+    "optionalCoverages": "Coberturas opcionales",
+    "noOptionals": "Este producto no tiene coberturas opcionales.",
+    "simulate": "Ver impacto",
+    "impactTitle": "Impacto de la modificación",
+    "newPremium": "Nueva prima mensual",
+    "previously": "antes",
+    "difference": "Diferencia mensual",
+    "adjustment": "Ajuste prorrateado",
+    "days": "días restantes",
+    "effectiveFrom": "Efectiva desde",
+    "periodUnchanged": "La vigencia de la póliza no cambia.",
+    "accept": "He revisado el impacto y confirmo la modificación.",
+    "confirm": "Confirmar modificación",
+    "processing": "Procesando…",
+    "history": "Historial de versiones",
+    "plans": {
+      "esencial": "Esencial",
+      "integral": "Integral",
+      "premium": "Premium"
+    },
+    "origins": {
+      "emision": "emisión",
+      "modificacion": "modificación"
+    },
+    "reasons": {
+      "producto_no_modificable": "Este producto se contrata por fechas y no admite modificaciones.",
+      "poliza_programada": "La póliza aún no inicia su vigencia.",
+      "poliza_vencida": "La póliza ya venció y no admite modificaciones.",
+      "fin_de_vigencia": "La póliza termina hoy; los cambios aplicarían fuera de la vigencia."
+    },
+    "errors": {
+      "not-found": "No encontramos esta póliza disponible para tu cuenta.",
+      "not-modifiable": "La póliza ya no admite modificaciones.",
+      "not-allowed": "El cambio solicitado no está autorizado para este producto.",
+      "no-changes": "Las condiciones elegidas son iguales a las vigentes.",
+      "outdated-version": "La póliza cambió mientras revisabas. Cargamos la versión vigente; vuelve a revisar el impacto.",
+      "impact-changed": "El impacto cambió desde que lo revisaste. Vuelve a revisarlo antes de confirmar.",
+      "key-conflict": "No pudimos confirmar esta operación. Vuelve a revisar el impacto."
+    },
+    "outcomes": {
+      "confirmed": "La modificación quedó confirmada. Versión vigente:",
+      "simulationFailed": "No fue posible calcular el impacto. Tus condiciones vigentes no cambiaron.",
+      "unconfirmed": "No pudimos confirmar la modificación. Tus condiciones vigentes no cambiaron; intenta confirmar de nuevo."
+    }
   }
 }

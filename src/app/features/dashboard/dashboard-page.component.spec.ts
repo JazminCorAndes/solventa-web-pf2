@@ -89,13 +89,16 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     expect(text()).not.toContain('Funciones no disponibles');
     expect(text()).not.toContain('Notificaciones');
     expect(text()).toContain(es.dashboard.simulationNotice);
-    expect(elements('a')).toHaveLength(3);
+    expect(elements('a')).toHaveLength(4);
     expect(elements('a')[0].getAttribute('href')).toBe('/app/cotizaciones/solicitar');
     expect(elements('a')[1].getAttribute('href')).toBe(
       `/app/siniestros/reportar?polizaId=${DASHBOARD_RESPONSE.polizas[0].id}`,
     );
     expect(elements('a')[2].getAttribute('href')).toBe(
       `/app/polizas/${DASHBOARD_RESPONSE.polizas[0].id}/renovacion`,
+    );
+    expect(elements('a')[3].getAttribute('href')).toBe(
+      `/app/polizas/${DASHBOARD_RESPONSE.polizas[0].id}/modificacion`,
     );
     expect(text()).not.toContain('Madrid');
   });

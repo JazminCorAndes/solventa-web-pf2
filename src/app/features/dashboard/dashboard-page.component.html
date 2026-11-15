@@ -141,6 +141,13 @@
                   >
                     {{ 'policyRenewal.action' | transloco }}
                   </a>
+                  <a
+                    mat-stroked-button
+                    data-testid="dashboard-policy-modify"
+                    [routerLink]="['/app/polizas', policy.id, 'modificacion']"
+                  >
+                    {{ 'policyModification.action' | transloco }}
+                  </a>
                 }
               </li>
             } @empty {
