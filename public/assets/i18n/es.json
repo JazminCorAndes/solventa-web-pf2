@@ -1003,5 +1003,46 @@
       "pagado": "Pagado",
       "cerrado": "Cerrado"
     }
+  },
+  "policyRenewal": {
+    "action": "Renovar póliza",
+    "title": "Renovar mi póliza",
+    "subtitle": "Revisa la nueva vigencia, coberturas, prima y condiciones antes de confirmar.",
+    "back": "Volver al inicio",
+    "loading": "Consultando las condiciones de renovación…",
+    "invalid": "El identificador de la póliza no es válido.",
+    "notFound": "No encontramos esta póliza disponible para tu cuenta.",
+    "error": "No fue posible consultar la renovación. No se muestra información desactualizada.",
+    "retry": "Reintentar",
+    "currentPeriod": "Vigencia actual",
+    "policyId": "Póliza",
+    "window": "Ventana de renovación",
+    "offerTitle": "Condiciones de la renovación",
+    "newPeriod": "Nueva vigencia",
+    "premium": "Prima",
+    "monthly": "mensual",
+    "coverages": "Coberturas",
+    "conditions": "Condiciones",
+    "paymentNote": "La renovación requiere el pago simulado de la prima; solo se confirma si el pago es aprobado.",
+    "accept": "He revisado y acepto las condiciones de la renovación.",
+    "payAndRenew": "Pagar y renovar",
+    "renew": "Renovar",
+    "processing": "Procesando…",
+    "checkResult": "Consultar resultado",
+    "reasons": {
+      "producto_no_renovable": "Este producto se contrata por fechas y no admite renovación.",
+      "poliza_programada": "La póliza aún no inicia su vigencia; podrás renovarla más adelante.",
+      "poliza_vencida": "La póliza ya venció; contrata una nueva cobertura.",
+      "fuera_de_ventana": "La renovación se habilita en los 15 días previos al vencimiento."
+    },
+    "outcomes": {
+      "renewed": "Tu póliza fue renovada. Nueva vigencia:",
+      "rejected": "El pago fue rechazado y la póliza no se renovó. Tus condiciones actuales no cambiaron.",
+      "pending": "Estamos confirmando el pago de tu renovación. Tu póliza aún no cambia.",
+      "conditionsChanged": "Las condiciones de renovación cambiaron. Revisa las nuevas condiciones antes de aceptar.",
+      "inProgress": "Ya hay una renovación en proceso para esta póliza. Consulta su resultado antes de intentar de nuevo.",
+      "notRenewable": "La póliza ya no cumple las condiciones para renovarse.",
+      "unconfirmed": "No pudimos confirmar la renovación. Tu póliza no muestra cambios; consulta el resultado antes de intentar de nuevo."
+    }
   }
 }

@@ -94,6 +94,14 @@ export const routes: Routes = [
         title: 'Inicio | Solventa',
       },
       {
+        path: 'polizas/:policyId/renovacion',
+        loadComponent: () =>
+          import('./features/policies/policy-renewal-page.component').then(
+            (component) => component.PolicyRenewalPageComponent,
+          ),
+        title: 'Renovar póliza | Solventa',
+      },
+      {
         path: 'siniestros/:claimId',
         loadComponent: () =>
           import('./features/claims/claim-status-page.component').then(

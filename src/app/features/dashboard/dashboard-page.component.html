@@ -134,6 +134,13 @@
                   >
                     {{ 'claims.title' | transloco }}
                   </a>
+                  <a
+                    mat-stroked-button
+                    data-testid="dashboard-policy-renew"
+                    [routerLink]="['/app/polizas', policy.id, 'renovacion']"
+                  >
+                    {{ 'policyRenewal.action' | transloco }}
+                  </a>
                 }
               </li>
             } @empty {
