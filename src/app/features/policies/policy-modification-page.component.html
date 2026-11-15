@@ -1,0 +1,270 @@
+<section class="policy-modification">
+  <header class="modification-heading">
+    <div>
+      <h1>{{ 'policyModification.title' | transloco }}</h1>
+      <p>{{ 'policyModification.subtitle' | transloco }}</p>
+    </div>
+    <a mat-button routerLink="/app/dashboard">{{ 'policyModification.back' | transloco }}</a>
+  </header>
+
+  @switch (state()) {
+    @case ('loading') {
+      <div class="status-message" role="status">
+        <mat-spinner diameter="28" />
+        <span>{{ 'policyModification.loading' | transloco }}</span>
+      </div>
+    }
+    @case ('invalid') {
+      <p class="status-message error" role="alert">
+        {{ 'policyModification.invalid' | transloco }}
+      </p>
+    }
+    @case ('not-found') {
+      <p class="status-message error" role="alert" data-testid="modification-not-found">
+        {{ 'policyModification.notFound' | transloco }}
+      </p>
+    }
+    @case ('error') {
+      <div class="status-message error" role="alert">
+        <span>{{ 'policyModification.error' | transloco }}</span>
+        <button mat-stroked-button type="button" (click)="load()">
+          {{ 'policyModification.retry' | transloco }}
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (modification(); as modification) {
+        @if (outcome(); as result) {
+          @switch (result.kind) {
+            @case ('confirmed') {
+              <p class="status-message success" role="status" data-testid="modification-success">
+                {{ 'policyModification.outcomes.confirmed' | transloco }}
+                @if (result.kind === 'confirmed') {
+                  <strong>v{{ result.result.newVersion }}</strong>
+                }
+              </p>
+            }
+            @case ('rejected') {
+              <p class="status-message error" role="alert" data-testid="modification-rejected">
+                @if (result.kind === 'rejected') {
+                  @if (result.reason) {
+                    {{ 'policyModification.reasons.' + result.reason | transloco }}
+                  } @else {
+                    {{ 'policyModification.errors.' + result.error | transloco }}
+                  }
+                }
+              </p>
+            }
+            @case ('simulation-failed') {
+              <p class="status-message error" role="alert">
+                {{ 'policyModification.outcomes.simulationFailed' | transloco }}
+              </p>
+            }
+            @case ('unconfirmed') {
+              <p class="status-message error" role="alert" data-testid="modification-unconfirmed">
+                {{ 'policyModification.outcomes.unconfirmed' | transloco }}
+              </p>
+            }
+          }
+        }
+
+        @if (modification.currentVersion; as current) {
+          <mat-card appearance="raised" data-testid="modification-current">
+            <mat-card-header>
+              <mat-card-title>
+                {{ 'policyModification.currentVersion' | transloco }} v{{ current.version }}
+              </mat-card-title>
+              <mat-card-subtitle>
+                {{ 'policyModification.plans.' + current.plan | transloco }} ·
+                {{
+                  amount(current.premium.amount)
+                    | currency: 'COP' : 'symbol-narrow' : '1.0-0' : dateLocale
+                }}
+                {{ 'policyModification.monthly' | transloco }}
+              </mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <p>
+                {{ 'policyModification.period' | transloco }}:
+                {{ modification.period.start | date: 'mediumDate' : 'UTC' : dateLocale }} –
+                {{ modification.period.end | date: 'mediumDate' : 'UTC' : dateLocale }}
+              </p>
+              <ul>
+                @for (coverage of current.coverages; track coverage.code) {
+                  <li [class.excluded]="!coverage.included">
+                    {{ coverage.name }}
+                    @if (!coverage.included) {
+                      ({{ 'policyModification.notIncluded' | transloco }})
+                    }
+                  </li>
+                }
+              </ul>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        @if (modification.options; as options) {
+          <mat-card appearance="raised" data-testid="modification-form">
+            <mat-card-header>
+              <mat-card-title>{{ 'policyModification.changeTitle' | transloco }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <h3>{{ 'policyModification.plan' | transloco }}</h3>
+              <mat-radio-group
+                [value]="plan()"
+                [disabled]="busy()"
+                (change)="selectPlan($event.value)"
+                [attr.aria-label]="'policyModification.plan' | transloco"
+              >
+                @for (option of options.plans; track option.code) {
+                  <mat-radio-button
+                    [value]="option.code"
+                    [attr.data-testid]="'plan-' + option.code"
+                  >
+                    {{ 'policyModification.plans.' + option.code | transloco }} (×{{
+                      option.factor
+                    }})
+                  </mat-radio-button>
+                }
+              </mat-radio-group>
+              <h3>{{ 'policyModification.optionalCoverages' | transloco }}</h3>
+              @for (option of options.optionalCoverages; track option.code) {
+                <mat-checkbox
+                  [attr.data-testid]="'optional-' + option.code"
+                  [checked]="optionals().has(option.code)"
+                  [disabled]="busy()"
+                  (change)="toggleOptional(option.code, $event.checked)"
+                >
+                  {{ option.name }} (+{{
+                    amount(option.surcharge.amount)
+                      | currency: 'COP' : 'symbol-narrow' : '1.0-0' : dateLocale
+                  }})
+                </mat-checkbox>
+              } @empty {
+                <p>{{ 'policyModification.noOptionals' | transloco }}</p>
+              }
+            </mat-card-content>
+            <mat-card-actions>
+              <button
+                mat-stroked-button
+                type="button"
+                data-testid="modification-simulate"
+                [disabled]="!changed() || busy()"
+                (click)="simulate()"
+              >
+                {{ 'policyModification.simulate' | transloco }}
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        } @else if (modification.reason) {
+          <p class="status-message" data-testid="modification-not-modifiable">
+            {{ 'policyModification.reasons.' + modification.reason | transloco }}
+          </p>
+        }
+
+        @if (impact(); as impact) {
+          <mat-card appearance="raised" data-testid="modification-impact">
+            <mat-card-header>
+              <mat-card-title>{{ 'policyModification.impactTitle' | transloco }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <dl>
+                <div>
+                  <dt>{{ 'policyModification.newPremium' | transloco }}</dt>
+                  <dd data-testid="impact-new-premium">
+                    {{
+                      amount(impact.newPremium.amount)
+                        | currency: 'COP' : 'symbol-narrow' : '1.0-0' : dateLocale
+                    }}
+                    ({{ 'policyModification.previously' | transloco }}
+                    {{
+                      amount(impact.previousPremium.amount)
+                        | currency: 'COP' : 'symbol-narrow' : '1.0-0' : dateLocale
+                    }})
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyModification.difference' | transloco }}</dt>
+                  <dd>
+                    {{
+                      amount(impact.monthlyDifference.amount)
+                        | currency: 'COP' : 'symbol-narrow' : '1.0-0' : dateLocale
+                    }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyModification.adjustment' | transloco }}</dt>
+                  <dd data-testid="impact-adjustment">
+                    {{
+                      amount(impact.proratedAdjustment.amount)
+                        | currency: 'COP' : 'symbol-narrow' : '1.0-0' : dateLocale
+                    }}
+                    ({{ impact.remainingDays }} {{ 'policyModification.days' | transloco }})
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyModification.effectiveFrom' | transloco }}</dt>
+                  <dd>{{ impact.effectiveFrom | date: 'mediumDate' : 'UTC' : dateLocale }}</dd>
+                </div>
+              </dl>
+              <p>{{ 'policyModification.periodUnchanged' | transloco }}</p>
+              @for (code of impact.added; track code) {
+                <p data-testid="impact-added">+ {{ coverageName(code) }}</p>
+              }
+              @for (code of impact.removed; track code) {
+                <p data-testid="impact-removed">− {{ coverageName(code) }}</p>
+              }
+              <mat-checkbox
+                data-testid="modification-accept"
+                [checked]="confirmed()"
+                [disabled]="busy()"
+                (change)="toggleConfirmation($event.checked)"
+              >
+                {{ 'policyModification.accept' | transloco }}
+              </mat-checkbox>
+            </mat-card-content>
+            <mat-card-actions>
+              <button
+                mat-flat-button
+                type="button"
+                data-testid="modification-confirm"
+                [disabled]="!confirmed() || busy()"
+                (click)="confirm()"
+              >
+                @if (busy()) {
+                  {{ 'policyModification.processing' | transloco }}
+                } @else {
+                  {{ 'policyModification.confirm' | transloco }}
+                }
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+
+        @if (modification.history.length > 1) {
+          <mat-card appearance="raised" data-testid="modification-history">
+            <mat-card-header>
+              <mat-card-title>{{ 'policyModification.history' | transloco }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <ol>
+                @for (version of modification.history; track version.version) {
+                  <li>
+                    v{{ version.version }} ·
+                    {{ 'policyModification.plans.' + version.plan | transloco }} ·
+                    {{
+                      amount(version.premium.amount)
+                        | currency: 'COP' : 'symbol-narrow' : '1.0-0' : dateLocale
+                    }}
+                    · {{ 'policyModification.origins.' + version.origin | transloco }}
+                    {{ version.effectiveFrom | date: 'mediumDate' : 'UTC' : dateLocale }}
+                  </li>
+                }
+              </ol>
+            </mat-card-content>
+          </mat-card>
+        }
+      }
+    }
+  }
+</section>

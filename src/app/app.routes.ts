@@ -102,6 +102,14 @@ export const routes: Routes = [
         title: 'Renovar póliza | Solventa',
       },
       {
+        path: 'polizas/:policyId/modificacion',
+        loadComponent: () =>
+          import('./features/policies/policy-modification-page.component').then(
+            (component) => component.PolicyModificationPageComponent,
+          ),
+        title: 'Modificar póliza | Solventa',
+      },
+      {
         path: 'siniestros/:claimId',
         loadComponent: () =>
           import('./features/claims/claim-status-page.component').then(

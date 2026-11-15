@@ -62,6 +62,8 @@ import { CLAIM_STATUS_GATEWAY } from './core/claims/claim-status.gateway';
 import { HttpClaimStatusGateway } from './data-access/claims/http-claim-status.gateway';
 import { POLICY_RENEWAL_GATEWAY } from './core/policies/policy-renewal.gateway';
 import { HttpPolicyRenewalGateway } from './data-access/policies/http-policy-renewal.gateway';
+import { POLICY_MODIFICATION_GATEWAY } from './core/policies/policy-modification.gateway';
+import { HttpPolicyModificationGateway } from './data-access/policies/http-policy-modification.gateway';
 import { ADVISOR_EXCEPTIONS_GATEWAY } from './core/advisor-exceptions/advisor-exceptions.gateway';
 import { HttpAdvisorExceptionsGateway } from './data-access/advisor-exceptions/http-advisor-exceptions.gateway';
 import { MockAdvisorExceptionsGateway } from './data-access/advisor-exceptions/mock-advisor-exceptions.gateway';
@@ -81,6 +83,7 @@ export const appConfig: ApplicationConfig = {
     { provide: DASHBOARD_GATEWAY, useClass: HttpDashboardGateway },
     { provide: CLAIM_STATUS_GATEWAY, useClass: HttpClaimStatusGateway },
     { provide: POLICY_RENEWAL_GATEWAY, useClass: HttpPolicyRenewalGateway },
+    { provide: POLICY_MODIFICATION_GATEWAY, useClass: HttpPolicyModificationGateway },
     { provide: CLAIM_GATEWAY, useClass: HttpClaimGateway },
     { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
