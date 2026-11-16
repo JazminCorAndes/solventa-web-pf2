@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  margin-block: var(--solventa-space-3);
+}
+.capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--solventa-space-2);
+}
+button {
+  min-height: 44px;
+}
+button:focus-visible {
+  outline: 2px solid var(--solventa-color-primary-strong);
+  outline-offset: 3px;
+}
+.capture-note {
+  color: var(--solventa-color-text-secondary);
+}
+.camera {
+  margin-block: var(--solventa-space-3);
+}
+video,
+img {
+  display: block;
+  width: 100%;
+  max-height: 28rem;
+  object-fit: contain;
+  background: var(--solventa-color-surface);
+}
+[hidden] {
+  display: none;
+}

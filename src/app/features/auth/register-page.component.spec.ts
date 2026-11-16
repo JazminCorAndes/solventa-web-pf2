@@ -73,6 +73,29 @@ describe('RegisterPageComponent', () => {
     expect(register).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['empty', null, '#register-name'],
+    ['intermediate', { ...VALUES, phone: '', birthDate: '' }, '#register-phone'],
+    ['mismatch', { ...VALUES, confirmPassword: 'Different-Test!' }, '#register-confirm-password'],
+    ['consent', { ...VALUES, authorized: null }, 'input[type=radio]'],
+    ['declined with error', { ...VALUES, phone: '', authorized: false }, '#register-phone'],
+  ] as const)('focuses the first visible invalid control: %s', async (_case, values, selector) => {
+    if (values) component.form.setValue(values);
+    fixture.detectChanges();
+    const previous = component.form.getRawValue();
+    fixture.nativeElement.querySelector('button[type=submit]').focus();
+    component.submit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector(selector));
+    expect(component.form.getRawValue()).toEqual(previous);
+    expect(register).not.toHaveBeenCalled();
+    if (previous.authorized === null) {
+      expect(fixture.nativeElement.querySelector('input[type=radio]:checked')).toBeNull();
+    }
+  });
+
   it.each([true, false])(
     'submits the decision %s without login or password persistence',
     (authorized) => {

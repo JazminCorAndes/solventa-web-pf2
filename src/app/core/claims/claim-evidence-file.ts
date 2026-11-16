@@ -27,6 +27,7 @@ export async function evidenceHash(blob: Blob): Promise<string> {
 export async function validateEvidenceFile(
   file: File,
   policy: EvidencePolicy,
+  signal?: AbortSignal,
 ): Promise<EvidenceUploadBody> {
   if (file.size === 0) throw new EvidenceValidationError('claimEvidence.errors.empty');
   if (policy.formatos.length === 0)
@@ -57,7 +58,23 @@ export async function validateEvidenceFile(
     });
   }
   if (format.mimeType === 'video/mp4') {
-    const duration = await videoDuration(file);
+    const header = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
+    const text = (start: number, end: number) =>
+      String.fromCharCode(...header.subarray(start, end));
+    const boxSize = header.length >= 16 ? new DataView(header.buffer).getUint32(0) : 0;
+    const brands: string[] = [];
+    for (let offset = 8; offset + 4 <= Math.min(boxSize, header.length); offset += 4) {
+      if (offset !== 12) brands.push(text(offset, offset + 4));
+    }
+    if (
+      text(4, 8) !== 'ftyp' ||
+      boxSize < 16 ||
+      !brands.some((brand) => /^(isom|iso[2-6]|mp4[12]|avc1|dash|M4V |MSNV)$/.test(brand)) ||
+      brands.some((brand) => /^(qt {2}|hei[cfx]|hev[cx]|mif1|msf1|avif|avis)$/.test(brand))
+    ) {
+      throw new EvidenceValidationError('claimEvidence.errors.format');
+    }
+    const duration = await videoDuration(file, signal);
     if (duration > policy.maxVideoSeconds) {
       throw new EvidenceValidationError('claimEvidence.errors.duration');
     }
@@ -65,12 +82,13 @@ export async function validateEvidenceFile(
   return { mimeType: format.mimeType, tamanoBytes: file.size, sha256: await evidenceHash(file) };
 }
 
-function videoDuration(file: File): Promise<number> {
+function videoDuration(file: File, signal?: AbortSignal): Promise<number> {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
     const url = URL.createObjectURL(file);
     const finish = (duration?: number) => {
       clearTimeout(timeout);
+      signal?.removeEventListener('abort', abort);
       video.onloadedmetadata = null;
       video.onerror = null;
       video.removeAttribute('src');
@@ -79,7 +97,13 @@ function videoDuration(file: File): Promise<number> {
       if (duration !== undefined && Number.isFinite(duration) && duration > 0) resolve(duration);
       else reject(new EvidenceValidationError('claimEvidence.errors.video'));
     };
+    const abort = () => finish();
     const timeout = setTimeout(() => finish(), 15_000);
+    if (signal?.aborted) {
+      finish();
+      return;
+    }
+    signal?.addEventListener('abort', abort, { once: true });
     video.preload = 'metadata';
     video.onloadedmetadata = () => finish(video.duration);
     video.onerror = () => finish();

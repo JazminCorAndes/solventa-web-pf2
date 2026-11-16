@@ -187,6 +187,16 @@ button:focus-visible {
   outline: 2px solid var(--solventa-color-primary-strong);
   outline-offset: 3px;
 }
+h2:focus {
+  outline: 2px solid var(--solventa-color-primary-strong);
+  outline-offset: 3px;
+}
+h2 {
+  scroll-margin-top: 6rem;
+}
+.file-info .file-actions {
+  flex-shrink: 1;
+}
 @keyframes evidence-spin {
   to {
     transform: rotate(360deg);

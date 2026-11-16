@@ -9,6 +9,7 @@ import {
   EvidencePolicy,
   EvidenceUpload,
   EvidenceUploadBody,
+  validEvidenceMetadata,
 } from '../../core/claims/claim-evidence.models';
 
 @Injectable({ providedIn: 'root' })
@@ -163,7 +164,17 @@ function mime(value: unknown): EvidenceMime {
 function body(value: Record<string, unknown>): EvidenceUploadBody {
   const sha256 = value['sha256'];
   if (typeof sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(sha256)) invalid();
-  return { mimeType: mime(value['mimeType']), tamanoBytes: positive(value['tamanoBytes']), sha256 };
+  const result: EvidenceUploadBody = {
+    mimeType: mime(value['mimeType']),
+    tamanoBytes: positive(value['tamanoBytes']),
+    sha256,
+    ...(value['fechaCaptura'] == null ? {} : { fechaCaptura: value['fechaCaptura'] as string }),
+    ...(value['ubicacion'] == null
+      ? {}
+      : { ubicacion: value['ubicacion'] as EvidenceUploadBody['ubicacion'] }),
+  };
+  if (!validEvidenceMetadata(result)) invalid();
+  return result;
 }
 
 function upload(

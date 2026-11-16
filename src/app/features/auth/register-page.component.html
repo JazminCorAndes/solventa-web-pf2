@@ -15,7 +15,7 @@
             {{ key | transloco }}
           </div>
         }
-        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <form #registrationForm [formGroup]="form" (ngSubmit)="submit()" novalidate>
           <div class="registration-fields">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ 'registration.name' | transloco }}</mat-label>

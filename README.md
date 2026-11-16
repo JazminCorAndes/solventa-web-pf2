@@ -129,6 +129,22 @@ nuevo ni un adaptador simulado. El selector acepta los MIME, tamaños, cantidad 
 duración MP4 declarados por `GET /v1/siniestros/configuracion-evidencias`, sin
 sustituir una política inválida por valores locales.
 
+Tras confirmar el reporte, **Agregar fotos, video o recibo** abre este panel.
+Puedes tomar una foto JPEG o grabar video si tu navegador produce MP4 compatible.
+La cámara requiere una acción y permiso del usuario; la grabación no usa micrófono.
+Si el navegador no admite MP4, elige un archivo MP4 compatible. La captura requiere
+un contexto seguro, como HTTPS o localhost; un servidor HTTP en una IP de la red
+local no garantiza acceso a cámara o ubicación.
+
+Antes de iniciar la carga, puedes elegir **Adjuntar mi ubicación actual** para cada
+archivo y retirarla mientras el intento siga local. El permiso es opcional: puedes
+continuar sin ubicación si lo rechazas o el dispositivo no la obtiene. Corresponde
+a tu dispositivo en ese momento, no acredita el lugar del siniestro.
+El BFF debe admitir `fechaCaptura` y
+`ubicacion: {consentimiento: true, latitud, longitud, fecha}` en el inicio de carga.
+La fecha de captura solo se añade al tomar la foto o grabar; no se deduce al elegir
+un archivo. Los metadatos conservan su valor en los reintentos de la misma operación.
+
 Cada archivo conserva SHA-256 y un UUID estable en `sessionStorage`, separados
 por actor y siniestro, **antes** del inicio de carga. Los bytes solo viven en memoria;
 al recargar hay que volver a seleccionar el archivo original. No cierres la pestaña

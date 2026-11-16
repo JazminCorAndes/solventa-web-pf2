@@ -1,16 +1,9 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { DOCUMENT, UpperCasePipe } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
-import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -21,6 +14,7 @@ import { PartnerContextService } from '../../core/partners/partner-context.servi
 import { BrandComponent } from '../../shared/brand/brand.component';
 import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
 import { ThemeToggleComponent } from '../../shared/theme-toggle/theme-toggle.component';
+import { ShellKeyboardDirective } from '../shell-keyboard.directive';
 
 @Component({
   selector: 'app-authenticated-layout',
@@ -37,6 +31,7 @@ import { ThemeToggleComponent } from '../../shared/theme-toggle/theme-toggle.com
     ThemeToggleComponent,
     TranslocoPipe,
     UpperCasePipe,
+    ShellKeyboardDirective,
   ],
   templateUrl: './authenticated-layout.component.html',
   styleUrl: './authenticated-layout.component.scss',
@@ -46,7 +41,6 @@ export class AuthenticatedLayoutComponent {
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   private readonly transloco = inject(TranslocoService);
-  private readonly sidenav = viewChild(MatSidenav);
 
   readonly user = this.auth.user;
   readonly partners = inject(PartnerContextService);
@@ -68,16 +62,6 @@ export class AuthenticatedLayoutComponent {
       .pipe(map((breakpointState) => breakpointState.matches)),
     { initialValue: false },
   );
-
-  toggleMenu(): void {
-    void this.sidenav()?.toggle();
-  }
-
-  closeMobileMenu(): void {
-    if (this.isHandset()) {
-      void this.sidenav()?.close();
-    }
-  }
 
   toggleLanguage(): void {
     const language = this.language() === 'es' ? 'en' : 'es';

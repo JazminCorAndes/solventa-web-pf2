@@ -82,6 +82,13 @@ interface ConsultationScope {
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'clientInformation.searchMode' | transloco }}</mat-label>
                 <mat-select formControlName="searchMode">
+                  <!-- Material omite la primera notificación de la etiqueta traducida de la opción. -->
+                  <mat-select-trigger>{{
+                    (form.controls.searchMode.value === 'document'
+                      ? 'clientInformation.searchByDocument'
+                      : 'clientInformation.searchById'
+                    ) | transloco
+                  }}</mat-select-trigger>
                   <mat-option value="document">
                     {{ 'clientInformation.searchByDocument' | transloco }}
                   </mat-option>
@@ -95,6 +102,9 @@ interface ConsultationScope {
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'clientInformation.documentType' | transloco }}</mat-label>
                   <mat-select formControlName="documentType">
+                    <mat-select-trigger>{{
+                      'quoteRequest.documentTypes.' + form.controls.documentType.value | transloco
+                    }}</mat-select-trigger>
                     @for (type of documentTypes; track type) {
                       <mat-option [value]="type">
                         {{ 'quoteRequest.documentTypes.' + type | transloco }}

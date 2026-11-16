@@ -17,14 +17,17 @@ import { SvgIconComponent } from '../svg-icon/svg-icon.component';
       [attr.title]="(theme.theme() === 'dark' ? 'theme.useLight' : 'theme.useDark') | transloco"
       (click)="theme.toggle()"
     >
-      <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" />
+      <app-icon
+        [class.light]="theme.theme() === 'light'"
+        [name]="theme.theme() === 'dark' ? 'sun' : 'moon'"
+      />
     </button>
   `,
   styles: `
     .theme-toggle {
       display: grid;
-      width: 2.5rem;
-      height: 2.5rem;
+      width: var(--theme-toggle-size, 2.5rem);
+      height: var(--theme-toggle-size, 2.5rem);
       padding: 0;
       border: 1px solid var(--solventa-color-border);
       border-radius: 50%;
@@ -37,6 +40,28 @@ import { SvgIconComponent } from '../svg-icon/svg-icon.component';
     .theme-toggle:hover {
       border-color: var(--solventa-color-primary);
       color: var(--solventa-color-primary);
+    }
+
+    app-icon {
+      transform: rotate(-8deg);
+      transition: transform 170ms ease-out;
+    }
+
+    app-icon.light {
+      transform: rotate(8deg);
+    }
+
+    .theme-toggle:focus-visible {
+      outline: 3px solid var(--solventa-color-text);
+      outline-offset: 3px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      app-icon,
+      app-icon.light {
+        transform: none;
+        transition: none;
+      }
     }
   `,
 })

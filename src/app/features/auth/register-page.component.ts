@@ -1,9 +1,11 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
   ElementRef,
   inject,
+  Injector,
   signal,
   viewChild,
 } from '@angular/core';
@@ -14,8 +16,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatRadioModule } from '@angular/material/radio';
-import { MatSelectModule } from '@angular/material/select';
+import { MatRadioButton, MatRadioModule } from '@angular/material/radio';
+import { MatSelect, MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { finalize, take } from 'rxjs';
@@ -78,6 +80,10 @@ export class RegisterPageComponent {
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly alert = viewChild<ElementRef<HTMLElement>>('registrationAlert');
+  private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('registrationForm');
+  private readonly documentTypeSelect = viewChild(MatSelect);
+  private readonly firstConsentChoice = viewChild(MatRadioButton);
+  private readonly injector = inject(Injector);
   readonly returnUrl = inject(ActivatedRoute).snapshot.queryParamMap.get('returnUrl');
   readonly documentTypes: readonly DocumentType[] = ['cc', 'ce', 'passport', 'ppt'];
   readonly documentNumberFilter = documentNumberFilter;
@@ -116,6 +122,7 @@ export class RegisterPageComponent {
     this.form.controls.phone.setValue(this.form.controls.phone.value.trim());
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      afterNextRender(() => this.focusFirstInvalidControl(), { injector: this.injector });
       return;
     }
     const data = this.form.getRawValue();
@@ -164,5 +171,22 @@ export class RegisterPageComponent {
           queueMicrotask(() => this.alert()?.nativeElement.focus());
         },
       });
+  }
+
+  private focusFirstInvalidControl(): void {
+    const controls =
+      this.formElement()?.nativeElement.querySelectorAll<HTMLElement>('[formcontrolname]');
+    for (const element of controls ?? []) {
+      const name = element.getAttribute('formcontrolname')!;
+      if (
+        !this.form.get(name)?.invalid &&
+        !(name === 'confirmPassword' && this.form.hasError('passwordMismatch'))
+      )
+        continue;
+      if (name === 'authorized') this.firstConsentChoice()?.focus();
+      else if (name === 'documentType') this.documentTypeSelect()?.focus();
+      else element.focus();
+      return;
+    }
   }
 }
