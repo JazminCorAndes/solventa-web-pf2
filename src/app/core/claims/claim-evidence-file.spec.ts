@@ -6,7 +6,7 @@ const policy: EvidencePolicy = {
   maxChunkBytes: 4,
   maxVideoSeconds: 120,
   formatos: [
-    { mimeType: 'video/mp4', maxBytes: 4 },
+    { mimeType: 'video/mp4', maxBytes: 24 },
     { mimeType: 'image/png', maxBytes: 4 },
   ],
 };
@@ -16,6 +16,20 @@ function file(type = 'image/png'): File {
   Object.defineProperty(result, 'arrayBuffer', {
     value: async () => new Uint8Array([1, 2, 3, 4]).buffer,
   });
+  return result;
+}
+
+function videoFile(): File {
+  // Cabecera ftyp ISO BMFF; los metadatos de duración se simulan en el elemento video.
+  const data = new Uint8Array([
+    0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109, 0, 0, 0, 0, 105, 115, 111, 109,
+    109, 112, 52, 50,
+  ]);
+  const result = new File([data], 'test.mp4', { type: 'video/mp4' });
+  Object.defineProperty(result, 'arrayBuffer', { value: async () => data.buffer });
+  vi.spyOn(result, 'slice').mockImplementation(
+    (start, end) => ({ arrayBuffer: async () => data.slice(start, end).buffer }) as Blob,
+  );
   return result;
 }
 
@@ -97,7 +111,7 @@ describe('Evidence file validation', () => {
       Object.defineProperty(video, 'duration', { value: duration });
       vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-video');
       const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
-      const result = validateEvidenceFile(file('video/mp4'), policy);
+      const result = validateEvidenceFile(videoFile(), policy);
       const assertion =
         duration === 120
           ? expect(result).resolves.toMatchObject({ mimeType: 'video/mp4' })
@@ -107,6 +121,7 @@ describe('Evidence file validation', () => {
                   ? 'claimEvidence.errors.duration'
                   : 'claimEvidence.errors.video',
             });
+      await vi.waitFor(() => expect(video.onloadedmetadata).toBeTypeOf('function'));
       video.dispatchEvent(new Event('loadedmetadata'));
       await assertion;
       expect(revoke).toHaveBeenCalledWith('blob:test-video');
@@ -119,8 +134,9 @@ describe('Evidence file validation', () => {
     vi.spyOn(video, 'load').mockImplementation(() => undefined);
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-video');
     const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
-    const result = validateEvidenceFile(file('video/mp4'), policy);
+    const result = validateEvidenceFile(videoFile(), policy);
     const assertion = expect(result).rejects.toMatchObject({ key: 'claimEvidence.errors.video' });
+    await vi.waitFor(() => expect(video.onerror).toBeTypeOf('function'));
     video.dispatchEvent(new Event('error'));
     await assertion;
     expect(revoke).toHaveBeenCalledOnce();
