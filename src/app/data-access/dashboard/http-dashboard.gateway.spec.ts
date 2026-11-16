@@ -18,6 +18,7 @@ import {
 import { PREMIUM_PERIODICITIES } from '../../core/offers/offer.models';
 import { PENDING_PAYMENT_RESPONSE } from '../../core/payments/simulated-payment.testing';
 import { HttpDashboardGateway } from './http-dashboard.gateway';
+import { MockDashboardGateway } from './mock-dashboard.gateway';
 import populatedReal from './testing/dashboard-populated-real.json';
 import emptyReal from './testing/dashboard-empty-real.json';
 import policyIntegration from './testing/dashboard-policies-integration.json';
@@ -347,8 +348,8 @@ describe('HttpDashboardGateway', () => {
   });
 });
 
-describe('Dashboard production registration', () => {
-  it('uses HTTP in the real application configuration', () => {
+describe('Dashboard application registration', () => {
+  it('uses the gateway selected by the compiled environment', () => {
     TestBed.configureTestingModule({
       providers: [
         appConfig.providers,
@@ -356,6 +357,8 @@ describe('Dashboard production registration', () => {
         { provide: AuthService, useValue: { synchronizeSession: () => of(undefined) } },
       ],
     });
-    expect(TestBed.inject(DASHBOARD_GATEWAY)).toBeInstanceOf(HttpDashboardGateway);
+    expect(TestBed.inject(DASHBOARD_GATEWAY)).toBeInstanceOf(
+      environment.dataAccessMode === 'backend' ? HttpDashboardGateway : MockDashboardGateway,
+    );
   });
 });

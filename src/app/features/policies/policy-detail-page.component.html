@@ -1,0 +1,97 @@
+<section class="policy-detail">
+  <a class="back-link" routerLink="/app/polizas">
+    <app-icon name="arrow-left" [size]="18" />
+    <span>{{ 'policies.back' | transloco }}</span>
+  </a>
+
+  @if (dashboard.status() === 'loading' || dashboard.status() === 'idle') {
+    <div class="state-panel" role="status">
+      <mat-spinner diameter="36" />
+      <span>{{ 'policies.loading' | transloco }}</span>
+    </div>
+  } @else if (dashboard.status() === 'error') {
+    <div class="state-panel" role="alert">
+      <p>{{ 'policies.error' | transloco }}</p>
+      <button mat-stroked-button type="button" (click)="dashboard.load()">
+        {{ 'policies.refresh' | transloco }}
+      </button>
+    </div>
+  } @else if (policy(); as currentPolicy) {
+    <header class="policy-hero">
+      <div class="hero-copy">
+        <span
+          class="status-badge"
+          [class.status-badge--inactive]="currentPolicy.status !== 'vigente'"
+        >
+          {{ stateLabel(currentPolicy.status) }}
+        </span>
+        <h1>{{ policyTypeLabel(currentPolicy.type) }}</h1>
+        <p>{{ currentPolicy.id }}</p>
+      </div>
+      <div class="hero-icon"><app-icon name="shield" [size]="40" /></div>
+    </header>
+
+    <div class="detail-grid">
+      <article class="detail-card">
+        <div class="section-heading">
+          <h2>{{ 'policies.coverage' | transloco }}</h2>
+          <p>{{ 'policies.coverageSubtitle' | transloco }}</p>
+        </div>
+
+        <dl>
+          <div>
+            <dt>{{ 'policies.type' | transloco }}</dt>
+            <dd>{{ policyTypeLabel(currentPolicy.type) }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'policies.status' | transloco }}</dt>
+            <dd>{{ stateLabel(currentPolicy.status) }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'policies.validFrom' | transloco }}</dt>
+            <dd>{{ currentPolicy.startDate | date: 'longDate' : undefined : dateLocale }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'policies.validUntil' | transloco }}</dt>
+            <dd>{{ currentPolicy.endDate | date: 'longDate' : undefined : dateLocale }}</dd>
+          </div>
+          <div class="wide">
+            <dt>{{ 'policies.subscription' | transloco }}</dt>
+            <dd>{{ currentPolicy.subscriptionId }}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <aside class="actions-card">
+        <h2>{{ 'policies.actions' | transloco }}</h2>
+        <p>{{ 'policies.actionsSubtitle' | transloco }}</p>
+
+        @if (currentPolicy.status === 'vigente') {
+          <nav [attr.aria-label]="'policies.actions' | transloco">
+            <a
+              mat-flat-button
+              routerLink="/app/siniestros/reportar"
+              [queryParams]="{ polizaId: currentPolicy.id }"
+            >
+              {{ 'policies.reportClaim' | transloco }}
+            </a>
+            <a mat-stroked-button [routerLink]="['/app/polizas', currentPolicy.id, 'renovacion']">
+              {{ 'policies.renew' | transloco }}
+            </a>
+            <a mat-stroked-button [routerLink]="['/app/polizas', currentPolicy.id, 'modificacion']">
+              {{ 'policies.modify' | transloco }}
+            </a>
+          </nav>
+        } @else {
+          <p class="inactive-notice">{{ 'policies.inactiveNotice' | transloco }}</p>
+        }
+      </aside>
+    </div>
+  } @else {
+    <div class="state-panel" role="alert">
+      <span class="not-found-icon"><app-icon name="policy" [size]="34" /></span>
+      <p>{{ 'policies.notFound' | transloco }}</p>
+      <a mat-stroked-button routerLink="/app/polizas">{{ 'policies.back' | transloco }}</a>
+    </div>
+  }
+</section>

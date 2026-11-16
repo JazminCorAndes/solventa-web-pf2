@@ -1,8 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, forkJoin, Observable, Subject, takeUntil } from 'rxjs';
-import { HttpClaimEvidenceGateway } from '../../data-access/claims/http-claim-evidence.gateway';
 import { AuthService } from '../auth/auth.service';
+import { CLAIM_EVIDENCE_GATEWAY } from './claim-evidence.gateway';
 import { EVIDENCE_FORMATS, evidenceHash, validateEvidenceFile } from './claim-evidence-file';
 import {
   ClaimEvidence,
@@ -19,7 +19,7 @@ import { ClaimEvidenceStorage } from './claim-evidence-storage.service';
 
 @Injectable()
 export class ClaimEvidenceService {
-  private readonly gateway = inject(HttpClaimEvidenceGateway);
+  private readonly gateway = inject(CLAIM_EVIDENCE_GATEWAY);
   private readonly storage = inject(ClaimEvidenceStorage);
   private readonly auth = inject(AuthService);
   private readonly stopped = new Subject<void>();

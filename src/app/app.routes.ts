@@ -94,6 +94,14 @@ export const routes: Routes = [
         title: 'Inicio | Solventa',
       },
       {
+        path: 'polizas',
+        loadComponent: () =>
+          import('./features/policies/policy-list-page.component').then(
+            (component) => component.PolicyListPageComponent,
+          ),
+        title: 'Mis pólizas | Solventa',
+      },
+      {
         path: 'polizas/:policyId/renovacion',
         loadComponent: () =>
           import('./features/policies/policy-renewal-page.component').then(
@@ -108,6 +116,14 @@ export const routes: Routes = [
             (component) => component.PolicyModificationPageComponent,
           ),
         title: 'Modificar póliza | Solventa',
+      },
+      {
+        path: 'polizas/:policyId',
+        loadComponent: () =>
+          import('./features/policies/policy-detail-page.component').then(
+            (component) => component.PolicyDetailPageComponent,
+          ),
+        title: 'Detalle de póliza | Solventa',
       },
       {
         path: 'siniestros/:claimId',
