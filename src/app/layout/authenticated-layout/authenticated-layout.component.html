@@ -62,7 +62,7 @@
             mat-list-item
             routerLink="/app/polizas"
             routerLinkActive="active-link"
-            (click)="closeMobileMenu()"
+            (click)="keyboard.closeForNavigation()"
           >
             <app-icon matListItemIcon name="policy" />
             <span matListItemTitle>{{ 'navigation.policies' | transloco }}</span>
