@@ -1,5 +1,37 @@
+@use '@angular/material' as mat;
+
 :host {
   display: block;
+  @include mat.button-overrides(
+    (
+      filled-container-height: 44px,
+      text-container-height: 44px,
+      outlined-container-height: 44px,
+    )
+  );
+  @include mat.icon-button-overrides(
+    (
+      state-layer-size: 44px,
+    )
+  );
+}
+
+:host-context(html:not([data-theme='dark'])) {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--solventa-color-primary-strong),
+      filled-label-text-color: var(--solventa-color-text-on-dark),
+      text-label-text-color: var(--solventa-color-primary-strong),
+    )
+  );
+}
+
+.claim-page button:focus-visible,
+.claim-page a:focus-visible,
+mat-datepicker-toggle:focus-within,
+mat-timepicker-toggle:focus-within {
+  outline: 3px solid var(--solventa-color-primary-strong);
+  outline-offset: 3px;
 }
 
 .claim-page {
@@ -19,11 +51,6 @@ dt {
   color: var(--solventa-color-text-secondary);
 }
 
-.eyebrow {
-  color: var(--solventa-color-primary);
-  font-weight: 700;
-}
-
 mat-card-content {
   padding: clamp(1rem, 4vw, 2rem);
 }
@@ -31,6 +58,60 @@ mat-card-content {
 form {
   display: grid;
   gap: 1rem;
+}
+
+fieldset {
+  display: grid;
+  min-width: 0;
+  gap: var(--solventa-space-4);
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+legend {
+  padding: 0;
+  margin-bottom: 1.5rem;
+  font-family: var(--solventa-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+fieldset + fieldset {
+  margin-top: 1rem;
+}
+
+.date-time {
+  display: grid;
+  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+mat-form-field {
+  width: 100%;
+  min-width: 0;
+}
+
+.field-help {
+  margin: 0;
+  color: var(--solventa-color-text-secondary);
+}
+
+.field-help span {
+  display: block;
+}
+
+.policy-label {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 40rem) {
+  .date-time {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .notice {

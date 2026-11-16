@@ -1,6 +1,8 @@
-<a class="skip-link" href="#main-content">{{ 'navigation.skipToContent' | transloco }}</a>
+<a class="skip-link" href="#main-content" (click)="keyboard.skipToContent($event, mainContent)">
+  {{ 'navigation.skipToContent' | transloco }}
+</a>
 
-<mat-sidenav-container class="app-shell">
+<mat-sidenav-container class="app-shell" [appShellKeyboard]="isHandset()" #keyboard="shellKeyboard">
   <mat-sidenav
     #drawer
     id="app-sidebar"
@@ -8,10 +10,11 @@
     [opened]="!isHandset()"
     [fixedInViewport]="isHandset()"
     [attr.aria-label]="'navigation.primary' | transloco"
+    (closed)="keyboard.onMenuClosed()"
   >
     <div class="sidenav-shell">
       <div class="sidenav-header">
-        <a [routerLink]="homeUrl()" (click)="closeMobileMenu()">
+        <a [routerLink]="homeUrl()" (click)="keyboard.closeForNavigation()">
           <app-brand [compact]="true" />
         </a>
         @if (isHandset()) {
@@ -19,7 +22,7 @@
             type="button"
             class="icon-button close-button"
             [attr.aria-label]="'navigation.closeMenu' | transloco"
-            (click)="toggleMenu()"
+            (click)="keyboard.toggleMenu()"
           >
             <app-icon name="close" />
           </button>
@@ -40,7 +43,7 @@
           [routerLink]="homeUrl()"
           routerLinkActive="active-link"
           [routerLinkActiveOptions]="{ exact: true }"
-          (click)="closeMobileMenu()"
+          (click)="keyboard.closeForNavigation()"
         >
           <app-icon matListItemIcon name="home" />
           <span matListItemTitle>{{ 'navigation.dashboard' | transloco }}</span>
@@ -50,7 +53,7 @@
             mat-list-item
             routerLink="/app/cotizaciones"
             routerLinkActive="active-link"
-            (click)="closeMobileMenu()"
+            (click)="keyboard.closeForNavigation()"
           >
             <app-icon matListItemIcon name="policy" />
             <span matListItemTitle>{{ 'navigation.quotes' | transloco }}</span>
@@ -59,7 +62,7 @@
             mat-list-item
             routerLink="/app/siniestros/reportar"
             routerLinkActive="active-link"
-            (click)="closeMobileMenu()"
+            (click)="keyboard.closeForNavigation()"
           >
             <app-icon matListItemIcon name="claim" />
             <span matListItemTitle>{{ 'navigation.claims' | transloco }}</span>
@@ -69,7 +72,7 @@
             routerLink="/app/siniestros"
             routerLinkActive="active-link"
             [routerLinkActiveOptions]="{ exact: true }"
-            (click)="closeMobileMenu()"
+            (click)="keyboard.closeForNavigation()"
           >
             <app-icon matListItemIcon name="claim" />
             <span matListItemTitle>{{ 'claimStatus.title' | transloco }}</span>
@@ -78,7 +81,7 @@
             mat-list-item
             routerLink="/app/consentimiento"
             routerLinkActive="active-link"
-            (click)="closeMobileMenu()"
+            (click)="keyboard.closeForNavigation()"
           >
             <app-icon matListItemIcon name="shield" />
             <span matListItemTitle>{{ 'navigation.consent' | transloco }}</span>
@@ -89,7 +92,7 @@
               mat-list-item
               routerLink="/app/socios/clientes/consultar"
               routerLinkActive="active-link"
-              (click)="closeMobileMenu()"
+              (click)="keyboard.closeForNavigation()"
             >
               <app-icon matListItemIcon name="policy" />
               <span matListItemTitle>{{ 'navigation.clients' | transloco }}</span>
@@ -100,7 +103,7 @@
               mat-list-item
               routerLink="/app/socios/cotizaciones/solicitar"
               routerLinkActive="active-link"
-              (click)="closeMobileMenu()"
+              (click)="keyboard.closeForNavigation()"
             >
               <app-icon matListItemIcon name="claim" />
               <span matListItemTitle>{{ 'navigation.quotes' | transloco }}</span>
@@ -134,12 +137,13 @@
     <mat-toolbar class="topbar">
       @if (isHandset()) {
         <button
+          #menuTrigger
           type="button"
           class="icon-button menu-button"
           aria-controls="app-sidebar"
           [attr.aria-expanded]="drawer.opened"
           [attr.aria-label]="'navigation.openMenu' | transloco"
-          (click)="toggleMenu()"
+          (click)="keyboard.toggleMenu()"
         >
           <app-icon name="menu" />
         </button>
@@ -168,7 +172,7 @@
       </div>
     </mat-toolbar>
 
-    <main id="main-content" class="main-content" tabindex="-1">
+    <main #mainContent id="main-content" class="main-content" tabindex="-1">
       @if (!isPartner() || partners.context()) {
         <router-outlet />
       }

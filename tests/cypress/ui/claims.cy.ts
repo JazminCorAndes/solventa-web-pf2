@@ -17,12 +17,15 @@ function openReport() {
   cy.contains('a', 'Siniestros').click();
   cy.location('pathname').should('eq', '/app/siniestros/reportar');
   cy.wait('@policies');
+  cy.wait('@catalog');
 }
 
 function fillReport() {
   cy.get('mat-select[formcontrolname=polizaId]').click();
-  cy.contains('mat-option', policy.id).click();
-  cy.get('input[formcontrolname=fechaEvento]').type('2025-01-10T12:00');
+  cy.contains('mat-option', 'Seguro Automotriz Total').click();
+  cy.get('#claim-event-date').clear().type('10/01/2025').blur();
+  cy.get('#claim-event-time').clear().type('12:00').blur();
+  cy.get('body').type('{esc}');
   cy.get('input[formcontrolname=tipoEvento]').type('Colision');
   cy.get('input[formcontrolname=lugar]').type('Bogota');
   cy.get('textarea[formcontrolname=descripcion]').type(description);
@@ -43,6 +46,19 @@ describe('SOL-175: interfaz local con HTTP controlado, no acredita persistencia 
     cy.intercept('GET', '/api/v1/siniestros/polizas', {
       body: { polizas: [policy] },
     }).as('policies');
+    cy.intercept('GET', '/api/v1/productos-seguro', {
+      body: {
+        productos: [
+          {
+            id: 'automotive',
+            nombre: 'Seguro Automotriz Total',
+            descripcion: 'Seguro sintético',
+            disponible: true,
+            coberturasPrincipales: [],
+          },
+        ],
+      },
+    }).as('catalog');
   });
 
   it('CA1/CA2: selecciona poliza vigente y valida campos sin enviar formularios invalidos', () => {
@@ -52,7 +68,8 @@ describe('SOL-175: interfaz local con HTTP controlado, no acredita persistencia 
     cy.get('mat-error').should('be.visible');
     cy.get('@report.all').should('have.length', 0);
     fillReport();
-    cy.get('input[formcontrolname=fechaEvento]').clear().type('2099-01-10T12:00');
+    cy.get('#claim-event-date').clear().type('10/01/2099').blur();
+    cy.get('body').type('{esc}');
     cy.get('button[type=submit]').click();
     cy.get('[role=alert]').should('contain.text', 'no futuras');
     cy.get('@report.all').should('have.length', 0);
@@ -78,7 +95,7 @@ describe('SOL-175: interfaz local con HTTP controlado, no acredita persistencia 
     cy.get('@report.all').should('have.length', 1);
     cy.get('[data-testid=claim-confirmation]')
       .should('contain.text', claimId)
-      .and('contain.text', 'registrado');
+      .and('contain.text', 'Registrado');
     cy.reload();
     cy.wait('@readReport');
     cy.get('[data-testid=claim-confirmation]').should('contain.text', claimId);
@@ -177,10 +194,15 @@ describe('SOL-175: interfaz local con HTTP controlado, no acredita persistencia 
     const setLocalTime = (timestamp: string) =>
       cy.window().then((window) => {
         const date = new window.Date(timestamp);
-        const local = new window.Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-          .toISOString()
-          .slice(0, 16);
-        cy.get('input[formcontrolname=fechaEvento]').clear().type(local);
+        const localDate = new Intl.DateTimeFormat('es-CO', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        }).format(date);
+        const localTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        cy.get('#claim-event-date').clear().type(localDate).blur();
+        cy.get('#claim-event-time').clear().type(localTime).blur();
+        cy.get('body').type('{esc}');
       });
     openReport();
     fillReport();

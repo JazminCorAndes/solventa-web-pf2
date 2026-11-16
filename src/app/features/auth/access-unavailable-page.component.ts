@@ -28,14 +28,7 @@ import { homeUrl } from '../../core/auth/auth.guards';
       }
     </main>
   `,
-  styles: `
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-  `,
+  styleUrl: './access-unavailable-page.component.scss',
 })
 export class AccessUnavailablePageComponent {
   private readonly auth = inject(AuthService);

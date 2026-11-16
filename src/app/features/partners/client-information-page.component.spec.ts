@@ -2,9 +2,16 @@ import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
-import { TranslocoTestingModule } from '@jsverse/transloco';
+import {
+  provideTransloco,
+  TRANSLOCO_LOADER,
+  TranslocoService,
+  TranslocoTestingModule,
+  Translation,
+} from '@jsverse/transloco';
 import { of, startWith, Subject, throwError } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
+import en from '../../../../public/assets/i18n/en.json';
 import { PartnerContext, PartnerContextService } from '../../core/partners/partner-context.service';
 import {
   ClientInformationRequest,
@@ -66,6 +73,96 @@ function resultFor(request: ClientInformationRequest): ClientInformationResult {
     consultadaEn: '2026-10-24T20:00:00Z',
   };
 }
+
+describe('Client information translated initial selections', () => {
+  it.each([false, true])(
+    'renders labels before interaction, on reentry and language change (delayed=%s)',
+    async (delayed) => {
+      const translations = new Subject<Translation>();
+      const consult = vi
+        .fn()
+        .mockImplementation((request: ClientInformationRequest) => of(resultFor(request)));
+      const queryParamMap = convertToParamMap({ socio: 'BANCO-001' });
+      TestBed.configureTestingModule({
+        imports: [ClientInformationPageComponent],
+        providers: [
+          provideTransloco({
+            config: {
+              availableLangs: ['es', 'en'],
+              defaultLang: 'es',
+              reRenderOnLangChange: true,
+              prodMode: true,
+            },
+          }),
+          {
+            provide: TRANSLOCO_LOADER,
+            useValue: {
+              getTranslation: (lang: string) =>
+                lang === 'en' ? of(en) : delayed ? translations : of(es),
+            },
+          },
+          {
+            provide: ActivatedRoute,
+            useValue: { queryParamMap: of(queryParamMap), snapshot: { queryParamMap } },
+          },
+          { provide: Router, useValue: { navigate: vi.fn().mockResolvedValue(true) } },
+          { provide: PartnerContextService, useValue: { context: signal(CONTEXT) } },
+          { provide: HttpClientInformationGateway, useValue: { consult } },
+        ],
+      });
+      let fixture = TestBed.createComponent(ClientInformationPageComponent);
+      fixture.autoDetectChanges();
+      await fixture.whenStable();
+      if (delayed) {
+        translations.next(es);
+        translations.complete();
+        await fixture.whenStable();
+      }
+      const labels = () =>
+        [...fixture.nativeElement.querySelectorAll('.mat-mdc-select-value-text')].map(
+          (element: unknown) => (element as HTMLElement).textContent?.trim(),
+        );
+      const values = () => fixture.componentInstance.form.getRawValue();
+      const initial = values();
+      await vi.waitFor(() =>
+        expect(labels()).toEqual([
+          es.clientInformation.searchByDocument,
+          es.quoteRequest.documentTypes.cc,
+        ]),
+      );
+      fixture.destroy();
+      fixture = TestBed.createComponent(ClientInformationPageComponent);
+      fixture.autoDetectChanges();
+      await fixture.whenStable();
+      await vi.waitFor(() =>
+        expect(labels()).toEqual([
+          es.clientInformation.searchByDocument,
+          es.quoteRequest.documentTypes.cc,
+        ]),
+      );
+      TestBed.inject(TranslocoService).setActiveLang('en');
+      await fixture.whenStable();
+      await vi.waitFor(() =>
+        expect(labels()).toEqual([
+          en.clientInformation.searchByDocument,
+          en.quoteRequest.documentTypes.cc,
+        ]),
+      );
+      expect(values()).toEqual(initial);
+      fixture.componentInstance.form.controls.documentNumber.setValue('1023456789');
+      fixture.componentInstance.submit();
+      await fixture.whenStable();
+      expect(consult).toHaveBeenCalledOnce();
+      expect(consult).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tipoDocumento: 'cc',
+          numeroDocumento: '1023456789',
+          socioId: 'BANCO-001',
+        }),
+      );
+    },
+  );
+});
 
 describe('ClientInformationPageComponent', () => {
   let fixture: ComponentFixture<ClientInformationPageComponent>;

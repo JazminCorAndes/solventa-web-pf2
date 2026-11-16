@@ -1,0 +1,18 @@
+@use '@angular/material' as mat;
+
+:host-context(html:not([data-theme='dark'])) {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--solventa-color-primary-strong),
+      filled-label-text-color: var(--solventa-color-text-on-dark),
+      text-label-text-color: var(--solventa-color-primary-strong),
+    )
+  );
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}

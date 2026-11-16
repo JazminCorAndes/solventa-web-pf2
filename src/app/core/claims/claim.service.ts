@@ -246,6 +246,7 @@ function isDefinitiveRejection(error: unknown): boolean {
     error instanceof HttpErrorResponse &&
     (error.status === 400 ||
       error.status === 404 ||
+      (error.status === 422 && error.error?.code === 'fecha_evento_invalida') ||
       (error.status === 409 && error.error?.code === 'poliza_no_vigente'))
   );
 }
@@ -255,6 +256,8 @@ function errorKey(error: unknown): string {
     if (error.status === 401) return 'claims.errors.session';
     if (error.status === 403) return 'claims.errors.forbidden';
     if (error.status === 400) return 'claims.errors.invalid';
+    if (error.status === 422 && error.error?.code === 'fecha_evento_invalida')
+      return 'claims.errors.invalid';
     if (error.status === 404) return 'claims.errors.notFound';
     if (error.status === 409) {
       return error.error?.code === 'poliza_no_vigente'
