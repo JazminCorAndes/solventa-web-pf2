@@ -29,5 +29,20 @@ describe('ThemeService', () => {
     expect(service.theme()).toBe('light');
     expect(document.documentElement.dataset['theme']).toBe('light');
     expect(localStorage.getItem('solventa-theme')).toBe('light');
+    expect(document.documentElement.style.colorScheme).toBe('light');
+    service.toggle();
+    expect(service.theme()).toBe('dark');
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+    expect(localStorage.getItem('solventa-theme')).toBe('dark');
+  });
+
+  it.each(['light', 'dark', 'invalid'])('loads saved %s using the existing single key', (saved) => {
+    localStorage.setItem('solventa-theme', saved);
+    const service = TestBed.inject(ThemeService);
+    const expected = saved === 'light' ? 'light' : 'dark';
+    expect(service.theme()).toBe(expected);
+    expect(document.documentElement.dataset['theme']).toBe(expected);
+    expect(document.documentElement.style.colorScheme).toBe(expected);
   });
 });

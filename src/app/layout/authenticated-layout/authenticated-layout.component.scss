@@ -1,10 +1,10 @@
 :host {
   display: block;
-  min-height: 100dvh;
+  height: 100dvh;
 }
 
 .app-shell {
-  min-height: 100dvh;
+  height: 100dvh;
   background: var(--solventa-color-background);
 }
 
@@ -16,6 +16,7 @@ mat-sidenav {
 }
 
 .sidenav-shell {
+  box-sizing: border-box;
   display: flex;
   min-height: 100%;
   padding: var(--solventa-space-5) var(--solventa-space-4);

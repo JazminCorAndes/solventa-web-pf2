@@ -19,6 +19,7 @@ import { AUTH_STORAGE, BrowserAuthStorage } from './core/auth/auth-storage.servi
 import { DASHBOARD_GATEWAY } from './core/dashboard/dashboard.gateway';
 import { CLAIM_GATEWAY } from './core/claims/claim.gateway';
 import { HttpClaimGateway } from './data-access/claims/http-claim.gateway';
+import { MockClaimGateway } from './data-access/claims/mock-claim.gateway';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
 import { OFFER_GATEWAY } from './core/offers/offer.gateway';
 import {
@@ -28,6 +29,7 @@ import {
 import { MockAuthGateway } from './data-access/auth/mock-auth.gateway';
 import { HttpAuthGateway } from './data-access/auth/http-auth.gateway';
 import { HttpDashboardGateway } from './data-access/dashboard/http-dashboard.gateway';
+import { MockDashboardGateway } from './data-access/dashboard/mock-dashboard.gateway';
 import { MockOfferGateway } from './data-access/offers/mock-offer.gateway';
 import { HttpOfferGateway } from './data-access/offers/http-offer.gateway';
 import { SUBSCRIPTION_GATEWAY } from './core/subscriptions/subscription.gateway';
@@ -60,6 +62,16 @@ import { MockAdvisorProfilingGateway } from './data-access/advisor-profiling/moc
 import { HttpAdvisorProfilingGateway } from './data-access/advisor-profiling/http-advisor-profiling.gateway';
 import { CLAIM_STATUS_GATEWAY } from './core/claims/claim-status.gateway';
 import { HttpClaimStatusGateway } from './data-access/claims/http-claim-status.gateway';
+import { MockClaimStatusGateway } from './data-access/claims/mock-claim-status.gateway';
+import { CLAIM_EVIDENCE_GATEWAY } from './core/claims/claim-evidence.gateway';
+import { HttpClaimEvidenceGateway } from './data-access/claims/http-claim-evidence.gateway';
+import { MockClaimEvidenceGateway } from './data-access/claims/mock-claim-evidence.gateway';
+import { POLICY_RENEWAL_GATEWAY } from './core/policies/policy-renewal.gateway';
+import { HttpPolicyRenewalGateway } from './data-access/policies/http-policy-renewal.gateway';
+import { MockPolicyRenewalGateway } from './data-access/policies/mock-policy-renewal.gateway';
+import { POLICY_MODIFICATION_GATEWAY } from './core/policies/policy-modification.gateway';
+import { HttpPolicyModificationGateway } from './data-access/policies/http-policy-modification.gateway';
+import { MockPolicyModificationGateway } from './data-access/policies/mock-policy-modification.gateway';
 import { ADVISOR_EXCEPTIONS_GATEWAY } from './core/advisor-exceptions/advisor-exceptions.gateway';
 import { HttpAdvisorExceptionsGateway } from './data-access/advisor-exceptions/http-advisor-exceptions.gateway';
 import { MockAdvisorExceptionsGateway } from './data-access/advisor-exceptions/mock-advisor-exceptions.gateway';
@@ -76,9 +88,30 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'es-CO' },
     { provide: AUTH_GATEWAY, useClass: backendMode ? HttpAuthGateway : MockAuthGateway },
     { provide: AUTH_STORAGE, useClass: BrowserAuthStorage },
-    { provide: DASHBOARD_GATEWAY, useClass: HttpDashboardGateway },
-    { provide: CLAIM_STATUS_GATEWAY, useClass: HttpClaimStatusGateway },
-    { provide: CLAIM_GATEWAY, useClass: HttpClaimGateway },
+    {
+      provide: DASHBOARD_GATEWAY,
+      useClass: backendMode ? HttpDashboardGateway : MockDashboardGateway,
+    },
+    {
+      provide: CLAIM_STATUS_GATEWAY,
+      useClass: backendMode ? HttpClaimStatusGateway : MockClaimStatusGateway,
+    },
+    {
+      provide: CLAIM_EVIDENCE_GATEWAY,
+      useClass: backendMode ? HttpClaimEvidenceGateway : MockClaimEvidenceGateway,
+    },
+    {
+      provide: POLICY_RENEWAL_GATEWAY,
+      useClass: backendMode ? HttpPolicyRenewalGateway : MockPolicyRenewalGateway,
+    },
+    {
+      provide: POLICY_MODIFICATION_GATEWAY,
+      useClass: backendMode ? HttpPolicyModificationGateway : MockPolicyModificationGateway,
+    },
+    {
+      provide: CLAIM_GATEWAY,
+      useClass: backendMode ? HttpClaimGateway : MockClaimGateway,
+    },
     { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
     {

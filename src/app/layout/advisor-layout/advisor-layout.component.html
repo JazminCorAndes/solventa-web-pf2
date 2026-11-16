@@ -1,8 +1,12 @@
-<a class="skip-link" href="#advisor-main-content">
+<a
+  class="skip-link"
+  href="#advisor-main-content"
+  (click)="keyboard.skipToContent($event, mainContent)"
+>
   {{ 'navigation.skipToContent' | transloco }}
 </a>
 
-<mat-sidenav-container class="app-shell">
+<mat-sidenav-container class="app-shell" [appShellKeyboard]="isHandset()" #keyboard="shellKeyboard">
   <mat-sidenav
     #drawer
     id="advisor-sidebar"
@@ -10,10 +14,11 @@
     [opened]="!isHandset()"
     [fixedInViewport]="isHandset()"
     [attr.aria-label]="'navigation.primary' | transloco"
+    (closed)="keyboard.onMenuClosed()"
   >
     <div class="sidenav-shell">
       <div class="sidenav-header">
-        <a routerLink="/asesor/perfilamientos/nuevo" (click)="closeMobileMenu()">
+        <a routerLink="/asesor/perfilamientos/nuevo" (click)="keyboard.closeForNavigation()">
           <app-brand [compact]="true" />
         </a>
         @if (isHandset()) {
@@ -21,7 +26,7 @@
             type="button"
             class="icon-button close-button"
             [attr.aria-label]="'navigation.closeMenu' | transloco"
-            (click)="toggleMenu()"
+            (click)="keyboard.toggleMenu()"
           >
             <app-icon name="close" />
           </button>
@@ -39,7 +44,7 @@
           mat-list-item
           routerLink="/asesor/perfilamientos/nuevo"
           routerLinkActive="active-link"
-          (click)="closeMobileMenu()"
+          (click)="keyboard.closeForNavigation()"
         >
           <app-icon matListItemIcon name="home" />
           <span matListItemTitle>{{ 'navigation.dashboard' | transloco }}</span>
@@ -52,7 +57,7 @@
           mat-list-item
           routerLink="/asesor/excepciones"
           routerLinkActive="active-link"
-          (click)="closeMobileMenu()"
+          (click)="keyboard.closeForNavigation()"
         >
           <app-icon matListItemIcon name="policy" />
           <span matListItemTitle>{{ 'advisorNavigation.exceptions' | transloco }}</span>
@@ -61,7 +66,7 @@
           mat-list-item
           routerLink="/asesor/perfilamientos/nuevo"
           routerLinkActive="active-link"
-          (click)="closeMobileMenu()"
+          (click)="keyboard.closeForNavigation()"
         >
           <app-icon matListItemIcon name="policy" />
           <span matListItemTitle>{{ 'navigation.quotes' | transloco }}</span>
@@ -81,12 +86,13 @@
     <mat-toolbar class="topbar">
       @if (isHandset()) {
         <button
+          #menuTrigger
           type="button"
           class="icon-button menu-button"
           aria-controls="advisor-sidebar"
           [attr.aria-expanded]="drawer.opened"
           [attr.aria-label]="'navigation.openMenu' | transloco"
-          (click)="toggleMenu()"
+          (click)="keyboard.toggleMenu()"
         >
           <app-icon name="menu" />
         </button>
@@ -113,7 +119,7 @@
       </div>
     </mat-toolbar>
 
-    <main id="advisor-main-content" class="main-content" tabindex="-1">
+    <main #mainContent id="advisor-main-content" class="main-content" tabindex="-1">
       <router-outlet />
     </main>
   </mat-sidenav-content>

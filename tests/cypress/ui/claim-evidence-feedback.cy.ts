@@ -124,21 +124,19 @@ describe('Evidencias: estados con HTTP sintético local, no acredita backend rea
         fileName: 'informe-sintetico.pdf',
         mimeType: 'application/pdf',
       });
-      cy.expectConsoleError('Claim evidence operation failed.', 503, 'servicio_no_disponible');
       cy.get('[data-testid=evidence-upload]').click();
       screenshot(`evidence-loading-${width}`);
       cy.wait('@chunk', { log: false });
       screenshot(`evidence-verifying-${width}`);
-      cy.wait('@confirm', { log: false });
+      cy.wait('@confirm', { log: false }).its('response.statusCode').should('eq', 503);
       cy.get('[data-testid=evidence-upload]').should('be.enabled');
       cy.get('[data-testid=evidence-file-error]').should(
         'contain.text',
         'servicio no está disponible',
       );
       cy.get('[data-testid=evidence-download]').should('not.exist');
-      cy.expectConsoleError('Claim evidence operation failed.', 422, rejectionCode);
       cy.get('[data-testid=evidence-upload]').click();
-      cy.wait('@confirm', { log: false });
+      cy.wait('@confirm', { log: false }).its('response.statusCode').should('eq', 422);
       cy.get('[data-testid=evidence-file]').should('contain.text', 'informe-sintetico.pdf');
       cy.get('[data-testid=evidence-upload]').should('not.exist');
       cy.get('[data-testid=evidence-file-error]').should(

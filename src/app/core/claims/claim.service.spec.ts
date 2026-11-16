@@ -109,6 +109,7 @@ describe('ClaimService', () => {
     [400, 'solicitud_invalida'],
     [404, 'poliza_no_encontrada'],
     [409, 'poliza_no_vigente'],
+    [422, 'fecha_evento_invalida'],
   ])('allows correction only after definitive rejection %s/%s', (status, code) => {
     gateway.report.mockReturnValueOnce(
       throwError(() => new HttpErrorResponse({ status, error: { code } })),

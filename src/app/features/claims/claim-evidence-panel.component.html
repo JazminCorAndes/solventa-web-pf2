@@ -1,14 +1,14 @@
 <section class="evidence-panel" data-testid="claim-evidence-panel" aria-labelledby="evidence-title">
   <header class="evidence-heading">
     <div>
-      <h2 id="evidence-title">{{ 'claimEvidence.title' | transloco }}</h2>
+      <h2 #title id="evidence-title" tabindex="-1">{{ 'claimEvidence.title' | transloco }}</h2>
       <p>{{ 'claimEvidence.subtitle' | transloco }}</p>
     </div>
     <button
       mat-stroked-button
       type="button"
       (click)="evidence.load()"
-      [disabled]="evidence.busy()"
+      [disabled]="evidence.busy() || !!locatingKey()"
       data-testid="evidence-load"
     >
       {{ (evidence.policy() ? 'claimEvidence.refresh' : 'claimEvidence.open') | transloco }}
@@ -61,12 +61,18 @@
           </li>
         }
       </ul>
+      <app-claim-evidence-capture
+        [policy]="policy"
+        [disabled]="evidence.busy() || !!locatingKey()"
+        (captured)="capture($event)"
+      />
+      <p>{{ 'claimEvidence.capture.subject' | transloco }}</p>
       <input
         id="evidence-files"
         type="file"
         multiple
         [accept]="accept()"
-        [disabled]="evidence.busy()"
+        [disabled]="evidence.busy() || !!locatingKey()"
         aria-describedby="evidence-limits evidence-formats"
         [attr.aria-invalid]="generalError() ? true : null"
         [attr.aria-errormessage]="generalError() ? 'evidence-input-error' : null"
@@ -87,11 +93,24 @@
                 {{ size(entry.body.tamanoBytes) }}</strong
               >
               <span>{{ 'claimEvidence.reselectShort' | transloco }}</span>
+              @if (entry.body.fechaCaptura; as date) {
+                <span
+                  >{{ 'claimEvidence.capture.date' | transloco }}:
+                  {{ date | date: 'medium' : undefined : dateLocale }}</span
+                >
+              }
+              @if (entry.body.ubicacion; as location) {
+                <span
+                  >{{ 'claimEvidence.location.pending' | transloco }}: {{ location.latitud }},
+                  {{ location.longitud }} ·
+                  {{ location.fecha | date: 'medium' : undefined : dateLocale }}</span
+                >
+              }
             </div>
             <button
               mat-stroked-button
               type="button"
-              [disabled]="evidence.busy()"
+              [disabled]="evidence.busy() || !!locatingKey()"
               (click)="evidence.remove(entry.key)"
               data-testid="evidence-remove"
             >
@@ -108,6 +127,57 @@
             <div class="file-info">
               <strong class="file-name">{{ file.file.name }}</strong>
               <span>{{ formats[file.body.mimeType].label }} · {{ size(file.file.size) }}</span>
+              @if (file.body.fechaCaptura; as date) {
+                <span
+                  >{{ 'claimEvidence.capture.date' | transloco }}:
+                  {{ date | date: 'medium' : undefined : dateLocale }}</span
+                >
+              }
+              @if (file.body.ubicacion; as location) {
+                <span
+                  >{{ 'claimEvidence.location.pending' | transloco }}: {{ location.latitud }},
+                  {{ location.longitud }} ·
+                  {{ location.fecha | date: 'medium' : undefined : dateLocale }}</span
+                >
+              }
+              @if (evidence.canEditMetadata(file.key)) {
+                <p [id]="'location-help-' + file.key">
+                  {{ 'claimEvidence.location.consent' | transloco }}
+                </p>
+                <div class="file-actions">
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    (click)="locate(file.key)"
+                    [disabled]="!!locatingKey()"
+                    [attr.aria-describedby]="'location-help-' + file.key"
+                  >
+                    {{ 'claimEvidence.location.attach' | transloco }}
+                  </button>
+                  @if (file.body.ubicacion) {
+                    <button
+                      mat-button
+                      type="button"
+                      (click)="removeLocation(file.key)"
+                      [disabled]="!!locatingKey()"
+                    >
+                      {{ 'claimEvidence.location.remove' | transloco }}
+                    </button>
+                  }
+                </div>
+              } @else if (file.state !== 'confirmed') {
+                <p>{{ 'claimEvidence.location.locked' | transloco }}</p>
+              }
+              @if (locatingKey() === file.key) {
+                <button mat-button type="button" (click)="cancelLocation()">
+                  {{ 'claimEvidence.location.cancel' | transloco }}
+                </button>
+              }
+              <span role="status" aria-live="polite">
+                @if (locationMessages()[file.key]; as state) {
+                  {{ 'claimEvidence.location.' + state | transloco }}
+                }
+              </span>
               <span class="file-status" [class.success]="file.state === 'confirmed'" role="status">
                 @if (file.state === 'uploading' || file.state === 'verifying') {
                   <span class="spinner" aria-hidden="true"></span>
@@ -139,7 +209,7 @@
                   <button
                     mat-flat-button
                     type="button"
-                    [disabled]="evidence.busy()"
+                    [disabled]="evidence.busy() || !!locatingKey()"
                     (click)="evidence.upload(file.key)"
                     data-testid="evidence-upload"
                   >
@@ -151,7 +221,7 @@
                 <button
                   mat-button
                   type="button"
-                  [disabled]="evidence.busy()"
+                  [disabled]="evidence.busy() || !!locatingKey()"
                   (click)="evidence.remove(file.key)"
                   data-testid="evidence-remove"
                 >
@@ -184,6 +254,19 @@
                   'claimEvidence.states.confirmed' | transloco
                 }}</span></span
               >
+              @if (item.fechaCaptura; as date) {
+                <span
+                  >{{ 'claimEvidence.capture.date' | transloco }}:
+                  {{ date | date: 'medium' : undefined : dateLocale }}</span
+                >
+              }
+              @if (item.ubicacion; as location) {
+                <span
+                  >{{ 'claimEvidence.location.returned' | transloco }}: {{ location.latitud }},
+                  {{ location.longitud }} ·
+                  {{ location.fecha | date: 'medium' : undefined : dateLocale }}</span
+                >
+              }
             </div>
             <button
               mat-stroked-button

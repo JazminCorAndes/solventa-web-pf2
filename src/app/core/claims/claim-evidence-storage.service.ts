@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable } from '@angular/core';
-import { EVIDENCE_MIMES, PendingEvidence } from './claim-evidence.models';
+import { EVIDENCE_MIMES, PendingEvidence, validEvidenceMetadata } from './claim-evidence.models';
 
 @Injectable({ providedIn: 'root' })
 export class ClaimEvidenceStorage {
@@ -50,6 +50,7 @@ function isPendingEvidence(value: unknown): value is PendingEvidence {
     Number.isSafeInteger(body.tamanoBytes) &&
     body.tamanoBytes > 0 &&
     typeof body.sha256 === 'string' &&
-    /^[0-9a-f]{64}$/.test(body.sha256)
+    /^[0-9a-f]{64}$/.test(body.sha256) &&
+    validEvidenceMetadata(body)
   );
 }

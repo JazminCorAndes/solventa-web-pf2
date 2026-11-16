@@ -1,0 +1,89 @@
+<div class="capture-actions">
+  <button
+    #photoButton
+    mat-stroked-button
+    type="button"
+    (click)="open('photo')"
+    [disabled]="disabled() || state() !== 'idle'"
+  >
+    {{ 'claimEvidence.capture.photo' | transloco }}
+  </button>
+  <button
+    #videoButton
+    mat-stroked-button
+    type="button"
+    (click)="open('video')"
+    [disabled]="disabled() || state() !== 'idle'"
+  >
+    {{ 'claimEvidence.capture.video' | transloco }}
+  </button>
+</div>
+<p class="capture-note">{{ 'claimEvidence.capture.help' | transloco }}</p>
+<div role="status" aria-live="polite">
+  @if (message(); as key) {
+    <p>{{ key | transloco }}</p>
+  }
+  @if (state() === 'requesting') {
+    <p>{{ 'claimEvidence.capture.requesting' | transloco }}</p>
+  }
+  @if (state() === 'recording') {
+    <p>{{ 'claimEvidence.capture.recording' | transloco }}</p>
+  }
+</div>
+<div
+  class="camera"
+  [hidden]="state() === 'idle'"
+  (keydown.escape)="close()"
+  tabindex="-1"
+  role="group"
+  aria-label="{{ 'claimEvidence.capture.preview' | transloco }}"
+>
+  <video
+    #camera
+    [hidden]="state() === 'review' || state() === 'requesting'"
+    muted
+    playsinline
+    aria-label="{{ 'claimEvidence.capture.preview' | transloco }}"
+  ></video>
+  @if (state() === 'review') {
+    @if (kind() === 'photo') {
+      <img [src]="preview()" alt="{{ 'claimEvidence.capture.photoPreview' | transloco }}" />
+    } @else {
+      <video
+        [src]="preview()"
+        controls
+        playsinline
+        aria-label="{{ 'claimEvidence.capture.videoPreview' | transloco }}"
+      ></video>
+    }
+    <p>{{ 'claimEvidence.capture.notUploaded' | transloco }}</p>
+  }
+  <div class="capture-actions">
+    @if (state() === 'photo') {
+      <button #shutter mat-flat-button type="button" (click)="takePhoto()">
+        {{ 'claimEvidence.capture.shutter' | transloco }}
+      </button>
+    }
+    @if (state() === 'video') {
+      <button #shutter mat-flat-button type="button" (click)="record()">
+        {{ 'claimEvidence.capture.start' | transloco }}
+      </button>
+    }
+    @if (state() === 'recording') {
+      <button #stopButton mat-flat-button type="button" (click)="stopRecording()">
+        {{ 'claimEvidence.capture.stop' | transloco }}
+      </button>
+    }
+    @if (state() === 'review') {
+      <button #keepButton mat-flat-button type="button" (click)="keep()">
+        {{ 'claimEvidence.capture.keep' | transloco }}
+      </button>
+    }
+    <button mat-stroked-button type="button" (click)="close()">
+      {{
+        (state() === 'review' ? 'claimEvidence.capture.discard' : 'claimEvidence.capture.close')
+          | transloco
+      }}
+    </button>
+  </div>
+</div>

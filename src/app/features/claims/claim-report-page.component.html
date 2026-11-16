@@ -1,6 +1,5 @@
 <section class="claim-page">
   <header>
-    <span class="eyebrow">{{ 'navigation.claims' | transloco }}</span>
     <h1>{{ 'claims.title' | transloco }}</h1>
     <p>{{ 'claims.instructions' | transloco }}</p>
     <a mat-button routerLink="/app/dashboard">{{ 'claims.back' | transloco }}</a>
@@ -10,6 +9,19 @@
     <div class="notice" role="alert">
       <p>{{ error | transloco }}</p>
     </div>
+  }
+  @if (catalogStatus() === 'loading') {
+    <p role="status">{{ 'claims.catalogLoading' | transloco }}</p>
+  } @else if (catalogStatus() === 'error') {
+    <div class="notice" role="alert">
+      <p>{{ 'claims.catalogError' | transloco }}</p>
+      <button mat-stroked-button type="button" (click)="retryCatalog()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  }
+  @if (ambiguousPolicies) {
+    <p class="notice" role="alert">{{ 'claims.ambiguousPolicy' | transloco }}</p>
   }
 
   @if (claims.record(); as record) {
@@ -22,9 +34,9 @@
           <dt>{{ 'claims.id' | transloco }}</dt>
           <dd>{{ record.id }}</dd>
           <dt>{{ 'claims.status' | transloco }}</dt>
-          <dd>{{ 'claims.registered' | transloco }} ({{ record.estado }})</dd>
+          <dd>{{ 'claims.registered' | transloco }}</dd>
           <dt>{{ 'claims.policy' | transloco }}</dt>
-          <dd>{{ record.polizaId }}</dd>
+          <dd>{{ policyLabel(record.polizaId) }}</dd>
           <dt>{{ 'claims.eventDate' | transloco }}</dt>
           <dd>{{ record.fechaEvento | date: 'medium' : undefined : dateLocale }}</dd>
           <dt>{{ 'claims.eventType' | transloco }}</dt>
@@ -37,6 +49,9 @@
           <dd>{{ record.registradoEn | date: 'medium' : undefined : dateLocale }}</dd>
         </dl>
         <p>{{ 'claims.confirmationNote' | transloco }}</p>
+        <a mat-flat-button [routerLink]="['/app/siniestros', record.id]" fragment="evidence-title">
+          {{ 'claimEvidence.addAfterReport' | transloco }}
+        </a>
         <a mat-button [routerLink]="['/app/siniestros', record.id]">
           {{ 'claimStatus.title' | transloco }}
         </a>
@@ -74,8 +89,7 @@
     @if (claims.attempt(); as attempt) {
       <div class="notice" role="status">
         <p>{{ 'claims.pendingNote' | transloco }}</p>
-        <p>{{ 'claims.operation' | transloco }}: {{ attempt.key }}</p>
-        <p>{{ 'claims.policy' | transloco }}: {{ attempt.payload.polizaId }}</p>
+        <p>{{ 'claims.policy' | transloco }}: {{ policyLabel(attempt.payload.polizaId) }}</p>
         <button
           mat-flat-button
           type="button"
@@ -100,51 +114,141 @@
           </button>
         }
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'claims.policy' | transloco }}</mat-label>
-            <mat-select formControlName="polizaId" required>
-              @for (policy of claims.policies(); track policy.id) {
-                <mat-option [value]="policy.id"> {{ policy.tipo }} · {{ policy.id }} </mat-option>
+          <fieldset>
+            <legend>{{ 'claims.policyAndDate' | transloco }}</legend>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'claims.policy' | transloco }}</mat-label>
+              <mat-select formControlName="polizaId" required>
+                <mat-select-trigger>
+                  <span class="policy-label">{{ policyLabel(form.controls.polizaId.value) }}</span>
+                </mat-select-trigger>
+                @for (policy of policyOptions; track policy.id) {
+                  <mat-option [value]="policy.id" [disabled]="!policy.selectable">
+                    {{ policyLabel(policy.id) }}
+                    @if (!policy.selectable) {
+                      · {{ 'claims.identityMissing' | transloco }}
+                    }
+                  </mat-option>
+                }
+              </mat-select>
+              <mat-hint>{{ 'claims.policyHint' | transloco }}</mat-hint>
+              <mat-error>{{ 'claims.validation.policy' | transloco }}</mat-error>
+            </mat-form-field>
+            @if (duplicatePolicies) {
+              <p class="field-help" data-testid="policy-presentation-help">
+                {{ 'claims.presentationOptionsHelp' | transloco }}
+              </p>
+            }
+
+            <div class="date-time">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'claims.date' | transloco }}</mat-label>
+                <input
+                  matInput
+                  id="claim-event-date"
+                  [matDatepicker]="calendar"
+                  [formControl]="eventDay"
+                  [min]="periodStart"
+                  [max]="periodEnd"
+                  required
+                />
+                <mat-datepicker-toggle
+                  matSuffix
+                  [for]="calendar"
+                  [aria-label]="'claims.openCalendar' | transloco"
+                />
+                <mat-datepicker #calendar [touchUi]="touchUi()" />
+                <mat-hint>{{
+                  (dateLocale === 'en-US' ? 'claims.dateFormatEn' : 'claims.dateFormatEs')
+                    | transloco
+                }}</mat-hint>
+                <mat-error>{{ 'claims.validation.date' | transloco }}</mat-error>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'claims.time' | transloco }}</mat-label>
+                <input
+                  matInput
+                  id="claim-event-time"
+                  [matTimepicker]="clock"
+                  [formControl]="eventTime"
+                  [matTimepickerMin]="minTime"
+                  [matTimepickerMax]="maxTime"
+                  required
+                />
+                <mat-timepicker-toggle
+                  matSuffix
+                  [for]="clock"
+                  [aria-label]="'claims.openClock' | transloco"
+                />
+                <mat-timepicker #clock interval="30m" [aria-label]="'claims.time' | transloco" />
+                <mat-error>{{ 'claims.validation.date' | transloco }}</mat-error>
+              </mat-form-field>
+            </div>
+            <p class="field-help">
+              {{ 'claims.dateHint' | transloco }}
+              @if (validPeriod; as period) {
+                <span>{{ 'claims.validPeriod' | transloco: period }}</span>
+                <span>{{ 'claims.localPeriodHint' | transloco }}</span>
               }
-            </mat-select>
-            <mat-hint>{{ 'claims.policyHint' | transloco }}</mat-hint>
-            <mat-error>{{ 'claims.validation.policy' | transloco }}</mat-error>
-          </mat-form-field>
+            </p>
+            @if (
+              form.hasError('eventDate') &&
+              form.controls.fechaEvento.touched &&
+              eventDay.valid &&
+              eventTime.valid
+            ) {
+              <p class="validation-error" role="alert">
+                {{ 'claims.validation.date' | transloco }}
+              </p>
+            }
+          </fieldset>
+          <fieldset>
+            <legend>{{ 'claims.eventDetails' | transloco }}</legend>
+            @if (isAutomotive) {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'claims.eventType' | transloco }}</mat-label>
+                <mat-select [formControl]="eventChoice">
+                  @for (event of eventSuggestions; track event.value) {
+                    <mat-option [value]="event.value">{{ event.key | transloco }}</mat-option>
+                  }
+                  <mat-option value="other">{{ 'claims.events.other' | transloco }}</mat-option>
+                </mat-select>
+                <mat-hint>{{ 'claims.eventSuggestionsHint' | transloco }}</mat-hint>
+              </mat-form-field>
+            }
+            @if (!isAutomotive || eventChoice.value === 'other') {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{
+                  (isAutomotive ? 'claims.otherEvent' : 'claims.eventType') | transloco
+                }}</mat-label>
+                <input matInput formControlName="tipoEvento" maxlength="100" required />
+                <mat-error>{{ 'claims.validation.type' | transloco }}</mat-error>
+              </mat-form-field>
+            }
 
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'claims.eventDate' | transloco }}</mat-label>
-            <input matInput type="datetime-local" formControlName="fechaEvento" required />
-            <mat-hint>{{ 'claims.dateHint' | transloco }}</mat-hint>
-            <mat-error>{{ 'claims.validation.date' | transloco }}</mat-error>
-          </mat-form-field>
-          @if (form.hasError('eventDate') && form.controls.fechaEvento.touched) {
-            <p class="validation-error" role="alert">{{ 'claims.validation.date' | transloco }}</p>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'claims.place' | transloco }}</mat-label>
+              <input matInput formControlName="lugar" maxlength="300" required />
+              <mat-hint>{{ 'claims.placeHint' | transloco }}</mat-hint>
+              <mat-error>{{ 'claims.validation.place' | transloco }}</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'claims.description' | transloco }}</mat-label>
+              <textarea
+                matInput
+                formControlName="descripcion"
+                rows="5"
+                maxlength="5000"
+                required
+              ></textarea>
+              <mat-hint>{{ 'claims.descriptionHint' | transloco }}</mat-hint>
+              <mat-error>{{ 'claims.validation.description' | transloco }}</mat-error>
+            </mat-form-field>
+          </fieldset>
+
+          @if (submitted() && (form.invalid || eventDay.invalid || eventTime.invalid)) {
+            <p class="validation-error" role="alert">{{ 'claims.checkFields' | transloco }}</p>
           }
-
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'claims.eventType' | transloco }}</mat-label>
-            <input matInput formControlName="tipoEvento" maxlength="100" required />
-            <mat-error>{{ 'claims.validation.type' | transloco }}</mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'claims.place' | transloco }}</mat-label>
-            <input matInput formControlName="lugar" maxlength="300" required />
-            <mat-error>{{ 'claims.validation.place' | transloco }}</mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'claims.description' | transloco }}</mat-label>
-            <textarea
-              matInput
-              formControlName="descripcion"
-              rows="5"
-              maxlength="5000"
-              required
-            ></textarea>
-            <mat-hint>{{ 'claims.descriptionHint' | transloco }}</mat-hint>
-            <mat-error>{{ 'claims.validation.description' | transloco }}</mat-error>
-          </mat-form-field>
 
           <button
             mat-flat-button
@@ -153,7 +257,8 @@
               claims.locked() ||
               claims.loading() ||
               !claims.policies().length ||
-              !!claims.policyError()
+              !!claims.policyError() ||
+              catalogStatus() !== 'ready'
             "
           >
             {{ 'claims.submit' | transloco }}

@@ -25,12 +25,14 @@ import {
 import { AuthService } from '../../core/auth/auth.service';
 import { safePostLoginUrl } from '../../core/auth/auth.guards';
 import { BrandComponent } from '../../shared/brand/brand.component';
+import { ThemeToggleComponent } from '../../shared/theme-toggle/theme-toggle.component';
 
 @Component({
   selector: 'app-login-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     BrandComponent,
+    ThemeToggleComponent,
     MatButtonModule,
     MatCardModule,
     MatFormFieldModule,

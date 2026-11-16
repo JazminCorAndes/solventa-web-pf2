@@ -1,0 +1,88 @@
+.policy-renewal {
+  display: grid;
+  gap: var(--solventa-space-5);
+  max-width: var(--solventa-content-max-width);
+  margin: 0 auto;
+}
+
+.renewal-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--solventa-space-6);
+}
+
+h1 {
+  margin: var(--solventa-space-2) 0;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+h2 {
+  margin: var(--solventa-space-2) 0;
+}
+
+h3 {
+  margin: var(--solventa-space-4) 0 var(--solventa-space-2);
+  font-size: 1rem;
+}
+
+.renewal-heading p,
+mat-card-content p {
+  margin: 0;
+  color: var(--solventa-color-text-secondary);
+}
+
+.summary-label {
+  color: var(--solventa-color-text-secondary);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--solventa-space-3);
+  margin: 0;
+}
+
+dt {
+  color: var(--solventa-color-text-secondary);
+  font-size: 0.9rem;
+}
+
+dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+ul {
+  margin: 0;
+  padding-left: var(--solventa-space-5);
+}
+
+.payment-note {
+  margin: var(--solventa-space-4) 0 var(--solventa-space-2);
+}
+
+.status-message {
+  display: flex;
+  align-items: center;
+  gap: var(--solventa-space-3);
+  margin: 0;
+}
+
+.status-message.error {
+  color: var(--solventa-color-error);
+}
+
+.status-message.success {
+  color: var(--solventa-color-success);
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .renewal-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

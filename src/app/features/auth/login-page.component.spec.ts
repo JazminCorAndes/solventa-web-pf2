@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { TranslocoTestingModule } from '@jsverse/transloco';
+import { TranslocoService, TranslocoTestingModule } from '@jsverse/transloco';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import {
   AccessDeniedError,
@@ -14,6 +14,8 @@ import { AuthGrant } from '../../core/auth/auth.models';
 import { AUTH_STORAGE } from '../../core/auth/auth-storage.service';
 import { grantFor, TestAuthGateway, TestAuthStorage } from '../../core/auth/auth.testing';
 import { LoginPageComponent } from './login-page.component';
+import { ThemeService } from '../../core/theme/theme.service';
+import en from '../../../../public/assets/i18n/en.json';
 
 @Component({ template: '' })
 class EmptyPageComponent {}
@@ -25,11 +27,13 @@ describe('LoginPageComponent', () => {
   let loginCalls: number;
 
   beforeEach(async () => {
+    localStorage.removeItem('solventa-theme');
     await TestBed.configureTestingModule({
       imports: [
         LoginPageComponent,
         TranslocoTestingModule.forRoot({
           langs: {
+            en,
             es: {
               auth: {
                 title: 'Iniciar sesión',
@@ -40,6 +44,7 @@ describe('LoginPageComponent', () => {
                   show: 'Mostrar',
                   hide: 'Ocultar',
                 },
+                theme: { useLight: 'Usar tema claro', useDark: 'Usar tema oscuro' },
                 forgotPassword: 'Olvidé mi contraseña',
                 submit: 'Iniciar sesión',
                 processing: 'Procesando',
@@ -60,7 +65,11 @@ describe('LoginPageComponent', () => {
               },
             },
           },
-          translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
+          translocoConfig: {
+            availableLangs: ['es', 'en'],
+            defaultLang: 'es',
+            reRenderOnLangChange: true,
+          },
         }),
       ],
       providers: [
@@ -82,12 +91,76 @@ describe('LoginPageComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    localStorage.removeItem('solventa-theme');
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.style.removeProperty('color-scheme');
+  });
+
+  it('changes the real global theme without submitting, reconstructing or changing the form', () => {
+    component.form.setValue({ email: 'synthetic@example.test', password: 'synthetic' });
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('#login-password');
+    input.focus();
+    const form = component.form;
+    const button: HTMLButtonElement =
+      fixture.nativeElement.querySelector('app-theme-toggle button');
+    button.click();
+    fixture.detectChanges();
+    expect(TestBed.inject(ThemeService).theme()).toBe('light');
+    expect(document.documentElement.dataset['theme']).toBe('light');
+    expect(localStorage.getItem('solventa-theme')).toBe('light');
+    expect(component.form).toBe(form);
+    expect(component.form.getRawValue()).toEqual({
+      email: 'synthetic@example.test',
+      password: 'synthetic',
+    });
+    expect(fixture.nativeElement.querySelector('#login-password')).toBe(input);
+    expect(document.activeElement).toBe(input);
+    expect(component.passwordVisible()).toBe(false);
+    expect(loginCalls).toBe(0);
+  });
+
   it('does not submit an invalid form', () => {
     component.submit();
 
     expect(loginCalls).toBe(0);
     expect(component.form.controls.email.touched).toBe(true);
     expect(component.form.controls.password.touched).toBe(true);
+  });
+
+  it('uses the real English control translations without changing their semantics', () => {
+    TestBed.inject(TranslocoService).setActiveLang('en');
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('app-theme-toggle button').getAttribute('aria-label'),
+    ).toBe(en.theme.useLight);
+  });
+
+  it('keeps appearance controls independent of an authoritative pending/error login', () => {
+    const result = new Subject<AuthGrant>();
+    gateway.loginResult = () => {
+      loginCalls++;
+      return result;
+    };
+    component.form.setValue({ email: 'synthetic@example.test', password: 'synthetic' });
+    component.submit();
+    fixture.detectChanges();
+    const themeButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector('app-theme-toggle button');
+    themeButton.click();
+    fixture.detectChanges();
+    expect(component.loading()).toBe(true);
+    expect(component.form.disabled).toBe(true);
+    expect(loginCalls).toBe(1);
+    result.error(new InvalidCredentialsError());
+    fixture.detectChanges();
+    expect(component.errorKey()).toBe('auth.errors.invalidCredentials');
+    expect(component.form.enabled).toBe(true);
+    expect(component.form.getRawValue()).toEqual({
+      email: 'synthetic@example.test',
+      password: 'synthetic',
+    });
+    expect(fixture.nativeElement.querySelector('app-theme-toggle button')).toBe(themeButton);
   });
 
   it('shows a generic invalid credentials error', () => {

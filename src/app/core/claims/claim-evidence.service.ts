@@ -1,26 +1,30 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, forkJoin, Observable, Subject, takeUntil } from 'rxjs';
-import { HttpClaimEvidenceGateway } from '../../data-access/claims/http-claim-evidence.gateway';
 import { AuthService } from '../auth/auth.service';
+import { CLAIM_EVIDENCE_GATEWAY } from './claim-evidence.gateway';
 import { EVIDENCE_FORMATS, evidenceHash, validateEvidenceFile } from './claim-evidence-file';
 import {
   ClaimEvidence,
   EvidenceFile,
+  EvidenceLocation,
+  EvidenceMetadata,
   EvidencePolicy,
   EvidenceUpload,
   EvidenceValidationError,
   PendingEvidence,
+  validEvidenceMetadata,
 } from './claim-evidence.models';
 import { ClaimEvidenceStorage } from './claim-evidence-storage.service';
 
 @Injectable()
 export class ClaimEvidenceService {
-  private readonly gateway = inject(HttpClaimEvidenceGateway);
+  private readonly gateway = inject(CLAIM_EVIDENCE_GATEWAY);
   private readonly storage = inject(ClaimEvidenceStorage);
   private readonly auth = inject(AuthService);
   private readonly stopped = new Subject<void>();
   private generation = 0;
+  private selectionAbort = new AbortController();
   private readonly owner = signal<string | null>(null);
   private claimId: string | null = null;
   private readonly pendingState = signal<PendingEvidence[]>([]);
@@ -53,6 +57,7 @@ export class ClaimEvidenceService {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
+      this.selectionAbort.abort();
       this.generation++;
       this.stopped.next();
       this.stopped.complete();
@@ -62,6 +67,8 @@ export class ClaimEvidenceService {
   connect(claimId: string): void {
     const owner = this.auth.user()?.id ?? null;
     if (this.owner() === owner && this.claimId === claimId) return;
+    this.selectionAbort.abort();
+    this.selectionAbort = new AbortController();
     this.generation++;
     this.stopped.next();
     this.owner.set(owner);
@@ -108,7 +115,7 @@ export class ClaimEvidenceService {
     }
   }
 
-  async select(files: File[]): Promise<void> {
+  async select(files: File[], metadata: EvidenceMetadata = {}): Promise<void> {
     const policy = this.policy();
     if (!policy || this.busy() || files.length === 0) return;
     const generation = this.generation;
@@ -116,13 +123,16 @@ export class ClaimEvidenceService {
     this.errorState.set(null);
     let selectedFileName: string | null = null;
     try {
+      if (!validEvidenceMetadata(metadata)) {
+        throw new EvidenceValidationError('claimEvidence.errors.metadata');
+      }
       if (files.length > policy.maxCantidad) {
         throw new EvidenceValidationError('claimEvidence.errors.count');
       }
       const selected: EvidenceFile[] = [];
       for (const file of files) {
         selectedFileName = file.name;
-        const body = await validateEvidenceFile(file, policy);
+        const body = await validateEvidenceFile(file, policy, this.selectionAbort.signal);
         if (!this.current(generation)) return;
         if (
           this.evidences().some((entry) => entry.sha256 === body.sha256) ||
@@ -138,7 +148,7 @@ export class ClaimEvidenceService {
         );
         selected.push({
           key: existing?.key ?? crypto.randomUUID(),
-          body: existing?.body ?? body,
+          body: existing?.body ?? { ...body, ...metadata },
           file,
           offset: 0,
           state: existing?.disposition === 'rejected' ? 'error' : 'selected',
@@ -260,6 +270,32 @@ export class ClaimEvidenceService {
     );
   }
 
+  canEditMetadata(key: string): boolean {
+    return (
+      !this.busy() &&
+      this.pendingState().some((entry) => entry.key === key && entry.disposition === 'local')
+    );
+  }
+
+  setLocation(key: string, location: EvidenceLocation | null): void {
+    if (!this.active() || !this.canEditMetadata(key)) return;
+    if (!validEvidenceMetadata({ ubicacion: location })) return;
+    const entry = this.pendingState().find((pending) => pending.key === key)!;
+    const body = { ...entry.body };
+    if (location) body.ubicacion = location;
+    else delete body.ubicacion;
+    try {
+      this.savePending(
+        this.pendingState().map((pending) =>
+          pending.key === key ? { ...pending, body } : pending,
+        ),
+      );
+      this.update(key, { body });
+    } catch (error: unknown) {
+      this.fail(error);
+    }
+  }
+
   async remove(key: string): Promise<void> {
     const entry = this.pendingState().find((pending) => pending.key === key);
     const claimId = this.claimId;
@@ -377,7 +413,6 @@ export class ClaimEvidenceService {
       selectedFileName?: string | null;
     } = {},
   ): void {
-    console.error('Claim evidence operation failed.', error);
     this.errorFileKeyState.set(context.fileKey ?? null);
     this.selectionFileNameState.set(context.selectedFileName ?? null);
     this.errorParamsState.set(

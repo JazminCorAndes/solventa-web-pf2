@@ -1,0 +1,200 @@
+<section class="policy-renewal">
+  <header class="renewal-heading">
+    <div>
+      <h1>{{ 'policyRenewal.title' | transloco }}</h1>
+      <p>{{ 'policyRenewal.subtitle' | transloco }}</p>
+    </div>
+    <a mat-button routerLink="/app/dashboard">{{ 'policyRenewal.back' | transloco }}</a>
+  </header>
+
+  @switch (state()) {
+    @case ('loading') {
+      <div class="status-message" role="status">
+        <mat-spinner diameter="28" />
+        <span>{{ 'policyRenewal.loading' | transloco }}</span>
+      </div>
+    }
+    @case ('invalid') {
+      <p class="status-message error" role="alert">{{ 'policyRenewal.invalid' | transloco }}</p>
+    }
+    @case ('not-found') {
+      <p class="status-message error" role="alert" data-testid="renewal-not-found">
+        {{ 'policyRenewal.notFound' | transloco }}
+      </p>
+    }
+    @case ('error') {
+      <div class="status-message error" role="alert">
+        <span>{{ 'policyRenewal.error' | transloco }}</span>
+        <button mat-stroked-button type="button" (click)="load()">
+          {{ 'policyRenewal.retry' | transloco }}
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (eligibility(); as eligibility) {
+        <mat-card appearance="raised" data-testid="renewal-current">
+          <mat-card-content>
+            <span class="summary-label">{{ 'policyRenewal.currentPeriod' | transloco }}</span>
+            <h2>
+              {{ eligibility.currentPeriod.start | date: 'mediumDate' : 'UTC' : dateLocale }} –
+              {{ eligibility.currentPeriod.end | date: 'mediumDate' : 'UTC' : dateLocale }}
+            </h2>
+            <p>{{ 'policyRenewal.policyId' | transloco }}: {{ eligibility.policyId }}</p>
+            <p>
+              {{ 'policyRenewal.window' | transloco }}:
+              {{ eligibility.window.from | date: 'mediumDate' : 'UTC' : dateLocale }} –
+              {{ eligibility.window.to | date: 'mediumDate' : 'UTC' : dateLocale }}
+            </p>
+          </mat-card-content>
+        </mat-card>
+
+        @switch (outcome()?.kind) {
+          @case ('renewed') {
+            <p class="status-message success" role="status" data-testid="renewal-success">
+              {{ 'policyRenewal.outcomes.renewed' | transloco }}
+              @if (outcome(); as result) {
+                @if (result.kind === 'renewed') {
+                  <strong>
+                    {{ result.renewal.newPeriod.start | date: 'mediumDate' : 'UTC' : dateLocale }} –
+                    {{ result.renewal.newPeriod.end | date: 'mediumDate' : 'UTC' : dateLocale }}
+                  </strong>
+                }
+              }
+            </p>
+          }
+          @case ('rejected') {
+            <p class="status-message error" role="alert" data-testid="renewal-rejected">
+              {{ 'policyRenewal.outcomes.rejected' | transloco }}
+            </p>
+          }
+          @case ('pending') {
+            <div class="status-message" role="status" data-testid="renewal-pending">
+              <span>{{ 'policyRenewal.outcomes.pending' | transloco }}</span>
+              @if (hasPendingKey()) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  data-testid="renewal-check"
+                  [disabled]="submitting()"
+                  (click)="confirm()"
+                >
+                  {{ 'policyRenewal.checkResult' | transloco }}
+                </button>
+              }
+            </div>
+          }
+          @case ('conditions-changed') {
+            <p class="status-message error" role="alert">
+              {{ 'policyRenewal.outcomes.conditionsChanged' | transloco }}
+            </p>
+          }
+          @case ('in-progress') {
+            <p class="status-message error" role="alert">
+              {{ 'policyRenewal.outcomes.inProgress' | transloco }}
+            </p>
+          }
+          @case ('not-renewable') {
+            <p class="status-message error" role="alert">
+              {{ 'policyRenewal.outcomes.notRenewable' | transloco }}
+            </p>
+          }
+          @case ('unconfirmed') {
+            <div class="status-message error" role="alert" data-testid="renewal-unconfirmed">
+              <span>{{ 'policyRenewal.outcomes.unconfirmed' | transloco }}</span>
+              @if (hasPendingKey()) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  data-testid="renewal-check"
+                  [disabled]="submitting()"
+                  (click)="confirm()"
+                >
+                  {{ 'policyRenewal.checkResult' | transloco }}
+                </button>
+              }
+            </div>
+          }
+        }
+
+        @if (eligibility.offer; as offer) {
+          @if (outcome()?.kind !== 'renewed') {
+            <mat-card appearance="raised" data-testid="renewal-offer">
+              <mat-card-header>
+                <mat-card-title>{{ 'policyRenewal.offerTitle' | transloco }}</mat-card-title>
+                <mat-card-subtitle>{{ offer.product }}</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <dl>
+                  <div>
+                    <dt>{{ 'policyRenewal.newPeriod' | transloco }}</dt>
+                    <dd data-testid="renewal-new-period">
+                      {{ offer.newPeriod.start | date: 'mediumDate' : 'UTC' : dateLocale }} –
+                      {{ offer.newPeriod.end | date: 'mediumDate' : 'UTC' : dateLocale }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{{ 'policyRenewal.premium' | transloco }}</dt>
+                    <dd data-testid="renewal-premium">
+                      {{
+                        amount(offer.premium.amount)
+                          | currency: 'COP' : 'symbol-narrow' : '1.0-0' : dateLocale
+                      }}
+                      {{ 'policyRenewal.monthly' | transloco }}
+                    </dd>
+                  </div>
+                </dl>
+                <h3>{{ 'policyRenewal.coverages' | transloco }}</h3>
+                <ul data-testid="renewal-coverages">
+                  @for (coverage of offer.coverages; track coverage.name) {
+                    <li>
+                      <strong>{{ coverage.name }}</strong
+                      >: {{ coverage.description }}
+                    </li>
+                  }
+                </ul>
+                <h3>{{ 'policyRenewal.conditions' | transloco }}</h3>
+                <ul>
+                  @for (condition of offer.conditions; track condition) {
+                    <li>{{ condition }}</li>
+                  }
+                </ul>
+                @if (offer.requiresPayment) {
+                  <p class="payment-note">{{ 'policyRenewal.paymentNote' | transloco }}</p>
+                }
+                <mat-checkbox
+                  data-testid="renewal-accept"
+                  [checked]="accepted()"
+                  [disabled]="submitting()"
+                  (change)="toggleAcceptance($event.checked)"
+                >
+                  {{ 'policyRenewal.accept' | transloco }}
+                </mat-checkbox>
+              </mat-card-content>
+              <mat-card-actions>
+                <button
+                  mat-flat-button
+                  type="button"
+                  data-testid="renewal-confirm"
+                  [disabled]="!accepted() || submitting()"
+                  (click)="confirm()"
+                >
+                  @if (submitting()) {
+                    {{ 'policyRenewal.processing' | transloco }}
+                  } @else if (offer.requiresPayment) {
+                    {{ 'policyRenewal.payAndRenew' | transloco }}
+                  } @else {
+                    {{ 'policyRenewal.renew' | transloco }}
+                  }
+                </button>
+              </mat-card-actions>
+            </mat-card>
+          }
+        } @else if (eligibility.reason) {
+          <p class="status-message" data-testid="renewal-not-renewable">
+            {{ 'policyRenewal.reasons.' + eligibility.reason | transloco }}
+          </p>
+        }
+      }
+    }
+  }
+</section>

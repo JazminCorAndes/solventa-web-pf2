@@ -1,12 +1,15 @@
 import { provideHttpClient } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import es from '../../../../public/assets/i18n/es.json';
 import { AuthUser } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { TEST_USER } from '../../core/auth/auth.testing';
 import { ClaimEvidence } from '../../core/claims/claim-evidence.models';
+import { CLAIM_EVIDENCE_GATEWAY } from '../../core/claims/claim-evidence.gateway';
+import { HttpClaimEvidenceGateway } from '../../data-access/claims/http-claim-evidence.gateway';
 import { ClaimEvidencePanelComponent } from './claim-evidence-panel.component';
 
 const evidence: ClaimEvidence = {
@@ -32,7 +35,12 @@ describe('ClaimEvidencePanelComponent private downloads', () => {
           translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
         }),
       ],
-      providers: [provideHttpClient(), { provide: AuthService, useValue: { user } }],
+      providers: [
+        provideHttpClient(),
+        provideRouter([]),
+        { provide: CLAIM_EVIDENCE_GATEWAY, useClass: HttpClaimEvidenceGateway },
+        { provide: AuthService, useValue: { user } },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(ClaimEvidencePanelComponent);
     fixture.componentRef.setInput('claimId', evidence.siniestroId);

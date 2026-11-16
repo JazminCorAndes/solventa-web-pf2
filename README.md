@@ -71,16 +71,34 @@ pnpm start
 La aplicación estará disponible en `http://localhost:4200`. Este modo usa los adaptadores
 simulados y no requiere ejecutar el backend.
 
-El tablero de inicio es una excepción: no tiene adaptador simulado y requiere una sesión
-del backend. En este modo informa el error de conexión en lugar de mostrar datos ficticios.
-Para consultar el resumen real, usa el modo con backend.
+Credenciales:
+
+```text
+Usuario: cliente@solventa.co
+Contraseña: Solventa123!
+```
+
+El tablero incluye una póliza académica vigente para recorrer sin backend:
+
+- consulta de la póliza en la sección **Mis pólizas**, con listado, detalle y vigencia;
+- reporte y carga de evidencias de un siniestro;
+- renovación con pago simulado;
+- simulación y confirmación de una modificación versionada.
+
+El siniestro paramétrico `70000000-0000-4000-8000-000000000001` permite comprobar
+el resultado automático de HU31 en `/app/siniestros`: aparece como **Paramétrico**,
+**Pagado** y conserva el historial desde el evento hasta la indemnización.
+
+Los mocks viven solo en memoria durante la sesión de la aplicación. Recargar reinicia
+renovaciones, modificaciones, reportes y evidencias. Las configuraciones `local` y
+`backend` siguen usando los adaptadores HTTP reales.
 
 ### Reportar un siniestro (SOL-175)
 
 El menú **Reportar siniestro** y las pólizas vigentes del inicio abren
 `/app/siniestros/reportar`, protegido por la sesión de cliente existente. Este flujo
-usa exclusivamente el backend, también al ejecutar el frontend en modo de desarrollo:
-no confirma reportes con mocks ni datos locales.
+usa el adaptador en memoria con `pnpm start` y el backend real en las configuraciones
+`local` y `backend`. El mock conserva la clave de idempotencia durante la sesión.
 
 Requiere el contrato de siniestros del BFF: `GET /v1/siniestros/polizas` devuelve
 `{polizas:[{id,tipo,fechaInicio,fechaFin,estado:'vigente'}]}`; las fechas de vigencia
@@ -124,10 +142,27 @@ adaptadores están en `src/app/**/claims/*.spec.ts`.
 ### Adjuntar evidencias privadas (SOL-176)
 
 Desde el detalle autorizado `/app/siniestros/:id`, **Consultar evidencias y límites**
-carga la política vigente y los metadatos confirmados. No hay un listado general
-nuevo ni un adaptador simulado. El selector acepta los MIME, tamaños, cantidad y
+carga la política vigente y los metadatos confirmados. En modo mock, las cargas,
+fragmentos, confirmaciones, cancelaciones y descargas se conservan en memoria. En modo
+HTTP se usa exclusivamente la respuesta del backend. El selector acepta los MIME, tamaños, cantidad y
 duración MP4 declarados por `GET /v1/siniestros/configuracion-evidencias`, sin
 sustituir una política inválida por valores locales.
+
+Tras confirmar el reporte, **Agregar fotos, video o recibo** abre este panel.
+Puedes tomar una foto JPEG o grabar video si tu navegador produce MP4 compatible.
+La cámara requiere una acción y permiso del usuario; la grabación no usa micrófono.
+Si el navegador no admite MP4, elige un archivo MP4 compatible. La captura requiere
+un contexto seguro, como HTTPS o localhost; un servidor HTTP en una IP de la red
+local no garantiza acceso a cámara o ubicación.
+
+Antes de iniciar la carga, puedes elegir **Adjuntar mi ubicación actual** para cada
+archivo y retirarla mientras el intento siga local. El permiso es opcional: puedes
+continuar sin ubicación si lo rechazas o el dispositivo no la obtiene. Corresponde
+a tu dispositivo en ese momento, no acredita el lugar del siniestro.
+El BFF debe admitir `fechaCaptura` y
+`ubicacion: {consentimiento: true, latitud, longitud, fecha}` en el inicio de carga.
+La fecha de captura solo se añade al tomar la foto o grabar; no se deduce al elegir
+un archivo. Los metadatos conservan su valor en los reintentos de la misma operación.
 
 Cada archivo conserva SHA-256 y un UUID estable en `sessionStorage`, separados
 por actor y siniestro, **antes** del inicio de carga. Los bytes solo viven en memoria;

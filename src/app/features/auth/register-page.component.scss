@@ -1,3 +1,14 @@
+@use '@angular/material' as mat;
+
+:host-context(html:not([data-theme='dark'])) {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--solventa-color-primary-strong),
+      filled-label-text-color: var(--solventa-color-text-on-dark),
+    )
+  );
+}
+
 .registration-card {
   width: min(100%, 760px);
 }
