@@ -1,0 +1,72 @@
+<section class="policies-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">{{ 'policies.eyebrow' | transloco }}</span>
+      <h1>{{ 'policies.title' | transloco }}</h1>
+      <p>{{ 'policies.subtitle' | transloco }}</p>
+    </div>
+    <a mat-flat-button routerLink="/app/cotizaciones/solicitar">
+      {{ 'policies.newQuote' | transloco }}
+    </a>
+  </header>
+
+  @if (dashboard.status() === 'loading' || dashboard.status() === 'idle') {
+    <div class="state-panel" role="status">
+      <mat-spinner diameter="36" />
+      <span>{{ 'policies.loading' | transloco }}</span>
+    </div>
+  } @else if (dashboard.status() === 'error') {
+    <div class="state-panel" role="alert">
+      <p>{{ 'policies.error' | transloco }}</p>
+      <button mat-stroked-button type="button" (click)="dashboard.load()">
+        {{ 'policies.refresh' | transloco }}
+      </button>
+    </div>
+  } @else if (dashboard.snapshot(); as snapshot) {
+    <div class="policy-grid">
+      @for (policy of snapshot.policies; track policy.id) {
+        <article class="policy-card" data-testid="policy-card">
+          <div class="card-topline">
+            <span class="policy-icon"><app-icon name="shield" [size]="26" /></span>
+            <span class="status-badge" [class.status-badge--inactive]="policy.status !== 'vigente'">
+              {{ stateLabel(policy.status) }}
+            </span>
+          </div>
+
+          <h2>{{ policyTypeLabel(policy.type) }}</h2>
+          <p class="policy-number">{{ 'policies.policyNumber' | transloco }} · {{ policy.id }}</p>
+
+          <dl>
+            <div>
+              <dt>{{ 'policies.validFrom' | transloco }}</dt>
+              <dd>{{ policy.startDate | date: 'mediumDate' : undefined : dateLocale }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'policies.validUntil' | transloco }}</dt>
+              <dd>{{ policy.endDate | date: 'mediumDate' : undefined : dateLocale }}</dd>
+            </div>
+          </dl>
+
+          <a
+            class="detail-link"
+            [routerLink]="['/app/polizas', policy.id]"
+            [attr.aria-label]="
+              ('policies.viewDetail' | transloco) + ': ' + policyTypeLabel(policy.type)
+            "
+          >
+            <span>{{ 'policies.viewDetail' | transloco }}</span>
+            <app-icon name="arrow-right" [size]="18" />
+          </a>
+        </article>
+      } @empty {
+        <div class="empty-state">
+          <span class="empty-icon"><app-icon name="policy" [size]="34" /></span>
+          <h2>{{ 'policies.empty' | transloco }}</h2>
+          <a mat-flat-button routerLink="/app/cotizaciones/solicitar">
+            {{ 'policies.emptyAction' | transloco }}
+          </a>
+        </div>
+      }
+    </div>
+  }
+</section>

@@ -80,6 +80,7 @@ Contraseña: Solventa123!
 
 El tablero incluye una póliza académica vigente para recorrer sin backend:
 
+- consulta de la póliza en la sección **Mis pólizas**, con listado, detalle y vigencia;
 - reporte y carga de evidencias de un siniestro;
 - renovación con pago simulado;
 - simulación y confirmación de una modificación versionada.

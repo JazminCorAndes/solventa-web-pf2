@@ -60,6 +60,15 @@
           </a>
           <a
             mat-list-item
+            routerLink="/app/polizas"
+            routerLinkActive="active-link"
+            (click)="closeMobileMenu()"
+          >
+            <app-icon matListItemIcon name="policy" />
+            <span matListItemTitle>{{ 'navigation.policies' | transloco }}</span>
+          </a>
+          <a
+            mat-list-item
             routerLink="/app/siniestros/reportar"
             routerLinkActive="active-link"
             (click)="keyboard.closeForNavigation()"
