@@ -7,7 +7,9 @@ import { AuthUser } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
 import { TEST_USER } from '../auth/auth.testing';
 import { ClaimEvidenceService } from './claim-evidence.service';
+import { CLAIM_EVIDENCE_GATEWAY } from './claim-evidence.gateway';
 import { ClaimEvidenceStorage } from './claim-evidence-storage.service';
+import { HttpClaimEvidenceGateway } from '../../data-access/claims/http-claim-evidence.gateway';
 
 const claimId = '11111111-1111-4111-8111-111111111111';
 const uploadId = '22222222-2222-4222-8222-222222222222';
@@ -50,6 +52,7 @@ describe('ClaimEvidenceService with HTTP and retry storage', () => {
         ClaimEvidenceService,
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: CLAIM_EVIDENCE_GATEWAY, useClass: HttpClaimEvidenceGateway },
         { provide: AuthService, useValue: { user } },
       ],
     });
