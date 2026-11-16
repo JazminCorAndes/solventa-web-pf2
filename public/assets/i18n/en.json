@@ -1003,5 +1003,107 @@
       "pagado": "Paid",
       "cerrado": "Closed"
     }
+  },
+  "policyRenewal": {
+    "action": "Renew policy",
+    "title": "Renew my policy",
+    "subtitle": "Review the new term, coverages, premium and conditions before confirming.",
+    "back": "Back to home",
+    "loading": "Loading renewal conditions…",
+    "invalid": "The policy identifier is not valid.",
+    "notFound": "We could not find this policy for your account.",
+    "error": "We could not load the renewal. No outdated information is shown.",
+    "retry": "Try again",
+    "currentPeriod": "Current term",
+    "policyId": "Policy",
+    "window": "Renewal window",
+    "offerTitle": "Renewal conditions",
+    "newPeriod": "New term",
+    "premium": "Premium",
+    "monthly": "monthly",
+    "coverages": "Coverages",
+    "conditions": "Conditions",
+    "paymentNote": "The renewal requires the simulated premium payment; it is confirmed only if the payment is approved.",
+    "accept": "I have reviewed and accept the renewal conditions.",
+    "payAndRenew": "Pay and renew",
+    "renew": "Renew",
+    "processing": "Processing…",
+    "checkResult": "Check result",
+    "reasons": {
+      "producto_no_renovable": "This product is purchased for specific dates and cannot be renewed.",
+      "poliza_programada": "The policy has not started yet; you can renew it later.",
+      "poliza_vencida": "The policy has expired; purchase a new coverage.",
+      "fuera_de_ventana": "Renewal opens during the 15 days before the end date."
+    },
+    "outcomes": {
+      "renewed": "Your policy was renewed. New term:",
+      "rejected": "The payment was declined and the policy was not renewed. Your current conditions did not change.",
+      "pending": "We are confirming the payment for your renewal. Your policy has not changed yet.",
+      "conditionsChanged": "The renewal conditions changed. Review the new conditions before accepting.",
+      "inProgress": "A renewal is already in progress for this policy. Check its result before trying again.",
+      "notRenewable": "The policy no longer meets the renewal conditions.",
+      "unconfirmed": "We could not confirm the renewal. Your policy shows no changes; check the result before trying again."
+    }
+  },
+  "policyModification": {
+    "action": "Modify policy",
+    "title": "Modify my policy",
+    "subtitle": "Adjust the plan and allowed optional coverages and review the impact before confirming.",
+    "back": "Back to home",
+    "loading": "Loading your policy conditions…",
+    "invalid": "The policy identifier is not valid.",
+    "notFound": "We could not find this policy for your account.",
+    "error": "We could not load the policy. No outdated information is shown.",
+    "retry": "Try again",
+    "currentVersion": "Current conditions",
+    "monthly": "monthly",
+    "period": "Term",
+    "notIncluded": "not included",
+    "changeTitle": "Allowed changes",
+    "plan": "Plan",
+    "optionalCoverages": "Optional coverages",
+    "noOptionals": "This product has no optional coverages.",
+    "simulate": "See impact",
+    "impactTitle": "Modification impact",
+    "newPremium": "New monthly premium",
+    "previously": "previously",
+    "difference": "Monthly difference",
+    "adjustment": "Prorated adjustment",
+    "days": "remaining days",
+    "effectiveFrom": "Effective from",
+    "periodUnchanged": "The policy term does not change.",
+    "accept": "I have reviewed the impact and confirm the modification.",
+    "confirm": "Confirm modification",
+    "processing": "Processing…",
+    "history": "Version history",
+    "plans": {
+      "esencial": "Essential",
+      "integral": "Comprehensive",
+      "premium": "Premium"
+    },
+    "origins": {
+      "emision": "issuance",
+      "modificacion": "modification"
+    },
+    "reasons": {
+      "producto_no_modificable": "This product is purchased for specific dates and cannot be modified.",
+      "poliza_programada": "The policy has not started yet.",
+      "poliza_vencida": "The policy has expired and cannot be modified.",
+      "fin_de_vigencia": "The policy ends today; changes would apply outside its term."
+    },
+    "errors": {
+      "not-found": "We could not find this policy for your account.",
+      "not-modifiable": "The policy no longer accepts modifications.",
+      "not-allowed": "The requested change is not allowed for this product.",
+      "no-changes": "The selected conditions are the same as the current ones.",
+      "outdated-version": "The policy changed while you were reviewing. We loaded the current version; review the impact again.",
+      "impact-changed": "The impact changed since you reviewed it. Review it again before confirming.",
+      "key-conflict": "We could not confirm this operation. Review the impact again."
+    },
+    "outcomes": {
+      "confirmed": "The modification was confirmed. Current version:",
+      "simulationFailed": "We could not calculate the impact. Your current conditions did not change.",
+      "unconfirmed": "We could not confirm the modification. Your current conditions did not change; try confirming again."
+    }
   }
 }
