@@ -730,13 +730,19 @@ describe('ClaimReportPageComponent with authenticated HTTP', () => {
     expect(component.form.controls.fechaEvento.value).toBe(fields.fechaEvento);
   });
 
-  it('opens calendar on click, not focus, with public Material controls', async () => {
+  it('keeps the date editable and opens the calendar from its toggle', async () => {
     loadPolicies();
     const date: HTMLInputElement = fixture.nativeElement.querySelector('#claim-event-date');
     date.focus();
     fixture.detectChanges();
     expect(document.querySelector('mat-calendar')).toBeNull();
     date.click();
+    fixture.detectChanges();
+    expect(document.querySelector('mat-calendar')).toBeNull();
+    const toggle: HTMLButtonElement = fixture.nativeElement.querySelector(
+      'mat-datepicker-toggle button',
+    );
+    toggle.click();
     fixture.detectChanges();
     await fixture.whenStable();
     expect(document.querySelector('mat-calendar')).not.toBeNull();
