@@ -8,6 +8,8 @@ import { AuthUser } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { TEST_USER } from '../../core/auth/auth.testing';
 import { ClaimEvidence } from '../../core/claims/claim-evidence.models';
+import { CLAIM_EVIDENCE_GATEWAY } from '../../core/claims/claim-evidence.gateway';
+import { HttpClaimEvidenceGateway } from '../../data-access/claims/http-claim-evidence.gateway';
 import { ClaimEvidencePanelComponent } from './claim-evidence-panel.component';
 
 const evidence: ClaimEvidence = {
@@ -36,6 +38,7 @@ describe('ClaimEvidencePanelComponent private downloads', () => {
       providers: [
         provideHttpClient(),
         provideRouter([]),
+        { provide: CLAIM_EVIDENCE_GATEWAY, useClass: HttpClaimEvidenceGateway },
         { provide: AuthService, useValue: { user } },
       ],
     }).compileComponents();

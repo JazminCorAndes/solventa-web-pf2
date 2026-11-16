@@ -71,16 +71,33 @@ pnpm start
 La aplicación estará disponible en `http://localhost:4200`. Este modo usa los adaptadores
 simulados y no requiere ejecutar el backend.
 
-El tablero de inicio es una excepción: no tiene adaptador simulado y requiere una sesión
-del backend. En este modo informa el error de conexión en lugar de mostrar datos ficticios.
-Para consultar el resumen real, usa el modo con backend.
+Credenciales:
+
+```text
+Usuario: cliente@solventa.co
+Contraseña: Solventa123!
+```
+
+El tablero incluye una póliza académica vigente para recorrer sin backend:
+
+- reporte y carga de evidencias de un siniestro;
+- renovación con pago simulado;
+- simulación y confirmación de una modificación versionada.
+
+El siniestro paramétrico `70000000-0000-4000-8000-000000000001` permite comprobar
+el resultado automático de HU31 en `/app/siniestros`: aparece como **Paramétrico**,
+**Pagado** y conserva el historial desde el evento hasta la indemnización.
+
+Los mocks viven solo en memoria durante la sesión de la aplicación. Recargar reinicia
+renovaciones, modificaciones, reportes y evidencias. Las configuraciones `local` y
+`backend` siguen usando los adaptadores HTTP reales.
 
 ### Reportar un siniestro (SOL-175)
 
 El menú **Reportar siniestro** y las pólizas vigentes del inicio abren
 `/app/siniestros/reportar`, protegido por la sesión de cliente existente. Este flujo
-usa exclusivamente el backend, también al ejecutar el frontend en modo de desarrollo:
-no confirma reportes con mocks ni datos locales.
+usa el adaptador en memoria con `pnpm start` y el backend real en las configuraciones
+`local` y `backend`. El mock conserva la clave de idempotencia durante la sesión.
 
 Requiere el contrato de siniestros del BFF: `GET /v1/siniestros/polizas` devuelve
 `{polizas:[{id,tipo,fechaInicio,fechaFin,estado:'vigente'}]}`; las fechas de vigencia
@@ -124,8 +141,9 @@ adaptadores están en `src/app/**/claims/*.spec.ts`.
 ### Adjuntar evidencias privadas (SOL-176)
 
 Desde el detalle autorizado `/app/siniestros/:id`, **Consultar evidencias y límites**
-carga la política vigente y los metadatos confirmados. No hay un listado general
-nuevo ni un adaptador simulado. El selector acepta los MIME, tamaños, cantidad y
+carga la política vigente y los metadatos confirmados. En modo mock, las cargas,
+fragmentos, confirmaciones, cancelaciones y descargas se conservan en memoria. En modo
+HTTP se usa exclusivamente la respuesta del backend. El selector acepta los MIME, tamaños, cantidad y
 duración MP4 declarados por `GET /v1/siniestros/configuracion-evidencias`, sin
 sustituir una política inválida por valores locales.
 

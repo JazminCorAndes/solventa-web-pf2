@@ -20,12 +20,14 @@ import { AuthUser } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { TEST_USER } from '../../core/auth/auth.testing';
 import { CLAIM_STATUS_GATEWAY } from '../../core/claims/claim-status.gateway';
+import { CLAIM_EVIDENCE_GATEWAY } from '../../core/claims/claim-evidence.gateway';
 import {
   CLAIM_ID,
   CLAIM_NOT_FOUND_PROBLEM,
   CLAIM_STATUS_RESPONSE,
 } from '../../core/claims/claim-status.testing';
 import { HttpClaimStatusGateway } from '../../data-access/claims/http-claim-status.gateway';
+import { HttpClaimEvidenceGateway } from '../../data-access/claims/http-claim-evidence.gateway';
 import { ClaimStatusPageComponent } from './claim-status-page.component';
 
 registerLocaleData(localeEsCo);
@@ -57,6 +59,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
         provideHttpClientTesting(),
         { provide: AuthService, useValue: { user } },
         { provide: CLAIM_STATUS_GATEWAY, useClass: HttpClaimStatusGateway },
+        { provide: CLAIM_EVIDENCE_GATEWAY, useClass: HttpClaimEvidenceGateway },
         { provide: ActivatedRoute, useValue: { paramMap: params.asObservable() } },
       ],
     }).compileComponents();
