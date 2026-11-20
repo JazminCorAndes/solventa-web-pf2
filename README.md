@@ -86,8 +86,9 @@ El tablero incluye una póliza académica vigente para recorrer sin backend:
 - simulación y confirmación de una modificación versionada.
 
 El siniestro paramétrico `70000000-0000-4000-8000-000000000001` permite comprobar
-el resultado automático de HU31 en `/app/siniestros`: aparece como **Paramétrico**,
-**Pagado** y conserva el historial desde el evento hasta la indemnización.
+el resultado automático de HU31: está disponible en `/app/siniestros` y su detalle
+aparece como **Paramétrico**, **Pagado** y conserva el historial desde el evento
+hasta la indemnización.
 
 Los mocks viven solo en memoria durante la sesión de la aplicación. Recargar reinicia
 renovaciones, modificaciones, reportes y evidencias. Las configuraciones `local` y
@@ -121,10 +122,37 @@ No borres el almacenamiento ni cierres la pestaña mientras exista una operació
 sin confirmar. El navegador no es la fuente de verdad: únicamente se presenta
 éxito con ID, estado y datos validados del backend.
 
+### Listado de siniestros del cliente (refinamiento SOL-184)
+
+El menú **Siniestros** abre `/app/siniestros`, con carga, vacío, error y acceso
+denegado explícitos, actualización y enlaces al detalle y al reporte. Conserva una
+consulta opcional por UUID. Sigue la estructura de listado y nuevo reporte del
+[mock de referencia](https://juanes545.github.io/solventa-web/#/app/claims),
+manteniendo las rutas españolas y los componentes existentes.
+
+`GET /v1/siniestros` devuelve `{siniestros: ClaimRecord[]}` del cliente identificado
+por JWT; no se envía identidad de cliente, cuerpo ni parámetros. El contrato no
+ofrece filtros, total ni paginación. Se conserva el orden del servidor (registro
+descendente y desempate por identificador). Un fallo o respuesta inválida no se
+convierte en una lista vacía ni deja resultados anteriores visibles; un cambio de
+cuenta cancela la consulta y descarta los datos. No hay persistencia local del listado.
+
+El badge **Reporte registrado** es únicamente el acuse durable: no significa
+aprobado ni estado vigente. Cada reporte muestra su evento, descripción original,
+lugar, póliza y fechas, y enlaza a `/app/siniestros/:claimId` para consultar estado,
+historial y evidencias existentes. El detalle permite volver al listado. No se
+añaden operaciones de evaluación, peritaje, pago ni bandeja interna.
+
+El modo mock lista el caso paramétrico académico y los reportes creados en memoria,
+sin duplicarlos por reintentos. Backend de referencia:
+`Migue765/backend-solventa@cdc1f849`, contrato `contracts/openapi/siniestros-v1.yaml`.
+Jira no estuvo disponible: este refinamiento no declara verificados sus criterios
+de aceptación.
+
 ### Consultar estado e historial (SOL-177)
 
-El menú **Estado de mi siniestro** abre `/app/siniestros`. Desde la confirmación
-del reporte se puede consultar el mismo número sin volver a escribirlo.
+El listado y la confirmación del reporte enlazan directamente al caso;
+también se conserva la consulta manual por UUID.
 `GET /v1/clientes/me/siniestros/:id` devuelve estado, fechas e historial permitido;
 el frontend no decide transiciones. El acuse `registrado` del formulario conserva
 su contrato y no sustituye esta consulta del estado vigente.

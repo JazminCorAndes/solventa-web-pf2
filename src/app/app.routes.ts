@@ -136,8 +136,8 @@ export const routes: Routes = [
       {
         path: 'siniestros',
         loadComponent: () =>
-          import('./features/claims/claim-status-page.component').then(
-            (component) => component.ClaimStatusPageComponent,
+          import('./features/claims/claim-list-page.component').then(
+            (component) => component.ClaimListPageComponent,
           ),
         title: 'Siniestros | Solventa',
       },
