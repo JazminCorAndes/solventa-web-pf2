@@ -43,6 +43,7 @@ export class DashboardPageComponent implements OnInit {
     programada: 'dashboard.states.scheduled',
     vigente: 'dashboard.states.active',
     vencida: 'dashboard.states.expired',
+    cancelada: 'policies.states.cancelled',
   };
 
   readonly policyTypeKeys: Readonly<Record<string, string>> = {

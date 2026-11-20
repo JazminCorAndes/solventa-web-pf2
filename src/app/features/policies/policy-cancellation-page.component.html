@@ -1,0 +1,222 @@
+<section class="policy-cancellation" [attr.aria-busy]="busy()">
+  <header>
+    <div>
+      <h1>{{ 'policyCancellation.title' | transloco }}</h1>
+      <p>{{ 'policyCancellation.subtitle' | transloco }}</p>
+    </div>
+    <a
+      mat-button
+      [routerLink]="policyId() ? ['/app/polizas', policyId()] : ['/app/polizas']"
+      data-testid="cancellation-back"
+      >{{ 'policyCancellation.back' | transloco }}</a
+    >
+  </header>
+
+  <p class="academic-notice">{{ 'policyCancellation.academic' | transloco }}</p>
+
+  @if (notice(); as message) {
+    <p class="status-message error" role="alert" data-testid="cancellation-notice">
+      {{ 'policyCancellation.errors.' + message | transloco }}
+    </p>
+  }
+
+  @switch (state()) {
+    @case ('loading') {
+      <div class="status-message" role="status">
+        <mat-spinner diameter="28" />
+        <span>{{ 'policyCancellation.loading' | transloco }}</span>
+      </div>
+    }
+    @case ('invalid') {
+      <p role="alert">{{ 'policyCancellation.invalid' | transloco }}</p>
+    }
+    @case ('session') {
+      <p role="alert">{{ 'policyCancellation.errors.session' | transloco }}</p>
+    }
+    @case ('error') {
+      <button mat-stroked-button type="button" (click)="load()" data-testid="cancellation-reload">
+        {{ 'policyCancellation.reload' | transloco }}
+      </button>
+    }
+    @case ('ready') {
+      @if (cancellation(); as current) {
+        @if (result(); as result) {
+          <mat-card data-testid="cancellation-result">
+            <mat-card-header>
+              <mat-card-title role="status">{{
+                'policyCancellation.success' | transloco
+              }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <dl>
+                <div>
+                  <dt>{{ 'policyCancellation.reference' | transloco }}</dt>
+                  <dd>{{ result.id }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyCancellation.reason' | transloco }}</dt>
+                  <dd>{{ 'policyCancellation.reasons.' + result.reason | transloco }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyCancellation.confirmedAt' | transloco }}</dt>
+                  <dd>{{ result.confirmedAt | date: 'medium' : undefined : dateLocale }}</dd>
+                </div>
+              </dl>
+            </mat-card-content>
+          </mat-card>
+        } @else if (current.reason) {
+          <p role="status" data-testid="cancellation-ineligible">
+            {{ 'policyCancellation.ineligible.' + current.reason | transloco }}
+          </p>
+        }
+
+        @if (pending() && !result()) {
+          <mat-card data-testid="cancellation-pending">
+            <mat-card-content>
+              <p role="status">{{ 'policyCancellation.pending' | transloco }}</p>
+              <p>
+                {{ 'policyCancellation.reason' | transloco }}:
+                {{ 'policyCancellation.reasons.' + pending()!.reason | transloco }}
+              </p>
+            </mat-card-content>
+            <mat-card-actions>
+              <button
+                mat-flat-button
+                type="button"
+                (click)="confirm()"
+                [disabled]="busy() || blocked()"
+                data-testid="cancellation-retry"
+              >
+                {{ 'policyCancellation.retry' | transloco }}
+              </button>
+              <button
+                mat-stroked-button
+                type="button"
+                (click)="load()"
+                [disabled]="busy()"
+                data-testid="cancellation-reload"
+              >
+                {{ 'policyCancellation.reload' | transloco }}
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+
+        @if (settlement(); as settlement) {
+          <mat-card data-testid="cancellation-settlement">
+            <mat-card-header>
+              <mat-card-title>{{ 'policyCancellation.settlement' | transloco }}</mat-card-title>
+              <mat-card-subtitle>{{ current.policyId }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <dl>
+                <div>
+                  <dt>{{ 'policyCancellation.coverageEnd' | transloco }}</dt>
+                  <dd>{{ settlement.coverageEnd | date: 'longDate' : 'UTC' : dateLocale }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyCancellation.monthlyPremium' | transloco }}</dt>
+                  <dd>{{ money(settlement.monthlyPremium.amount) }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyCancellation.currentPeriod' | transloco }}</dt>
+                  <dd>
+                    {{ settlement.currentPeriod.start | date: 'mediumDate' : 'UTC' : dateLocale }} –
+                    {{ settlement.currentPeriod.end | date: 'mediumDate' : 'UTC' : dateLocale }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyCancellation.unusedDays' | transloco }}</dt>
+                  <dd>{{ settlement.unusedDays }} / {{ settlement.periodDays }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyCancellation.proratedRefund' | transloco }}</dt>
+                  <dd>{{ money(settlement.proratedRefund.amount) }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyCancellation.voidedRefund' | transloco }}</dt>
+                  <dd>{{ money(settlement.voidedRefund.amount) }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyCancellation.refund' | transloco }}</dt>
+                  <dd data-testid="cancellation-refund">{{ money(settlement.refund.amount) }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'policyCancellation.pendingAmount' | transloco }}</dt>
+                  <dd>{{ money(settlement.pendingAmount.amount) }}</dd>
+                </div>
+              </dl>
+              <h3>{{ 'policyCancellation.endedCoverages' | transloco }}</h3>
+              <ul>
+                @for (coverage of settlement.endedCoverages; track coverage.code) {
+                  <li>{{ coverage.name }}</li>
+                }
+              </ul>
+              <h3>{{ 'policyCancellation.voidedPeriods' | transloco }}</h3>
+              <ul>
+                @for (period of settlement.voidedPeriods; track $index) {
+                  <li>
+                    {{ period.start | date: 'mediumDate' : 'UTC' : dateLocale }} –
+                    {{ period.end | date: 'mediumDate' : 'UTC' : dateLocale }} ·
+                    {{ money(period.premium.amount) }}
+                  </li>
+                } @empty {
+                  <li>{{ 'policyCancellation.noVoidedPeriods' | transloco }}</li>
+                }
+              </ul>
+              <p class="rule">
+                {{ 'policyCancellation.rule' | transloco }}: {{ settlement.ruleVersion }}
+              </p>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        @if (current.cancellable && !pending() && !result()) {
+          <mat-card data-testid="cancellation-form">
+            <mat-card-content>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'policyCancellation.reason' | transloco }}</mat-label>
+                <mat-select
+                  [value]="reason()"
+                  (selectionChange)="selectReason($event.value)"
+                  [disabled]="busy() || blocked()"
+                  required
+                  data-testid="cancellation-reason"
+                >
+                  @for (option of reasons; track option) {
+                    <mat-option [value]="option">{{
+                      'policyCancellation.reasons.' + option | transloco
+                    }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <p>{{ 'policyCancellation.consequences' | transloco }}</p>
+              <mat-checkbox
+                [checked]="confirmed()"
+                (change)="confirmed.set($event.checked)"
+                [disabled]="busy() || blocked()"
+                data-testid="cancellation-accept"
+              >
+                {{ 'policyCancellation.confirmation' | transloco }}
+              </mat-checkbox>
+            </mat-card-content>
+            <mat-card-actions>
+              <button
+                mat-flat-button
+                type="button"
+                (click)="confirm()"
+                [disabled]="!canConfirm()"
+                data-testid="cancellation-confirm"
+              >
+                {{ 'policyCancellation.confirm' | transloco }}
+              </button>
+              <a mat-button [routerLink]="['/app/polizas', policyId()]">{{
+                'policyCancellation.keep' | transloco
+              }}</a>
+            </mat-card-actions>
+          </mat-card>
+        }
+      }
+    }
+  }
+</section>

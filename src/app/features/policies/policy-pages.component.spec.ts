@@ -37,7 +37,7 @@ describe('Policy pages', () => {
     expect(dashboard.load).toHaveBeenCalledOnce();
   });
 
-  it('connects an active policy detail with claims, renewal and modification', async () => {
+  it('connects an active policy detail with claims, renewal, modification and cancellation', async () => {
     await configure(PolicyDetailPageComponent, DASHBOARD_SNAPSHOT.policies[0].id);
     const fixture = TestBed.createComponent(PolicyDetailPageComponent);
     fixture.detectChanges();
@@ -52,7 +52,23 @@ describe('Policy pages', () => {
       `/app/siniestros/reportar?polizaId=${DASHBOARD_SNAPSHOT.policies[0].id}`,
       `/app/polizas/${DASHBOARD_SNAPSHOT.policies[0].id}/renovacion`,
       `/app/polizas/${DASHBOARD_SNAPSHOT.policies[0].id}/modificacion`,
+      `/app/polizas/${DASHBOARD_SNAPSHOT.policies[0].id}/cancelacion`,
     ]);
+  });
+
+  it('shows the recorded cancellation without offering renewal or modification', async () => {
+    snapshot.set({
+      ...DASHBOARD_SNAPSHOT,
+      policies: [{ ...DASHBOARD_SNAPSHOT.policies[0], status: 'cancelada' }],
+    });
+    await configure(PolicyDetailPageComponent, DASHBOARD_SNAPSHOT.policies[0].id);
+    const fixture = TestBed.createComponent(PolicyDetailPageComponent);
+    fixture.detectChanges();
+    expect(text(fixture)).toContain(es.policies.states.cancelled);
+    expect(fixture.nativeElement.querySelector('.actions-card nav')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.actions-card a').getAttribute('href')).toBe(
+      `/app/polizas/${DASHBOARD_SNAPSHOT.policies[0].id}/cancelacion`,
+    );
   });
 
   it('does not present operations for an unknown policy', async () => {

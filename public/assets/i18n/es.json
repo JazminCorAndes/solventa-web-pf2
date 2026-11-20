@@ -409,11 +409,14 @@
     "reportClaim": "Reportar un siniestro",
     "renew": "Renovar póliza",
     "modify": "Modificar póliza",
+    "cancel": "Revisar cancelación",
+    "cancellationResult": "Ver cancelación registrada",
     "inactiveNotice": "Esta póliza no está vigente. Las operaciones están disponibles únicamente para pólizas vigentes.",
     "notFound": "No encontramos esta póliza en tu cuenta.",
     "states": {
       "active": "Vigente",
-      "expired": "Vencida"
+      "expired": "Vencida",
+      "cancelled": "Cancelada"
     }
   },
   "quoteRequest": {
@@ -1164,6 +1167,65 @@
       "inProgress": "Ya hay una renovación en proceso para esta póliza. Consulta su resultado antes de intentar de nuevo.",
       "notRenewable": "La póliza ya no cumple las condiciones para renovarse.",
       "unconfirmed": "No pudimos confirmar la renovación. Tu póliza no muestra cambios; consulta el resultado antes de intentar de nuevo."
+    }
+  },
+  "policyCancellation": {
+    "title": "Cancelar póliza",
+    "subtitle": "Revisa la liquidación y las coberturas que finalizarán antes de confirmar.",
+    "back": "Volver a la póliza",
+    "academic": "Simulación académica. Esta operación no realiza cobros ni devoluciones de dinero reales.",
+    "loading": "Consultando elegibilidad y liquidación",
+    "invalid": "El identificador de la póliza no es válido.",
+    "settlement": "Liquidación de cancelación",
+    "coverageEnd": "Fecha efectiva y fin de cobertura",
+    "monthlyPremium": "Prima mensual",
+    "currentPeriod": "Periodo actual",
+    "unusedDays": "Días no usados / días del periodo",
+    "proratedRefund": "Devolución proporcional",
+    "voidedRefund": "Devolución de periodos anulados",
+    "refund": "Devolución total",
+    "pendingAmount": "Valor pendiente",
+    "endedCoverages": "Coberturas que finalizan",
+    "voidedPeriods": "Periodos anulados",
+    "noVoidedPeriods": "No hay periodos posteriores por anular.",
+    "rule": "Regla aplicada por el servicio",
+    "reason": "Motivo de cancelación",
+    "consequences": "La cobertura termina en la fecha efectiva indicada. La liquidación corresponde a los valores informados por el servicio.",
+    "confirmation": "He revisado la liquidación y acepto finalizar estas coberturas.",
+    "confirm": "Confirmar cancelación",
+    "keep": "Conservar mi póliza",
+    "pending": "Hay una solicitud cuyo resultado aún debe verificarse. No se enviará una nueva cancelación ni se cambiarán sus condiciones.",
+    "retry": "Recuperar la misma solicitud",
+    "reload": "Consultar estado actualizado",
+    "success": "Cancelación registrada",
+    "reference": "Referencia de cancelación",
+    "confirmedAt": "Confirmada el",
+    "reasons": {
+      "ya_no_la_necesito": "Ya no la necesito",
+      "costo": "Costo",
+      "cambio_de_aseguradora": "Cambio de aseguradora",
+      "insatisfaccion": "Insatisfacción",
+      "otro": "Otro"
+    },
+    "ineligible": {
+      "producto_no_cancelable": "Este producto no permite cancelación.",
+      "poliza_cancelada": "Esta póliza ya está cancelada.",
+      "poliza_programada": "La póliza aún no ha iniciado su vigencia.",
+      "poliza_vencida": "La póliza está vencida.",
+      "fin_de_vigencia": "La póliza llegó al final de su vigencia.",
+      "renovacion_en_curso": "Hay una renovación en curso. No puedes cancelar mientras se resuelve."
+    },
+    "errors": {
+      "load": "No pudimos consultar la cancelación. Puedes volver a consultar sin enviar una solicitud.",
+      "ambiguous": "No pudimos confirmar el resultado. Conservamos la misma solicitud para recuperarla de forma segura.",
+      "storage": "No pudimos conservar o leer la solicitud de recuperación. La confirmación está bloqueada; vuelve a consultar el estado antes de continuar.",
+      "not-found": "No encontramos esta póliza en tu cuenta.",
+      "forbidden": "Tu sesión no tiene permiso para cancelar esta póliza.",
+      "session": "Necesitas una sesión de cliente válida para continuar.",
+      "invalid-request": "El servicio rechazó los datos de la solicitud. Consulta el estado antes de continuar.",
+      "not-cancellable": "La póliza ya no permite esta cancelación. Revisa su estado actualizado.",
+      "settlement-changed": "La liquidación cambió. Revisa los nuevos valores, elige el motivo y confirma nuevamente.",
+      "key-conflict": "La referencia de la solicitud tiene un conflicto. Consulta el estado; no se enviará una cancelación con otra clave. Si persiste, contacta con soporte."
     }
   },
   "policyModification": {
