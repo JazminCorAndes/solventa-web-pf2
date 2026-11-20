@@ -18,6 +18,41 @@ Actions se ejecuta automáticamente. Un colaborador solicita Jenkins con un come
 Los reportes HTML/XML se conservan en Jenkins privado. No se exige un porcentaje mínimo nuevo.
 Consulta [la guía de CI](docs/ci.md) para ver alcance, nombres y lectura de resultados.
 
+## Documento académico y aceptación simulada
+
+El detalle en `/app/polizas/:policyId` consulta el documento autenticado del cliente,
+muestra su contenido estructurado como texto y permite una aceptación explícita
+ligada a `documentoId`, `versionPoliza` y `contenidoHash`. Desde una suscripción
+emitida se accede a **Mis pólizas**; la suscripción no expone un identificador de
+póliza y no se inventa uno. No se implementa firma legal ni se cambia el ciclo de vida.
+
+Esta función requiere modo backend: no genera HTML ni aceptaciones de demostración.
+Depende de [Migue765/backend-solventa#135](https://github.com/Migue765/backend-solventa/pull/135),
+rama `feature/refina-documento-firma`, contrato `documento-poliza-web-v1.yaml` en
+`5b6ebceecdd7c74758b8e6487914eab1a7c3b09f`. La existencia del PR no implica despliegue.
+Consume `GET .../polizas/{id}/documento`, `POST .../polizas/{id}/aceptaciones` y
+`GET .../polizas/{id}/documentos/{documentoId}/descarga` bajo `/v1/clientes/me`.
+La descarga verifica SHA-256 sobre el `ArrayBuffer` original contra el DTO,
+el tipo HTML UTF-8 y los encabezados de integridad/seguridad cuando son visibles.
+En llamadas cross-origin no depende de encabezados no expuestos por CORS:
+usa el hash del DTO y un nombre `.html` propio formado solo por UUID validados.
+El HTML nunca se inserta en el DOM de la aplicación.
+
+Antes del POST se conserva la clave UUID y el cuerpo exacto en `sessionStorage`,
+aislados por cliente/póliza. Un timeout, 503 o resultado inválido conserva el intento
+para recuperarlo sin otra clave incluso tras recargar. Un 409 por documento
+desactualizado obliga a consultar y aceptar expresamente la nueva versión;
+un conflicto de idempotencia bloquea el reenvío. Un cambio de cuenta oculta el
+contenido y cancela las peticiones de la cuenta anterior.
+
+Comprobaciones focales:
+`pnpm exec ng test --watch=false "--include=src/app/**/*policy-document*.spec.ts"`,
+`node tests/cypress/run.cjs ui policy-document.cy.ts` y `pnpm build`.
+La suite `ui` controla HTTP y no acredita E2E contra servicios ni criterios de Jira.
+La [suite opt-in `document`](tests/cypress/README.md) verifica consulta, aceptación
+y descarga con el BFF y Pólizas/SQLite sintéticos de esa rama; solo sesión y dashboard
+se controlan. Tampoco acredita login/pagos reales ni un despliegue.
+
 ## Tecnologías
 
 Las pruebas adicionales están en [`tests/cypress`](tests/cypress/README.md):

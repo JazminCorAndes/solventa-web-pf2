@@ -558,6 +558,12 @@ test('selecciona solo un spec sin ampliar su alcance ni mezclar suites', () => {
   );
   assert.throws(() => selectedSpec('evidence'), /exige seleccionar/);
   assert.throws(() => selectedSpec('evidence', 'catalog.cy.ts'), /exige seleccionar/);
+  assert.equal(
+    selectedSpec('document', 'policy-document.cy.ts'),
+    'tests/cypress/document/policy-document.cy.ts',
+  );
+  assert.throws(() => selectedSpec('document'), /exige seleccionar/);
+  assert.throws(() => selectedSpec('document', 'catalog.cy.ts'), /exige seleccionar/);
   for (const file of [
     '',
     '*.cy.ts',
