@@ -150,9 +150,9 @@ describe('OperationalReportsPageComponent with HTTP consumer', () => {
   });
 
   it('downloads exactly the confirmed report and reports when it is no longer reproducible', async () => {
-    const createObjectURL = vi.fn(() => 'blob:report');
-    const revokeObjectURL = vi.fn();
-    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    // spyOn (y no reemplazar la propiedad) para que restoreAllMocks deje URL intacto.
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:report');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const click = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
