@@ -1,4 +1,21 @@
 {
+  "claimList": {
+    "title": "My claims",
+    "subtitle": "Browse your reports and open a claim to follow its progress and attach evidence.",
+    "loading": "Loading your claims…",
+    "error": "Your claims could not be loaded. No outdated reports are shown; please try again.",
+    "forbidden": "Your account cannot access this client claim list.",
+    "session": "Sign in as a client to view your claims.",
+    "signIn": "Sign in",
+    "empty": "You have not reported any claims yet",
+    "emptyHint": "When you report an event, you can find it here.",
+    "registered": "Report registered",
+    "registrationNote": "Registration confirms receipt, not approval or the current claim status. Open the detail to see its status and history.",
+    "viewDetail": "View status, history and evidence",
+    "location": "Event location",
+    "lookup": "Look up a claim number",
+    "back": "Back to my claims"
+  },
   "claims": {
     "title": "Report a claim",
     "instructions": "Select your policy and tell us what happened.",
