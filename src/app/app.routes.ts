@@ -228,6 +228,14 @@ export const routes: Routes = [
         title: 'Excepciones Open Finance | Solventa',
       },
       {
+        path: 'reportes',
+        loadComponent: () =>
+          import('./features/advisor/operational-reports-page.component').then(
+            (component) => component.OperationalReportsPageComponent,
+          ),
+        title: 'Reportes operativos | Solventa',
+      },
+      {
         path: 'perfilamientos/nuevo',
         loadComponent: () =>
           import('./features/advisor/mortgage-profiling-start-page.component').then(

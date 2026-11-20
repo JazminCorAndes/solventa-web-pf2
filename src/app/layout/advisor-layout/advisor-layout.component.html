@@ -64,6 +64,16 @@
         </a>
         <a
           mat-list-item
+          routerLink="/asesor/reportes"
+          routerLinkActive="active-link"
+          data-testid="advisor-nav-reports"
+          (click)="keyboard.closeForNavigation()"
+        >
+          <app-icon matListItemIcon name="shield" />
+          <span matListItemTitle>{{ 'advisorNavigation.reports' | transloco }}</span>
+        </a>
+        <a
+          mat-list-item
           routerLink="/asesor/perfilamientos/nuevo"
           routerLinkActive="active-link"
           (click)="keyboard.closeForNavigation()"

@@ -1,0 +1,302 @@
+<section class="operational-reports">
+  <header class="reports-heading">
+    <h1>{{ 'operationalReports.title' | transloco }}</h1>
+    <p>{{ 'operationalReports.subtitle' | transloco }}</p>
+  </header>
+
+  @if (state() === 'forbidden') {
+    <p class="status-message error" role="alert" data-testid="report-forbidden">
+      {{ 'operationalReports.forbidden' | transloco }}
+    </p>
+  } @else {
+    <mat-card appearance="raised">
+      <mat-card-content>
+        <form class="filters" [formGroup]="form" (ngSubmit)="query()" data-testid="report-filters">
+          <mat-form-field>
+            <mat-label>{{ 'operationalReports.from' | transloco }}</mat-label>
+            <input matInput type="date" formControlName="from" data-testid="report-from" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>{{ 'operationalReports.to' | transloco }}</mat-label>
+            <input matInput type="date" formControlName="to" data-testid="report-to" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>{{ 'operationalReports.product' | transloco }}</mat-label>
+            <mat-select formControlName="product" data-testid="report-product">
+              <mat-option [value]="null">{{ 'operationalReports.all' | transloco }}</mat-option>
+              @for (product of options().products; track product) {
+                <mat-option [value]="product">{{ productLabel(product) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>{{ 'operationalReports.status' | transloco }}</mat-label>
+            <mat-select formControlName="status" data-testid="report-status">
+              <mat-option [value]="null">{{ 'operationalReports.all' | transloco }}</mat-option>
+              @for (status of options().statuses; track status) {
+                <mat-option [value]="status">
+                  {{ 'operationalReports.policyStates.' + status | transloco }}
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>{{ 'operationalReports.cutOff' | transloco }}</mat-label>
+            <input
+              matInput
+              type="datetime-local"
+              formControlName="cutOff"
+              data-testid="report-cut-off"
+            />
+            <mat-hint>{{ 'operationalReports.cutOffHint' | transloco }}</mat-hint>
+          </mat-form-field>
+          <div class="filter-actions">
+            <button
+              mat-flat-button
+              type="submit"
+              data-testid="report-query"
+              [disabled]="state() === 'loading'"
+            >
+              {{ 'operationalReports.query' | transloco }}
+            </button>
+          </div>
+        </form>
+        @if (periodError(); as error) {
+          <p class="status-message error" role="alert" data-testid="report-period-error">
+            {{ 'operationalReports.periodErrors.' + error | transloco }}
+          </p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    @switch (state()) {
+      @case ('idle') {
+        <p class="status-message" data-testid="report-idle">
+          {{ 'operationalReports.idle' | transloco }}
+        </p>
+      }
+      @case ('loading') {
+        <div class="status-message" role="status" data-testid="report-loading">
+          <mat-spinner diameter="28" />
+          <span>{{ 'operationalReports.loading' | transloco }}</span>
+        </div>
+      }
+      @case ('invalid-filters') {
+        <p class="status-message error" role="alert" data-testid="report-invalid">
+          {{ 'operationalReports.invalidFilters' | transloco }}
+        </p>
+      }
+      @case ('incomplete') {
+        <div class="status-message error" role="alert" data-testid="report-incomplete">
+          <span>
+            {{ 'operationalReports.incomplete' | transloco }}
+            @if (unavailableSource(); as source) {
+              ({{ label('operationalReports.sources.' + source, source) }})
+            }
+          </span>
+          <button mat-stroked-button type="button" (click)="query()">
+            {{ 'operationalReports.retry' | transloco }}
+          </button>
+        </div>
+      }
+      @case ('error') {
+        <div class="status-message error" role="alert" data-testid="report-error">
+          <span>{{ 'operationalReports.error' | transloco }}</span>
+          <button mat-stroked-button type="button" (click)="query()">
+            {{ 'operationalReports.retry' | transloco }}
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        @if (report(); as result) {
+          <div class="report-meta" data-testid="report-meta">
+            <div>
+              <span class="meta-label">{{ 'operationalReports.cutOffLabel' | transloco }}</span>
+              <strong data-testid="report-cut-off-value">
+                {{ result.cutOff | date: 'medium' : undefined : dateLocale }}
+              </strong>
+            </div>
+            <div>
+              <span class="meta-label">{{ 'operationalReports.period' | transloco }}</span>
+              <strong>
+                {{ result.filters.from | date: 'mediumDate' : 'UTC' : dateLocale }} –
+                {{ result.filters.to | date: 'mediumDate' : 'UTC' : dateLocale }}
+              </strong>
+            </div>
+            <div class="meta-actions">
+              <button
+                mat-stroked-button
+                type="button"
+                data-testid="report-download"
+                [disabled]="download() === 'downloading'"
+                (click)="downloadReport()"
+              >
+                @if (download() === 'downloading') {
+                  {{ 'operationalReports.downloading' | transloco }}
+                } @else {
+                  {{ 'operationalReports.download' | transloco }}
+                }
+              </button>
+            </div>
+          </div>
+          @if (download() === 'not-reproducible') {
+            <p class="status-message error" role="alert" data-testid="report-not-reproducible">
+              {{ 'operationalReports.notReproducible' | transloco }}
+            </p>
+          } @else if (download() === 'error') {
+            <p class="status-message error" role="alert" data-testid="report-download-error">
+              {{ 'operationalReports.downloadError' | transloco }}
+            </p>
+          }
+
+          @if (empty()) {
+            <p class="status-message" data-testid="report-empty">
+              {{ 'operationalReports.empty' | transloco }}
+            </p>
+          } @else {
+            <div class="indicators" data-testid="report-indicators">
+              <mat-card appearance="outlined" data-testid="indicator-policies">
+                <mat-card-header>
+                  <mat-card-title>{{ 'operationalReports.policies' | transloco }}</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p class="kpi">{{ result.policies.portfolio }}</p>
+                  <p>{{ 'operationalReports.portfolio' | transloco }}</p>
+                  <p>
+                    {{ 'operationalReports.issuedInPeriod' | transloco }}:
+                    <strong>{{ result.policies.issuedInPeriod }}</strong>
+                  </p>
+                  <ul>
+                    @for (item of result.policies.byStatus | keyvalue; track item.key) {
+                      <li>
+                        {{ label('operationalReports.policyStates.' + item.key, item.key) }}:
+                        {{ item.value }}
+                      </li>
+                    }
+                  </ul>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card appearance="outlined" data-testid="indicator-premiums">
+                <mat-card-header>
+                  <mat-card-title>{{ 'operationalReports.premiums' | transloco }}</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p class="kpi">{{ result.premiums.confirmed }}</p>
+                  <p>{{ 'operationalReports.confirmedPremiums' | transloco }}</p>
+                  @for (total of result.premiums.totals; track total.currency) {
+                    <p>
+                      <strong>
+                        {{
+                          amount(total.amount)
+                            | currency: total.currency : 'symbol-narrow' : '1.0-2' : dateLocale
+                        }}
+                      </strong>
+                    </p>
+                  }
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card appearance="outlined" data-testid="indicator-claims">
+                <mat-card-header>
+                  <mat-card-title>{{ 'operationalReports.claims' | transloco }}</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p class="kpi">{{ result.claims.reported }}</p>
+                  <p>{{ 'operationalReports.reportedClaims' | transloco }}</p>
+                  <ul>
+                    @for (item of result.claims.byStatus | keyvalue; track item.key) {
+                      @if (item.value > 0) {
+                        <li>
+                          {{ label('operationalReports.claimStates.' + item.key, item.key) }}:
+                          {{ item.value }}
+                        </li>
+                      }
+                    }
+                  </ul>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card appearance="outlined" data-testid="indicator-payments">
+                <mat-card-header>
+                  <mat-card-title>{{ 'operationalReports.payments' | transloco }}</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p class="kpi">{{ result.payments.registered }}</p>
+                  <p>{{ 'operationalReports.registeredPayments' | transloco }}</p>
+                  <ul>
+                    @for (total of result.payments.totals; track total.status + total.currency) {
+                      <li>
+                        {{
+                          label('operationalReports.paymentStates.' + total.status, total.status)
+                        }}:
+                        {{
+                          amount(total.amount)
+                            | currency: total.currency : 'symbol-narrow' : '1.0-2' : dateLocale
+                        }}
+                      </li>
+                    }
+                  </ul>
+                </mat-card-content>
+              </mat-card>
+            </div>
+
+            <mat-card appearance="raised" data-testid="report-by-product">
+              <mat-card-header>
+                <mat-card-title>{{ 'operationalReports.byProduct' | transloco }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{{ 'operationalReports.product' | transloco }}</th>
+                      <th scope="col">{{ 'operationalReports.portfolio' | transloco }}</th>
+                      <th scope="col">{{ 'operationalReports.issuedInPeriod' | transloco }}</th>
+                      <th scope="col">{{ 'operationalReports.confirmedPremiums' | transloco }}</th>
+                      <th scope="col">{{ 'operationalReports.reportedClaims' | transloco }}</th>
+                      <th scope="col">{{ 'operationalReports.registeredPayments' | transloco }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of result.byProduct; track row.product) {
+                      <tr>
+                        <th scope="row">{{ productLabel(row.product) }}</th>
+                        <td>{{ row.portfolio }}</td>
+                        <td>{{ row.issuedPolicies }}</td>
+                        <td>{{ row.confirmedPremiums }}</td>
+                        <td>{{ row.reportedClaims }}</td>
+                        <td>{{ row.registeredPayments }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          @if (hasInconsistencies()) {
+            <p class="status-message warning" role="status" data-testid="report-inconsistencies">
+              {{ 'operationalReports.inconsistencies' | transloco }}
+              @for (item of result.inconsistencies | keyvalue; track item.key) {
+                @if (item.value > 0) {
+                  <span>
+                    {{ 'operationalReports.inconsistencyTypes.' + item.key | transloco }}:
+                    {{ item.value }}.
+                  </span>
+                }
+              }
+            </p>
+          }
+
+          <p class="sources" data-testid="report-sources">
+            {{ 'operationalReports.sourcesLabel' | transloco }}
+            @for (source of result.sources; track source.service; let last = $last) {
+              {{ label('operationalReports.sources.' + source.service, source.service) }}
+              ({{ source.records }}){{ last ? '.' : ',' }}
+            }
+          </p>
+        }
+      }
+    }
+  }
+</section>

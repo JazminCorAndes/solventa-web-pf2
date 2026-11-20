@@ -828,7 +828,8 @@
     "portalType": "Distribution partners",
     "title": "Advisor portal",
     "clients": "Customers",
-    "exceptions": "Open Finance exceptions"
+    "exceptions": "Open Finance exceptions",
+    "reports": "Operational reports"
   },
   "advisorExceptions": {
     "eyebrow": "Operation review",
@@ -1225,6 +1226,92 @@
       "confirmed": "The modification was confirmed. Current version:",
       "simulationFailed": "We could not calculate the impact. Your current conditions did not change.",
       "unconfirmed": "We could not confirm the modification. Your current conditions did not change; try confirming again."
+    }
+  },
+  "operationalReports": {
+    "title": "Operational reports",
+    "subtitle": "Aggregated policy, premium, claim and payment indicators at a cut-off date, without personal data.",
+    "from": "From",
+    "to": "To",
+    "product": "Product",
+    "status": "Policy status",
+    "all": "All",
+    "cutOff": "Cut-off date (optional)",
+    "cutOffHint": "Leave it empty to use the latest cut-off.",
+    "query": "Run report",
+    "idle": "Choose the period and filters, then run the report.",
+    "loading": "Consolidating the sources at the cut-off…",
+    "forbidden": "Your user is not authorized to view operational reports.",
+    "invalidFilters": "The filters are not valid. Check the period, product and status.",
+    "incomplete": "Not all sources could be consolidated at the cut-off. No partial report is shown.",
+    "error": "The report could not be loaded. No outdated information is shown.",
+    "retry": "Retry",
+    "cutOffLabel": "Cut-off date",
+    "period": "Period",
+    "download": "Download CSV",
+    "downloading": "Downloading…",
+    "notReproducible": "The result at the cut-off no longer matches the report shown. Run it again before downloading.",
+    "downloadError": "The report could not be downloaded. Try again.",
+    "empty": "There are no results for the selected period and filters.",
+    "policies": "Policies",
+    "portfolio": "Portfolio at cut-off",
+    "issuedInPeriod": "Issued in the period",
+    "premiums": "Premiums",
+    "confirmedPremiums": "Confirmed premiums",
+    "claims": "Claims",
+    "reportedClaims": "Reported claims",
+    "payments": "Payments",
+    "registeredPayments": "Registered payments",
+    "byProduct": "Breakdown by product",
+    "inconsistencies": "Differences between sources:",
+    "inconsistencyTypes": {
+      "claimsWithoutPolicy": "Claims without policy",
+      "policiesWithoutPremium": "Policies without premium",
+      "premiumsWithOtherProduct": "Premiums with a different product",
+      "paymentsWithoutClaim": "Payments without claim"
+    },
+    "sourcesLabel": "Sources at cut-off:",
+    "sources": {
+      "polizas": "Policies",
+      "primas": "Premiums",
+      "siniestros": "Claims"
+    },
+    "periodErrors": {
+      "order": "The start date cannot be after the end date.",
+      "length": "The period cannot exceed 366 days.",
+      "future": "The period cannot end after the cut-off.",
+      "cutoff": "The cut-off date cannot be in the future."
+    },
+    "products": {
+      "automotive": "Auto",
+      "travel": "Travel",
+      "life": "Life",
+      "device-protection": "Device protection",
+      "parametric": "Flight delay",
+      "parametric-weather": "Parametric weather",
+      "payment-protection": "Payment protection",
+      "mortgage-life": "Mortgage life"
+    },
+    "policyStates": {
+      "programada": "Scheduled",
+      "vigente": "Active",
+      "vencida": "Expired",
+      "cancelada": "Cancelled"
+    },
+    "claimStates": {
+      "reportado": "Reported",
+      "en_evaluacion": "Under evaluation",
+      "en_revision": "Under review",
+      "en_inspeccion": "Under inspection",
+      "aprobado": "Approved",
+      "rechazado": "Rejected",
+      "pagado": "Paid",
+      "cerrado": "Closed"
+    },
+    "paymentStates": {
+      "pendiente": "Pending",
+      "confirmado": "Confirmed",
+      "rechazado": "Rejected"
     }
   }
 }
