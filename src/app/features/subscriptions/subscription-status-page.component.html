@@ -17,6 +17,11 @@
 
     <mat-card appearance="outlined">
       <mat-card-content>
+        @if (subscription.saga.status === 'issued') {
+          <a mat-stroked-button routerLink="/app/polizas">
+            {{ 'policyDocument.afterIssuance' | transloco }}
+          </a>
+        }
         @if (subscription.status === 'approved' && subscription.saga.status !== 'failed') {
           <span class="success-icon"><app-icon name="check" [size]="30" /></span>
         } @else {
