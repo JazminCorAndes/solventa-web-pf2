@@ -409,11 +409,14 @@
     "reportClaim": "Report a claim",
     "renew": "Renew policy",
     "modify": "Modify policy",
+    "cancel": "Review cancellation",
+    "cancellationResult": "View recorded cancellation",
     "inactiveNotice": "This policy is not active. Operations are only available for active policies.",
     "notFound": "We could not find this policy in your account.",
     "states": {
       "active": "Active",
-      "expired": "Expired"
+      "expired": "Expired",
+      "cancelled": "Cancelled"
     }
   },
   "quoteRequest": {
@@ -1164,6 +1167,65 @@
       "inProgress": "A renewal is already in progress for this policy. Check its result before trying again.",
       "notRenewable": "The policy no longer meets the renewal conditions.",
       "unconfirmed": "We could not confirm the renewal. Your policy shows no changes; check the result before trying again."
+    }
+  },
+  "policyCancellation": {
+    "title": "Cancel policy",
+    "subtitle": "Review the settlement and the coverage that will end before confirming.",
+    "back": "Back to policy",
+    "academic": "Academic simulation. This operation does not charge or refund real money.",
+    "loading": "Loading eligibility and settlement",
+    "invalid": "The policy identifier is invalid.",
+    "settlement": "Cancellation settlement",
+    "coverageEnd": "Effective date and end of coverage",
+    "monthlyPremium": "Monthly premium",
+    "currentPeriod": "Current period",
+    "unusedDays": "Unused days / days in period",
+    "proratedRefund": "Prorated refund",
+    "voidedRefund": "Refund for voided periods",
+    "refund": "Total refund",
+    "pendingAmount": "Outstanding amount",
+    "endedCoverages": "Coverage ending",
+    "voidedPeriods": "Voided periods",
+    "noVoidedPeriods": "There are no later periods to void.",
+    "rule": "Rule applied by the service",
+    "reason": "Cancellation reason",
+    "consequences": "Coverage ends on the effective date shown. The settlement displays the values returned by the service.",
+    "confirmation": "I have reviewed the settlement and agree to end this coverage.",
+    "confirm": "Confirm cancellation",
+    "keep": "Keep my policy",
+    "pending": "A request still needs its result verified. No new cancellation will be submitted or its conditions changed.",
+    "retry": "Recover the same request",
+    "reload": "Check current status",
+    "success": "Cancellation recorded",
+    "reference": "Cancellation reference",
+    "confirmedAt": "Confirmed on",
+    "reasons": {
+      "ya_no_la_necesito": "I no longer need it",
+      "costo": "Cost",
+      "cambio_de_aseguradora": "Changing insurer",
+      "insatisfaccion": "Dissatisfaction",
+      "otro": "Other"
+    },
+    "ineligible": {
+      "producto_no_cancelable": "This product does not allow cancellation.",
+      "poliza_cancelada": "This policy is already cancelled.",
+      "poliza_programada": "The policy has not started yet.",
+      "poliza_vencida": "The policy has expired.",
+      "fin_de_vigencia": "The policy has reached the end of its term.",
+      "renovacion_en_curso": "A renewal is in progress. Cancellation is unavailable until it is resolved."
+    },
+    "errors": {
+      "load": "We could not load the cancellation. You can check again without submitting a request.",
+      "ambiguous": "We could not confirm the result. The same request has been preserved for safe recovery.",
+      "storage": "We could not save or read the recovery request. Confirmation is blocked; check the current status before continuing.",
+      "not-found": "We could not find this policy in your account.",
+      "forbidden": "Your session does not have permission to cancel this policy.",
+      "session": "You need a valid client session to continue.",
+      "invalid-request": "The service rejected the request data. Check the current status before continuing.",
+      "not-cancellable": "This cancellation is no longer available. Review the current policy status.",
+      "settlement-changed": "The settlement changed. Review the new values, choose a reason and confirm again.",
+      "key-conflict": "The request reference has a conflict. Check the current status; no cancellation with a different key will be submitted. Contact support if it persists."
     }
   },
   "policyModification": {

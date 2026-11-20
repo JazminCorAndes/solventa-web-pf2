@@ -81,9 +81,17 @@
             <a mat-stroked-button [routerLink]="['/app/polizas', currentPolicy.id, 'modificacion']">
               {{ 'policies.modify' | transloco }}
             </a>
+            <a mat-stroked-button [routerLink]="['/app/polizas', currentPolicy.id, 'cancelacion']">
+              {{ 'policies.cancel' | transloco }}
+            </a>
           </nav>
         } @else {
           <p class="inactive-notice">{{ 'policies.inactiveNotice' | transloco }}</p>
+          @if (currentPolicy.status === 'cancelada') {
+            <a mat-stroked-button [routerLink]="['/app/polizas', currentPolicy.id, 'cancelacion']">
+              {{ 'policies.cancellationResult' | transloco }}
+            </a>
+          }
         }
       </aside>
     </div>
