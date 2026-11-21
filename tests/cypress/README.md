@@ -113,6 +113,13 @@ rechazo corregible y reintento con la misma operación tras un 503, aun si la p�
 ya no aparece vigente. Usa HTTP controlado; no acredita el recorrido a servicios
 ni persistencia reales de SOL-313.
 
+Para el refinamiento de cancelación SOL-187:
+`node tests/cypress/run.cjs ui policy-cancellation.cy.ts`. Recorre listado → detalle →
+cancelación, aceptación explícita, doble clic, resultado y regreso contextual; cubre
+503 con recarga y replay de clave/cuerpo, nueva aceptación tras `liquidacion_cambio`
+y ausencia de desbordamiento horizontal en escritorio (1280 px) y móvil (390 px).
+Usa HTTP controlado y no acredita persistencia real ni criterios Jira.
+
 ```sh
 pnpm install --frozen-lockfile
 pnpm test:cypress:types

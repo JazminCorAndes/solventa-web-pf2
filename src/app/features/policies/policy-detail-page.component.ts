@@ -65,4 +65,5 @@ const POLICY_TYPE_KEYS: Readonly<Record<string, string>> = {
 const POLICY_STATE_KEYS: Readonly<Record<string, string>> = {
   vigente: 'policies.states.active',
   vencida: 'policies.states.expired',
+  cancelada: 'policies.states.cancelled',
 };

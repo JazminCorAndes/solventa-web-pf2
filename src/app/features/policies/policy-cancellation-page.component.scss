@@ -1,0 +1,78 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.policy-cancellation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--solventa-space-5);
+  max-width: var(--solventa-content-max-width);
+  margin: 0 auto;
+  overflow-wrap: anywhere;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--solventa-space-4);
+}
+
+h1 {
+  margin: 0 0 var(--solventa-space-2);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+h3 {
+  font-size: 1rem;
+}
+
+header p,
+.rule,
+dt {
+  color: var(--solventa-color-text-secondary);
+}
+
+.academic-notice {
+  padding: var(--solventa-space-4);
+  border: 1px solid var(--solventa-color-border);
+  border-radius: var(--solventa-radius-md);
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--solventa-space-4);
+}
+
+dd {
+  margin: var(--solventa-space-1) 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+mat-card-content,
+mat-card-actions {
+  padding-top: var(--solventa-space-4);
+}
+
+mat-card-actions {
+  flex-wrap: wrap;
+  gap: var(--solventa-space-3);
+}
+
+mat-form-field {
+  width: min(100%, 26rem);
+}
+
+.status-message {
+  display: flex;
+  align-items: center;
+  gap: var(--solventa-space-3);
+}
+
+.error {
+  color: var(--solventa-color-error);
+}

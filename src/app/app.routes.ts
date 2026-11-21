@@ -118,6 +118,14 @@ export const routes: Routes = [
         title: 'Modificar póliza | Solventa',
       },
       {
+        path: 'polizas/:policyId/cancelacion',
+        loadComponent: () =>
+          import('./features/policies/policy-cancellation-page.component').then(
+            (component) => component.PolicyCancellationPageComponent,
+          ),
+        title: 'Cancelar póliza | Solventa',
+      },
+      {
         path: 'polizas/:policyId',
         loadComponent: () =>
           import('./features/policies/policy-detail-page.component').then(

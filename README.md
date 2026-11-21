@@ -118,7 +118,8 @@ El tablero incluye una póliza académica vigente para recorrer sin backend:
 - consulta de la póliza en la sección **Mis pólizas**, con listado, detalle y vigencia;
 - reporte y carga de evidencias de un siniestro;
 - renovación con pago simulado;
-- simulación y confirmación de una modificación versionada.
+- simulación y confirmación de una modificación versionada;
+- revisión de liquidación, confirmación y resultado de una cancelación académica.
 
 El siniestro paramétrico `70000000-0000-4000-8000-000000000001` permite comprobar
 el resultado automático de HU31: está disponible en `/app/siniestros` y su detalle
@@ -126,8 +127,38 @@ aparece como **Paramétrico**, **Pagado** y conserva el historial desde el event
 hasta la indemnización.
 
 Los mocks viven solo en memoria durante la sesión de la aplicación. Recargar reinicia
-renovaciones, modificaciones, reportes y evidencias. Las configuraciones `local` y
+renovaciones, modificaciones, cancelaciones, reportes y evidencias. Las configuraciones `local` y
 `backend` siguen usando los adaptadores HTTP reales.
+
+### Cancelar una póliza (refinamiento SOL-187)
+
+Desde **Mis pólizas → detalle → Revisar cancelación**, la ruta
+`/app/polizas/:policyId/cancelacion` consulta
+`GET /v1/clientes/me/polizas/:policyId/cancelacion`. El servicio determina autorización,
+elegibilidad, fin de cobertura, coberturas finalizadas, periodos anulados y todos los
+importes en COP. Angular no calcula liquidaciones ni construye su hash.
+El contrato utilizado es el BFF web de `Migue765/backend-solventa` en
+`cdc1f8497f68a35bdef5c2e988a0671b080b65a3`, sin cambios backend/SOL-321.
+
+Después de elegir un motivo y aceptar expresamente, envía
+`POST /v1/clientes/me/polizas/:policyId/cancelaciones` con
+`Idempotency-Key` UUID y exclusivamente
+`{confirma:true,motivoCancelacion,liquidacionHash}`. Un 201 registra y un 200 recupera
+la misma solicitud. La clave y el cuerpo se guardan en `sessionStorage`, aislados por
+cliente, póliza y modo de datos, antes del envío. Tras un error ambiguo, timeout o
+respuesta inválida se conserva esa solicitud, también al recargar; no se puede cambiar
+el motivo ni enviar una clave nueva. Si el almacenamiento falla, se bloquea el envío.
+La consulta puede recuperar una cancelación ya registrada sin repetir el POST.
+Un 409 `liquidacion_cambio` obliga a consultar y aceptar nuevamente; 422 muestra la
+inelegibilidad actual; 403, 404 y conflicto de clave se presentan sin afirmar éxito.
+
+El resultado conserva referencia, motivo, fecha y liquidación del servicio. Se refresca
+el dashboard y se vuelve al detalle contextual, que reconoce el estado `cancelada` y
+permite consultar el resultado sin ofrecer renovación o modificación. La vigencia
+original no se confunde con la fecha efectiva de cancelación.
+El mock es solo académico, con liquidación prefijada y estado en memoria.
+No se ejecutan cobros ni devoluciones reales, KYC o firma. Esta integración no acredita
+criterios de aceptación de Jira: no se dispone de acceso a esa herramienta.
 
 ### Reportar un siniestro (SOL-175)
 
