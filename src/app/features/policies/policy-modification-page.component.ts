@@ -16,7 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { finalize, take } from 'rxjs';
+import { distinctUntilChanged, finalize, map, Subject, take, takeUntil } from 'rxjs';
 import { POLICY_MODIFICATION_GATEWAY } from '../../core/policies/policy-modification.gateway';
 import {
   ModificationErrorKind,
@@ -70,7 +70,8 @@ export class PolicyModificationPageComponent implements OnInit {
   readonly busy = signal(false);
   readonly outcome = signal<Outcome | null>(null);
   /** Clave reutilizada solo para reconsultar una confirmacion cuyo resultado no se conocio. */
-  private pending: { impactHash: string; key: string } | null = null;
+  private readonly pending = new Map<string, { impactHash: string; key: string }>();
+  private readonly contextChanged = new Subject<void>();
 
   readonly changed = computed(() => {
     const current = this.modification()?.currentVersion;
@@ -93,17 +94,27 @@ export class PolicyModificationPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
-      const policyId = params.get('policyId');
-      this.outcome.set(null);
-      if (policyId === null || !POLICY_ID_PATTERN.test(policyId)) {
-        this.policyId.set(null);
-        this.state.set('invalid');
-        return;
-      }
-      this.policyId.set(policyId);
-      this.load();
-    });
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('policyId')),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((policyId) => {
+        this.contextChanged.next();
+        this.outcome.set(null);
+        this.modification.set(null);
+        this.plan.set(null);
+        this.optionals.set(new Set());
+        this.invalidateImpact();
+        if (policyId === null || !POLICY_ID_PATTERN.test(policyId)) {
+          this.policyId.set(null);
+          this.state.set('invalid');
+          return;
+        }
+        this.policyId.set(policyId);
+        this.load();
+      });
   }
 
   load(): void {
@@ -114,7 +125,7 @@ export class PolicyModificationPageComponent implements OnInit {
     this.state.set('loading');
     this.gateway
       .state(policyId)
-      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .pipe(take(1), takeUntil(this.contextChanged), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (modification) => {
           this.applyState(modification);
@@ -159,6 +170,7 @@ export class PolicyModificationPageComponent implements OnInit {
       .simulate(policyId, proposal)
       .pipe(
         take(1),
+        takeUntil(this.contextChanged),
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.busy.set(false)),
       )
@@ -179,21 +191,22 @@ export class PolicyModificationPageComponent implements OnInit {
     if (!policyId || !proposal || !impact || this.busy() || !this.confirmed()) {
       return;
     }
-    const key =
-      this.pending?.impactHash === impact.impactHash ? this.pending.key : crypto.randomUUID();
-    this.pending = { impactHash: impact.impactHash, key };
+    const pending = this.pending.get(policyId);
+    const key = pending?.impactHash === impact.impactHash ? pending.key : crypto.randomUUID();
+    this.pending.set(policyId, { impactHash: impact.impactHash, key });
     this.busy.set(true);
     this.outcome.set(null);
     this.gateway
       .confirm(policyId, proposal, impact.impactHash, key)
       .pipe(
         take(1),
+        takeUntil(this.contextChanged),
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.busy.set(false)),
       )
       .subscribe({
         next: (result) => {
-          this.pending = null;
+          this.pending.delete(policyId);
           const current = this.modification();
           if (current) {
             this.applyState({
@@ -248,7 +261,8 @@ export class PolicyModificationPageComponent implements OnInit {
 
   private handleError(error: unknown, technical: 'simulation-failed' | 'unconfirmed'): void {
     if (error instanceof PolicyModificationError) {
-      this.pending = null;
+      const policyId = this.policyId();
+      if (policyId) this.pending.delete(policyId);
       this.outcome.set({ kind: 'rejected', error: error.kind, reason: error.reason });
       if (['outdated-version', 'impact-changed', 'not-modifiable'].includes(error.kind)) {
         this.load();

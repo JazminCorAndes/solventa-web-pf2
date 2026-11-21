@@ -550,6 +550,17 @@
     }
   },
   "profiling": {
+    "sourceReason": "Reason reported by the service",
+    "sourceReasons": {
+      "fuente_no_disponible": "The source is unavailable.",
+      "dependencia_timeout": "The source exceeded the response timeout.",
+      "dependencia_saturada": "The source query capacity is saturated.",
+      "presupuesto_agotado": "The available query time was exhausted.",
+      "respuesta_fuente_invalida": "The source returned an invalid response.",
+      "perfil_vencido": "The information retrieved from the source had expired.",
+      "circuito_abierto": "Source queries were suspended after previous failures."
+    },
+    "reasonUnavailable": "The service did not report a recognized cause of degradation.",
     "additionalSource": "Additional adapter: {{ name }}",
     "cachedEvidence": "The server reused cached evidence that is still current and linked to the current consent. Sources remain simulated.",
     "defaultEvidence": "This profile includes model defaults, not current results from those sources. Review each source's status in the details.",

@@ -6,7 +6,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
-import { of } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
 import en from '../../../../public/assets/i18n/en.json';
 import { environment } from '../../../environments/environment';
@@ -32,6 +32,7 @@ describe('PolicyRenewalPageComponent with HTTP consumer', () => {
   let fixture: ComponentFixture<PolicyRenewalPageComponent>;
   let http: HttpTestingController;
   const user = signal<AuthUser | null>(TEST_USER);
+  const params = new BehaviorSubject(convertToParamMap({ policyId: '' }));
   const root = () => fixture.nativeElement as HTMLElement;
   const text = () => root().textContent ?? '';
   const find = (testId: string) => root().querySelector<HTMLElement>(`[data-testid="${testId}"]`);
@@ -43,6 +44,7 @@ describe('PolicyRenewalPageComponent with HTTP consumer', () => {
   };
 
   async function setup(policyId: string, eligibility: object = ELIGIBILITY_RESPONSE) {
+    params.next(convertToParamMap({ policyId }));
     await TestBed.configureTestingModule({
       imports: [
         PolicyRenewalPageComponent,
@@ -57,7 +59,7 @@ describe('PolicyRenewalPageComponent with HTTP consumer', () => {
         provideHttpClientTesting(),
         { provide: AuthService, useValue: { user } },
         { provide: POLICY_RENEWAL_GATEWAY, useClass: HttpPolicyRenewalGateway },
-        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ policyId })) } },
+        { provide: ActivatedRoute, useValue: { paramMap: params.asObservable() } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(PolicyRenewalPageComponent);
@@ -98,6 +100,47 @@ describe('PolicyRenewalPageComponent with HTTP consumer', () => {
     expect(find('renewal-not-renewable')?.textContent).toContain(
       es.policyRenewal.reasons.fuera_de_ventana,
     );
+  });
+
+  it('cancels an old renewal without losing its recovery key when navigating away', async () => {
+    await setup(RENEWAL_POLICY_ID);
+    accept();
+    fixture.componentInstance.confirm();
+    const old = http.expectOne(`${BASE}/renovaciones`);
+    const key = old.request.headers.get('Idempotency-Key');
+    const nextId = '80000000-0000-4000-8000-000000000002';
+    params.next(convertToParamMap({ policyId: nextId }));
+    render();
+    expect(old.cancelled).toBe(true);
+    expect(fixture.componentInstance.eligibility()).toBeNull();
+    expect(fixture.componentInstance.accepted()).toBe(false);
+    expect(fixture.componentInstance.submitting()).toBe(false);
+    const next = http.expectOne(
+      `${environment.apiBaseUrl}/v1/clientes/me/polizas/${nextId}/renovacion`,
+    );
+    next.flush({ ...NOT_RENEWABLE_RESPONSE, polizaId: nextId });
+    render();
+    expect(fixture.componentInstance.outcome()).toBeNull();
+
+    params.next(convertToParamMap({ policyId: RENEWAL_POLICY_ID }));
+    http.expectOne(`${BASE}/renovacion`).flush(ELIGIBILITY_RESPONSE);
+    render();
+    fixture.componentInstance.confirm();
+    const retry = http.expectOne(`${BASE}/renovaciones`);
+    expect(retry.request.headers.get('Idempotency-Key')).toBe(key);
+    retry.flush(renewalResponse('pendiente'));
+    render();
+  });
+
+  it('cancels a pending eligibility query when navigating to an invalid policy', async () => {
+    await setup(RENEWAL_POLICY_ID);
+    fixture.componentInstance.load();
+    const old = http.expectOne(`${BASE}/renovacion`);
+    params.next(convertToParamMap({ policyId: 'invalid' }));
+    render();
+    expect(old.cancelled).toBe(true);
+    expect(fixture.componentInstance.state()).toBe('invalid');
+    expect(fixture.componentInstance.eligibility()).toBeNull();
   });
 
   it('requires explicit acceptance and sends a single request while processing', async () => {

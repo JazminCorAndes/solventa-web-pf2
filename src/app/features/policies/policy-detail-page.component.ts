@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { PolicyDocumentPanelComponent } from './policy-document-panel.component';
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -27,9 +28,14 @@ export class PolicyDetailPageComponent implements OnInit {
   readonly dashboard = inject(DashboardService);
   private readonly route = inject(ActivatedRoute);
   private readonly i18n = inject(TranslocoService);
-  readonly policyId = this.route.snapshot.paramMap.get('policyId') ?? '';
+  private readonly params = toSignal(this.route.paramMap, {
+    initialValue: this.route.snapshot.paramMap,
+  });
   readonly policy = computed(
-    () => this.dashboard.snapshot()?.policies.find((item) => item.id === this.policyId) ?? null,
+    () =>
+      this.dashboard
+        .snapshot()
+        ?.policies.find((item) => item.id === this.params().get('policyId')) ?? null,
   );
 
   get dateLocale(): string {

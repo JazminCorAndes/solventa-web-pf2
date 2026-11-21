@@ -4,7 +4,10 @@ import { AuthService } from '../../core/auth/auth.service';
 import localeEsCo from '@angular/common/locales/es-CO';
 import { convertToParamMap, ActivatedRoute, provideRouter } from '@angular/router';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { signal } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import es from '../../../../public/assets/i18n/es.json';
 import en from '../../../../public/assets/i18n/en.json';
@@ -12,6 +15,7 @@ import { DASHBOARD_SNAPSHOT } from '../../core/dashboard/dashboard.testing';
 import { DashboardService } from '../../core/dashboard/dashboard.service';
 import { PolicyDetailPageComponent } from './policy-detail-page.component';
 import { PolicyListPageComponent } from './policy-list-page.component';
+import { PolicyDocumentPanelComponent } from './policy-document-panel.component';
 
 registerLocaleData(localeEsCo);
 
@@ -19,6 +23,7 @@ describe('Policy pages', () => {
   const status = signal<'ready'>('ready');
   const snapshot = signal(DASHBOARD_SNAPSHOT);
   const dashboard = { status, snapshot, load: vi.fn() };
+  const params = new BehaviorSubject(convertToParamMap({ policyId: '' }));
 
   beforeEach(() => {
     dashboard.load.mockClear();
@@ -82,10 +87,49 @@ describe('Policy pages', () => {
     expect(fixture.nativeElement.querySelector('.actions-card')).toBeNull();
   });
 
+  it('updates the document and actions when the router reuses the policy detail', async () => {
+    const first = DASHBOARD_SNAPSHOT.policies[0];
+    const second = { ...first, id: '80000000-0000-4000-8000-000000000002', status: 'cancelada' };
+    snapshot.set({ ...DASHBOARD_SNAPSHOT, policies: [first, second] });
+    await configure(PolicyDetailPageComponent, first.id, true);
+    const harness = await RouterTestingHarness.create();
+    const firstInstance = await harness.navigateByUrl(
+      `/app/polizas/${first.id}`,
+      PolicyDetailPageComponent,
+    );
+    const secondInstance = await harness.navigateByUrl(
+      `/app/polizas/${second.id}`,
+      PolicyDetailPageComponent,
+    );
+    harness.detectChanges();
+
+    expect(secondInstance).toBe(firstInstance);
+    expect(secondInstance.policy()).toEqual(second);
+    expect(harness.routeNativeElement?.querySelector('.hero-copy')?.textContent).toContain(
+      second.id,
+    );
+    expect(harness.routeNativeElement?.querySelector('.actions-card nav')).toBeNull();
+    expect(harness.routeNativeElement?.querySelector('.actions-card a')?.getAttribute('href')).toBe(
+      `/app/polizas/${second.id}/cancelacion`,
+    );
+    const documentPanel = harness.routeDebugElement?.query(
+      By.directive(PolicyDocumentPanelComponent),
+    );
+    expect(documentPanel?.componentInstance.policy()).toEqual(second);
+
+    await harness.navigateByUrl('/app/polizas/missing-policy', PolicyDetailPageComponent);
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.textContent).toContain(es.policies.notFound);
+    expect(harness.routeNativeElement?.querySelector('app-policy-document-panel')).toBeNull();
+    expect(harness.routeNativeElement?.querySelector('.actions-card')).toBeNull();
+  });
+
   async function configure(
     component: typeof PolicyListPageComponent | typeof PolicyDetailPageComponent,
     policyId = '',
+    realRoute = false,
   ): Promise<void> {
+    params.next(convertToParamMap({ policyId }));
     await TestBed.configureTestingModule({
       imports: [
         component,
@@ -97,12 +141,23 @@ describe('Policy pages', () => {
       providers: [
         provideHttpClient(),
         { provide: AuthService, useValue: { user: signal(null) } },
-        provideRouter([]),
+        provideRouter(
+          realRoute
+            ? [{ path: 'app/polizas/:policyId', component: PolicyDetailPageComponent }]
+            : [],
+        ),
         { provide: DashboardService, useValue: dashboard },
-        {
-          provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({ policyId }) } },
-        },
+        ...(!realRoute
+          ? [
+              {
+                provide: ActivatedRoute,
+                useValue: {
+                  paramMap: params.asObservable(),
+                  snapshot: { paramMap: convertToParamMap({ policyId }) },
+                },
+              },
+            ]
+          : []),
       ],
     }).compileComponents();
   }

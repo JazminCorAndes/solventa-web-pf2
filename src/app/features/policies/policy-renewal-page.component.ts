@@ -14,7 +14,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { finalize, take } from 'rxjs';
+import { distinctUntilChanged, finalize, map, Subject, take, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { POLICY_RENEWAL_GATEWAY } from '../../core/policies/policy-renewal.gateway';
 import {
@@ -70,24 +70,32 @@ export class PolicyRenewalPageComponent implements OnInit {
   readonly submitting = signal(false);
   readonly outcome = signal<Outcome | null>(null);
   private readonly keys = new Map<string, PendingKey>();
+  private readonly contextChanged = new Subject<void>();
 
   get dateLocale(): string {
     return this.i18n.getActiveLang() === 'en' ? 'en-US' : 'es-CO';
   }
 
   ngOnInit(): void {
-    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
-      const policyId = params.get('policyId');
-      this.outcome.set(null);
-      this.accepted.set(false);
-      if (policyId === null || !POLICY_ID_PATTERN.test(policyId)) {
-        this.policyId.set(null);
-        this.state.set('invalid');
-        return;
-      }
-      this.policyId.set(policyId);
-      this.load();
-    });
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('policyId')),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((policyId) => {
+        this.contextChanged.next();
+        this.outcome.set(null);
+        this.accepted.set(false);
+        this.eligibility.set(null);
+        if (policyId === null || !POLICY_ID_PATTERN.test(policyId)) {
+          this.policyId.set(null);
+          this.state.set('invalid');
+          return;
+        }
+        this.policyId.set(policyId);
+        this.load();
+      });
   }
 
   load(): void {
@@ -99,7 +107,7 @@ export class PolicyRenewalPageComponent implements OnInit {
     this.eligibility.set(null);
     this.gateway
       .eligibility(policyId)
-      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .pipe(take(1), takeUntil(this.contextChanged), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (eligibility) => {
           this.eligibility.set(eligibility);
@@ -147,6 +155,7 @@ export class PolicyRenewalPageComponent implements OnInit {
       .renew(policyId, conditionsHash, key)
       .pipe(
         take(1),
+        takeUntil(this.contextChanged),
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.submitting.set(false)),
       )
@@ -205,7 +214,7 @@ export class PolicyRenewalPageComponent implements OnInit {
   private refreshAfterRenewal(policyId: string): void {
     this.gateway
       .eligibility(policyId)
-      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .pipe(take(1), takeUntil(this.contextChanged), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (eligibility) => this.eligibility.set(eligibility),
         error: () => undefined,
