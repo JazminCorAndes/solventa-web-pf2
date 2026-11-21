@@ -828,7 +828,8 @@
     "portalType": "Socios distribuidores",
     "title": "Portal del asesor",
     "clients": "Clientes",
-    "exceptions": "Excepciones Open Finance"
+    "exceptions": "Excepciones Open Finance",
+    "reports": "Reportes operativos"
   },
   "advisorExceptions": {
     "eyebrow": "Revisión de operaciones",
@@ -1225,6 +1226,92 @@
       "confirmed": "La modificación quedó confirmada. Versión vigente:",
       "simulationFailed": "No fue posible calcular el impacto. Tus condiciones vigentes no cambiaron.",
       "unconfirmed": "No pudimos confirmar la modificación. Tus condiciones vigentes no cambiaron; intenta confirmar de nuevo."
+    }
+  },
+  "operationalReports": {
+    "title": "Reportes operativos",
+    "subtitle": "Indicadores agregados de pólizas, primas, siniestros y pagos a una fecha de corte, sin datos personales.",
+    "from": "Desde",
+    "to": "Hasta",
+    "product": "Producto",
+    "status": "Estado de la póliza",
+    "all": "Todos",
+    "cutOff": "Fecha de corte (opcional)",
+    "cutOffHint": "Si la dejas vacía se usa el corte más reciente.",
+    "query": "Consultar",
+    "idle": "Elige el período y los filtros, y consulta el reporte.",
+    "loading": "Consolidando las fuentes al corte…",
+    "forbidden": "Tu usuario no está autorizado para consultar reportes operativos.",
+    "invalidFilters": "Los filtros no son válidos. Revisa el período, el producto y el estado.",
+    "incomplete": "No fue posible consolidar todas las fuentes al corte. No se muestra un reporte parcial.",
+    "error": "No fue posible consultar el reporte. No se muestra información desactualizada.",
+    "retry": "Reintentar",
+    "cutOffLabel": "Fecha de corte",
+    "period": "Período",
+    "download": "Descargar CSV",
+    "downloading": "Descargando…",
+    "notReproducible": "El resultado al corte ya no coincide con el reporte mostrado. Consúltalo de nuevo antes de descargar.",
+    "downloadError": "No fue posible descargar el reporte. Inténtalo de nuevo.",
+    "empty": "No hay resultados para el período y los filtros elegidos.",
+    "policies": "Pólizas",
+    "portfolio": "Cartera al corte",
+    "issuedInPeriod": "Emitidas en el período",
+    "premiums": "Primas",
+    "confirmedPremiums": "Primas confirmadas",
+    "claims": "Siniestros",
+    "reportedClaims": "Siniestros reportados",
+    "payments": "Pagos",
+    "registeredPayments": "Pagos registrados",
+    "byProduct": "Detalle por producto",
+    "inconsistencies": "Diferencias entre fuentes:",
+    "inconsistencyTypes": {
+      "claimsWithoutPolicy": "Siniestros sin póliza",
+      "policiesWithoutPremium": "Pólizas sin prima",
+      "premiumsWithOtherProduct": "Primas con producto distinto",
+      "paymentsWithoutClaim": "Pagos sin siniestro"
+    },
+    "sourcesLabel": "Fuentes al corte:",
+    "sources": {
+      "polizas": "Pólizas",
+      "primas": "Primas",
+      "siniestros": "Siniestros"
+    },
+    "periodErrors": {
+      "order": "La fecha inicial no puede ser posterior a la final.",
+      "length": "El período no puede superar 366 días.",
+      "future": "El período no puede terminar después del corte.",
+      "cutoff": "La fecha de corte no puede ser futura."
+    },
+    "products": {
+      "automotive": "Automotor",
+      "travel": "Viaje",
+      "life": "Vida",
+      "device-protection": "Protección de dispositivos",
+      "parametric": "Retraso de vuelo",
+      "parametric-weather": "Clima paramétrico",
+      "payment-protection": "Protección de pagos",
+      "mortgage-life": "Vida hipotecario"
+    },
+    "policyStates": {
+      "programada": "Programada",
+      "vigente": "Vigente",
+      "vencida": "Vencida",
+      "cancelada": "Cancelada"
+    },
+    "claimStates": {
+      "reportado": "Reportado",
+      "en_evaluacion": "En evaluación",
+      "en_revision": "En revisión",
+      "en_inspeccion": "En inspección",
+      "aprobado": "Aprobado",
+      "rechazado": "Rechazado",
+      "pagado": "Pagado",
+      "cerrado": "Cerrado"
+    },
+    "paymentStates": {
+      "pendiente": "Pendiente",
+      "confirmado": "Confirmado",
+      "rechazado": "Rechazado"
     }
   }
 }
