@@ -18,6 +18,41 @@ Actions se ejecuta automáticamente. Un colaborador solicita Jenkins con un come
 Los reportes HTML/XML se conservan en Jenkins privado. No se exige un porcentaje mínimo nuevo.
 Consulta [la guía de CI](docs/ci.md) para ver alcance, nombres y lectura de resultados.
 
+## Documento académico y aceptación simulada
+
+El detalle en `/app/polizas/:policyId` consulta el documento autenticado del cliente,
+muestra su contenido estructurado como texto y permite una aceptación explícita
+ligada a `documentoId`, `versionPoliza` y `contenidoHash`. Desde una suscripción
+emitida se accede a **Mis pólizas**; la suscripción no expone un identificador de
+póliza y no se inventa uno. No se implementa firma legal ni se cambia el ciclo de vida.
+
+Esta función requiere modo backend: no genera HTML ni aceptaciones de demostración.
+Depende de [Migue765/backend-solventa#135](https://github.com/Migue765/backend-solventa/pull/135),
+rama `feature/refina-documento-firma`, contrato `documento-poliza-web-v1.yaml` en
+`5b6ebceecdd7c74758b8e6487914eab1a7c3b09f`. La existencia del PR no implica despliegue.
+Consume `GET .../polizas/{id}/documento`, `POST .../polizas/{id}/aceptaciones` y
+`GET .../polizas/{id}/documentos/{documentoId}/descarga` bajo `/v1/clientes/me`.
+La descarga verifica SHA-256 sobre el `ArrayBuffer` original contra el DTO,
+el tipo HTML UTF-8 y los encabezados de integridad/seguridad cuando son visibles.
+En llamadas cross-origin no depende de encabezados no expuestos por CORS:
+usa el hash del DTO y un nombre `.html` propio formado solo por UUID validados.
+El HTML nunca se inserta en el DOM de la aplicación.
+
+Antes del POST se conserva la clave UUID y el cuerpo exacto en `sessionStorage`,
+aislados por cliente/póliza. Un timeout, 503 o resultado inválido conserva el intento
+para recuperarlo sin otra clave incluso tras recargar. Un 409 por documento
+desactualizado obliga a consultar y aceptar expresamente la nueva versión;
+un conflicto de idempotencia bloquea el reenvío. Un cambio de cuenta oculta el
+contenido y cancela las peticiones de la cuenta anterior.
+
+Comprobaciones focales:
+`pnpm exec ng test --watch=false "--include=src/app/**/*policy-document*.spec.ts"`,
+`node tests/cypress/run.cjs ui policy-document.cy.ts` y `pnpm build`.
+La suite `ui` controla HTTP y no acredita E2E contra servicios ni criterios de Jira.
+La [suite opt-in `document`](tests/cypress/README.md) verifica consulta, aceptación
+y descarga con el BFF y Pólizas/SQLite sintéticos de esa rama; solo sesión y dashboard
+se controlan. Tampoco acredita login/pagos reales ni un despliegue.
+
 ## Tecnologías
 
 Las pruebas adicionales están en [`tests/cypress`](tests/cypress/README.md):
@@ -87,8 +122,9 @@ El tablero incluye una póliza académica vigente para recorrer sin backend:
 - revisión de liquidación, confirmación y resultado de una cancelación académica.
 
 El siniestro paramétrico `70000000-0000-4000-8000-000000000001` permite comprobar
-el resultado automático de HU31 en `/app/siniestros`: aparece como **Paramétrico**,
-**Pagado** y conserva el historial desde el evento hasta la indemnización.
+el resultado automático de HU31: está disponible en `/app/siniestros` y su detalle
+aparece como **Paramétrico**, **Pagado** y conserva el historial desde el evento
+hasta la indemnización.
 
 Los mocks viven solo en memoria durante la sesión de la aplicación. Recargar reinicia
 renovaciones, modificaciones, cancelaciones, reportes y evidencias. Las configuraciones `local` y
@@ -152,10 +188,37 @@ No borres el almacenamiento ni cierres la pestaña mientras exista una operació
 sin confirmar. El navegador no es la fuente de verdad: únicamente se presenta
 éxito con ID, estado y datos validados del backend.
 
+### Listado de siniestros del cliente (refinamiento SOL-184)
+
+El menú **Siniestros** abre `/app/siniestros`, con carga, vacío, error y acceso
+denegado explícitos, actualización y enlaces al detalle y al reporte. Conserva una
+consulta opcional por UUID. Sigue la estructura de listado y nuevo reporte del
+[mock de referencia](https://juanes545.github.io/solventa-web/#/app/claims),
+manteniendo las rutas españolas y los componentes existentes.
+
+`GET /v1/siniestros` devuelve `{siniestros: ClaimRecord[]}` del cliente identificado
+por JWT; no se envía identidad de cliente, cuerpo ni parámetros. El contrato no
+ofrece filtros, total ni paginación. Se conserva el orden del servidor (registro
+descendente y desempate por identificador). Un fallo o respuesta inválida no se
+convierte en una lista vacía ni deja resultados anteriores visibles; un cambio de
+cuenta cancela la consulta y descarta los datos. No hay persistencia local del listado.
+
+El badge **Reporte registrado** es únicamente el acuse durable: no significa
+aprobado ni estado vigente. Cada reporte muestra su evento, descripción original,
+lugar, póliza y fechas, y enlaza a `/app/siniestros/:claimId` para consultar estado,
+historial y evidencias existentes. El detalle permite volver al listado. No se
+añaden operaciones de evaluación, peritaje, pago ni bandeja interna.
+
+El modo mock lista el caso paramétrico académico y los reportes creados en memoria,
+sin duplicarlos por reintentos. Backend de referencia:
+`Migue765/backend-solventa@cdc1f849`, contrato `contracts/openapi/siniestros-v1.yaml`.
+Jira no estuvo disponible: este refinamiento no declara verificados sus criterios
+de aceptación.
+
 ### Consultar estado e historial (SOL-177)
 
-El menú **Estado de mi siniestro** abre `/app/siniestros`. Desde la confirmación
-del reporte se puede consultar el mismo número sin volver a escribirlo.
+El listado y la confirmación del reporte enlazan directamente al caso;
+también se conserva la consulta manual por UUID.
 `GET /v1/clientes/me/siniestros/:id` devuelve estado, fechas e historial permitido;
 el frontend no decide transiciones. El acuse `registrado` del formulario conserva
 su contrato y no sustituye esta consulta del estado vigente.
@@ -338,8 +401,11 @@ del frontend, parámetros de URL ni registros.
 
 ### Backend desplegado en AWS
 
-El build de producción (`pnpm build`) y `pnpm start:aws` usan el API Gateway directamente
-(`src/environments/environment.ts`, `apiBaseUrl: https://65qgzhody9.execute-api.us-east-2.amazonaws.com`).
+`pnpm start:aws` usa el API Gateway nuevo directamente
+(`src/environments/environment.backend.ts`,
+`apiBaseUrl: https://r92im9tgi6.execute-api.us-east-2.amazonaws.com`).
+El build de producción (`pnpm build`) conserva su destino en
+`src/environments/environment.ts`; este ajuste local no cambia GitHub Pages.
 No hay proxy ni cookies: la autenticación usa tokens JWT.
 
 Esta configuración apunta al entorno desplegado, pero esta rama **no acredita ni
@@ -912,13 +978,22 @@ Se requieren un BFF con HU11 desplegado y un usuario de prueba habilitado. El mo
 el API Gateway directamente con tokens Bearer, sin proxy ni cookies:
 
 ```powershell
-pnpm start:aws
+corepack.cmd pnpm start:aws --host localhost --port 4200
 ```
 
 Abrir `http://localhost:4200` y probar inicio de sesión, ausencia de autorización, autorización,
 solicitud, perfil, ofertas y revocación. CORS debe permitir el origen local y exponer el
 encabezado `Date` para comparar vigencias. No usar credenciales de producción ni desactivar
 la validación TLS del destino AWS. Las pruebas unitarias no demuestran esta integración real.
+
+El Gateway debe permitir preflight sin autenticación y CORS también en errores:
+métodos `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`; encabezados `Authorization`,
+`Content-Type`, `Idempotency-Key`, `API-Version`, `Upload-Offset` y `X-Correlation-ID`;
+exponer `Date` y `Retry-After`, sin cookies. Login y registro requieren los desafíos
+públicos y `ENCRYPTED_LOGIN_ENABLED=true` en el backend compatible.
+Una respuesta de `/ping` no acredita esos contratos ni persistencia.
+La suite Cypress integrada sigue limitada a backends locales desechables: no se debe
+redirigir a AWS ni quitar sus protecciones para comprobar este entorno.
 
 ## Aplicación en GitHub Pages
 

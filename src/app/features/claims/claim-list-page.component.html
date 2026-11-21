@@ -1,0 +1,118 @@
+<section class="claims-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">{{ 'claimStatus.eyebrow' | transloco }}</span>
+      <h1>{{ 'claimList.title' | transloco }}</h1>
+      <p>{{ 'claimList.subtitle' | transloco }}</p>
+    </div>
+    <div class="actions">
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="refresh()"
+        [disabled]="status() === 'loading'"
+        data-testid="claim-list-refresh"
+      >
+        {{ 'claimStatus.refresh' | transloco }}
+      </button>
+      <a mat-flat-button routerLink="/app/siniestros/reportar">
+        {{ 'claims.title' | transloco }}
+      </a>
+    </div>
+  </header>
+
+  @switch (status()) {
+    @case ('loading') {
+      <div class="state-panel" role="status">
+        <mat-spinner diameter="36" />
+        <span>{{ 'claimList.loading' | transloco }}</span>
+      </div>
+    }
+    @case ('error') {
+      <div class="state-panel" role="alert" data-testid="claim-list-error">
+        <p>{{ 'claimList.error' | transloco }}</p>
+        <button mat-stroked-button type="button" (click)="refresh()">
+          {{ 'common.retry' | transloco }}
+        </button>
+      </div>
+    }
+    @case ('forbidden') {
+      <div class="state-panel" role="alert">
+        <p>{{ 'claimList.forbidden' | transloco }}</p>
+      </div>
+    }
+    @case ('session') {
+      <div class="state-panel" role="alert">
+        <p>{{ 'claimList.session' | transloco }}</p>
+        <a mat-button routerLink="/iniciar-sesion" [queryParams]="{ returnUrl: '/app/siniestros' }">
+          {{ 'claimList.signIn' | transloco }}
+        </a>
+      </div>
+    }
+    @case ('ready') {
+      @if (claims().length) {
+        <p class="registration-note">{{ 'claimList.registrationNote' | transloco }}</p>
+        <ul class="claim-list" [attr.aria-label]="'claimList.title' | transloco">
+          @for (claim of claims(); track claim.id) {
+            <li>
+              <article class="claim-card" data-testid="claim-list-item">
+                <div class="card-heading">
+                  <h2>{{ claim.tipoEvento }}</h2>
+                  <span class="registration-badge">{{ 'claimList.registered' | transloco }}</span>
+                </div>
+                <p class="claim-number">{{ 'claimStatus.claimId' | transloco }} · {{ claim.id }}</p>
+                <p class="description">{{ claim.descripcion }}</p>
+                <dl>
+                  <div>
+                    <dt>{{ 'claimStatus.occurredAt' | transloco }}</dt>
+                    <dd>{{ claim.fechaEvento | date: 'medium' : undefined : dateLocale }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ 'claimStatus.reportedAt' | transloco }}</dt>
+                    <dd>{{ claim.registradoEn | date: 'medium' : undefined : dateLocale }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ 'claimList.location' | transloco }}</dt>
+                    <dd>{{ claim.lugar }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ 'claimStatus.policyId' | transloco }}</dt>
+                    <dd>{{ claim.polizaId }}</dd>
+                  </div>
+                </dl>
+                <a
+                  mat-button
+                  [routerLink]="['/app/siniestros', claim.id]"
+                  [attr.aria-label]="('claimList.viewDetail' | transloco) + ': ' + claim.id"
+                >
+                  {{ 'claimList.viewDetail' | transloco }}
+                </a>
+              </article>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="state-panel" role="status" data-testid="claim-list-empty">
+          <h2>{{ 'claimList.empty' | transloco }}</h2>
+          <p>{{ 'claimList.emptyHint' | transloco }}</p>
+          <a mat-flat-button routerLink="/app/siniestros/reportar">
+            {{ 'claims.title' | transloco }}
+          </a>
+        </div>
+      }
+    }
+  }
+
+  <details class="lookup-panel">
+    <summary>{{ 'claimList.lookup' | transloco }}</summary>
+    <form [formGroup]="lookupForm" (ngSubmit)="search()" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'claimStatus.lookupLabel' | transloco }}</mat-label>
+        <input matInput formControlName="claimId" autocomplete="off" data-testid="claim-id-input" />
+        <mat-hint>{{ 'claimStatus.lookupHint' | transloco }}</mat-hint>
+        <mat-error>{{ 'claimStatus.lookupInvalid' | transloco }}</mat-error>
+      </mat-form-field>
+      <button mat-stroked-button type="submit">{{ 'claimStatus.lookupSubmit' | transloco }}</button>
+    </form>
+  </details>
+</section>

@@ -21,6 +21,9 @@ import { MockPolicyModificationGateway } from './data-access/policies/mock-polic
 import { POLICY_CANCELLATION_GATEWAY } from './core/policies/policy-cancellation.gateway';
 import { HttpPolicyCancellationGateway } from './data-access/policies/http-policy-cancellation.gateway';
 import { MockPolicyCancellationGateway } from './data-access/policies/mock-policy-cancellation.gateway';
+import { OPERATIONAL_REPORT_GATEWAY } from './core/reports/operational-report.gateway';
+import { HttpOperationalReportGateway } from './data-access/reports/http-operational-report.gateway';
+import { MockOperationalReportGateway } from './data-access/reports/mock-operational-report.gateway';
 import { CLAIM_EVIDENCE_GATEWAY } from './core/claims/claim-evidence.gateway';
 import { HttpClaimEvidenceGateway } from './data-access/claims/http-claim-evidence.gateway';
 import { MockClaimEvidenceGateway } from './data-access/claims/mock-claim-evidence.gateway';
@@ -48,6 +51,7 @@ describe('Registro del gateway de perfilamiento hipotecario', () => {
       [DASHBOARD_GATEWAY, HttpDashboardGateway, MockDashboardGateway],
       [POLICY_RENEWAL_GATEWAY, HttpPolicyRenewalGateway, MockPolicyRenewalGateway],
       [POLICY_MODIFICATION_GATEWAY, HttpPolicyModificationGateway, MockPolicyModificationGateway],
+      [OPERATIONAL_REPORT_GATEWAY, HttpOperationalReportGateway, MockOperationalReportGateway],
     ] as const;
     for (const [token, http, mock] of expected) {
       const provider = appConfig.providers.find(

@@ -18,6 +18,24 @@ export class HttpClaimGateway implements ClaimGateway {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiBaseUrl}/v1/siniestros`;
 
+  list(): Observable<ClaimRecord[]> {
+    return this.http.get<unknown>(this.url).pipe(
+      map((response) => {
+        if (!response || typeof response !== 'object' || !('siniestros' in response)) {
+          throw new Error('Invalid claim list response.');
+        }
+        const records: unknown = response.siniestros;
+        if (!Array.isArray(records) || !records.every(isClaimRecord)) {
+          throw new Error('Invalid claim list response.');
+        }
+        if (new Set(records.map((record) => record.id.toLowerCase())).size !== records.length) {
+          throw new Error('Duplicate claim identifiers.');
+        }
+        return records;
+      }),
+    );
+  }
+
   policies(): Observable<ClaimPolicy[]> {
     return this.http.get<{ polizas: ClaimPolicy[] }>(`${this.url}/polizas`).pipe(
       map((response) => {

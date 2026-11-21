@@ -1,4 +1,21 @@
 {
+  "claimList": {
+    "title": "My claims",
+    "subtitle": "Browse your reports and open a claim to follow its progress and attach evidence.",
+    "loading": "Loading your claims…",
+    "error": "Your claims could not be loaded. No outdated reports are shown; please try again.",
+    "forbidden": "Your account cannot access this client claim list.",
+    "session": "Sign in as a client to view your claims.",
+    "signIn": "Sign in",
+    "empty": "You have not reported any claims yet",
+    "emptyHint": "When you report an event, you can find it here.",
+    "registered": "Report registered",
+    "registrationNote": "Registration confirms receipt, not approval or the current claim status. Open the detail to see its status and history.",
+    "viewDetail": "View status, history and evidence",
+    "location": "Event location",
+    "lookup": "Look up a claim number",
+    "back": "Back to my claims"
+  },
   "claims": {
     "title": "Report a claim",
     "instructions": "Select your policy and tell us what happened.",
@@ -755,6 +772,61 @@
       "subscription": "The subscription could not be processed. Please try again."
     }
   },
+  "policyDocument": {
+    "title": "Policy document and simulated signature",
+    "simulation": "SIMULATION · NOT LEGALLY VALID",
+    "disclaimer": "Academic document. This is not a legal policy or a real electronic signature.",
+    "backendRequired": "Viewing, downloading and accepting require the backend. This mode does not fabricate documents or signatures.",
+    "loading": "Loading the current document",
+    "refresh": "Check the current document",
+    "policy": "Policy",
+    "status": "Document status",
+    "states": { "activa": "Active", "cancelada": "Cancelled" },
+    "term": "Coverage period",
+    "premium": "Premium reported by the service",
+    "monthly": "Monthly",
+    "version": "Policy version",
+    "plan": "Plan",
+    "documentId": "Document",
+    "hash": "File SHA-256",
+    "notVersioned": "Date-based product, not versioned",
+    "unavailable": "Not reported by the service",
+    "coverages": "Document coverages",
+    "included": "Included",
+    "excluded": "Not included",
+    "noCoverages": "The service reports no coverages for this document. No coverages are added from the summary or catalog.",
+    "conditions": "Academic conditions",
+    "summaryDiffers": "The policy summary differs from the current document. This section shows authoritative service data; refresh My policies to compare.",
+    "download": "Download simulated document",
+    "downloading": "Verifying the file before downloading",
+    "acceptanceTitle": "SIMULATED acceptance / signature",
+    "acceptanceScope": "Only records your academic acceptance of the displayed document, version and hash. It does not activate, renew or modify the policy and has no legal effect.",
+    "notAccepted": "The current document has no recorded acceptance.",
+    "consent": "I have read this document and explicitly accept the academic simulation without legal validity for this version and hash.",
+    "accept": "Record simulated acceptance",
+    "accepted": "Simulated acceptance recorded on",
+    "reference": "Reference",
+    "pending": "A saved request needs its result recovered. No other acceptance with a new key will be submitted.",
+    "recover": "Recover the same acceptance",
+    "outdated": "The document changed. The previous request does not accept the new document. Review the updated content and explicitly accept again.",
+    "receipt": "The service confirmed an acceptance for document",
+    "receiptScope": "This record does not imply acceptance of a later version.",
+    "history": "Simulated acceptance history",
+    "afterIssuance": "View the document and simulated signature in My policies",
+    "errors": {
+      "invalid": "The document response is invalid or does not belong to your account. Acceptance is blocked.",
+      "session": "A valid client session is required to view and accept this document.",
+      "forbidden": "Your session does not have permission for this operation.",
+      "notFound": "We could not find this policy in your account.",
+      "invalidRequest": "The request is invalid. Check the current document before continuing.",
+      "outdated": "The document is no longer current. Load and review the updated document.",
+      "keyConflict": "The request key has a conflict. No new key will be generated or automatically retried. Contact support.",
+      "storage": "We could not safely read or preserve the recovery request. Acceptance is blocked.",
+      "unavailable": "We could not load the document. Retry the lookup without submitting an acceptance.",
+      "ambiguous": "We could not confirm the result. The same key and payload are preserved for recovery without duplicates.",
+      "download": "We could not verify or download the server file. No document was downloaded; check the current document before retrying."
+    }
+  },
   "subscription": {
     "detailTitle": "Subscription details",
     "validFrom": "Coverage starts",
@@ -831,7 +903,8 @@
     "portalType": "Distribution partners",
     "title": "Advisor portal",
     "clients": "Customers",
-    "exceptions": "Open Finance exceptions"
+    "exceptions": "Open Finance exceptions",
+    "reports": "Operational reports"
   },
   "advisorExceptions": {
     "eyebrow": "Operation review",
@@ -1287,6 +1360,92 @@
       "confirmed": "The modification was confirmed. Current version:",
       "simulationFailed": "We could not calculate the impact. Your current conditions did not change.",
       "unconfirmed": "We could not confirm the modification. Your current conditions did not change; try confirming again."
+    }
+  },
+  "operationalReports": {
+    "title": "Operational reports",
+    "subtitle": "Aggregated policy, premium, claim and payment indicators at a cut-off date, without personal data.",
+    "from": "From",
+    "to": "To",
+    "product": "Product",
+    "status": "Policy status",
+    "all": "All",
+    "cutOff": "Cut-off date (optional)",
+    "cutOffHint": "Leave it empty to use the latest cut-off.",
+    "query": "Run report",
+    "idle": "Choose the period and filters, then run the report.",
+    "loading": "Consolidating the sources at the cut-off…",
+    "forbidden": "Your user is not authorized to view operational reports.",
+    "invalidFilters": "The filters are not valid. Check the period, product and status.",
+    "incomplete": "Not all sources could be consolidated at the cut-off. No partial report is shown.",
+    "error": "The report could not be loaded. No outdated information is shown.",
+    "retry": "Retry",
+    "cutOffLabel": "Cut-off date",
+    "period": "Period",
+    "download": "Download CSV",
+    "downloading": "Downloading…",
+    "notReproducible": "The result at the cut-off no longer matches the report shown. Run it again before downloading.",
+    "downloadError": "The report could not be downloaded. Try again.",
+    "empty": "There are no results for the selected period and filters.",
+    "policies": "Policies",
+    "portfolio": "Portfolio at cut-off",
+    "issuedInPeriod": "Issued in the period",
+    "premiums": "Premiums",
+    "confirmedPremiums": "Confirmed premiums",
+    "claims": "Claims",
+    "reportedClaims": "Reported claims",
+    "payments": "Payments",
+    "registeredPayments": "Registered payments",
+    "byProduct": "Breakdown by product",
+    "inconsistencies": "Differences between sources:",
+    "inconsistencyTypes": {
+      "claimsWithoutPolicy": "Claims without policy",
+      "policiesWithoutPremium": "Policies without premium",
+      "premiumsWithOtherProduct": "Premiums with a different product",
+      "paymentsWithoutClaim": "Payments without claim"
+    },
+    "sourcesLabel": "Sources at cut-off:",
+    "sources": {
+      "polizas": "Policies",
+      "primas": "Premiums",
+      "siniestros": "Claims"
+    },
+    "periodErrors": {
+      "order": "The start date cannot be after the end date.",
+      "length": "The period cannot exceed 366 days.",
+      "future": "The period cannot end after the cut-off.",
+      "cutoff": "The cut-off date cannot be in the future."
+    },
+    "products": {
+      "automotive": "Auto",
+      "travel": "Travel",
+      "life": "Life",
+      "device-protection": "Device protection",
+      "parametric": "Flight delay",
+      "parametric-weather": "Parametric weather",
+      "payment-protection": "Payment protection",
+      "mortgage-life": "Mortgage life"
+    },
+    "policyStates": {
+      "programada": "Scheduled",
+      "vigente": "Active",
+      "vencida": "Expired",
+      "cancelada": "Cancelled"
+    },
+    "claimStates": {
+      "reportado": "Reported",
+      "en_evaluacion": "Under evaluation",
+      "en_revision": "Under review",
+      "en_inspeccion": "Under inspection",
+      "aprobado": "Approved",
+      "rechazado": "Rejected",
+      "pagado": "Paid",
+      "cerrado": "Closed"
+    },
+    "paymentStates": {
+      "pendiente": "Pending",
+      "confirmado": "Confirmed",
+      "rechazado": "Rejected"
     }
   }
 }
