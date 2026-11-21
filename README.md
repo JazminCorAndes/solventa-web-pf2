@@ -5,6 +5,11 @@ Aplicación web de Solventa para Proyecto Final II de la Universidad de los Ande
 Este repositorio contiene la base técnica de la aplicación web. El alcance funcional se
 gestiona en Jira y las decisiones visuales deben seguir la versión más reciente de Figma.
 
+La [auditoría web del 21 de noviembre de 2026](docs/auditoria-web-2026-11-21.md)
+contrasta los documentos del proyecto con `develop` y los contratos remotos:
+registra funciones existentes, brechas corregidas y dependencias. Jira requiere
+autenticación; esta revisión no certifica la cobertura de sus tres sprints.
+
 ## Comprobaciones y cobertura
 
 [📊 Cobertura de código](https://github.com/Migue765/backend-solventa/wiki/Cobertura-de-codigo)

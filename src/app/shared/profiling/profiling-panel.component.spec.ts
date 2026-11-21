@@ -1,7 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { TranslocoTestingModule } from '@jsverse/transloco';
+import { TranslocoService, TranslocoTestingModule } from '@jsverse/transloco';
+import en from '../../../../public/assets/i18n/en.json';
+import es from '../../../../public/assets/i18n/es.json';
 import { of, Subject, throwError } from 'rxjs';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
@@ -38,6 +40,9 @@ describe('ProfilingPanelComponent', () => {
                 additionalSource: 'Adaptador adicional: {{ name }}',
                 cachedEvidence: 'Evidencia en caché vigente y simulada.',
                 defaultEvidence: 'Este perfil incluye valores predeterminados del modelo.',
+                sourceReason: 'Motivo informado por el servicio',
+                sourceReasons: es.profiling.sourceReasons,
+                reasonUnavailable: 'El servicio no informó una causa reconocida de degradación.',
                 sourceState: {
                   disponible: 'Disponible',
                   cache: 'Caché vigente autorizada',
@@ -45,8 +50,9 @@ describe('ProfilingPanelComponent', () => {
                 },
               },
             },
+            en,
           },
-          translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
+          translocoConfig: { availableLangs: ['es', 'en'], defaultLang: 'es' },
         }),
       ],
       providers: [provideRouter([]), { provide: PROFILING_GATEWAY, useValue: gateway }],
@@ -110,6 +116,15 @@ describe('ProfilingPanelComponent', () => {
     expect(component.profile()).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Adaptador adicional: adaptador_qa');
     expect(fixture.nativeElement.textContent).toContain('Evidencia en caché vigente y simulada.');
+    const reasons: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.source-reason'),
+    );
+    expect(reasons).toHaveLength(3);
+    expect(
+      reasons.every((reason) =>
+        reason.textContent?.includes(es.profiling.sourceReasons.fuente_no_disponible),
+      ),
+    ).toBe(true);
     expect(fixture.nativeElement.textContent).not.toContain('profiling.source.adaptador_qa');
     profile.estadoFuentes[0].estado = 'fallida';
     component.reload();
@@ -168,6 +183,49 @@ describe('ProfilingPanelComponent', () => {
     );
     expect(component.profile()).toBeNull();
     expect(component.errorKey()).toBe('profiling.errors.unavailable');
+  });
+
+  it.each([null, '   ', '<img src=x onerror=alert(1)>', 'cliente@sensible.test'])(
+    'no publica causas ausentes o texto arbitrario del servicio: %s',
+    (reason) => {
+      const profile = createProfile();
+      profile.fallbackUsed = true;
+      profile.estadoFuentes = profile.fuentes.map((source, index) => ({
+        fuente: source.nombre,
+        estado: index === 0 ? 'cache' : 'default',
+        intentos: 2,
+        motivo: index === 0 ? reason : 'dependencia_timeout',
+      }));
+      gateway.loadProfile.mockReturnValue(of(profile));
+      openProfile();
+      const reasons: HTMLElement[] = Array.from(
+        fixture.nativeElement.querySelectorAll('.source-reason'),
+      );
+      expect(reasons[0].textContent).toContain(
+        'El servicio no informó una causa reconocida de degradación.',
+      );
+      expect(reasons[0].querySelector('img')).toBeNull();
+      if (reason?.trim()) expect(reasons[0].textContent).not.toContain(reason);
+      expect(reasons[1].textContent).toContain(es.profiling.sourceReasons.dependencia_timeout);
+    },
+  );
+
+  it('presents recognized degradation reasons in the active English language', () => {
+    const profile = createProfile();
+    profile.fallbackUsed = true;
+    profile.estadoFuentes = profile.fuentes.map((source) => ({
+      fuente: source.nombre,
+      estado: 'cache',
+      intentos: 2,
+      motivo: 'dependencia_timeout',
+    }));
+    gateway.loadProfile.mockReturnValue(of(profile));
+    TestBed.inject(TranslocoService).setActiveLang('en');
+    openProfile();
+    const reason: HTMLElement = fixture.nativeElement.querySelector('.source-reason');
+    expect(reason.textContent).toContain(en.profiling.sourceReason);
+    expect(reason.textContent).toContain(en.profiling.sourceReasons.dependencia_timeout);
+    expect(reason.textContent).not.toContain('dependencia_timeout');
   });
 
   it('no consulta perfil ni habilita cotizacion mientras la aprobacion esta pendiente', () => {

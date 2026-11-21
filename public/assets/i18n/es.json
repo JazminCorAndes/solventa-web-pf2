@@ -550,6 +550,17 @@
     }
   },
   "profiling": {
+    "sourceReason": "Motivo informado por el servicio",
+    "sourceReasons": {
+      "fuente_no_disponible": "La fuente no está disponible.",
+      "dependencia_timeout": "La fuente excedió el tiempo de espera.",
+      "dependencia_saturada": "La capacidad de consulta de la fuente está saturada.",
+      "presupuesto_agotado": "Se agotó el tiempo disponible para la consulta.",
+      "respuesta_fuente_invalida": "La fuente devolvió una respuesta inválida.",
+      "perfil_vencido": "La información consultada en la fuente estaba vencida.",
+      "circuito_abierto": "La consulta a la fuente se suspendió por fallos previos."
+    },
+    "reasonUnavailable": "El servicio no informó una causa reconocida de degradación.",
     "additionalSource": "Adaptador adicional: {{ name }}",
     "cachedEvidence": "El servidor reutilizó evidencia en caché que sigue vigente y vinculada al consentimiento actual. Las fuentes siguen siendo simuladas.",
     "defaultEvidence": "Este perfil incluye valores predeterminados del modelo, no resultados actuales de esas fuentes. Consulta el estado de cada fuente en el detalle.",

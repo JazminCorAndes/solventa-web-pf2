@@ -141,6 +141,11 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
     return this.profile()?.estadoFuentes?.find((state) => state.fuente === name)?.estado;
   }
 
+  sourceReason(name: string): string | null {
+    const reason = this.profile()?.estadoFuentes?.find((state) => state.fuente === name)?.motivo;
+    return reason && SOURCE_REASON_CODES.has(reason) ? reason : null;
+  }
+
   confirmRevocation(): void {
     const consent = this.consent();
     if (
@@ -290,3 +295,13 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
     );
   }
 }
+
+const SOURCE_REASON_CODES = new Set([
+  'fuente_no_disponible',
+  'dependencia_timeout',
+  'dependencia_saturada',
+  'presupuesto_agotado',
+  'respuesta_fuente_invalida',
+  'perfil_vencido',
+  'circuito_abierto',
+]);
