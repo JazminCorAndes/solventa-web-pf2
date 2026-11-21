@@ -1,0 +1,126 @@
+.claims-page {
+  display: grid;
+  gap: var(--solventa-space-5);
+  max-width: var(--solventa-content-max-width);
+  margin: 0 auto;
+}
+
+.page-heading,
+.actions,
+.card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--solventa-space-4);
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  color: var(--solventa-color-primary);
+  font-weight: 800;
+}
+
+h1 {
+  margin: var(--solventa-space-2) 0;
+  font-size: clamp(1.9rem, 4vw, 2.5rem);
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.page-heading p,
+.registration-note,
+dt,
+.claim-number {
+  color: var(--solventa-color-text-secondary);
+}
+
+.claim-list {
+  display: grid;
+  gap: var(--solventa-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.claim-card,
+.state-panel,
+.lookup-panel {
+  min-width: 0;
+  padding: var(--solventa-space-5);
+  border: 1px solid var(--solventa-color-border);
+  border-radius: var(--solventa-radius-lg);
+  background: var(--solventa-color-surface);
+}
+
+.registration-badge {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: var(--solventa-color-primary-soft);
+  color: var(--solventa-color-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.claim-number,
+dd,
+.description {
+  overflow-wrap: anywhere;
+}
+
+.description {
+  white-space: pre-wrap;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--solventa-space-4);
+}
+
+dd {
+  margin: var(--solventa-space-1) 0 0;
+}
+
+.state-panel {
+  display: grid;
+  min-height: 240px;
+  align-content: center;
+  justify-items: center;
+  gap: var(--solventa-space-4);
+  text-align: center;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+form {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--solventa-space-3);
+  margin-top: var(--solventa-space-5);
+}
+
+mat-form-field {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  form {
+    flex-direction: column;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+}

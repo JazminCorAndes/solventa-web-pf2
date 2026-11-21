@@ -1,4 +1,21 @@
 {
+  "claimList": {
+    "title": "Mis siniestros",
+    "subtitle": "Consulta tus reportes y abre el detalle para revisar su avance y adjuntar evidencias.",
+    "loading": "Consultando tus siniestros…",
+    "error": "No fue posible consultar tus siniestros. No se muestran reportes desactualizados; intenta nuevamente.",
+    "forbidden": "Tu cuenta no tiene permiso para consultar este listado de cliente.",
+    "session": "Inicia sesión como cliente para consultar tus siniestros.",
+    "signIn": "Iniciar sesión",
+    "empty": "Aún no tienes siniestros reportados",
+    "emptyHint": "Cuando reportes un evento, podrás consultarlo aquí.",
+    "registered": "Reporte registrado",
+    "registrationNote": "El registro confirma la recepción del reporte, no su aprobación ni su estado vigente. Consulta el detalle para ver el estado y el historial.",
+    "viewDetail": "Ver estado, historial y evidencias",
+    "location": "Lugar del evento",
+    "lookup": "Consultar por número de siniestro",
+    "back": "Volver a mis siniestros"
+  },
   "claims": {
     "title": "Reportar siniestro",
     "instructions": "Selecciona tu póliza y cuéntanos qué ocurrió.",

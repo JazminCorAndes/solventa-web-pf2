@@ -14,7 +14,7 @@ const storageKey = `solventa.claim-attempt.${syntheticUser.id}`;
 
 function openReport() {
   login(syntheticUser.correo, password);
-  cy.contains('a', 'Siniestros').click();
+  cy.contains('a', 'Reportar siniestro').click();
   cy.location('pathname').should('eq', '/app/siniestros/reportar');
   cy.wait('@policies');
   cy.wait('@catalog');
