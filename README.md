@@ -307,8 +307,11 @@ del frontend, parámetros de URL ni registros.
 
 ### Backend desplegado en AWS
 
-El build de producción (`pnpm build`) y `pnpm start:aws` usan el API Gateway directamente
-(`src/environments/environment.ts`, `apiBaseUrl: https://65qgzhody9.execute-api.us-east-2.amazonaws.com`).
+`pnpm start:aws` usa el API Gateway nuevo directamente
+(`src/environments/environment.backend.ts`,
+`apiBaseUrl: https://r92im9tgi6.execute-api.us-east-2.amazonaws.com`).
+El build de producción (`pnpm build`) conserva su destino en
+`src/environments/environment.ts`; este ajuste local no cambia GitHub Pages.
 No hay proxy ni cookies: la autenticación usa tokens JWT.
 
 Esta configuración apunta al entorno desplegado, pero esta rama **no acredita ni
@@ -881,13 +884,22 @@ Se requieren un BFF con HU11 desplegado y un usuario de prueba habilitado. El mo
 el API Gateway directamente con tokens Bearer, sin proxy ni cookies:
 
 ```powershell
-pnpm start:aws
+corepack.cmd pnpm start:aws --host localhost --port 4200
 ```
 
 Abrir `http://localhost:4200` y probar inicio de sesión, ausencia de autorización, autorización,
 solicitud, perfil, ofertas y revocación. CORS debe permitir el origen local y exponer el
 encabezado `Date` para comparar vigencias. No usar credenciales de producción ni desactivar
 la validación TLS del destino AWS. Las pruebas unitarias no demuestran esta integración real.
+
+El Gateway debe permitir preflight sin autenticación y CORS también en errores:
+métodos `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`; encabezados `Authorization`,
+`Content-Type`, `Idempotency-Key`, `API-Version`, `Upload-Offset` y `X-Correlation-ID`;
+exponer `Date` y `Retry-After`, sin cookies. Login y registro requieren los desafíos
+públicos y `ENCRYPTED_LOGIN_ENABLED=true` en el backend compatible.
+Una respuesta de `/ping` no acredita esos contratos ni persistencia.
+La suite Cypress integrada sigue limitada a backends locales desechables: no se debe
+redirigir a AWS ni quitar sus protecciones para comprobar este entorno.
 
 ## Aplicación en GitHub Pages
 
