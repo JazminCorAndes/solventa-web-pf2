@@ -109,6 +109,14 @@ describe('SubscriptionStatusPageComponent', () => {
     expect(fixture.nativeElement.querySelector('.success-icon')).not.toBeNull();
   });
 
+  it('links an issued subscription to the policy document without inventing a policy identifier', () => {
+    expect(fixture.nativeElement.querySelector('a[href="/app/polizas"]')).toBeNull();
+    subscription.set({ ...SUBSCRIPTION, saga: { ...SUBSCRIPTION.saga, status: 'issued' } });
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('a[href="/app/polizas"]');
+    expect(link.textContent).toContain(es.policyDocument.afterIssuance);
+  });
+
   it('links confirmed payments to their own subscription, never back to acceptance', () => {
     paymentGateway.load.mockReturnValue(of(CONFIRMED_PAYMENT));
     subscription.set({

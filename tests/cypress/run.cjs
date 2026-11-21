@@ -25,8 +25,11 @@ function localUrl(value) {
 }
 
 function selectedSpec(mode, file) {
-  if (!['ui', 'integrated', 'controlled', 'evidence'].includes(mode))
-    throw new Error('Usa run.cjs ui|integrated|controlled|evidence');
+  if (!['ui', 'integrated', 'controlled', 'evidence', 'document'].includes(mode))
+    throw new Error('Usa run.cjs ui|integrated|controlled|evidence|document');
+  if (mode === 'document' && file !== 'policy-document.cy.ts') {
+    throw new Error('La integración de documento exige seleccionar policy-document.cy.ts.');
+  }
   if (mode === 'evidence' && file !== 'claim-evidence.cy.ts') {
     throw new Error('La integración de evidencias exige seleccionar claim-evidence.cy.ts.');
   }

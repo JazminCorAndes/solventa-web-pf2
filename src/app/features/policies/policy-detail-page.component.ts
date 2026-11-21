@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { PolicyDocumentPanelComponent } from './policy-document-panel.component';
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -11,6 +12,7 @@ import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
   selector: 'app-policy-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    PolicyDocumentPanelComponent,
     DatePipe,
     MatButtonModule,
     MatProgressSpinnerModule,

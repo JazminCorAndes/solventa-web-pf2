@@ -1,4 +1,6 @@
 import { registerLocaleData } from '@angular/common';
+import { provideHttpClient } from '@angular/common/http';
+import { AuthService } from '../../core/auth/auth.service';
 import localeEsCo from '@angular/common/locales/es-CO';
 import { convertToParamMap, ActivatedRoute, provideRouter } from '@angular/router';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -77,6 +79,8 @@ describe('Policy pages', () => {
         }),
       ],
       providers: [
+        provideHttpClient(),
+        { provide: AuthService, useValue: { user: signal(null) } },
         provideRouter([]),
         { provide: DashboardService, useValue: dashboard },
         {

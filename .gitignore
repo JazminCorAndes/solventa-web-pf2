@@ -36,6 +36,7 @@ yarn-error.log
 /connect.lock
 /coverage
 /reports
+/cypress/downloads
 /.pnpm-store
 __pycache__/
 /libpeerconnection.log

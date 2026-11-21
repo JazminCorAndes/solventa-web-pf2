@@ -37,6 +37,37 @@ la prueba de duplicados del BFF también usa el formulario web cifrado.
 
 ## Ejecución
 
+### Documento y firma simulada (opt-in)
+
+`ui/policy-document.cy.ts` prueba consentimiento, replay tras 503/recarga,
+revisión tras 409, SHA-256, descarga y tamaños escritorio/móvil con HTTP controlado.
+Ejecuta `node tests\cypress\run.cjs ui policy-document.cy.ts`.
+
+`document/policy-document.cy.ts` exige un harness backend desechable y una póliza
+sintética nueva sin aceptación. Usa BFF → Pólizas/SQLite y JWT RSA de prueba;
+solo controla la restauración de sesión y el dashboard. **No intercepta** consulta,
+aceptación ni descarga del documento. Comprueba POST 201, persistencia al recargar,
+evidencia única y SHA-256 del archivo descargado. No acredita login, pagos reales,
+E2E completo, despliegue ni firma legal.
+
+El propietario del backend prepara el harness de
+`tests/test_policy_document_flow.py` en la rama del contrato (ver README principal)
+y entrega una fixture privada externa
+`{baseUrl,polizaId,actorId,token,syntheticOnly:true,user:{id,nombre,correo,rol:"cliente"}}`.
+No se versionan JWT, claves ni fixtures privadas. La suite es opt-in para no
+alterar el backend requerido por la suite `integrated/` general.
+
+```powershell
+$env:CYPRESS_DISPOSABLE_BACKEND='1'
+$env:CYPRESS_BACKEND_URL='http://127.0.0.1:PUERTO_BFF'
+$env:CYPRESS_POLICY_DOCUMENT_FIXTURE='C:\ruta-privada-de-sesion\fixture.json'
+$env:CYPRESS_WEB_PORT='PUERTO_WEB_LIBRE'
+node tests\cypress\run.cjs document policy-document.cy.ts
+```
+
+El runner cierra Angular; el propietario debe apagar el harness y eliminar
+sus archivos efímeros al terminar. Las descargas de Cypress se ignoran por Git.
+
 ### Integración de evidencias (opt-in, SOL-176)
 
 `evidence/claim-evidence.cy.ts` usa un helper backend local desechable con Identidad
