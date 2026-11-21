@@ -99,7 +99,8 @@ de ruta con `RouterTestingHarness`, cancelación de HTTP pendiente y conservaci�
 de claves al volver a la póliza, causas ausentes/texto sensible y traducción EN.
 
 ```powershell
-pnpm.cmd exec ng test --watch=false "--include=src/app/features/policies/*.spec.ts" "--include=src/app/shared/profiling/profiling-panel*.spec.ts"
+pnpm.cmd exec ng test --watch=false "--include=src/app/features/policies/*.spec.ts" "--include=src/app/shared/profiling/profiling-panel*.spec.ts" "--include=src/app/core/profiling/*.spec.ts"
+pnpm.cmd exec eslint src\app\features\policies\policy-detail-page.component.ts src\app\features\policies\policy-pages.component.spec.ts src\app\features\policies\policy-renewal-page.component.ts src\app\features\policies\policy-renewal-page.component.spec.ts src\app\features\policies\policy-modification-page.component.ts src\app\features\policies\policy-modification-page.component.spec.ts src\app\shared\profiling\profiling-panel.component.ts src\app\shared\profiling\profiling-panel.component.html src\app\shared\profiling\profiling-panel.component.spec.ts
 pnpm.cmd build
 ```
 
