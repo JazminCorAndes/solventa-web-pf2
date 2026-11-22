@@ -1385,6 +1385,8 @@
     "cutOffHint": "Si la dejas vacía se usa el corte más reciente.",
     "query": "Consultar",
     "idle": "Elige el período y los filtros, y consulta el reporte.",
+    "optionsLoading":  "Cargando las opciones del reporte…",
+    "optionsError":  "No fue posible cargar las opciones del reporte. Reintenta antes de consultar.",
     "loading": "Consolidando las fuentes al corte…",
     "forbidden": "Tu usuario no está autorizado para consultar reportes operativos.",
     "invalidFilters": "Los filtros no son válidos. Revisa el período, el producto y el estado.",

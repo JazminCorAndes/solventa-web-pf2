@@ -22,8 +22,6 @@ import { OPERATIONAL_REPORT_GATEWAY } from '../../core/reports/operational-repor
 import {
   OperationalReport,
   OperationalReportError,
-  REPORT_POLICY_STATES,
-  REPORT_PRODUCTS,
   ReportFilters,
   ReportOptions,
   ReportPolicyState,
@@ -31,7 +29,15 @@ import {
 } from '../../core/reports/operational-report.models';
 
 type ReportState =
-  'idle' | 'loading' | 'ready' | 'forbidden' | 'invalid-filters' | 'incomplete' | 'error';
+  | 'loading-options'
+  | 'options-error'
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'forbidden'
+  | 'invalid-filters'
+  | 'incomplete'
+  | 'error';
 type DownloadState = 'idle' | 'downloading' | 'not-reproducible' | 'error';
 
 const DAY = 86_400_000;
@@ -60,12 +66,8 @@ export class OperationalReportsPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly i18n = inject(TranslocoService);
 
-  readonly options = signal<ReportOptions>({
-    products: [...REPORT_PRODUCTS],
-    statuses: [...REPORT_POLICY_STATES],
-    maxPeriodDays: 366,
-  });
-  readonly state = signal<ReportState>('idle');
+  readonly options = signal<ReportOptions | null>(null);
+  readonly state = signal<ReportState>('loading-options');
   readonly report = signal<OperationalReport | null>(null);
   readonly unavailableSource = signal<string | null>(null);
   readonly download = signal<DownloadState>('idle');
@@ -113,21 +115,33 @@ export class OperationalReportsPageComponent implements OnInit {
         this.download.set('idle');
       }
     });
+    this.loadOptions();
+  }
+
+  loadOptions(): void {
+    this.state.set('loading-options');
+    this.options.set(null);
     this.gateway
       .options()
       .pipe(take(1), takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (options) => this.options.set(options),
+        next: (options) => {
+          this.options.set(options);
+          this.state.set('idle');
+        },
         error: (error: unknown) => {
           if (error instanceof OperationalReportError && error.kind === 'forbidden') {
             this.state.set('forbidden');
+            return;
           }
+          console.error('The operational report options could not be loaded.', error);
+          this.state.set('options-error');
         },
       });
   }
 
   query(): void {
-    if (this.state() === 'loading' || this.state() === 'forbidden') {
+    if (!this.options() || this.state() === 'loading' || this.state() === 'forbidden') {
       return;
     }
     const filters = this.filters();
@@ -206,6 +220,10 @@ export class OperationalReportsPageComponent implements OnInit {
   }
 
   private filters(): ReportFilters | null {
+    const options = this.options();
+    if (!options) {
+      return null;
+    }
     this.form.markAllAsTouched();
     const { from, to, product, status } = this.form.getRawValue();
     if (this.form.invalid || !from || !to) {
@@ -223,7 +241,7 @@ export class OperationalReportsPageComponent implements OnInit {
       this.periodError.set('order');
       return null;
     }
-    if ((end - start) / DAY + 1 > this.options().maxPeriodDays) {
+    if ((end - start) / DAY + 1 > options.maxPeriodDays) {
       this.periodError.set('length');
       return null;
     }

@@ -38,7 +38,7 @@ describe('OperationalReportsPageComponent with HTTP consumer', () => {
   };
   const reportRequest = () => http.expectOne((req) => req.url === BASE);
 
-  async function setup(options: object | null = OPTIONS_RESPONSE) {
+  async function setup(options: object | null = OPTIONS_RESPONSE, status = 403) {
     await TestBed.configureTestingModule({
       imports: [
         OperationalReportsPageComponent,
@@ -61,7 +61,10 @@ describe('OperationalReportsPageComponent with HTTP consumer', () => {
     if (options) {
       request.flush(options);
     } else {
-      request.flush(problem(403, 'alcance_insuficiente'), { status: 403, statusText: 'Forbidden' });
+      request.flush(
+        problem(status, status === 403 ? 'alcance_insuficiente' : 'servicio_no_disponible'),
+        { status, statusText: 'Error' },
+      );
     }
     render();
     component().form.patchValue(PERIOD);
@@ -147,6 +150,34 @@ describe('OperationalReportsPageComponent with HTTP consumer', () => {
     await setup(null);
     expect(find('report-forbidden')?.textContent).toContain(es.operationalReports.forbidden);
     expect(find('report-filters')).toBeNull();
+  });
+
+  it('retries unavailable options without showing a local catalog or querying a report', async () => {
+    await setup(null, 503);
+    const filters = component().form.getRawValue();
+    expect(find('report-options-error')?.textContent).toContain(es.operationalReports.optionsError);
+    expect(find('report-filters')).toBeNull();
+    expect(find('report-idle')).toBeNull();
+    component().query();
+    http.expectNone((req) => req.url === BASE);
+
+    find('report-options-error')?.querySelector<HTMLButtonElement>('button')?.click();
+    render();
+    expect(find('report-options-loading')).not.toBeNull();
+    expect(find('report-filters')).toBeNull();
+    component().query();
+    http.expectNone((req) => req.url === BASE);
+    const retry = http.expectOne(`${BASE}/opciones`);
+    retry.flush({ ...OPTIONS_RESPONSE, productos: ['automotive'] });
+    render();
+
+    expect(find('report-options-error')).toBeNull();
+    expect(find('report-idle')).not.toBeNull();
+    expect(find('report-filters')).not.toBeNull();
+    expect(component().options()?.products).toEqual(['automotive']);
+    expect(component().form.getRawValue()).toEqual(filters);
+    expect(find('report-indicators')).toBeNull();
+    http.expectNone((req) => req.url === BASE);
   });
 
   it('downloads exactly the confirmed report and reports when it is no longer reproducible', async () => {

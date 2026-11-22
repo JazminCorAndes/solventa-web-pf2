@@ -135,6 +135,17 @@ Los mocks viven solo en memoria durante la sesión de la aplicación. Recargar r
 renovaciones, modificaciones, cancelaciones, reportes y evidencias. Las configuraciones `local` y
 `backend` siguen usando los adaptadores HTTP reales.
 
+En la consulta de modificación, `opcional` e `incluida` son independientes:
+una cobertura no incluida puede no estar disponible como adicional. Se conserva
+esa condición en la versión actual y el historial, sin ofrecerla como endoso
+si no figura en las opciones del BFF.
+
+En **Asesor → Reportes**, los filtros solo se habilitan cuando carga
+`GET /v1/reportes/operativos/opciones`. Si falla, se muestra un error con reintento
+del catálogo, sin opciones locales prefijadas ni consulta automática del reporte.
+Los filtros elegidos se conservan y la consolidación sigue siendo responsabilidad
+del backend.
+
 ### Cancelar una póliza (refinamiento SOL-187)
 
 Desde **Mis pólizas → detalle → Revisar cancelación**, la ruta

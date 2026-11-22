@@ -1385,6 +1385,8 @@
     "cutOffHint": "Leave it empty to use the latest cut-off.",
     "query": "Run report",
     "idle": "Choose the period and filters, then run the report.",
+    "optionsLoading":  "Loading report options…",
+    "optionsError":  "The report options could not be loaded. Retry before running a report.",
     "loading": "Consolidating the sources at the cut-off…",
     "forbidden": "Your user is not authorized to view operational reports.",
     "invalidFilters": "The filters are not valid. Check the period, product and status.",
