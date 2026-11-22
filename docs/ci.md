@@ -1,5 +1,10 @@
 # Comprobaciones de la web
 
+La recuperación en el controlador Ally está **en preparación**. El estado
+administrativo histórico descrito aquí no confirma la incorporación al nuevo
+controlador; véanse los prerrequisitos y límites en
+[Jenkins web: integración privada](jenkins-integration.md).
+
 ## Resultados visibles en GitHub
 
 - **Cobertura** muestra líneas/ramas y conteos de `reports/unit-tests.xml`, sin incluir XML
@@ -139,8 +144,8 @@ controlado; **no acreditan AWS ni persistencia de servicios**. La suite
 manual y sus evidencias separadas. El agente `web-ci` debe tener las dependencias Linux
 de Cypress/Xvfb indicadas en `tests/cypress/README.md`: el pipeline no instala paquetes
 del sistema ni cambia el agente o los disparadores, y falla si el navegador no arranca.
-Las regresiones locales del contrato Jenkins y del artefacto se ejecutan con
-`node --test scripts/*.test.cjs tests/cypress/runner.test.cjs`; no sustituyen una ejecución
+Las regresiones locales del contrato Jenkins, la automatización y el artefacto se ejecutan con
+`node --test .github/scripts/*.test.cjs scripts/*.test.cjs tests/cypress/runner.test.cjs`; no sustituyen una ejecución
 del Jenkins vivo.
 
 El preflight `scripts/verify-ci-toolchain.cjs` tiene alcance **Linux**, igual que el

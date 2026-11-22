@@ -41,7 +41,7 @@ test('Jenkins exige integración Frontend controlada y su JUnit antes de compila
   );
   assert.match(
     block("stage('Pruebas y cobertura')"),
-    /node --test scripts\/\*\.test\.cjs tests\/cypress\/runner\.test\.cjs/,
+    /node --test \.github\/scripts\/\*\.test\.cjs scripts\/\*\.test\.cjs tests\/cypress\/runner\.test\.cjs/,
   );
 });
 
