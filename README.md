@@ -457,8 +457,10 @@ del frontend, parámetros de URL ni registros.
 `pnpm start:aws` usa el API Gateway nuevo directamente
 (`src/environments/environment.backend.ts`,
 `apiBaseUrl: https://r92im9tgi6.execute-api.us-east-2.amazonaws.com`).
-El build de producción (`pnpm build`) conserva su destino en
-`src/environments/environment.ts`; este ajuste local no cambia GitHub Pages.
+Los builds de producción (`pnpm build` y `pnpm build:pages`) usan el mismo API Gateway
+desde `src/environments/environment.ts`, sin `/v1` ni barra final en la URL base.
+Las rutas de los servicios agregan `/v1`. GitHub Pages recibe este destino únicamente
+tras integrar la entrega en `master` y completar su CI y publicación.
 No hay proxy ni cookies: la autenticación usa tokens JWT.
 
 Esta configuración apunta al entorno desplegado, pero esta rama **no acredita ni
@@ -776,7 +778,8 @@ desde la rama predeterminada (`develop`). CD comprueba por API que el artefacto 
 del CI exitoso de `master`; esa es la versión publicada, no la de la rama de ejecución.
 No se modifican ni eluden las revisiones o protecciones del environment.
 
-`pnpm build:pages` utiliza producción (backend AWS, no mocks) con base
+`pnpm build:pages` utiliza producción (API Gateway
+`https://r92im9tgi6.execute-api.us-east-2.amazonaws.com`, no mocks) con base
 `/solventa-web-pf2/` y genera el artefacto `dist/solventa-web-pf2/browser`.
 `scripts/prepare-pages.cjs` copia el `index.html` compilado a `404.html`, rechazando
 un build con base incorrecta. Pages sirve esa entrada al abrir o recargar una ruta
