@@ -60,6 +60,43 @@ se controlan. Tampoco acredita login/pagos reales ni un despliegue.
 
 ## Tecnologías
 
+### Recuperación de contraseña
+
+El login enlaza a `/olvide-contrasena`, que solicita únicamente el correo.
+El enlace de un uso abre la raíz `/?recuperacion=1#token=...` y pide sólo la nueva
+contraseña (8–128 caracteres, sin contraseña anterior ni campo repetido).
+En Pages se usa `https://jazmincorandes.github.io/solventa-web-pf2/?recuperacion=1#token=...`;
+el bootstrap toma el base href y abre la ruta interna `/recuperar-contrasena`
+sin solicitar esa ruta al servidor ni depender del fallback 404 existente.
+El fragmento y el marcador se eliminan antes del bootstrap; el token se consume en memoria y
+no se conserva tras salir o recargar. La página aplica `no-referrer`.
+Un enlace inválido, vencido o utilizado permite solicitar otro. Guardar correctamente
+invalida la sesión local y requiere iniciar sesión de nuevo.
+
+Requiere el BFF real: `POST /v1/recuperacion-contrasena {correo}` (202 genérico),
+`GET /v1/recuperacion-contrasena/desafio` y
+`POST /v1/recuperacion-contrasena/confirmar {token,credencialCifrada}` (204).
+La credencial JWE usa RSA-OAEP-256/A256GCM, `typ: solventa-reset+jwe` y
+`{desafioId,token,contrasena}`. No agrega Bearer ni renueva sesiones en estas rutas.
+La aceptación 202 debe contener sólo `mensaje`, con uno de los dos textos del contrato:
+`Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.` o
+`Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.`
+Otros textos, campos o cuerpos se rechazan. Ambos se traducen al mismo estado Web
+neutro; la respuesta original no se muestra al solicitante.
+El modo mock falla explícitamente: no envía correo ni cambia contraseñas.
+Backend implementa Amazon SES con remitente y URL pública configurados por entorno.
+La modalidad académica administrada dirige todos los enlaces al buzón administrador
+configurado en backend; el administrador autoriza el cambio. La recuperación normal
+al correo propio es una modalidad separada y configurable en backend.
+El mensaje Web de aceptación es neutro para ambas modalidades: no promete entrega
+al solicitante, no revela la existencia de la cuenta ni expone el buzón administrador
+o el enlace secreto. En un entorno configurado como administrado, el solicitante
+debe coordinar la autorización con el administrador.
+La identidad y el envío de la cuenta SES ya fueron comprobados. Siguen pendientes
+la configuración runtime, la migración, el despliegue y la validación end-to-end
+del flujo integrado; no se afirma disponibilidad en producción.
+Sin transporte operativo el servicio devuelve 503 para todos los correos.
+
 Las pruebas adicionales están en [`tests/cypress`](tests/cypress/README.md):
 `pnpm test:cypress:ui` valida la interfaz con HTTP controlado y
 `pnpm test:cypress:integrated` recorre servicios/persistencia reales en un backend
@@ -420,8 +457,10 @@ del frontend, parámetros de URL ni registros.
 `pnpm start:aws` usa el API Gateway nuevo directamente
 (`src/environments/environment.backend.ts`,
 `apiBaseUrl: https://r92im9tgi6.execute-api.us-east-2.amazonaws.com`).
-El build de producción (`pnpm build`) conserva su destino en
-`src/environments/environment.ts`; este ajuste local no cambia GitHub Pages.
+Los builds de producción (`pnpm build` y `pnpm build:pages`) usan el mismo API Gateway
+desde `src/environments/environment.ts`, sin `/v1` ni barra final en la URL base.
+Las rutas de los servicios agregan `/v1`. GitHub Pages recibe este destino únicamente
+tras integrar la entrega en `master` y completar su CI y publicación.
 No hay proxy ni cookies: la autenticación usa tokens JWT.
 
 Esta configuración apunta al entorno desplegado, pero esta rama **no acredita ni
@@ -739,7 +778,8 @@ desde la rama predeterminada (`develop`). CD comprueba por API que el artefacto 
 del CI exitoso de `master`; esa es la versión publicada, no la de la rama de ejecución.
 No se modifican ni eluden las revisiones o protecciones del environment.
 
-`pnpm build:pages` utiliza producción (backend AWS, no mocks) con base
+`pnpm build:pages` utiliza producción (API Gateway
+`https://r92im9tgi6.execute-api.us-east-2.amazonaws.com`, no mocks) con base
 `/solventa-web-pf2/` y genera el artefacto `dist/solventa-web-pf2/browser`.
 `scripts/prepare-pages.cjs` copia el `index.html` compilado a `404.html`, rechazando
 un build con base incorrecta. Pages sirve esa entrada al abrir o recargar una ruta

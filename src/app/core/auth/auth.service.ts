@@ -32,6 +32,14 @@ export class AuthService {
   readonly session = this.sessionState.asReadonly();
   readonly user = computed(() => this.sessionState()?.user ?? null);
 
+  requestPasswordRecovery(email: string): Observable<void> {
+    return this.gateway.requestPasswordRecovery(email);
+  }
+
+  resetPassword(token: string, password: string): Observable<void> {
+    return this.gateway.resetPassword(token, password).pipe(tap(() => this.clearLocalSession()));
+  }
+
   register(data: RegistrationData): Observable<AuthUser> {
     return this.gateway.register(data);
   }

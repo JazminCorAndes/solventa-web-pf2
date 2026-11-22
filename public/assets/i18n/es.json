@@ -192,6 +192,25 @@
       "unexpected": "Ocurrió un error inesperado. Inténtalo nuevamente."
     }
   },
+  "recovery": {
+    "title": "Recuperar contraseña",
+    "resetTitle": "Nueva contraseña",
+    "introduction": "Ingresa el correo de la cuenta para solicitar la recuperación de contraseña.",
+    "resetIntroduction": "El enlace autoriza el cambio. Ingresa únicamente la nueva contraseña.",
+    "newPassword": "Nueva contraseña",
+    "send": "Solicitar recuperación",
+    "save": "Guardar contraseña",
+    "processing": "Procesando",
+    "sent": "Solicitud recibida. Si la cuenta existe, la recuperación se gestionará mediante el canal autorizado de este entorno.",
+    "saved": "Tu contraseña fue actualizada. Inicia sesión con la nueva contraseña.",
+    "requestAnother": "Solicitar otro enlace",
+    "errors": {
+      "link": "El enlace no es válido, venció o ya fue utilizado. Solicita otro enlace.",
+      "invalid": "El servicio rechazó la solicitud. Revisa los datos y usa una contraseña de 8 a 128 caracteres.",
+      "unavailable": "La recuperación no está disponible o no pudo confirmarse. Inténtalo cuando el servicio de correo esté disponible.",
+      "encryption": "Usa HTTPS y un navegador con Web Crypto. La nueva contraseña no se enviará sin cifrar."
+    }
+  },
   "registration": {
     "title": "Registrarse",
     "introduction": "Crea tu cuenta de cliente con los datos de identidad y contacto que usarán tus cotizaciones. Los datos específicos de cada seguro se solicitan al cotizar.",
@@ -1385,8 +1404,8 @@
     "cutOffHint": "Si la dejas vacía se usa el corte más reciente.",
     "query": "Consultar",
     "idle": "Elige el período y los filtros, y consulta el reporte.",
-    "optionsLoading":  "Cargando las opciones del reporte…",
-    "optionsError":  "No fue posible cargar las opciones del reporte. Reintenta antes de consultar.",
+    "optionsLoading": "Cargando las opciones del reporte…",
+    "optionsError": "No fue posible cargar las opciones del reporte. Reintenta antes de consultar.",
     "loading": "Consolidando las fuentes al corte…",
     "forbidden": "Tu usuario no está autorizado para consultar reportes operativos.",
     "invalidFilters": "Los filtros no son válidos. Revisa el período, el producto y el estado.",

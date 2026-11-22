@@ -43,7 +43,7 @@ pipeline {
             steps {
                 publishChecks name: 'Cobertura', status: 'IN_PROGRESS', conclusion: 'NONE', title: 'Analizando cobertura web', summary: 'Objetivo recomendado: 80 % en líneas y ramas. Medición Angular/Vitest V8.', detailsURL: "https://github.com/JazminCorAndes/solventa-web-pf2/pull/${env.CHANGE_ID}/checks"
                 sh "python3 -m unittest discover -s scripts -p 'test_*summary.py'"
-                sh 'node --test scripts/*.test.cjs tests/cypress/runner.test.cjs'
+                sh 'node --test .github/scripts/*.test.cjs scripts/*.test.cjs tests/cypress/runner.test.cjs'
                 sh 'mkdir -p reports && pnpm test:coverage'
             }
         }

@@ -40,6 +40,14 @@ export class TestAuthStorage implements AuthStorage {
 
 /** Gateway de pruebas: `refresh` es controlable desde el test para simular concurrencia. */
 export class TestAuthGateway implements AuthGateway {
+  requestPasswordRecovery(): Observable<void> {
+    return of(undefined);
+  }
+
+  resetPassword(): Observable<void> {
+    return of(undefined);
+  }
+
   refreshCalls: string[] = [];
   logoutCalls: Array<string | null> = [];
   refreshResult: () => Observable<AuthGrant> = () => of(grantFor('access-2', 'refresh-2'));
