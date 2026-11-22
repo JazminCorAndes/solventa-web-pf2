@@ -128,6 +128,15 @@ describe('LoginPageComponent', () => {
     expect(component.form.controls.password.touched).toBe(true);
   });
 
+  it('enlaza la recuperación desde el login sin transportar credenciales', () => {
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector(
+      'a[href="/olvide-contrasena"]',
+    );
+    expect(link).not.toBeNull();
+    expect(link.hasAttribute('aria-disabled')).toBe(false);
+    expect(link.search).toBe('');
+  });
+
   it('uses the real English control translations without changing their semantics', () => {
     TestBed.inject(TranslocoService).setActiveLang('en');
     fixture.detectChanges();

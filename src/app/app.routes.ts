@@ -5,6 +5,23 @@ import { quoteResumeGuard } from './core/quotes/quote-resume.guard';
 
 export const routes: Routes = [
   {
+    path: 'olvide-contrasena',
+    loadComponent: () =>
+      import('./features/auth/password-recovery-page.component').then(
+        (component) => component.PasswordRecoveryPageComponent,
+      ),
+    title: 'Recuperar contraseña | Solventa',
+  },
+  {
+    path: 'recuperar-contrasena',
+    data: { resetPassword: true },
+    loadComponent: () =>
+      import('./features/auth/password-recovery-page.component').then(
+        (component) => component.PasswordRecoveryPageComponent,
+      ),
+    title: 'Nueva contraseña | Solventa',
+  },
+  {
     path: 'registrarse',
     canActivate: [guestGuard],
     loadComponent: () =>

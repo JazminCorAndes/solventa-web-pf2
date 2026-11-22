@@ -1,3 +1,19 @@
+export class InvalidRecoveryLinkError extends Error {
+  override readonly name = 'InvalidRecoveryLinkError';
+
+  constructor() {
+    super('Recovery link is invalid, expired or already used');
+  }
+}
+
+export class InvalidRecoveryRequestError extends Error {
+  override readonly name = 'InvalidRecoveryRequestError';
+
+  constructor() {
+    super('Password recovery request is invalid');
+  }
+}
+
 export class InvalidCredentialsError extends Error {
   override readonly name = 'InvalidCredentialsError';
 

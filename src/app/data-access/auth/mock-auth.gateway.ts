@@ -16,6 +16,14 @@ const MOCK_REFRESH_TOKEN = 'mock-refresh-token';
 export class MockAuthGateway implements AuthGateway {
   private activeSession: AuthSession | null = null;
 
+  requestPasswordRecovery(): Observable<void> {
+    return throwError(() => new AuthenticationUnavailableError());
+  }
+
+  resetPassword(): Observable<void> {
+    return throwError(() => new AuthenticationUnavailableError());
+  }
+
   register(): Observable<AuthUser> {
     return throwError(() => new AuthenticationUnavailableError());
   }

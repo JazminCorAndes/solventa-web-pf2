@@ -11,6 +11,8 @@ import {
   InvalidCredentialsError,
   InvalidRefreshTokenError,
   InvalidRegistrationError,
+  InvalidRecoveryLinkError,
+  InvalidRecoveryRequestError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { AuthGateway } from '../../core/auth/auth.gateway';
@@ -55,6 +57,49 @@ export class HttpAuthGateway implements AuthGateway {
   private readonly http = inject(HttpClient);
   private readonly sessionsUrl = `${environment.apiBaseUrl}/v1/sesiones`;
   private readonly usersUrl = `${environment.apiBaseUrl}/v1/usuarios`;
+  private readonly recoveryUrl = `${environment.apiBaseUrl}/v1/recuperacion-contrasena`;
+
+  requestPasswordRecovery(email: string): Observable<void> {
+    return this.http
+      .post<unknown>(this.recoveryUrl, { correo: email }, { observe: 'response' })
+      .pipe(
+        map((response) => {
+          if (response.status !== 202) throw new AuthenticationUnavailableError();
+        }),
+        catchError((error: unknown) => this.mapRecoveryError(error)),
+      );
+  }
+
+  resetPassword(token: string, password: string): Observable<void> {
+    return this.requestEncryptedCredentials(
+      this.recoveryUrl,
+      { token, contrasena: password },
+      'solventa-reset+jwe',
+    ).pipe(
+      switchMap((credencialCifrada) =>
+        this.http.post<unknown>(
+          `${this.recoveryUrl}/confirmar`,
+          { token, credencialCifrada },
+          { observe: 'response' },
+        ),
+      ),
+      map((response) => {
+        if (response.status !== 204) throw new AuthenticationUnavailableError();
+      }),
+      catchError((error: unknown) => this.mapRecoveryError(error)),
+    );
+  }
+
+  private mapRecoveryError(error: unknown): Observable<never> {
+    if (error instanceof HttpErrorResponse && error.status === 400) {
+      return throwError(() =>
+        error.error?.code === 'recuperacion_invalida'
+          ? new InvalidRecoveryLinkError()
+          : new InvalidRecoveryRequestError(),
+      );
+    }
+    return this.mapCommonError(error);
+  }
 
   register(data: RegistrationData): Observable<AuthUser> {
     return this.requestEncryptedCredentials(this.usersUrl, data, 'solventa-register+jwe').pipe(
@@ -156,7 +201,7 @@ export class HttpAuthGateway implements AuthGateway {
 
   private requestEncryptedCredentials(
     baseUrl: string,
-    credentials: LoginCredentials,
+    credentials: LoginCredentials | { token: string; contrasena: string },
     type: CredentialType,
   ): Observable<string> {
     return defer(() => {
@@ -183,11 +228,11 @@ export class HttpAuthGateway implements AuthGateway {
   }
 }
 
-type CredentialType = 'solventa-login+jwe' | 'solventa-register+jwe';
+type CredentialType = 'solventa-login+jwe' | 'solventa-register+jwe' | 'solventa-reset+jwe';
 
 async function encryptCredentials(
   response: unknown,
-  credentials: LoginCredentials,
+  credentials: LoginCredentials | { token: string; contrasena: string },
   type: CredentialType,
 ): Promise<string> {
   try {
@@ -224,8 +269,9 @@ async function encryptCredentials(
       new TextEncoder().encode(
         JSON.stringify({
           desafioId,
-          correo: credentials.email,
-          contrasena: credentials.password,
+          ...('token' in credentials
+            ? credentials
+            : { correo: credentials.email, contrasena: credentials.password }),
         }),
       ),
     )

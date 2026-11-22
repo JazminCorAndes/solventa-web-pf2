@@ -60,6 +60,30 @@ se controlan. Tampoco acredita login/pagos reales ni un despliegue.
 
 ## Tecnologías
 
+### Recuperación de contraseña
+
+El login enlaza a `/olvide-contrasena`, que solicita únicamente el correo.
+El enlace de un uso abre la raíz `/?recuperacion=1#token=...` y pide sólo la nueva
+contraseña (8–128 caracteres, sin contraseña anterior ni campo repetido).
+En Pages se usa `https://jazmincorandes.github.io/solventa-web-pf2/?recuperacion=1#token=...`;
+el bootstrap toma el base href y abre la ruta interna `/recuperar-contrasena`
+sin solicitar esa ruta al servidor ni depender del fallback 404 existente.
+El fragmento y el marcador se eliminan antes del bootstrap; el token se consume en memoria y
+no se conserva tras salir o recargar. La página aplica `no-referrer`.
+Un enlace inválido, vencido o utilizado permite solicitar otro. Guardar correctamente
+invalida la sesión local y requiere iniciar sesión de nuevo.
+
+Requiere el BFF real: `POST /v1/recuperacion-contrasena {correo}` (202 genérico),
+`GET /v1/recuperacion-contrasena/desafio` y
+`POST /v1/recuperacion-contrasena/confirmar {token,credencialCifrada}` (204).
+La credencial JWE usa RSA-OAEP-256/A256GCM, `typ: solventa-reset+jwe` y
+`{desafioId,token,contrasena}`. No agrega Bearer ni renueva sesiones en estas rutas.
+El modo mock falla explícitamente: no envía correo ni cambia contraseñas.
+Backend implementa Amazon SES con remitente y URL pública configurados por entorno.
+La identidad, permisos y entrega real de SES aún no están verificados ni habilitados;
+sin transporte operativo el servicio devuelve 503 para todos los correos.
+Esta implementación no acredita un recorrido end-to-end ni habilita AWS.
+
 Las pruebas adicionales están en [`tests/cypress`](tests/cypress/README.md):
 `pnpm test:cypress:ui` valida la interfaz con HTTP controlado y
 `pnpm test:cypress:integrated` recorre servicios/persistencia reales en un backend
