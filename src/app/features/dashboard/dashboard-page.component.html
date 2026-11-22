@@ -52,7 +52,7 @@
         <mat-card-content>
           <span>{{ 'dashboard.payments' | transloco }}</span>
           <strong>{{ snapshot.payments.length }}</strong>
-          <small>{{ 'dashboard.simulatedOnly' | transloco }}</small>
+          <small>{{ 'dashboard.persisted' | transloco }}</small>
         </mat-card-content>
       </mat-card>
     </div>
@@ -114,7 +114,6 @@
             @for (policy of snapshot.policies; track policy.id) {
               <li data-testid="dashboard-policy">
                 <h2>{{ 'dashboard.policyId' | transloco }}: {{ policy.id }}</h2>
-                <p>{{ 'dashboard.academicPolicy' | transloco }}</p>
                 <p>{{ 'dashboard.policyType' | transloco }}: {{ policyTypeLabel(policy.type) }}</p>
                 <p>{{ 'dashboard.subscriptionId' | transloco }}: {{ policy.subscriptionId }}</p>
                 <p>{{ 'dashboard.state' | transloco }}: {{ stateLabel(policy.status) }}</p>
@@ -162,7 +161,6 @@
           <mat-card-title>{{ 'dashboard.payments' | transloco }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          <p>{{ 'dashboard.simulationNotice' | transloco }}</p>
           <ul class="records">
             @for (payment of snapshot.payments; track payment.id) {
               <li data-testid="dashboard-payment">

@@ -157,12 +157,12 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
       { method: 'POST', url: '/api/v1/solicitudes-cotizacion/*/pago-simulado', times: 1 },
       { statusCode: 503 },
     ).as('ambiguous');
-    cy.contains('button', 'Confirmar pago simulado').click();
+    cy.contains('button', 'Confirmar pago').click();
     cy.wait('@ambiguous').then(({ request }) => {
       key = String(request.headers['idempotency-key']);
     });
     cy.contains('[role=alert]', 'No fue posible obtener el resultado').should('be.visible');
-    cy.contains('h3', 'Pago simulado confirmado').should('not.exist');
+    cy.contains('h3', 'Pago confirmado').should('not.exist');
     cy.intercept('POST', '/api/v1/solicitudes-cotizacion/*/pago-simulado', () => {
       throw new Error('Recovery must not POST another payment.');
     });
@@ -171,7 +171,7 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     cy.wait('@recovery').then(({ request }) =>
       expect(request.headers['idempotency-key']).to.eq(key),
     );
-    cy.contains('h3', 'Pago simulado confirmado').should('be.visible');
+    cy.contains('h3', 'Pago confirmado').should('be.visible');
     cy.get('.confirm-payment').should('not.exist');
     cy.get('@ambiguous.all').should('have.length', 1);
   });
@@ -182,9 +182,9 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
       ...payment,
       importe: { monto: '1.00', moneda: 'COP' },
     });
-    cy.contains('button', 'Confirmar pago simulado').click();
+    cy.contains('button', 'Confirmar pago').click();
     cy.contains('[role=alert]', 'No fue posible obtener el resultado').should('be.visible');
-    cy.contains('h3', 'Pago simulado confirmado').should('not.exist');
+    cy.contains('h3', 'Pago confirmado').should('not.exist');
   });
 
   it('conserva pendiente tras recargar y consulta la misma clave sin repetir el POST', () => {
@@ -208,7 +208,7 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     cy.wait('@pendingPayment');
     cy.get('.payment-pending').should(
       'contain.text',
-      'Resultado del pago simulado aún no confirmado',
+      'Resultado del pago aún no confirmado',
     );
     cy.get('.payment-section').should('not.contain.text', 'Fecha de confirmación');
     cy.get('.payment-section').should('not.contain.text', 'Fecha de rechazo');
@@ -364,7 +364,7 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
       .its('response.body.saga.estado')
       .should('eq', 'pago_confirmado');
     cy.wait('@persistedPayment');
-    cy.contains('h3', 'Pago simulado confirmado').should('be.visible');
+    cy.contains('h3', 'Pago confirmado').should('be.visible');
     cy.contains('Póliza emitida').should('not.exist');
     cy.get('.confirm-payment').should('not.exist');
     cy.contains('button', 'Reintentar emisión').should('be.visible');
@@ -373,7 +373,7 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     cy.visit('/app/dashboard');
     cy.contains('policy-ui').should('be.visible');
     cy.visit(`/app/cotizaciones/suscripcion/detalle?solicitud=${quoteId}`);
-    cy.contains('h3', 'Pago simulado confirmado').should('be.visible');
+    cy.contains('h3', 'Pago confirmado').should('be.visible');
     cy.contains('Póliza emitida').should('not.exist');
     cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/suscripcion`, {
       ...subscription,
@@ -455,7 +455,7 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
         expect(response?.body.saga).to.include({ estado: 'pago_confirmado', version: 2 });
       });
       cy.contains('dd', 'Póliza emitida').should('be.visible');
-      cy.get('.payment-confirmation').should('contain.text', 'Pago simulado confirmado');
+      cy.get('.payment-confirmation').should('contain.text', 'Pago confirmado');
       cy.get('.payment-section [role=alert]').should('not.exist');
       cy.get(
         '.issuance-pending, .confirm-payment, .retry-issuance, .recover-payment, .request-new-payment',
@@ -517,17 +517,17 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     });
     cy.get('.confirm-payment').click();
     cy.wait('@paymentAttempt').its('response.statusCode').should('eq', 200);
-    cy.get('.payment-rejection').should('contain.text', 'Pago simulado rechazado');
+    cy.get('.payment-rejection').should('contain.text', 'Pago rechazado');
     cy.get('.payment-section').should('not.contain.text', 'Fecha de confirmación');
     cy.get('.payment-section').should(
       'not.contain.text',
-      'Pago simulado pendiente de confirmación',
+      'Pago pendiente de confirmación',
     );
     cy.get('.payment-confirmation').should('not.exist');
     cy.get('.retry-issuance').should('not.exist');
     cy.visit('/app/dashboard');
     cy.get('[data-testid=dashboard-payment]')
-      .should('contain.text', 'Pago simulado rechazado')
+      .should('contain.text', 'Pago rechazado')
       .and('contain.text', 'Fecha de rechazo')
       .and('not.contain.text', 'Confirmado');
     cy.get('[data-testid=dashboard-policy]').should('not.exist');

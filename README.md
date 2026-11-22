@@ -695,6 +695,11 @@ y `estado`, además de `simulada: true`; las vigencias son fechas de calendario 
 El inicio muestra esos campos sin reconstruir pólizas desde la suscripción ni la saga.
 Una respuesta antigua con `polizas: { disponibilidad: 'no_implementado' }` se trata
 como error de contrato y permite reintentar; nunca se interpreta como una lista vacía.
+Para la demostración académica, el inicio muestra los registros sin rótulos repetidos
+de simulación. Los títulos y acciones de pagos y documentos usan etiquetas neutrales,
+sin alterar los datos ni los campos `simulada` del contrato. Se conservan los
+consentimientos, los avisos legales del documento y de las operaciones de pago,
+los errores, los estados vacíos y la información de fuentes degradadas del perfil.
 Se requiere desplegar primero el backend compatible. Se retira el panel de funciones
 no implementadas; esto no habilita notificaciones.
 El resumen no reconstruye ni reactiva solicitudes históricas: el enlace para cotizar

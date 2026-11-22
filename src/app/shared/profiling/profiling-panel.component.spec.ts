@@ -38,7 +38,8 @@ describe('ProfilingPanelComponent', () => {
               profiling: {
                 simulated: 'Datos simulados. No es una consulta financiera real.',
                 additionalSource: 'Adaptador adicional: {{ name }}',
-                cachedEvidence: 'Evidencia en caché vigente y simulada.',
+                cachedEvidence: es.profiling.cachedEvidence,
+                version: es.profiling.version,
                 defaultEvidence: 'Este perfil incluye valores predeterminados del modelo.',
                 sourceReason: 'Motivo informado por el servicio',
                 sourceReasons: es.profiling.sourceReasons,
@@ -93,11 +94,13 @@ describe('ProfilingPanelComponent', () => {
     expect(component.authorized()).toBe(true);
   });
 
-  it('muestra perfil completo y fuentes simuladas de la solicitud', () => {
+  it('muestra perfil completo y fuentes sin avisos redundantes de simulación', () => {
     openProfile();
     expect(component.profile()?.solicitudId).toBe('AQT-2026-123456');
     expect(component.profile()?.fuentes).toHaveLength(2);
-    expect(fixture.nativeElement.textContent).toContain('No es una consulta financiera real.');
+    expect(fixture.nativeElement.textContent).not.toContain('No es una consulta financiera real.');
+    expect(fixture.nativeElement.textContent).not.toContain('Fuente simulada');
+    expect(fixture.nativeElement.textContent).toContain(es.profiling.version);
     expect(fixture.nativeElement.textContent).toContain('0.250000');
   });
 
@@ -115,7 +118,7 @@ describe('ProfilingPanelComponent', () => {
     openProfile();
     expect(component.profile()).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Adaptador adicional: adaptador_qa');
-    expect(fixture.nativeElement.textContent).toContain('Evidencia en caché vigente y simulada.');
+    expect(fixture.nativeElement.textContent).toContain(es.profiling.cachedEvidence);
     const reasons: HTMLElement[] = Array.from(
       fixture.nativeElement.querySelectorAll('.source-reason'),
     );
@@ -159,9 +162,7 @@ describe('ProfilingPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Este perfil incluye valores predeterminados del modelo.',
     );
-    expect(fixture.nativeElement.textContent).not.toContain(
-      'Evidencia en caché vigente y simulada.',
-    );
+    expect(fixture.nativeElement.textContent).not.toContain(es.profiling.cachedEvidence);
     const states: HTMLElement[] = Array.from(
       fixture.nativeElement.querySelectorAll('.source-state'),
     );

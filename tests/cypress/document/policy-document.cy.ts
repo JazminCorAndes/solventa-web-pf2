@@ -126,10 +126,10 @@ describe('Documento: navegador → BFF → Polizas/SQLite sintéticos; sesión/d
           cy.get('.acceptance mat-checkbox input').check();
           cy.get('.accept-document').click();
           cy.wait('@accept');
-          cy.contains('.acceptance', 'Aceptación simulada registrada el').should('be.visible');
+          cy.contains('.acceptance', 'Aceptación registrada el').should('be.visible');
           cy.reload();
           cy.wait('@document');
-          cy.contains('.acceptance', 'Aceptación simulada registrada el').should('be.visible');
+          cy.contains('.acceptance', 'Aceptación registrada el').should('be.visible');
           cy.get('.accept-document').should('not.exist');
           cy.get('@accept.all').should('have.length', 1);
           cy.get('.download-document').click();

@@ -57,7 +57,7 @@ describe('UI controlada: documento académico y aceptación SIMULADA (no E2E rea
     cy.visit('/app/polizas');
     cy.get(`a[href="/app/polizas/${DOCUMENT_POLICY_ID}"]`).first().click();
     cy.wait('@document');
-    cy.contains('h2', 'Documento y firma simulada').should('be.visible');
+    cy.contains('h2', 'Documento y aceptación de póliza').should('be.visible');
   }
 
   function currentAcceptance() {
@@ -102,9 +102,9 @@ describe('UI controlada: documento académico y aceptación SIMULADA (no E2E rea
     cy.get('.acceptance mat-checkbox input').check();
     cy.get('.accept-document').click();
     cy.wait('@accept');
-    cy.contains('.acceptance', 'Aceptación simulada registrada el').should('be.visible');
+    cy.contains('.acceptance', 'Aceptación registrada el').should('be.visible');
     cy.get('@accept.all').should('have.length', 1);
-    cy.contains('button', 'Descargar documento simulado').click();
+    cy.contains('button', 'Descargar documento').click();
     cy.wait('@download')
       .its('request.headers.authorization')
       .should('eq', 'Bearer synthetic-ui-access-not-a-real-jwt');
@@ -141,7 +141,7 @@ describe('UI controlada: documento académico y aceptación SIMULADA (no E2E rea
     cy.get('.acceptance mat-checkbox').should('not.exist');
     cy.get('.recover-acceptance').should('be.enabled').click();
     cy.wait('@accept');
-    cy.contains('.acceptance', 'Aceptación simulada registrada el').should('be.visible');
+    cy.contains('.acceptance', 'Aceptación registrada el').should('be.visible');
     cy.then(() => expect(posts).to.eq(2));
   });
 
@@ -178,7 +178,7 @@ describe('UI controlada: documento académico y aceptación SIMULADA (no E2E rea
     cy.get('.acceptance mat-checkbox input').should('not.be.checked').check();
     cy.get('.accept-document').click();
     cy.wait('@accept');
-    cy.contains('.acceptance', 'Aceptación simulada registrada el').should('be.visible');
+    cy.contains('.acceptance', 'Aceptación registrada el').should('be.visible');
   });
 
   it('muestra la corrupción de bytes y nunca crea una descarga alternativa', () => {

@@ -79,7 +79,6 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     expect(policyText).toContain(DASHBOARD_RESPONSE.polizas[0].id);
     expect(policyText).toContain(DASHBOARD_RESPONSE.polizas[0].suscripcionId);
     expect(policyText).toContain(es.dashboard.policyTypes.travel);
-    expect(policyText).toContain(es.dashboard.academicPolicy);
     expect(policyText).toContain(es.dashboard.states.active);
     expect(policyText).toContain('10/10/2026');
     expect(policyText).toContain('20/10/2026');
@@ -88,7 +87,6 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     expect(text()).toContain(es.dashboard.policies);
     expect(text()).not.toContain('Funciones no disponibles');
     expect(text()).not.toContain('Notificaciones');
-    expect(text()).toContain(es.dashboard.simulationNotice);
     expect(elements('a')).toHaveLength(4);
     expect(elements('a')[0].getAttribute('href')).toBe('/app/cotizaciones/solicitar');
     expect(elements('a')[1].getAttribute('href')).toBe(
@@ -215,7 +213,6 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     expect(policyText).toContain(es.dashboard.states.active);
     expect(policyText).toContain('19/10/2026');
     expect(policyText).toContain('19/11/2026');
-    expect(policyText).toContain(es.dashboard.academicPolicy);
     expect(elements('[data-testid="dashboard-payment"]')).toHaveLength(1);
     expect(elements('[role="alert"]')).toHaveLength(0);
   });
@@ -299,11 +296,25 @@ describe('DashboardPageComponent with HTTP consumer', () => {
     expect(text()).toContain(en.dashboard.policies);
     expect(text()).toContain(en.dashboard.startDate);
     expect(text()).toContain('Oct 10, 2026');
-    expect(text()).toContain(en.dashboard.simulationNotice);
     user.set(null);
     fixture.detectChanges();
     expect(elements('[data-testid="dashboard-quote"]')).toHaveLength(0);
     expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(0);
     expect(text()).not.toContain('12345.67');
   });
+
+  it.each(['es', 'en'])(
+    'shows account records without redundant simulation labels in %s',
+    (lang) => {
+      TestBed.inject(TranslocoService).setActiveLang(lang);
+      const labels = lang === 'es' ? es : en;
+      http.expectOne(URL).flush(DASHBOARD_RESPONSE);
+      fixture.detectChanges();
+      expect(text()).toContain(labels.dashboard.subtitle);
+      expect(text()).toContain(labels.dashboard.payments);
+      expect(text()).not.toMatch(/simulad|simulat|académic|academic|fictici|fiction/i);
+      expect(elements('[data-testid="dashboard-policy"]')).toHaveLength(1);
+      expect(elements('[data-testid="dashboard-payment"]')).toHaveLength(1);
+    },
+  );
 });

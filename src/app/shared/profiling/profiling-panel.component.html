@@ -1,7 +1,6 @@
 <mat-card appearance="outlined">
   <mat-card-content>
     <h2>{{ 'profiling.title' | transloco }}</h2>
-    <p class="simulation-note">{{ 'profiling.simulated' | transloco }}</p>
     <p>{{ 'profiling.purpose' | transloco }}</p>
 
     @if (loading()) {
@@ -198,9 +197,8 @@
         <p>
           {{ 'profiling.sources' | transloco }}:
           @for (source of profile.fuentes; track source.nombre) {
-            <span
-              >{{ sourceLabelKey(source.nombre) | transloco: { name: source.nombre } }} ·
-              {{ 'profiling.simulatedSource' | transloco }}
+            <span>
+              {{ sourceLabelKey(source.nombre) | transloco: { name: source.nombre } }}
               @if (!$last) {
                 ;
               }
@@ -242,7 +240,7 @@
                 <strong>{{
                   sourceLabelKey(source.nombre) | transloco: { name: source.nombre }
                 }}</strong>
-                <span>{{ 'profiling.simulatedSource' | transloco }} · {{ source.version }}</span>
+                <span>{{ 'profiling.version' | transloco }} · {{ source.version }}</span>
                 @let state = sourceState(source.nombre);
                 @if (state) {
                   <span class="source-state">{{

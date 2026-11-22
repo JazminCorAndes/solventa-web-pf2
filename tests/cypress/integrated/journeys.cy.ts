@@ -89,7 +89,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
           expect(response!.body.decision.hashDecision).to.match(/^[0-9a-f]{64}$/i);
           expect(response!.body.decision.reglaVersion).to.eq(response!.body.reglaVersion);
         });
-        cy.contains('button', 'Confirmar pago simulado').should('be.enabled').click();
+        cy.contains('button', 'Confirmar pago').should('be.enabled').click();
         cy.wait('@realPayment', { log: false }).then(({ request, response }) => {
           expect(response?.statusCode).to.be.oneOf([200, 201]);
           expect(response!.body.simulada).to.eq(true);
@@ -99,7 +99,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
           paymentKey = String(request.headers['idempotency-key']);
           expect(paymentKey).to.match(/^[0-9a-f-]{36}$/i);
         });
-        cy.contains('h3', 'Pago simulado confirmado').should('be.visible');
+        cy.contains('h3', 'Pago confirmado').should('be.visible');
         cy.get('.confirm-payment').should('not.exist');
         cy.then(() =>
           api<{ id: string }>(
@@ -117,7 +117,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
           expect(policies[0].simulada).to.eq(true);
         });
         cy.reload();
-        cy.contains('h3', 'Pago simulado confirmado').should('be.visible');
+        cy.contains('h3', 'Pago confirmado').should('be.visible');
         cy.contains('button', 'Cerrar sesión').click();
         cy.location('pathname').should('eq', '/iniciar-sesion');
         cy.window({ log: false }).then((win) => {
@@ -134,7 +134,7 @@ describe('E2E integrado: UI -> BFF -> servicios -> persistencia real', () => {
           .and(($record) => expect($record.text()).to.include(requestId));
         cy.then(() => cy.visit(`/app/cotizaciones/suscripcion/detalle?solicitud=${requestId}`));
         cy.contains('h1', 'Detalle de la suscripción').should('be.visible');
-        cy.contains('h3', 'Pago simulado confirmado').should('be.visible');
+        cy.contains('h3', 'Pago confirmado').should('be.visible');
         cy.get('.confirm-payment').should('not.exist');
       });
     });
