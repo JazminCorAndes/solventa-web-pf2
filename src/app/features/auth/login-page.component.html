@@ -68,9 +68,9 @@
           }
         </mat-form-field>
 
-        <span class="pending-link" aria-disabled="true">{{
+        <a class="pending-link" routerLink="/olvide-contrasena">{{
           'auth.forgotPassword' | transloco
-        }}</span>
+        }}</a>
 
         <button mat-flat-button type="submit" class="submit-button" [disabled]="loading()">
           @if (loading()) {

@@ -64,6 +64,9 @@ describe('authInterceptor', () => {
     ['registration challenge', `${API}/v1/usuarios/desafio`, 'GET'],
     ['renew', `${API}/v1/sesiones/renovar`, 'POST'],
     ['register', `${API}/v1/usuarios`, 'POST'],
+    ['recovery', `${API}/v1/recuperacion-contrasena`, 'POST'],
+    ['recovery challenge', `${API}/v1/recuperacion-contrasena/desafio`, 'GET'],
+    ['reset', `${API}/v1/recuperacion-contrasena/confirmar`, 'POST'],
   ])('does not add the token to %s', (_name, url, method) => {
     client.request(method, url, { body: {} }).subscribe();
 
@@ -83,20 +86,24 @@ describe('authInterceptor', () => {
     }
   });
 
-  it.each(['/v1/sesiones/desafio', '/v1/usuarios/desafio', '/v1/usuarios'])(
-    'does not renew or redirect when public auth rejects %s',
-    async (path) => {
-      const url = `${API}${path}`;
-      const response = firstValueFrom(
-        client.request(path.endsWith('/desafio') ? 'GET' : 'POST', url),
-      ).catch((error: unknown) => error);
-      http.expectOne(url).flush({}, UNAUTHORIZED);
+  it.each([
+    '/v1/sesiones/desafio',
+    '/v1/usuarios/desafio',
+    '/v1/usuarios',
+    '/v1/recuperacion-contrasena',
+    '/v1/recuperacion-contrasena/desafio',
+    '/v1/recuperacion-contrasena/confirmar',
+  ])('does not renew or redirect when public auth rejects %s', async (path) => {
+    const url = `${API}${path}`;
+    const response = firstValueFrom(
+      client.request(path.endsWith('/desafio') ? 'GET' : 'POST', url),
+    ).catch((error: unknown) => error);
+    http.expectOne(url).flush({}, UNAUTHORIZED);
 
-      expect(await response).toBeInstanceOf(HttpErrorResponse);
-      expect(gateway.refreshCalls).toEqual([]);
-      expect(navigate).not.toHaveBeenCalled();
-    },
-  );
+    expect(await response).toBeInstanceOf(HttpErrorResponse);
+    expect(gateway.refreshCalls).toEqual([]);
+    expect(navigate).not.toHaveBeenCalled();
+  });
 
   it('does not touch requests outside the API', () => {
     client.get('/assets/i18n/es.json').subscribe();

@@ -11,6 +11,8 @@ import {
   InvalidCredentialsError,
   InvalidRefreshTokenError,
   InvalidRegistrationError,
+  InvalidRecoveryLinkError,
+  InvalidRecoveryRequestError,
   CredentialEncryptionUnavailableError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
@@ -18,6 +20,7 @@ import { HttpAuthGateway } from './http-auth.gateway';
 
 const SESSIONS = `${environment.apiBaseUrl}/v1/sesiones`;
 const USERS = `${environment.apiBaseUrl}/v1/usuarios`;
+const RECOVERY = `${environment.apiBaseUrl}/v1/recuperacion-contrasena`;
 
 const USER_RESPONSE = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -58,6 +61,132 @@ describe('HttpAuthGateway', () => {
   });
 
   afterEach(() => http.verify());
+
+  describe('recuperación', () => {
+    it.each([
+      'Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.',
+      'Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.',
+    ])(
+      'acepta el contrato 202 %s sin exponer su mensaje ni fabricar envío ante 503',
+      async (mensaje) => {
+        const accepted = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
+        const request = http.expectOne(RECOVERY);
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual({ correo: 'sintetico@example.test' });
+        request.flush({ mensaje }, { status: 202, statusText: 'Accepted' });
+        await expect(accepted).resolves.toBeUndefined();
+        const unavailable = firstValueFrom(
+          gateway.requestPasswordRecovery('sintetico@example.test'),
+        );
+        const rejected = expect(unavailable).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+        http.expectOne(RECOVERY).flush({}, { status: 503, statusText: 'Unavailable' });
+        await rejected;
+      },
+    );
+
+    it.each(
+      [
+        null,
+        {},
+        [],
+        { mensaje: 42 },
+        { mensaje: 'Respuesta desconocida' },
+        {
+          mensaje: 'Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.',
+          modo: 'normal',
+        },
+        {
+          mensaje:
+            'Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.',
+          destino: 'direccion-no-publica@example.test',
+        },
+      ].map((body) => ({ body })),
+    )('rechaza DTO 202 desconocidos o campos adicionales: %j', async ({ body }) => {
+      const result = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
+      const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+      http.expectOne(RECOVERY).flush(body, { status: 202, statusText: 'Accepted' });
+      await rejected;
+    });
+
+    it('rechaza una respuesta exitosa HTTP que no confirma aceptación del contrato', async () => {
+      const result = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
+      const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+      http.expectOne(RECOVERY).flush({});
+      await rejected;
+    });
+
+    it('cifra el token y contraseña con el contrato reset y exige 204', async () => {
+      vi.stubGlobal('isSecureContext', true);
+      vi.stubGlobal('Uint8Array', new TextEncoder().encode('').constructor);
+      try {
+        const pair = await generateKeyPair('RSA-OAEP-256', { extractable: true });
+        const jwk = await exportJWK(pair.publicKey);
+        const token = 'a'.repeat(64);
+        const result = firstValueFrom(gateway.resetPassword(token, ' nueva clave '));
+        const challenge = http.expectOne(`${RECOVERY}/desafio`);
+        expect(challenge.request.body).toBeNull();
+        challenge.flush({
+          desafioId: 'reset-challenge',
+          clavePublica: { ...jwk, alg: 'RSA-OAEP-256', use: 'enc', kid: 'reset-key' },
+          expiraEn: new Date(Date.now() + 60000).toISOString(),
+        });
+        const request = await vi.waitFor(() => http.expectOne(`${RECOVERY}/confirmar`));
+        expect(Object.keys(request.request.body)).toEqual(['token', 'credencialCifrada']);
+        expect(request.request.body.token).toBe(token);
+        const { plaintext, protectedHeader } = await compactDecrypt(
+          request.request.body.credencialCifrada,
+          pair.privateKey,
+        );
+        expect(protectedHeader).toMatchObject({
+          alg: 'RSA-OAEP-256',
+          enc: 'A256GCM',
+          kid: 'reset-key',
+          typ: 'solventa-reset+jwe',
+        });
+        expect(JSON.parse(new TextDecoder().decode(plaintext))).toEqual({
+          desafioId: 'reset-challenge',
+          token,
+          contrasena: ' nueva clave ',
+        });
+        request.flush(null, { status: 204, statusText: 'No Content' });
+        await expect(result).resolves.toBeUndefined();
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it.each([
+      ['recuperacion_invalida', InvalidRecoveryLinkError],
+      ['solicitud_invalida', InvalidRecoveryRequestError],
+    ])('traduce el error %s sin exponer contenido de respuesta', async (code, expected) => {
+      const result = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
+      const rejected = expect(result).rejects.toBeInstanceOf(expected);
+      http.expectOne(RECOVERY).flush({ code }, { status: 400, statusText: 'Bad Request' });
+      await rejected;
+    });
+
+    it('no convierte un código 400 desconocido en un error de enlace o política', async () => {
+      const result = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
+      const rejected = expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
+      http
+        .expectOne(RECOVERY)
+        .flush({ code: 'desconocido' }, { status: 400, statusText: 'Bad Request' });
+      await rejected;
+    });
+
+    it('no envía contraseña sin cifrar cuando no hay contexto seguro', async () => {
+      vi.stubGlobal('isSecureContext', false);
+      try {
+        await expect(
+          firstValueFrom(gateway.resetPassword('a'.repeat(64), 'nueva clave')),
+        ).rejects.toBeInstanceOf(CredentialEncryptionUnavailableError);
+        http.expectNone(`${RECOVERY}/desafio`);
+        http.expectNone(`${RECOVERY}/confirmar`);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+  });
 
   describe('login', () => {
     it('accepts the real partner role and preserves authorized organizations', async () => {

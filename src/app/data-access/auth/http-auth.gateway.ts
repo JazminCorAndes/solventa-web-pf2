@@ -11,6 +11,8 @@ import {
   InvalidCredentialsError,
   InvalidRefreshTokenError,
   InvalidRegistrationError,
+  InvalidRecoveryLinkError,
+  InvalidRecoveryRequestError,
   TooManyAttemptsError,
 } from '../../core/auth/auth.errors';
 import { AuthGateway } from '../../core/auth/auth.gateway';
@@ -50,11 +52,72 @@ interface TokenResponse extends SessionResponse {
   refreshExpiraEn: string;
 }
 
+const RECOVERY_ACCEPTANCE_MESSAGES = [
+  'Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.',
+  'Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.',
+];
+
 @Injectable()
 export class HttpAuthGateway implements AuthGateway {
   private readonly http = inject(HttpClient);
   private readonly sessionsUrl = `${environment.apiBaseUrl}/v1/sesiones`;
   private readonly usersUrl = `${environment.apiBaseUrl}/v1/usuarios`;
+  private readonly recoveryUrl = `${environment.apiBaseUrl}/v1/recuperacion-contrasena`;
+
+  requestPasswordRecovery(email: string): Observable<void> {
+    return this.http
+      .post<unknown>(this.recoveryUrl, { correo: email }, { observe: 'response' })
+      .pipe(
+        map((response) => {
+          const body = response.body;
+          if (
+            response.status !== 202 ||
+            !body ||
+            typeof body !== 'object' ||
+            Array.isArray(body) ||
+            Object.keys(body).length !== 1 ||
+            !('mensaje' in body) ||
+            typeof body.mensaje !== 'string' ||
+            !RECOVERY_ACCEPTANCE_MESSAGES.includes(body.mensaje)
+          ) {
+            throw new AuthenticationUnavailableError();
+          }
+        }),
+        catchError((error: unknown) => this.mapRecoveryError(error)),
+      );
+  }
+
+  resetPassword(token: string, password: string): Observable<void> {
+    return this.requestEncryptedCredentials(
+      this.recoveryUrl,
+      { token, contrasena: password },
+      'solventa-reset+jwe',
+    ).pipe(
+      switchMap((credencialCifrada) =>
+        this.http.post<unknown>(
+          `${this.recoveryUrl}/confirmar`,
+          { token, credencialCifrada },
+          { observe: 'response' },
+        ),
+      ),
+      map((response) => {
+        if (response.status !== 204) throw new AuthenticationUnavailableError();
+      }),
+      catchError((error: unknown) => this.mapRecoveryError(error)),
+    );
+  }
+
+  private mapRecoveryError(error: unknown): Observable<never> {
+    if (error instanceof HttpErrorResponse && error.status === 400) {
+      if (error.error?.code === 'recuperacion_invalida') {
+        return throwError(() => new InvalidRecoveryLinkError());
+      }
+      if (error.error?.code === 'solicitud_invalida') {
+        return throwError(() => new InvalidRecoveryRequestError());
+      }
+    }
+    return this.mapCommonError(error);
+  }
 
   register(data: RegistrationData): Observable<AuthUser> {
     return this.requestEncryptedCredentials(this.usersUrl, data, 'solventa-register+jwe').pipe(
@@ -156,7 +219,7 @@ export class HttpAuthGateway implements AuthGateway {
 
   private requestEncryptedCredentials(
     baseUrl: string,
-    credentials: LoginCredentials,
+    credentials: LoginCredentials | { token: string; contrasena: string },
     type: CredentialType,
   ): Observable<string> {
     return defer(() => {
@@ -183,11 +246,11 @@ export class HttpAuthGateway implements AuthGateway {
   }
 }
 
-type CredentialType = 'solventa-login+jwe' | 'solventa-register+jwe';
+type CredentialType = 'solventa-login+jwe' | 'solventa-register+jwe' | 'solventa-reset+jwe';
 
 async function encryptCredentials(
   response: unknown,
-  credentials: LoginCredentials,
+  credentials: LoginCredentials | { token: string; contrasena: string },
   type: CredentialType,
 ): Promise<string> {
   try {
@@ -224,8 +287,9 @@ async function encryptCredentials(
       new TextEncoder().encode(
         JSON.stringify({
           desafioId,
-          correo: credentials.email,
-          contrasena: credentials.password,
+          ...('token' in credentials
+            ? credentials
+            : { correo: credentials.email, contrasena: credentials.password }),
         }),
       ),
     )

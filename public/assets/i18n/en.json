@@ -192,6 +192,25 @@
       "unexpected": "An unexpected error occurred. Please try again."
     }
   },
+  "recovery": {
+    "title": "Recover password",
+    "resetTitle": "New password",
+    "introduction": "Enter the account email to request password recovery.",
+    "resetIntroduction": "The link authorizes the change. Enter only the new password.",
+    "newPassword": "New password",
+    "send": "Request recovery",
+    "save": "Save password",
+    "processing": "Processing",
+    "sent": "Request received. If the account exists, recovery will be managed through this environment's authorized channel.",
+    "saved": "Your password was updated. Sign in with your new password.",
+    "requestAnother": "Request another link",
+    "errors": {
+      "link": "The link is invalid, expired or already used. Request another link.",
+      "invalid": "The service rejected the request. Check your details and use a password of 8 to 128 characters.",
+      "unavailable": "Recovery is unavailable or could not be confirmed. Try again when the email service is available.",
+      "encryption": "Use HTTPS and a browser with Web Crypto. Your new password will not be sent unencrypted."
+    }
+  },
   "registration": {
     "title": "Sign up",
     "introduction": "Create your customer account with the identity and contact information used for your quotes. Insurance-specific details are requested when you get a quote.",
@@ -1385,8 +1404,8 @@
     "cutOffHint": "Leave it empty to use the latest cut-off.",
     "query": "Run report",
     "idle": "Choose the period and filters, then run the report.",
-    "optionsLoading":  "Loading report options…",
-    "optionsError":  "The report options could not be loaded. Retry before running a report.",
+    "optionsLoading": "Loading report options…",
+    "optionsError": "The report options could not be loaded. Retry before running a report.",
     "loading": "Consolidating the sources at the cut-off…",
     "forbidden": "Your user is not authorized to view operational reports.",
     "invalidFilters": "The filters are not valid. Check the period, product and status.",

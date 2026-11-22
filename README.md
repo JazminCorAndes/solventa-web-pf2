@@ -60,6 +60,43 @@ se controlan. Tampoco acredita login/pagos reales ni un despliegue.
 
 ## Tecnologías
 
+### Recuperación de contraseña
+
+El login enlaza a `/olvide-contrasena`, que solicita únicamente el correo.
+El enlace de un uso abre la raíz `/?recuperacion=1#token=...` y pide sólo la nueva
+contraseña (8–128 caracteres, sin contraseña anterior ni campo repetido).
+En Pages se usa `https://jazmincorandes.github.io/solventa-web-pf2/?recuperacion=1#token=...`;
+el bootstrap toma el base href y abre la ruta interna `/recuperar-contrasena`
+sin solicitar esa ruta al servidor ni depender del fallback 404 existente.
+El fragmento y el marcador se eliminan antes del bootstrap; el token se consume en memoria y
+no se conserva tras salir o recargar. La página aplica `no-referrer`.
+Un enlace inválido, vencido o utilizado permite solicitar otro. Guardar correctamente
+invalida la sesión local y requiere iniciar sesión de nuevo.
+
+Requiere el BFF real: `POST /v1/recuperacion-contrasena {correo}` (202 genérico),
+`GET /v1/recuperacion-contrasena/desafio` y
+`POST /v1/recuperacion-contrasena/confirmar {token,credencialCifrada}` (204).
+La credencial JWE usa RSA-OAEP-256/A256GCM, `typ: solventa-reset+jwe` y
+`{desafioId,token,contrasena}`. No agrega Bearer ni renueva sesiones en estas rutas.
+La aceptación 202 debe contener sólo `mensaje`, con uno de los dos textos del contrato:
+`Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.` o
+`Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.`
+Otros textos, campos o cuerpos se rechazan. Ambos se traducen al mismo estado Web
+neutro; la respuesta original no se muestra al solicitante.
+El modo mock falla explícitamente: no envía correo ni cambia contraseñas.
+Backend implementa Amazon SES con remitente y URL pública configurados por entorno.
+La modalidad académica administrada dirige todos los enlaces al buzón administrador
+configurado en backend; el administrador autoriza el cambio. La recuperación normal
+al correo propio es una modalidad separada y configurable en backend.
+El mensaje Web de aceptación es neutro para ambas modalidades: no promete entrega
+al solicitante, no revela la existencia de la cuenta ni expone el buzón administrador
+o el enlace secreto. En un entorno configurado como administrado, el solicitante
+debe coordinar la autorización con el administrador.
+La identidad y el envío de la cuenta SES ya fueron comprobados. Siguen pendientes
+la configuración runtime, la migración, el despliegue y la validación end-to-end
+del flujo integrado; no se afirma disponibilidad en producción.
+Sin transporte operativo el servicio devuelve 503 para todos los correos.
+
 Las pruebas adicionales están en [`tests/cypress`](tests/cypress/README.md):
 `pnpm test:cypress:ui` valida la interfaz con HTTP controlado y
 `pnpm test:cypress:integrated` recorre servicios/persistencia reales en un backend
