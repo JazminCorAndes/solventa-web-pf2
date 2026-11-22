@@ -113,6 +113,36 @@ describe('PolicyModificationPageComponent with HTTP consumer', () => {
     );
   });
 
+  it('shows excluded liability without offering it as an optional endorsement', async () => {
+    const version = {
+      ...VERSION_1,
+      coberturas: [
+        VERSION_1.coberturas[0],
+        {
+          codigo: 'responsabilidad_civil',
+          nombre: 'Responsabilidad civil',
+          descripcion: 'Responsabilidad frente a terceros.',
+          opcional: false,
+          incluida: false,
+        },
+      ],
+    };
+    await setup(MODIFICATION_POLICY_ID, {
+      ...MODIFICATION_STATE_RESPONSE,
+      versionActual: version,
+      historial: [version],
+    });
+
+    const excluded = find('modification-current')?.querySelector('li.excluded');
+    expect(excluded?.textContent).toContain('Responsabilidad civil');
+    expect(excluded?.textContent).toContain(es.policyModification.notIncluded);
+    expect(find('modification-history')).toBeNull();
+    expect(fixture.componentInstance.modification()?.history[0].coverages[1].included).toBe(false);
+    expect(find('optional-responsabilidad_civil')).toBeNull();
+    expect(fixture.componentInstance.optionals().size).toBe(0);
+    expect(button('modification-simulate').disabled).toBe(true);
+  });
+
   it('cancels old confirmations and clears their proposal when the policy changes', async () => {
     await setup(MODIFICATION_POLICY_ID);
     simulate();

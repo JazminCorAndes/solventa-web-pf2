@@ -9,67 +9,88 @@
       {{ 'operationalReports.forbidden' | transloco }}
     </p>
   } @else {
-    <mat-card appearance="raised">
-      <mat-card-content>
-        <form class="filters" [formGroup]="form" (ngSubmit)="query()" data-testid="report-filters">
-          <mat-form-field>
-            <mat-label>{{ 'operationalReports.from' | transloco }}</mat-label>
-            <input matInput type="date" formControlName="from" data-testid="report-from" />
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>{{ 'operationalReports.to' | transloco }}</mat-label>
-            <input matInput type="date" formControlName="to" data-testid="report-to" />
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>{{ 'operationalReports.product' | transloco }}</mat-label>
-            <mat-select formControlName="product" data-testid="report-product">
-              <mat-option [value]="null">{{ 'operationalReports.all' | transloco }}</mat-option>
-              @for (product of options().products; track product) {
-                <mat-option [value]="product">{{ productLabel(product) }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>{{ 'operationalReports.status' | transloco }}</mat-label>
-            <mat-select formControlName="status" data-testid="report-status">
-              <mat-option [value]="null">{{ 'operationalReports.all' | transloco }}</mat-option>
-              @for (status of options().statuses; track status) {
-                <mat-option [value]="status">
-                  {{ 'operationalReports.policyStates.' + status | transloco }}
-                </mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field>
-            <mat-label>{{ 'operationalReports.cutOff' | transloco }}</mat-label>
-            <input
-              matInput
-              type="datetime-local"
-              formControlName="cutOff"
-              data-testid="report-cut-off"
-            />
-            <mat-hint>{{ 'operationalReports.cutOffHint' | transloco }}</mat-hint>
-          </mat-form-field>
-          <div class="filter-actions">
-            <button
-              mat-flat-button
-              type="submit"
-              data-testid="report-query"
-              [disabled]="state() === 'loading'"
-            >
-              {{ 'operationalReports.query' | transloco }}
-            </button>
-          </div>
-        </form>
-        @if (periodError(); as error) {
-          <p class="status-message error" role="alert" data-testid="report-period-error">
-            {{ 'operationalReports.periodErrors.' + error | transloco }}
-          </p>
-        }
-      </mat-card-content>
-    </mat-card>
+    @if (options(); as catalog) {
+      <mat-card appearance="raised">
+        <mat-card-content>
+          <form
+            class="filters"
+            [formGroup]="form"
+            (ngSubmit)="query()"
+            data-testid="report-filters"
+          >
+            <mat-form-field>
+              <mat-label>{{ 'operationalReports.from' | transloco }}</mat-label>
+              <input matInput type="date" formControlName="from" data-testid="report-from" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>{{ 'operationalReports.to' | transloco }}</mat-label>
+              <input matInput type="date" formControlName="to" data-testid="report-to" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>{{ 'operationalReports.product' | transloco }}</mat-label>
+              <mat-select formControlName="product" data-testid="report-product">
+                <mat-option [value]="null">{{ 'operationalReports.all' | transloco }}</mat-option>
+                @for (product of catalog.products; track product) {
+                  <mat-option [value]="product">{{ productLabel(product) }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>{{ 'operationalReports.status' | transloco }}</mat-label>
+              <mat-select formControlName="status" data-testid="report-status">
+                <mat-option [value]="null">{{ 'operationalReports.all' | transloco }}</mat-option>
+                @for (status of catalog.statuses; track status) {
+                  <mat-option [value]="status">
+                    {{ 'operationalReports.policyStates.' + status | transloco }}
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>{{ 'operationalReports.cutOff' | transloco }}</mat-label>
+              <input
+                matInput
+                type="datetime-local"
+                formControlName="cutOff"
+                data-testid="report-cut-off"
+              />
+              <mat-hint>{{ 'operationalReports.cutOffHint' | transloco }}</mat-hint>
+            </mat-form-field>
+            <div class="filter-actions">
+              <button
+                mat-flat-button
+                type="submit"
+                data-testid="report-query"
+                [disabled]="state() === 'loading'"
+              >
+                {{ 'operationalReports.query' | transloco }}
+              </button>
+            </div>
+          </form>
+          @if (periodError(); as error) {
+            <p class="status-message error" role="alert" data-testid="report-period-error">
+              {{ 'operationalReports.periodErrors.' + error | transloco }}
+            </p>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
 
     @switch (state()) {
+      @case ('loading-options') {
+        <div class="status-message" role="status" data-testid="report-options-loading">
+          <mat-spinner diameter="28" />
+          <span>{{ 'operationalReports.optionsLoading' | transloco }}</span>
+        </div>
+      }
+      @case ('options-error') {
+        <div class="status-message error" role="alert" data-testid="report-options-error">
+          <span>{{ 'operationalReports.optionsError' | transloco }}</span>
+          <button mat-stroked-button type="button" (click)="loadOptions()">
+            {{ 'operationalReports.retry' | transloco }}
+          </button>
+        </div>
+      }
       @case ('idle') {
         <p class="status-message" data-testid="report-idle">
           {{ 'operationalReports.idle' | transloco }}

@@ -197,14 +197,13 @@ function period(value: unknown): Period {
 
 function coverage(value: unknown): PolicyCoverage {
   const fields = record(value);
-  const result = {
+  return {
     code: code(fields['codigo']),
     name: text(fields['nombre']),
     description: text(fields['descripcion']),
     optional: bool(fields['opcional']),
     included: bool(fields['incluida']),
   };
-  return result.optional || result.included ? result : invalid();
 }
 
 function toVersion(value: unknown): PolicyVersion {
