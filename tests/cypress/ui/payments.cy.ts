@@ -206,10 +206,7 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     }).as('readAttempt');
     cy.get('.confirm-payment').click();
     cy.wait('@pendingPayment');
-    cy.get('.payment-pending').should(
-      'contain.text',
-      'Resultado del pago aún no confirmado',
-    );
+    cy.get('.payment-pending').should('contain.text', 'Resultado del pago aún no confirmado');
     cy.get('.payment-section').should('not.contain.text', 'Fecha de confirmación');
     cy.get('.payment-section').should('not.contain.text', 'Fecha de rechazo');
     cy.get('.confirm-payment, .retry-issuance, .request-new-payment').should('not.exist');
@@ -519,10 +516,7 @@ describe('UI determinista: pago simulado y recuperacion (no ledger real)', () =>
     cy.wait('@paymentAttempt').its('response.statusCode').should('eq', 200);
     cy.get('.payment-rejection').should('contain.text', 'Pago rechazado');
     cy.get('.payment-section').should('not.contain.text', 'Fecha de confirmación');
-    cy.get('.payment-section').should(
-      'not.contain.text',
-      'Pago pendiente de confirmación',
-    );
+    cy.get('.payment-section').should('not.contain.text', 'Pago pendiente de confirmación');
     cy.get('.payment-confirmation').should('not.exist');
     cy.get('.retry-issuance').should('not.exist');
     cy.visit('/app/dashboard');

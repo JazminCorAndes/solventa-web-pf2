@@ -42,7 +42,11 @@ describe('DashboardPageComponent with HTTP consumer', () => {
         DashboardPageComponent,
         TranslocoTestingModule.forRoot({
           langs: { es, en },
-          translocoConfig: { availableLangs: ['es', 'en'], defaultLang: 'es' },
+          translocoConfig: {
+            availableLangs: ['es', 'en'],
+            defaultLang: 'es',
+            reRenderOnLangChange: true,
+          },
         }),
       ],
       providers: [
