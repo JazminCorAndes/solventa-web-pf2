@@ -63,16 +63,48 @@ describe('HttpAuthGateway', () => {
   afterEach(() => http.verify());
 
   describe('recuperación', () => {
-    it('envía sólo correo y exige aceptación 202, sin fabricar envío ante 503', async () => {
-      const accepted = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
-      const request = http.expectOne(RECOVERY);
-      expect(request.request.method).toBe('POST');
-      expect(request.request.body).toEqual({ correo: 'sintetico@example.test' });
-      request.flush({ mensaje: 'Respuesta genérica' }, { status: 202, statusText: 'Accepted' });
-      await expect(accepted).resolves.toBeUndefined();
-      const unavailable = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
-      const rejected = expect(unavailable).rejects.toBeInstanceOf(AuthenticationUnavailableError);
-      http.expectOne(RECOVERY).flush({}, { status: 503, statusText: 'Unavailable' });
+    it.each([
+      'Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.',
+      'Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.',
+    ])(
+      'acepta el contrato 202 %s sin exponer su mensaje ni fabricar envío ante 503',
+      async (mensaje) => {
+        const accepted = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
+        const request = http.expectOne(RECOVERY);
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual({ correo: 'sintetico@example.test' });
+        request.flush({ mensaje }, { status: 202, statusText: 'Accepted' });
+        await expect(accepted).resolves.toBeUndefined();
+        const unavailable = firstValueFrom(
+          gateway.requestPasswordRecovery('sintetico@example.test'),
+        );
+        const rejected = expect(unavailable).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+        http.expectOne(RECOVERY).flush({}, { status: 503, statusText: 'Unavailable' });
+        await rejected;
+      },
+    );
+
+    it.each(
+      [
+        null,
+        {},
+        [],
+        { mensaje: 42 },
+        { mensaje: 'Respuesta desconocida' },
+        {
+          mensaje: 'Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.',
+          modo: 'normal',
+        },
+        {
+          mensaje:
+            'Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.',
+          destino: 'direccion-no-publica@example.test',
+        },
+      ].map((body) => ({ body })),
+    )('rechaza DTO 202 desconocidos o campos adicionales: %j', async ({ body }) => {
+      const result = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
+      const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+      http.expectOne(RECOVERY).flush(body, { status: 202, statusText: 'Accepted' });
       await rejected;
     });
 
@@ -130,6 +162,15 @@ describe('HttpAuthGateway', () => {
       const result = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
       const rejected = expect(result).rejects.toBeInstanceOf(expected);
       http.expectOne(RECOVERY).flush({ code }, { status: 400, statusText: 'Bad Request' });
+      await rejected;
+    });
+
+    it('no convierte un código 400 desconocido en un error de enlace o política', async () => {
+      const result = firstValueFrom(gateway.requestPasswordRecovery('sintetico@example.test'));
+      const rejected = expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
+      http
+        .expectOne(RECOVERY)
+        .flush({ code: 'desconocido' }, { status: 400, statusText: 'Bad Request' });
       await rejected;
     });
 

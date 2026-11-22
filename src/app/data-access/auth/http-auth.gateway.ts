@@ -52,6 +52,11 @@ interface TokenResponse extends SessionResponse {
   refreshExpiraEn: string;
 }
 
+const RECOVERY_ACCEPTANCE_MESSAGES = [
+  'Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.',
+  'Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.',
+];
+
 @Injectable()
 export class HttpAuthGateway implements AuthGateway {
   private readonly http = inject(HttpClient);
@@ -64,7 +69,19 @@ export class HttpAuthGateway implements AuthGateway {
       .post<unknown>(this.recoveryUrl, { correo: email }, { observe: 'response' })
       .pipe(
         map((response) => {
-          if (response.status !== 202) throw new AuthenticationUnavailableError();
+          const body = response.body;
+          if (
+            response.status !== 202 ||
+            !body ||
+            typeof body !== 'object' ||
+            Array.isArray(body) ||
+            Object.keys(body).length !== 1 ||
+            !('mensaje' in body) ||
+            typeof body.mensaje !== 'string' ||
+            !RECOVERY_ACCEPTANCE_MESSAGES.includes(body.mensaje)
+          ) {
+            throw new AuthenticationUnavailableError();
+          }
         }),
         catchError((error: unknown) => this.mapRecoveryError(error)),
       );
@@ -92,11 +109,12 @@ export class HttpAuthGateway implements AuthGateway {
 
   private mapRecoveryError(error: unknown): Observable<never> {
     if (error instanceof HttpErrorResponse && error.status === 400) {
-      return throwError(() =>
-        error.error?.code === 'recuperacion_invalida'
-          ? new InvalidRecoveryLinkError()
-          : new InvalidRecoveryRequestError(),
-      );
+      if (error.error?.code === 'recuperacion_invalida') {
+        return throwError(() => new InvalidRecoveryLinkError());
+      }
+      if (error.error?.code === 'solicitud_invalida') {
+        return throwError(() => new InvalidRecoveryRequestError());
+      }
     }
     return this.mapCommonError(error);
   }

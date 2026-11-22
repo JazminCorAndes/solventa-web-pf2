@@ -78,6 +78,11 @@ Requiere el BFF real: `POST /v1/recuperacion-contrasena {correo}` (202 genérico
 `POST /v1/recuperacion-contrasena/confirmar {token,credencialCifrada}` (204).
 La credencial JWE usa RSA-OAEP-256/A256GCM, `typ: solventa-reset+jwe` y
 `{desafioId,token,contrasena}`. No agrega Bearer ni renueva sesiones en estas rutas.
+La aceptación 202 debe contener sólo `mensaje`, con uno de los dos textos del contrato:
+`Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.` o
+`Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.`
+Otros textos, campos o cuerpos se rechazan. Ambos se traducen al mismo estado Web
+neutro; la respuesta original no se muestra al solicitante.
 El modo mock falla explícitamente: no envía correo ni cambia contraseñas.
 Backend implementa Amazon SES con remitente y URL pública configurados por entorno.
 La modalidad académica administrada dirige todos los enlaces al buzón administrador
