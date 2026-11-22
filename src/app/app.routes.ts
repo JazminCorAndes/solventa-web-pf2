@@ -118,6 +118,14 @@ export const routes: Routes = [
         title: 'Modificar póliza | Solventa',
       },
       {
+        path: 'polizas/:policyId/cancelacion',
+        loadComponent: () =>
+          import('./features/policies/policy-cancellation-page.component').then(
+            (component) => component.PolicyCancellationPageComponent,
+          ),
+        title: 'Cancelar póliza | Solventa',
+      },
+      {
         path: 'polizas/:policyId',
         loadComponent: () =>
           import('./features/policies/policy-detail-page.component').then(
@@ -136,8 +144,8 @@ export const routes: Routes = [
       {
         path: 'siniestros',
         loadComponent: () =>
-          import('./features/claims/claim-status-page.component').then(
-            (component) => component.ClaimStatusPageComponent,
+          import('./features/claims/claim-list-page.component').then(
+            (component) => component.ClaimListPageComponent,
           ),
         title: 'Siniestros | Solventa',
       },
@@ -226,6 +234,14 @@ export const routes: Routes = [
             (component) => component.AdvisorExceptionsPageComponent,
           ),
         title: 'Excepciones Open Finance | Solventa',
+      },
+      {
+        path: 'reportes',
+        loadComponent: () =>
+          import('./features/advisor/operational-reports-page.component').then(
+            (component) => component.OperationalReportsPageComponent,
+          ),
+        title: 'Reportes operativos | Solventa',
       },
       {
         path: 'perfilamientos/nuevo',

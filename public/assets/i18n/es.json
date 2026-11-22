@@ -1,4 +1,21 @@
 {
+  "claimList": {
+    "title": "Mis siniestros",
+    "subtitle": "Consulta tus reportes y abre el detalle para revisar su avance y adjuntar evidencias.",
+    "loading": "Consultando tus siniestros…",
+    "error": "No fue posible consultar tus siniestros. No se muestran reportes desactualizados; intenta nuevamente.",
+    "forbidden": "Tu cuenta no tiene permiso para consultar este listado de cliente.",
+    "session": "Inicia sesión como cliente para consultar tus siniestros.",
+    "signIn": "Iniciar sesión",
+    "empty": "Aún no tienes siniestros reportados",
+    "emptyHint": "Cuando reportes un evento, podrás consultarlo aquí.",
+    "registered": "Reporte registrado",
+    "registrationNote": "El registro confirma la recepción del reporte, no su aprobación ni su estado vigente. Consulta el detalle para ver el estado y el historial.",
+    "viewDetail": "Ver estado, historial y evidencias",
+    "location": "Lugar del evento",
+    "lookup": "Consultar por número de siniestro",
+    "back": "Volver a mis siniestros"
+  },
   "claims": {
     "title": "Reportar siniestro",
     "instructions": "Selecciona tu póliza y cuéntanos qué ocurrió.",
@@ -409,11 +426,14 @@
     "reportClaim": "Reportar un siniestro",
     "renew": "Renovar póliza",
     "modify": "Modificar póliza",
+    "cancel": "Revisar cancelación",
+    "cancellationResult": "Ver cancelación registrada",
     "inactiveNotice": "Esta póliza no está vigente. Las operaciones están disponibles únicamente para pólizas vigentes.",
     "notFound": "No encontramos esta póliza en tu cuenta.",
     "states": {
       "active": "Vigente",
-      "expired": "Vencida"
+      "expired": "Vencida",
+      "cancelled": "Cancelada"
     }
   },
   "quoteRequest": {
@@ -530,6 +550,17 @@
     }
   },
   "profiling": {
+    "sourceReason": "Motivo informado por el servicio",
+    "sourceReasons": {
+      "fuente_no_disponible": "La fuente no está disponible.",
+      "dependencia_timeout": "La fuente excedió el tiempo de espera.",
+      "dependencia_saturada": "La capacidad de consulta de la fuente está saturada.",
+      "presupuesto_agotado": "Se agotó el tiempo disponible para la consulta.",
+      "respuesta_fuente_invalida": "La fuente devolvió una respuesta inválida.",
+      "perfil_vencido": "La información consultada en la fuente estaba vencida.",
+      "circuito_abierto": "La consulta a la fuente se suspendió por fallos previos."
+    },
+    "reasonUnavailable": "El servicio no informó una causa reconocida de degradación.",
     "additionalSource": "Adaptador adicional: {{ name }}",
     "cachedEvidence": "El servidor reutilizó evidencia en caché que sigue vigente y vinculada al consentimiento actual. Las fuentes siguen siendo simuladas.",
     "defaultEvidence": "Este perfil incluye valores predeterminados del modelo, no resultados actuales de esas fuentes. Consulta el estado de cada fuente en el detalle.",
@@ -752,6 +783,61 @@
       "subscription": "No fue posible procesar la suscripción. Inténtalo nuevamente."
     }
   },
+  "policyDocument": {
+    "title": "Documento y firma simulada de póliza",
+    "simulation": "SIMULACIÓN · SIN VALIDEZ LEGAL",
+    "disclaimer": "Documento académico. No es una póliza legal ni una firma electrónica real.",
+    "backendRequired": "La consulta, descarga y aceptación requieren el backend. Este modo no fabrica documentos ni firmas.",
+    "loading": "Consultando el documento vigente",
+    "refresh": "Consultar documento actualizado",
+    "policy": "Póliza",
+    "status": "Estado del documento",
+    "states": { "activa": "Activa", "cancelada": "Cancelada" },
+    "term": "Vigencia",
+    "premium": "Prima informada por el servicio",
+    "monthly": "Mensual",
+    "version": "Versión de póliza",
+    "plan": "Plan",
+    "documentId": "Documento",
+    "hash": "SHA-256 del archivo",
+    "notVersioned": "Producto por fechas, sin versión",
+    "unavailable": "No informado por el servicio",
+    "coverages": "Coberturas del documento",
+    "included": "Incluida",
+    "excluded": "No incluida",
+    "noCoverages": "El servicio no informa coberturas para este documento. No se agregan coberturas del resumen ni del catálogo.",
+    "conditions": "Condiciones académicas",
+    "summaryDiffers": "El resumen de la póliza difiere del documento actual. Esta sección muestra los datos autoritativos del servicio; actualiza Mis pólizas para contrastarlos.",
+    "download": "Descargar documento simulado",
+    "downloading": "Verificando archivo antes de descargar",
+    "acceptanceTitle": "Aceptación / firma SIMULADA",
+    "acceptanceScope": "Solo registra tu aceptación académica del documento, versión y hash mostrados. No activa, renueva ni modifica la póliza y no tiene efecto legal.",
+    "notAccepted": "El documento actual no tiene una aceptación registrada.",
+    "consent": "He leído este documento y acepto expresamente la simulación académica sin validez legal para esta versión y este hash.",
+    "accept": "Registrar aceptación simulada",
+    "accepted": "Aceptación simulada registrada el",
+    "reference": "Referencia",
+    "pending": "Hay una solicitud guardada cuyo resultado debe recuperarse. No se enviará otra aceptación con una clave nueva.",
+    "recover": "Recuperar la misma aceptación",
+    "outdated": "El documento cambió. La solicitud anterior no acepta el nuevo documento. Revisa el contenido actualizado y acepta de nuevo expresamente.",
+    "receipt": "El servicio confirmó una aceptación para el documento",
+    "receiptScope": "Este registro no implica aceptación de una versión posterior.",
+    "history": "Historial de aceptaciones simuladas",
+    "afterIssuance": "Consultar documento y firma simulada en Mis pólizas",
+    "errors": {
+      "invalid": "La respuesta del documento es inválida o no corresponde a tu cuenta. No se permite aceptarla.",
+      "session": "Necesitas una sesión de cliente válida para consultar y aceptar este documento.",
+      "forbidden": "Tu sesión no tiene permiso para esta operación.",
+      "notFound": "No encontramos esta póliza en tu cuenta.",
+      "invalidRequest": "La solicitud no es válida. Consulta el documento actualizado antes de continuar.",
+      "outdated": "El documento ya no está vigente. Consulta y revisa el documento actualizado.",
+      "keyConflict": "La clave de la solicitud tiene un conflicto. No se generará otra clave ni se reenviará automáticamente. Contacta con soporte.",
+      "storage": "No pudimos leer o conservar de forma segura la solicitud de recuperación. La aceptación está bloqueada.",
+      "unavailable": "No pudimos consultar el documento. Reintenta la consulta sin enviar una aceptación.",
+      "ambiguous": "No pudimos confirmar el resultado. Conservamos la misma clave y los mismos datos para recuperarlo sin duplicados.",
+      "download": "No pudimos verificar o descargar el archivo del servidor. No se ha descargado ningún documento; vuelve a consultar antes de reintentar."
+    }
+  },
   "subscription": {
     "detailTitle": "Detalle de la suscripción",
     "validFrom": "Inicio de vigencia",
@@ -828,7 +914,8 @@
     "portalType": "Socios distribuidores",
     "title": "Portal del asesor",
     "clients": "Clientes",
-    "exceptions": "Excepciones Open Finance"
+    "exceptions": "Excepciones Open Finance",
+    "reports": "Reportes operativos"
   },
   "advisorExceptions": {
     "eyebrow": "Revisión de operaciones",
@@ -1166,6 +1253,65 @@
       "unconfirmed": "No pudimos confirmar la renovación. Tu póliza no muestra cambios; consulta el resultado antes de intentar de nuevo."
     }
   },
+  "policyCancellation": {
+    "title": "Cancelar póliza",
+    "subtitle": "Revisa la liquidación y las coberturas que finalizarán antes de confirmar.",
+    "back": "Volver a la póliza",
+    "academic": "Simulación académica. Esta operación no realiza cobros ni devoluciones de dinero reales.",
+    "loading": "Consultando elegibilidad y liquidación",
+    "invalid": "El identificador de la póliza no es válido.",
+    "settlement": "Liquidación de cancelación",
+    "coverageEnd": "Fecha efectiva y fin de cobertura",
+    "monthlyPremium": "Prima mensual",
+    "currentPeriod": "Periodo actual",
+    "unusedDays": "Días no usados / días del periodo",
+    "proratedRefund": "Devolución proporcional",
+    "voidedRefund": "Devolución de periodos anulados",
+    "refund": "Devolución total",
+    "pendingAmount": "Valor pendiente",
+    "endedCoverages": "Coberturas que finalizan",
+    "voidedPeriods": "Periodos anulados",
+    "noVoidedPeriods": "No hay periodos posteriores por anular.",
+    "rule": "Regla aplicada por el servicio",
+    "reason": "Motivo de cancelación",
+    "consequences": "La cobertura termina en la fecha efectiva indicada. La liquidación corresponde a los valores informados por el servicio.",
+    "confirmation": "He revisado la liquidación y acepto finalizar estas coberturas.",
+    "confirm": "Confirmar cancelación",
+    "keep": "Conservar mi póliza",
+    "pending": "Hay una solicitud cuyo resultado aún debe verificarse. No se enviará una nueva cancelación ni se cambiarán sus condiciones.",
+    "retry": "Recuperar la misma solicitud",
+    "reload": "Consultar estado actualizado",
+    "success": "Cancelación registrada",
+    "reference": "Referencia de cancelación",
+    "confirmedAt": "Confirmada el",
+    "reasons": {
+      "ya_no_la_necesito": "Ya no la necesito",
+      "costo": "Costo",
+      "cambio_de_aseguradora": "Cambio de aseguradora",
+      "insatisfaccion": "Insatisfacción",
+      "otro": "Otro"
+    },
+    "ineligible": {
+      "producto_no_cancelable": "Este producto no permite cancelación.",
+      "poliza_cancelada": "Esta póliza ya está cancelada.",
+      "poliza_programada": "La póliza aún no ha iniciado su vigencia.",
+      "poliza_vencida": "La póliza está vencida.",
+      "fin_de_vigencia": "La póliza llegó al final de su vigencia.",
+      "renovacion_en_curso": "Hay una renovación en curso. No puedes cancelar mientras se resuelve."
+    },
+    "errors": {
+      "load": "No pudimos consultar la cancelación. Puedes volver a consultar sin enviar una solicitud.",
+      "ambiguous": "No pudimos confirmar el resultado. Conservamos la misma solicitud para recuperarla de forma segura.",
+      "storage": "No pudimos conservar o leer la solicitud de recuperación. La confirmación está bloqueada; vuelve a consultar el estado antes de continuar.",
+      "not-found": "No encontramos esta póliza en tu cuenta.",
+      "forbidden": "Tu sesión no tiene permiso para cancelar esta póliza.",
+      "session": "Necesitas una sesión de cliente válida para continuar.",
+      "invalid-request": "El servicio rechazó los datos de la solicitud. Consulta el estado antes de continuar.",
+      "not-cancellable": "La póliza ya no permite esta cancelación. Revisa su estado actualizado.",
+      "settlement-changed": "La liquidación cambió. Revisa los nuevos valores, elige el motivo y confirma nuevamente.",
+      "key-conflict": "La referencia de la solicitud tiene un conflicto. Consulta el estado; no se enviará una cancelación con otra clave. Si persiste, contacta con soporte."
+    }
+  },
   "policyModification": {
     "action": "Modificar póliza",
     "title": "Modificar mi póliza",
@@ -1225,6 +1371,94 @@
       "confirmed": "La modificación quedó confirmada. Versión vigente:",
       "simulationFailed": "No fue posible calcular el impacto. Tus condiciones vigentes no cambiaron.",
       "unconfirmed": "No pudimos confirmar la modificación. Tus condiciones vigentes no cambiaron; intenta confirmar de nuevo."
+    }
+  },
+  "operationalReports": {
+    "title": "Reportes operativos",
+    "subtitle": "Indicadores agregados de pólizas, primas, siniestros y pagos a una fecha de corte, sin datos personales.",
+    "from": "Desde",
+    "to": "Hasta",
+    "product": "Producto",
+    "status": "Estado de la póliza",
+    "all": "Todos",
+    "cutOff": "Fecha de corte (opcional)",
+    "cutOffHint": "Si la dejas vacía se usa el corte más reciente.",
+    "query": "Consultar",
+    "idle": "Elige el período y los filtros, y consulta el reporte.",
+    "optionsLoading":  "Cargando las opciones del reporte…",
+    "optionsError":  "No fue posible cargar las opciones del reporte. Reintenta antes de consultar.",
+    "loading": "Consolidando las fuentes al corte…",
+    "forbidden": "Tu usuario no está autorizado para consultar reportes operativos.",
+    "invalidFilters": "Los filtros no son válidos. Revisa el período, el producto y el estado.",
+    "incomplete": "No fue posible consolidar todas las fuentes al corte. No se muestra un reporte parcial.",
+    "error": "No fue posible consultar el reporte. No se muestra información desactualizada.",
+    "retry": "Reintentar",
+    "cutOffLabel": "Fecha de corte",
+    "period": "Período",
+    "download": "Descargar CSV",
+    "downloading": "Descargando…",
+    "notReproducible": "El resultado al corte ya no coincide con el reporte mostrado. Consúltalo de nuevo antes de descargar.",
+    "downloadError": "No fue posible descargar el reporte. Inténtalo de nuevo.",
+    "empty": "No hay resultados para el período y los filtros elegidos.",
+    "policies": "Pólizas",
+    "portfolio": "Cartera al corte",
+    "issuedInPeriod": "Emitidas en el período",
+    "premiums": "Primas",
+    "confirmedPremiums": "Primas confirmadas",
+    "claims": "Siniestros",
+    "reportedClaims": "Siniestros reportados",
+    "payments": "Pagos",
+    "registeredPayments": "Pagos registrados",
+    "byProduct": "Detalle por producto",
+    "inconsistencies": "Diferencias entre fuentes:",
+    "inconsistencyTypes": {
+      "claimsWithoutPolicy": "Siniestros sin póliza",
+      "policiesWithoutPremium": "Pólizas sin prima",
+      "premiumsWithOtherProduct": "Primas con producto distinto",
+      "paymentsWithoutClaim": "Pagos sin siniestro"
+    },
+    "sourcesLabel": "Fuentes al corte:",
+    "sources": {
+      "polizas": "Pólizas",
+      "primas": "Primas",
+      "siniestros": "Siniestros"
+    },
+    "periodErrors": {
+      "order": "La fecha inicial no puede ser posterior a la final.",
+      "length": "El período no puede superar 366 días.",
+      "future": "El período no puede terminar después del corte.",
+      "cutoff": "La fecha de corte no puede ser futura."
+    },
+    "products": {
+      "automotive": "Automotor",
+      "travel": "Viaje",
+      "life": "Vida",
+      "device-protection": "Protección de dispositivos",
+      "parametric": "Retraso de vuelo",
+      "parametric-weather": "Clima paramétrico",
+      "payment-protection": "Protección de pagos",
+      "mortgage-life": "Vida hipotecario"
+    },
+    "policyStates": {
+      "programada": "Programada",
+      "vigente": "Vigente",
+      "vencida": "Vencida",
+      "cancelada": "Cancelada"
+    },
+    "claimStates": {
+      "reportado": "Reportado",
+      "en_evaluacion": "En evaluación",
+      "en_revision": "En revisión",
+      "en_inspeccion": "En inspección",
+      "aprobado": "Aprobado",
+      "rechazado": "Rechazado",
+      "pagado": "Pagado",
+      "cerrado": "Cerrado"
+    },
+    "paymentStates": {
+      "pendiente": "Pendiente",
+      "confirmado": "Confirmado",
+      "rechazado": "Rechazado"
     }
   }
 }

@@ -18,6 +18,7 @@ import {
   MODIFICATION_STATE_RESPONSE,
   NOT_MODIFIABLE_RESPONSE,
   VERSION_1,
+  VERSION_2,
 } from '../../core/policies/policy-modification.testing';
 import { problem } from '../../core/policies/policy-renewal.testing';
 import { HttpPolicyModificationGateway } from './http-policy-modification.gateway';
@@ -66,6 +67,72 @@ describe('HttpPolicyModificationGateway', () => {
     const result = firstValueFrom(gateway.state(MODIFICATION_POLICY_ID));
     http.expectOne(`${BASE}/modificacion`).flush(NOT_MODIFIABLE_RESPONSE);
     expect((await result).reason).toBe('poliza_vencida');
+  });
+
+  it('preserves a non-optional excluded coverage in the current version and history', async () => {
+    const liability = {
+      codigo: 'responsabilidad_civil',
+      nombre: 'Responsabilidad civil',
+      descripcion: 'Responsabilidad frente a terceros.',
+      opcional: false,
+      incluida: false,
+    };
+    const version = { ...VERSION_1, coberturas: [VERSION_1.coberturas[0], liability] };
+    const result = firstValueFrom(gateway.state(MODIFICATION_POLICY_ID));
+    http.expectOne(`${BASE}/modificacion`).flush({
+      ...MODIFICATION_STATE_RESPONSE,
+      versionActual: version,
+      historial: [version],
+    });
+    const state = await result;
+    const expected = {
+      code: liability.codigo,
+      name: liability.nombre,
+      description: liability.descripcion,
+      optional: false,
+      included: false,
+    };
+    expect(state.currentVersion?.coverages).toEqual([
+      expect.objectContaining({ code: 'danos_vehiculo', optional: false, included: true }),
+      expected,
+    ]);
+    expect(state.history[0].coverages[1]).toEqual(expected);
+  });
+
+  it.each([
+    { opcional: 'false', incluida: false },
+    { opcional: false, incluida: null },
+    { codigo: 'INVALID', opcional: false, incluida: false },
+    { nombre: '', opcional: false, incluida: false },
+    { descripcion: '', opcional: false, incluida: false },
+  ])('still rejects malformed excluded coverages: %j', async (fields) => {
+    const version = {
+      ...VERSION_1,
+      coberturas: [{ ...VERSION_1.coberturas[0], ...fields }],
+    };
+    const result = firstValueFrom(gateway.state(MODIFICATION_POLICY_ID));
+    http.expectOne(`${BASE}/modificacion`).flush({
+      ...MODIFICATION_STATE_RESPONSE,
+      versionActual: version,
+      historial: [version],
+    });
+    await expect(result).rejects.toThrow('invalid');
+  });
+
+  it('loads an excluded non-optional coverage from an older version independently', async () => {
+    const previous = {
+      ...VERSION_1,
+      coberturas: [{ ...VERSION_1.coberturas[0], opcional: false, incluida: false }],
+    };
+    const result = firstValueFrom(gateway.state(MODIFICATION_POLICY_ID));
+    http.expectOne(`${BASE}/modificacion`).flush({
+      ...MODIFICATION_STATE_RESPONSE,
+      versionActual: VERSION_2,
+      historial: [VERSION_2, previous],
+    });
+    const state = await result;
+    expect(state.currentVersion?.coverages[0].included).toBe(true);
+    expect(state.history[1].coverages[0]).toMatchObject({ optional: false, included: false });
   });
 
   it.each([

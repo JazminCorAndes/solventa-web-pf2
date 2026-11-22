@@ -40,6 +40,15 @@ describe('Mock claims and evidence gateways', () => {
       type: 'asistido',
       state: 'reportado',
     });
+    const list = await firstValueFrom(claims.list());
+    expect(list.filter((record) => record.id === first.id)).toEqual([first]);
+    expect(list.find((record) => record.id === MOCK_PARAMETRIC_CLAIM_ID)?.estado).toBe(
+      'registrado',
+    );
+    list[0].descripcion = 'Changed outside the store';
+    expect((await firstValueFrom(claims.list()))[0].descripcion).not.toBe(
+      'Changed outside the store',
+    );
   });
 
   it('uploads, confirms, lists and downloads evidence in memory', async () => {

@@ -11,7 +11,21 @@ import { MOCK_PARAMETRIC_CLAIM_ID, MOCK_POLICY_ID } from '../mock/mock.constants
 @Injectable({ providedIn: 'root' })
 export class MockClaimsStore {
   private readonly attempts = new Map<string, ClaimRecord>();
-  private readonly records = new Map<string, ClaimRecord>();
+  private readonly records = new Map<string, ClaimRecord>([
+    [
+      MOCK_PARAMETRIC_CLAIM_ID,
+      {
+        id: MOCK_PARAMETRIC_CLAIM_ID,
+        polizaId: MOCK_POLICY_ID,
+        fechaEvento: '2026-11-14T15:00:00Z',
+        tipoEvento: 'Evento paramétrico',
+        descripcion: 'Reporte académico de un evento paramétrico.',
+        lugar: 'Bogotá, Colombia',
+        estado: 'registrado',
+        registradoEn: '2026-11-14T15:01:00Z',
+      },
+    ],
+  ]);
   private readonly statuses = new Map<string, ClaimStatus>([
     [
       MOCK_PARAMETRIC_CLAIM_ID,
@@ -94,6 +108,16 @@ export class MockClaimsStore {
       ],
     });
     return structuredClone(record);
+  }
+
+  list(): ClaimRecord[] {
+    return structuredClone(
+      [...this.records.values()].sort(
+        (left, right) =>
+          Date.parse(right.registradoEn) - Date.parse(left.registradoEn) ||
+          right.id.localeCompare(left.id),
+      ),
+    );
   }
 
   record(id: string): ClaimRecord | null {

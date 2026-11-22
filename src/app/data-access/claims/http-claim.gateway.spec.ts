@@ -45,6 +45,50 @@ describe('HttpClaimGateway', () => {
 
   afterEach(() => http.verify());
 
+  it('lists only session claims without body, identity, filters or invented pagination', () => {
+    const next = vi.fn();
+    gateway.list().subscribe(next);
+    const request = http.expectOne(url);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.body).toBeNull();
+    expect(request.request.params.keys()).toEqual([]);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer synthetic-access');
+    request.flush({ siniestros: [record] });
+    expect(next).toHaveBeenCalledWith([record]);
+  });
+
+  it('accepts a genuinely empty list', () => {
+    const next = vi.fn();
+    gateway.list().subscribe(next);
+    http.expectOne(url).flush({ siniestros: [] });
+    expect(next).toHaveBeenCalledWith([]);
+  });
+
+  it.each([
+    {},
+    { siniestros: null },
+    { siniestros: [record, {}] },
+    { siniestros: [{ ...record, estado: 'pagado' }] },
+    { siniestros: [{ ...record, fechaEvento: '2025-01-10T12:00:00' }] },
+    { siniestros: [record, record] },
+  ])('rejects invalid lists as a whole instead of showing partial success', (response) => {
+    const next = vi.fn();
+    const error = vi.fn();
+    gateway.list().subscribe({ next, error });
+    http.expectOne(url).flush(response);
+    expect(next).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledOnce();
+  });
+
+  it.each([403, 503])('preserves a %s list failure instead of returning empty', (status) => {
+    const next = vi.fn();
+    const error = vi.fn();
+    gateway.list().subscribe({ next, error });
+    http.expectOne(url).flush({ code: 'fallo_sintetico' }, { status, statusText: 'Error' });
+    expect(next).not.toHaveBeenCalled();
+    expect(error.mock.calls[0][0].status).toBe(status);
+  });
+
   it('loads active policies through the authenticated API', () => {
     const active = {
       id: input.polizaId,

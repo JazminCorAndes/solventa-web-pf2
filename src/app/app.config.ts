@@ -72,6 +72,12 @@ import { MockPolicyRenewalGateway } from './data-access/policies/mock-policy-ren
 import { POLICY_MODIFICATION_GATEWAY } from './core/policies/policy-modification.gateway';
 import { HttpPolicyModificationGateway } from './data-access/policies/http-policy-modification.gateway';
 import { MockPolicyModificationGateway } from './data-access/policies/mock-policy-modification.gateway';
+import { POLICY_CANCELLATION_GATEWAY } from './core/policies/policy-cancellation.gateway';
+import { HttpPolicyCancellationGateway } from './data-access/policies/http-policy-cancellation.gateway';
+import { MockPolicyCancellationGateway } from './data-access/policies/mock-policy-cancellation.gateway';
+import { OPERATIONAL_REPORT_GATEWAY } from './core/reports/operational-report.gateway';
+import { HttpOperationalReportGateway } from './data-access/reports/http-operational-report.gateway';
+import { MockOperationalReportGateway } from './data-access/reports/mock-operational-report.gateway';
 import { ADVISOR_EXCEPTIONS_GATEWAY } from './core/advisor-exceptions/advisor-exceptions.gateway';
 import { HttpAdvisorExceptionsGateway } from './data-access/advisor-exceptions/http-advisor-exceptions.gateway';
 import { MockAdvisorExceptionsGateway } from './data-access/advisor-exceptions/mock-advisor-exceptions.gateway';
@@ -107,6 +113,16 @@ export const appConfig: ApplicationConfig = {
     {
       provide: POLICY_MODIFICATION_GATEWAY,
       useClass: backendMode ? HttpPolicyModificationGateway : MockPolicyModificationGateway,
+    },
+    {
+      provide: POLICY_CANCELLATION_GATEWAY,
+      ...(backendMode
+        ? { useClass: HttpPolicyCancellationGateway }
+        : { useExisting: MockPolicyCancellationGateway }),
+    },
+    {
+      provide: OPERATIONAL_REPORT_GATEWAY,
+      useClass: backendMode ? HttpOperationalReportGateway : MockOperationalReportGateway,
     },
     {
       provide: CLAIM_GATEWAY,

@@ -14,6 +14,10 @@ import { MockClaimsStore } from './mock-claims.store';
 export class MockClaimGateway implements ClaimGateway {
   private readonly store = inject(MockClaimsStore);
 
+  list(): Observable<ClaimRecord[]> {
+    return defer(() => of(this.store.list()));
+  }
+
   policies(): Observable<ClaimPolicy[]> {
     return of(this.store.policies());
   }

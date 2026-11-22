@@ -5,7 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
-import { of } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
 import en from '../../../../public/assets/i18n/en.json';
 import { environment } from '../../../environments/environment';
@@ -30,6 +30,7 @@ const BASE = `${environment.apiBaseUrl}/v1/clientes/me/polizas/${MODIFICATION_PO
 describe('PolicyModificationPageComponent with HTTP consumer', () => {
   let fixture: ComponentFixture<PolicyModificationPageComponent>;
   let http: HttpTestingController;
+  const params = new BehaviorSubject(convertToParamMap({ policyId: '' }));
   const root = () => fixture.nativeElement as HTMLElement;
   const text = () => root().textContent ?? '';
   const find = (testId: string) => root().querySelector<HTMLElement>(`[data-testid="${testId}"]`);
@@ -41,6 +42,7 @@ describe('PolicyModificationPageComponent with HTTP consumer', () => {
   };
 
   async function setup(policyId: string, state: object = MODIFICATION_STATE_RESPONSE) {
+    params.next(convertToParamMap({ policyId }));
     await TestBed.configureTestingModule({
       imports: [
         PolicyModificationPageComponent,
@@ -54,7 +56,7 @@ describe('PolicyModificationPageComponent with HTTP consumer', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: POLICY_MODIFICATION_GATEWAY, useClass: HttpPolicyModificationGateway },
-        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ policyId })) } },
+        { provide: ActivatedRoute, useValue: { paramMap: params.asObservable() } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(PolicyModificationPageComponent);
@@ -109,6 +111,82 @@ describe('PolicyModificationPageComponent with HTTP consumer', () => {
     expect(find('modification-not-modifiable')?.textContent).toContain(
       es.policyModification.reasons.poliza_vencida,
     );
+  });
+
+  it('shows excluded liability without offering it as an optional endorsement', async () => {
+    const version = {
+      ...VERSION_1,
+      coberturas: [
+        VERSION_1.coberturas[0],
+        {
+          codigo: 'responsabilidad_civil',
+          nombre: 'Responsabilidad civil',
+          descripcion: 'Responsabilidad frente a terceros.',
+          opcional: false,
+          incluida: false,
+        },
+      ],
+    };
+    await setup(MODIFICATION_POLICY_ID, {
+      ...MODIFICATION_STATE_RESPONSE,
+      versionActual: version,
+      historial: [version],
+    });
+
+    const excluded = find('modification-current')?.querySelector('li.excluded');
+    expect(excluded?.textContent).toContain('Responsabilidad civil');
+    expect(excluded?.textContent).toContain(es.policyModification.notIncluded);
+    expect(find('modification-history')).toBeNull();
+    expect(fixture.componentInstance.modification()?.history[0].coverages[1].included).toBe(false);
+    expect(find('optional-responsabilidad_civil')).toBeNull();
+    expect(fixture.componentInstance.optionals().size).toBe(0);
+    expect(button('modification-simulate').disabled).toBe(true);
+  });
+
+  it('cancels old confirmations and clears their proposal when the policy changes', async () => {
+    await setup(MODIFICATION_POLICY_ID);
+    simulate();
+    fixture.componentInstance.toggleConfirmation(true);
+    fixture.componentInstance.confirm();
+    const old = http.expectOne(`${BASE}/modificaciones`);
+    const key = old.request.headers.get('Idempotency-Key');
+    const nextId = '80000000-0000-4000-8000-000000000002';
+    params.next(convertToParamMap({ policyId: nextId }));
+    render();
+    expect(old.cancelled).toBe(true);
+    expect(fixture.componentInstance.impact()).toBeNull();
+    expect(fixture.componentInstance.confirmed()).toBe(false);
+    expect(fixture.componentInstance.modification()).toBeNull();
+    expect(fixture.componentInstance.busy()).toBe(false);
+    const next = http.expectOne(
+      `${environment.apiBaseUrl}/v1/clientes/me/polizas/${nextId}/modificacion`,
+    );
+    next.flush({ ...NOT_MODIFIABLE_RESPONSE, polizaId: nextId });
+    render();
+    expect(find('modification-form')).toBeNull();
+    expect(fixture.componentInstance.outcome()).toBeNull();
+
+    params.next(convertToParamMap({ policyId: MODIFICATION_POLICY_ID }));
+    http.expectOne(`${BASE}/modificacion`).flush(MODIFICATION_STATE_RESPONSE);
+    render();
+    simulate();
+    fixture.componentInstance.toggleConfirmation(true);
+    fixture.componentInstance.confirm();
+    const retry = http.expectOne(`${BASE}/modificaciones`);
+    expect(retry.request.headers.get('Idempotency-Key')).toBe(key);
+    retry.flush(MODIFICATION_RESULT_RESPONSE);
+    render();
+  });
+
+  it('cancels an old state query even when navigating to an invalid policy', async () => {
+    await setup(MODIFICATION_POLICY_ID);
+    fixture.componentInstance.load();
+    const old = http.expectOne(`${BASE}/modificacion`);
+    params.next(convertToParamMap({ policyId: 'invalid' }));
+    render();
+    expect(old.cancelled).toBe(true);
+    expect(fixture.componentInstance.state()).toBe('invalid');
+    expect(fixture.componentInstance.modification()).toBeNull();
   });
 
   it('shows the returned impact and requires explicit confirmation', async () => {

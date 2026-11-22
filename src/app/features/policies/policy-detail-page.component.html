@@ -31,6 +31,8 @@
       <div class="hero-icon"><app-icon name="shield" [size]="40" /></div>
     </header>
 
+    <app-policy-document-panel [policy]="currentPolicy" />
+
     <div class="detail-grid">
       <article class="detail-card">
         <div class="section-heading">
@@ -81,9 +83,17 @@
             <a mat-stroked-button [routerLink]="['/app/polizas', currentPolicy.id, 'modificacion']">
               {{ 'policies.modify' | transloco }}
             </a>
+            <a mat-stroked-button [routerLink]="['/app/polizas', currentPolicy.id, 'cancelacion']">
+              {{ 'policies.cancel' | transloco }}
+            </a>
           </nav>
         } @else {
           <p class="inactive-notice">{{ 'policies.inactiveNotice' | transloco }}</p>
+          @if (currentPolicy.status === 'cancelada') {
+            <a mat-stroked-button [routerLink]="['/app/polizas', currentPolicy.id, 'cancelacion']">
+              {{ 'policies.cancellationResult' | transloco }}
+            </a>
+          }
         }
       </aside>
     </div>

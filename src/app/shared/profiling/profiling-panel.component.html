@@ -248,6 +248,18 @@
                   <span class="source-state">{{
                     'profiling.sourceState.' + state | transloco
                   }}</span>
+                  @if (state === 'cache' || state === 'default') {
+                    @let reason = sourceReason(source.nombre);
+                    <span class="source-reason">
+                      {{ 'profiling.sourceReason' | transloco }}:
+                      {{
+                        (reason
+                          ? 'profiling.sourceReasons.' + reason
+                          : 'profiling.reasonUnavailable'
+                        ) | transloco
+                      }}
+                    </span>
+                  }
                 }
                 <span>{{ 'profiling.indicator' | transloco }}: {{ source.indicadorRiesgo }}</span>
                 <span
