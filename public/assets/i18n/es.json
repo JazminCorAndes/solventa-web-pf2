@@ -195,13 +195,13 @@
   "recovery": {
     "title": "Recuperar contraseña",
     "resetTitle": "Nueva contraseña",
-    "introduction": "Ingresa tu correo para solicitar un enlace de recuperación.",
-    "resetIntroduction": "El enlace verifica tu identidad. Ingresa únicamente tu nueva contraseña.",
+    "introduction": "Ingresa el correo de la cuenta para solicitar la recuperación de contraseña.",
+    "resetIntroduction": "El enlace autoriza el cambio. Ingresa únicamente la nueva contraseña.",
     "newPassword": "Nueva contraseña",
-    "send": "Enviar enlace",
+    "send": "Solicitar recuperación",
     "save": "Guardar contraseña",
     "processing": "Procesando",
-    "sent": "Si existe una cuenta con ese correo, recibirás un enlace de recuperación. Revisa también el correo no deseado.",
+    "sent": "Solicitud recibida. Si la cuenta existe, la recuperación se gestionará mediante el canal autorizado de este entorno.",
     "saved": "Tu contraseña fue actualizada. Inicia sesión con la nueva contraseña.",
     "requestAnother": "Solicitar otro enlace",
     "errors": {

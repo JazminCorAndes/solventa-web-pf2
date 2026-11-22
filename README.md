@@ -80,9 +80,17 @@ La credencial JWE usa RSA-OAEP-256/A256GCM, `typ: solventa-reset+jwe` y
 `{desafioId,token,contrasena}`. No agrega Bearer ni renueva sesiones en estas rutas.
 El modo mock falla explícitamente: no envía correo ni cambia contraseñas.
 Backend implementa Amazon SES con remitente y URL pública configurados por entorno.
-La identidad, permisos y entrega real de SES aún no están verificados ni habilitados;
-sin transporte operativo el servicio devuelve 503 para todos los correos.
-Esta implementación no acredita un recorrido end-to-end ni habilita AWS.
+La modalidad académica administrada dirige todos los enlaces al buzón administrador
+configurado en backend; el administrador autoriza el cambio. La recuperación normal
+al correo propio es una modalidad separada y configurable en backend.
+El mensaje Web de aceptación es neutro para ambas modalidades: no promete entrega
+al solicitante, no revela la existencia de la cuenta ni expone el buzón administrador
+o el enlace secreto. En un entorno configurado como administrado, el solicitante
+debe coordinar la autorización con el administrador.
+La identidad y el envío de la cuenta SES ya fueron comprobados. Siguen pendientes
+la configuración runtime, la migración, el despliegue y la validación end-to-end
+del flujo integrado; no se afirma disponibilidad en producción.
+Sin transporte operativo el servicio devuelve 503 para todos los correos.
 
 Las pruebas adicionales están en [`tests/cypress`](tests/cypress/README.md):
 `pnpm test:cypress:ui` valida la interfaz con HTTP controlado y

@@ -195,13 +195,13 @@
   "recovery": {
     "title": "Recover password",
     "resetTitle": "New password",
-    "introduction": "Enter your email to request a recovery link.",
-    "resetIntroduction": "The link verifies your identity. Enter only your new password.",
+    "introduction": "Enter the account email to request password recovery.",
+    "resetIntroduction": "The link authorizes the change. Enter only the new password.",
     "newPassword": "New password",
-    "send": "Send link",
+    "send": "Request recovery",
     "save": "Save password",
     "processing": "Processing",
-    "sent": "If an account exists with that email, you will receive a recovery link. Also check your spam folder.",
+    "sent": "Request received. If the account exists, recovery will be managed through this environment's authorized channel.",
     "saved": "Your password was updated. Sign in with your new password.",
     "requestAnother": "Request another link",
     "errors": {

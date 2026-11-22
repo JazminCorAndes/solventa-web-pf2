@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
-import { TranslocoTestingModule } from '@jsverse/transloco';
+import { TranslocoService, TranslocoTestingModule } from '@jsverse/transloco';
 import { firstValueFrom, Subject } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
+import en from '../../../../public/assets/i18n/en.json';
 import {
   AuthenticationUnavailableError,
   InvalidRecoveryLinkError,
@@ -27,8 +28,8 @@ describe('PasswordRecoveryPageComponent', () => {
       imports: [
         PasswordRecoveryPageComponent,
         TranslocoTestingModule.forRoot({
-          langs: { es },
-          translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
+          langs: { es, en },
+          translocoConfig: { availableLangs: ['es', 'en'], defaultLang: 'es' },
         }),
       ],
       providers: [
@@ -62,6 +63,35 @@ describe('PasswordRecoveryPageComponent', () => {
     expect(component.errorKey()).toBe('recovery.errors.unavailable');
     expect(component.form.enabled).toBe(true);
   });
+
+  it.each([
+    {
+      lang: 'es',
+      channel: 'canal autorizado de este entorno',
+      promise: /recibirás|correo no deseado/i,
+    },
+    { lang: 'en', channel: "environment's authorized channel", promise: /you will receive|spam/i },
+  ])(
+    'confirma gestión sin prometer entrega al solicitante en $lang',
+    async ({ lang, channel, promise }) => {
+      const { component, fixture, gateway } = await setup(false);
+      TestBed.inject(TranslocoService).setActiveLang(lang);
+      const result = new Subject<void>();
+      vi.spyOn(gateway, 'requestPasswordRecovery').mockReturnValue(result);
+      component.form.patchValue({ email: 'solicitante@example.test' });
+      component.submit();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+      result.next();
+      result.complete();
+      fixture.detectChanges();
+      const status = fixture.nativeElement.querySelector('[role="status"]').textContent;
+      expect(status).toContain(channel);
+      expect(status).not.toMatch(promise);
+      expect(status).not.toContain('solicitante@example.test');
+      expect(fixture.nativeElement.querySelector('input')).toBeNull();
+    },
+  );
 
   it('pide sólo nueva contraseña, preserva espacios y limpia sesión sólo tras confirmación', async () => {
     const { component, fixture, gateway } = await setup(true);
