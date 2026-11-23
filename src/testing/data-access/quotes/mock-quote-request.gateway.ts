@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { delay, map, Observable, of, throwError } from 'rxjs';
 import { AuthService } from '../../../app/core/auth/auth.service';
+import { createClientQuoteProfile } from '../../quotes/client-profile.testing';
 import {
   InsuranceProductUnavailableError,
   QuoteRequestUnavailableError,
@@ -114,6 +115,10 @@ const TRAVEL_DESTINATIONS: TravelDestination[] = [
 
 @Injectable()
 export class MockQuoteRequestGateway implements QuoteRequestGateway {
+  loadClientProfile() {
+    return of(createClientQuoteProfile(this.auth.user()?.id));
+  }
+
   private readonly storage = inject(QUOTE_REQUEST_STORAGE);
   private readonly auth = inject(AuthService);
   private readonly profiling = inject(MockProfilingGateway);

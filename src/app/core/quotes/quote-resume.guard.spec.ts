@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -25,6 +25,9 @@ import { quoteResumeGuard } from './quote-resume.guard';
 import { PROFILING_GATEWAY } from '../profiling/profiling.gateway';
 import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { of } from 'rxjs';
+import { AuthService } from '../auth/auth.service';
+import { HttpQuoteHistoryGateway } from '../../data-access/quotes/http-quote-history.gateway';
+import { historyEntry, HISTORY_CLIENT_ID } from '../../../testing/quotes/quote-history.testing';
 
 @Component({ template: '' })
 class FlowPage {}
@@ -78,8 +81,12 @@ describe('historical quote route integration', () => {
     loadConsent: vi.fn(() => of(createConsent())),
     loadProfile: vi.fn(() => of(createProfile(REQUEST.id))),
   };
+  const history = { loadClientState: vi.fn() };
 
   beforeEach(async () => {
+    history.loadClientState
+      .mockReset()
+      .mockReturnValue(of(historyEntry({ requestId: REQUEST.id })));
     profiling.loadConsent.mockReset().mockImplementation(() => of(createConsent()));
     profiling.loadProfile.mockReset().mockImplementation(() => of(createProfile(REQUEST.id)));
     TestBed.configureTestingModule({
@@ -101,6 +108,11 @@ describe('historical quote route integration', () => {
         { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
         { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
         { provide: PROFILING_GATEWAY, useValue: profiling },
+        {
+          provide: AuthService,
+          useValue: { user: signal({ id: HISTORY_CLIENT_ID, role: 'client' }) },
+        },
+        { provide: HttpQuoteHistoryGateway, useValue: history },
       ],
     });
     TestBed.inject(QUOTE_REQUEST_STORAGE).clear();
@@ -116,6 +128,21 @@ describe('historical quote route integration', () => {
     TestBed.inject(OFFER_SELECTION_STORAGE).clear();
     TestBed.inject(SUBSCRIPTION_STORAGE).clear();
   });
+  it.each(['vencida', 'rechazada'] as const)(
+    'prevents direct continuation of %s requests without profile or new business calls',
+    async (status) => {
+      history.loadClientState.mockReturnValue(of(historyEntry({ requestId: REQUEST.id, status })));
+      const navigation = harness.navigateByUrl(`/app/cotizaciones/ofertas?solicitud=${REQUEST.id}`);
+      const request = await vi.waitFor(() => http.expectOne(base));
+      request.flush(REQUEST);
+      http.expectOne(`${base}/suscripcion`).flush({}, { status: 404, statusText: 'Not Found' });
+      await navigation;
+      expect(TestBed.inject(Router).url).toBe('/app/cotizaciones');
+      expect(profiling.loadProfile).not.toHaveBeenCalled();
+      http.expectNone(`${base}/seleccion-provisional`);
+      http.expectNone((pending) => pending.method === 'POST' || pending.method === 'PUT');
+    },
+  );
 
   async function recover(step: string, selected: boolean, subscribed: boolean) {
     const navigation = harness.navigateByUrl(`/app/cotizaciones/${step}?solicitud=${REQUEST.id}`);

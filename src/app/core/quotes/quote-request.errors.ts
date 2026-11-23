@@ -21,3 +21,10 @@ export class InsuranceProductNotFoundError extends Error {
     super('The requested insurance product was not found');
   }
 }
+export class ClientProfileIncompleteError extends Error {
+  override readonly name = 'ClientProfileIncompleteError';
+
+  constructor() {
+    super('The registered client profile is incomplete');
+  }
+}

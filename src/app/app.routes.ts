@@ -96,6 +96,16 @@ export const routes: Routes = [
         title: 'Cotización de socio | Solventa',
       },
       {
+        path: 'socios/solicitudes',
+        canActivate: [partnerGuard],
+        data: { partnerScope: 'perfilamientos:crear', partnerMode: true },
+        loadComponent: () =>
+          import('./features/partners/partner-requests-page.component').then(
+            (component) => component.PartnerRequestsPageComponent,
+          ),
+        title: 'Solicitudes del socio | Solventa',
+      },
+      {
         path: 'socios',
         canActivate: [partnerGuard],
         runGuardsAndResolvers: 'always',

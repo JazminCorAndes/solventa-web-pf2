@@ -118,10 +118,17 @@
               <span matListItemTitle>{{ 'navigation.quotes' | transloco }}</span>
             </a>
           }
-          <button mat-list-item type="button" disabled>
-            <app-icon matListItemIcon name="policy" />
-            <span matListItemTitle>{{ 'navigation.requests' | transloco }}</span>
-          </button>
+          @if (partners.context()?.alcances?.includes('perfilamientos:crear')) {
+            <a
+              mat-list-item
+              routerLink="/app/socios/solicitudes"
+              routerLinkActive="active-link"
+              (click)="keyboard.closeForNavigation()"
+            >
+              <app-icon matListItemIcon name="policy" />
+              <span matListItemTitle>{{ 'navigation.requests' | transloco }}</span>
+            </a>
+          }
           <button mat-list-item type="button" disabled>
             <app-icon matListItemIcon name="shield" />
             <span matListItemTitle>{{ 'navigation.settings' | transloco }}</span>

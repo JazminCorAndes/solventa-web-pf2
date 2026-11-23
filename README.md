@@ -705,35 +705,40 @@ y el historial siguen comprobando consentimiento, perfil y vigencia internamente
 no permiten continuar sin una autorización válida. Sus enlaces a Consentimiento
 conservan la solicitud en `solicitud` para consultar allí el perfil asociado.
 
-`/app/cotizaciones` consulta el dashboard autenticado y recupera cada solicitud mediante
-`GET /v1/solicitudes-cotizacion/{id}`. Muestra tarjetas independientes, ordenadas por
-fecha, sin depender de la última solicitud de `sessionStorage`. El backend calcula y
-guarda solicitud y cotización atómicamente; el dashboard incluye todas esas solicitudes.
+`/app/cotizaciones` consulta `GET /v1/solicitudes-cotizacion` y recupera los datos de
+cada solicitud mediante `GET /v1/solicitudes-cotizacion/{id}`. No depende del dashboard,
+su límite de resultados ni la última solicitud local. Cada cotización conserva su fila,
+identificador y selección provisional o aceptación persistida, incluida la elección del socio.
 
-Cada tarjeta continúa su propia solicitud (`?solicitud={id}`): ofertas cuando no hay
-selección, aceptación cuando falta crear la suscripción, pago para suscripciones
-aprobadas pendientes y detalle para las pagadas. Sin selección aceptada, el enlace a
-ofertas solo se habilita cuando el panel confirma consentimiento y perfil vigentes, y se
-retira al vencer. La guarda vuelve a comprobarlos al entrar, incluso con un enlace directo.
-Un perfil vencido indica crear una nueva cotización; no renueva consentimiento, fechas
-ni crea solicitudes o pagos automáticamente. Los errores de ofertas y aceptación se
-muestran con una salida explícita, sin mantener una selección anterior o un spinner indefinido.
+El estado superior proviene exclusivamente del backend: `pendiente`, `completada`,
+`rechazada` o `vencida`. Calcular o seleccionar una oferta no completa una cotización.
+La finalización requiere pago confirmado y, cuando se solicitó emisión, saga emitida.
+Un pago rechazado o un error técnico no equivale al rechazo explícito del cliente.
+Los estados completada y rechazada se conservan aunque después caduquen perfil o fuentes.
 
-La guarda recupera primero solicitud y suscripción del propietario. Si existe suscripción,
-su estado y detalle se pueden consultar sin exigir nuevamente el perfil; la confirmación
-del pago sigue requiriendo selección aceptada y coincidente del backend. Actualmente
-el backend revalida el perfil al consultar una selección ya aceptada: si ha vencido,
-el estado de suscripción sigue accesible, pero su importe y pago no se pueden recuperar
-hasta que el backend permita esa lectura histórica. No se reconstruye una selección
-desde el dashboard ni se omite la validación para evitar ese error.
-Consultar el listado no cambia la solicitud activa ni confirma ofertas o pagos.
+Cada tarjeta continúa la misma solicitud (`?solicitud={id}`), sin crear otra cotización.
+La guarda consulta `GET /v1/solicitudes-cotizacion/{id}/estado` incluso con enlaces directos:
+vencida/rechazada vuelve al historial y completada conserva el acceso al detalle.
+El perfil y consentimiento siguen verificándose para ofertas no aceptadas. Si el panel
+detecta un perfil vencido, se consulta el estado autoritativo antes de cambiar la tarjeta;
+no se declara vencida por el reloj del navegador. Una tarjeta vencida conserva su ficha,
+sin aviso de renovar perfil ni botones de ofertas, reintento, nueva solicitud o consentimiento.
 
-Los estados superiores son «Solicitud en proceso», «Activa» y «Vencida». El vencimiento
-usa exclusivamente `vigenteHasta` de la suscripción (fin exclusivo), nunca `validaHasta`
-de la cotización. El backend compatible entrega `vigenteDesde`/`vigenteHasta` como ISO UTC
-o `null` tanto en suscripción individual como en dashboard. Si no informa fin contractual,
-no se inventa un vencimiento. El detalle muestra la vigencia disponible y el comprobante
-de pago simulado; no habilita un segundo pago ni supone emisión de una póliza real.
+El cliente puede rechazar explícitamente una solicitud pendiente antes de la aceptación:
+confirmación visible y `PUT /v1/solicitudes-cotizacion/{id}/rechazo` con cuerpo `{}` y
+clave UUID. Se relee el estado antes de mostrar el resultado. Ante incertidumbre se
+conserva la misma clave para reintentar y se impide otra decisión concurrente.
+Consultar el historial no acepta, rechaza ni paga automáticamente.
+
+La entrada SOCIO **Solicitudes** abre `/app/socios/solicitudes` con alcance
+`perfilamientos:crear`. `GET /v1/socios/solicitudes-cotizacion?socioId=...` omite
+`productoId` para incluir todos los productos autorizados, sin deduplicar clientes.
+Actualmente el flujo SOCIO disponible es vida hipotecaria; los demás seguros siguen
+en el flujo CLIENTE. Cada fila muestra solicitud, cliente autorizado, fecha, elección real
+y estado. Cuando el consentimiento no permite datos personales, se conserva la fila
+histórica con PII redactada y selección restringida, sin acceso al detalle.
+Estos contratos de historial, estado, rechazo y perfil requieren el backend compatible
+antes de publicar la interfaz; no se sustituyen por fixtures ni almacenamiento runtime.
 
 | Configuración | `apiBaseUrl`             | Uso                                        |
 | ------------- | ------------------------ | ------------------------------------------ |
@@ -1163,24 +1168,33 @@ solicita sus datos de riesgo específicos y genera ofertas comparables en COP.
 ### Variantes de cotización
 
 El catálogo conserva el seguro automotriz y cubre los ramos del caso Solventa
-(secciones 2.2, 2.4 y 5.1 del enunciado). Los datos del cliente provienen de la sesión;
+(secciones 2.2, 2.4 y 5.1 del enunciado). Los datos del cliente provienen de su registro;
 el formulario solicita únicamente los datos propios del seguro.
 
 | Producto (`productoId`) | Datos enviados en `datosProducto`                                   |
 | ----------------------- | ------------------------------------------------------------------- |
 | `automotive`            | `vehiclePlate`                                                      |
 | `travel`                | `destinationCountryCode`, `departureDate`, `returnDate`             |
-| `life`                  | `birthDate`                                                         |
+| `life`                  | `{}`; nacimiento resuelto desde el registro                         |
 | `device-protection`     | `deviceType`, `brandModel`, `purchaseValue`                         |
 | `parametric`            | `airline`, `flightNumber`, `flightDate`, `coverageType`             |
 | `parametric-weather`    | `location`, `weatherEvent`, `startDate`, `endDate`, `insuredAmount` |
 | `payment-protection`    | `creditType`, `monthlyPayment`                                      |
-| `mortgage-life`         | `birthDate`, `mortgageBalance`                                      |
+| `mortgage-life`         | `mortgageBalance`; nacimiento resuelto desde el registro            |
 
 El POST a `/api/v1/solicitudes-cotizacion` conserva el cuerpo
 `{ productoId, datosProducto }`; todos los valores de `datosProducto` son cadenas.
 Las fechas se ingresan como `DD/MM/AAAA` en español colombiano y se envían como
 `YYYY-MM-DD`; los importes se expresan en pesos colombianos enteros.
+
+`GET /v1/clientes/me/perfil`, con Bearer de cliente y `API-Version: 1`, devuelve
+la información registrada para mostrarla solo lectura: nombre, documento, correo,
+teléfono y fecha de nacimiento. No se lee la fecha desde JWT, no hay un control editable
+de nacimiento ni un valor por defecto. Vida y vida hipotecaria no envían nacimiento
+en `datosProducto`; el backend lo obtiene de Identidad y puede devolverlo en el recibo.
+Si falta un dato necesario registrado, la pantalla impide solicitar y pide actualizar
+el perfil, sin inventarlo ni recapturarlo. Las respuestas de otra sesión o mal formadas
+no se muestran, y el consentimiento sigue siendo obligatorio.
 
 Las ofertas y la selección requieren `prima: { monto, moneda }` con `periodicidad`:
 `mensual`, `por_viaje`, `por_vuelo` o `por_periodo`. La interfaz muestra el importe y la moneda recibidos

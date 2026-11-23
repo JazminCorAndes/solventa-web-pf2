@@ -23,6 +23,10 @@ import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.s
 import { HttpQuoteRequestGateway } from '../../data-access/quotes/http-quote-request.gateway';
 import product from '../../data-access/quotes/testing/insurance-product-detail.json';
 import { QuoteRequestPageComponent } from './quote-request-page.component';
+import {
+  clientQuoteProfileResponse,
+  TEST_CLIENT_ID,
+} from '../../../testing/quotes/client-profile.testing';
 
 const endpoint = `${environment.apiBaseUrl}/v1/productos-seguro`;
 const secondProduct = {
@@ -64,7 +68,7 @@ describe('Catalogo integrado con el formulario y HTTP autenticado', () => {
           provide: AuthService,
           useValue: {
             user: signal({
-              id: 'client-001',
+              id: TEST_CLIENT_ID,
               name: 'Cliente de prueba',
               email: 'cliente@example.com',
               role: 'client',
@@ -95,6 +99,9 @@ describe('Catalogo integrado con el formulario y HTTP autenticado', () => {
     fixture = TestBed.createComponent(QuoteRequestPageComponent);
     page = fixture.componentInstance;
     fixture.detectChanges();
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/clientes/me/perfil`)
+      .flush(clientQuoteProfileResponse());
     const catalog = http.expectOne(endpoint);
     expect(catalog.request.headers.get('Authorization')).toBe('Bearer synthetic-test-token');
     catalog.flush({

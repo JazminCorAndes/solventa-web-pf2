@@ -89,7 +89,14 @@
   }
   @if (result(); as result) {
     <h3 role="status">
-      {{ (offerExpired() ? 'partnerQuote.offerExpired' : 'partnerQuote.completed') | transloco }}
+      {{
+        (result.estadoSolicitud
+          ? 'quoteSummary.status.' + result.estadoSolicitud
+          : offerExpired()
+            ? 'partnerQuote.offerExpired'
+            : 'partnerQuote.completed'
+        ) | transloco
+      }}
     </h3>
     <dl>
       <dt>{{ 'partnerQuote.profileReference' | transloco }}</dt>
@@ -97,171 +104,179 @@
         <code data-testid="partner-profile-reference">{{ result.perfilamientoReferencia }}</code>
       </dd>
     </dl>
-    <section aria-labelledby="partner-offers-title">
-      <h3 id="partner-offers-title">{{ 'partnerQuote.offersTitle' | transloco }}</h3>
-      <p>{{ 'partnerQuote.selectionInstructions' | transloco }}</p>
-      @if (offersBusy()) {
-        <p role="status">
-          {{ (savingSelection() ? 'offers.savingSelection' : 'offers.loading') | transloco }}
-        </p>
-      }
-      @if (offerErrorKey(); as key) {
-        <div class="error" role="alert">
-          <p>{{ key | transloco }}</p>
-          @if (pendingOfferSelection()) {
-            <button
-              mat-stroked-button
-              type="button"
-              [disabled]="offersBusy() || retrySeconds() > 0"
-              (click)="retryOfferSelection()"
-            >
-              {{ 'partnerQuote.retrySelection' | transloco }}
-            </button>
-          } @else {
-            <button
-              mat-stroked-button
-              type="button"
-              [disabled]="offersBusy() || retrySeconds() > 0"
-              (click)="loadOffers()"
-            >
-              {{ 'common.retry' | transloco }}
-            </button>
-          }
-          @if (offerSnapshot() || pendingOfferSelection()) {
-            <button
-              mat-button
-              type="button"
-              [disabled]="offersBusy() || retrySeconds() > 0"
-              (click)="recoverOfferSelection()"
-            >
-              {{ 'offers.refreshSelection' | transloco }}
-            </button>
-          }
-        </div>
-      }
-      @if (offersMissing() && !offersBusy()) {
-        <p role="status">{{ 'partnerQuote.offersNotPrepared' | transloco }}</p>
-        <button
-          mat-flat-button
-          type="button"
-          data-testid="partner-prepare-offers"
-          [disabled]="retrySeconds() > 0"
-          (click)="loadOffers(true)"
-        >
-          {{ 'partnerQuote.prepareOffers' | transloco }}
-        </button>
-      }
-      @if (offerSnapshot(); as snapshot) {
-        <p>{{ 'offers.validity' | transloco }}: {{ snapshot.vigenteHasta | date: 'medium' }}</p>
-        @if (choicesExpired()) {
-          <p role="status">{{ 'partnerQuote.offerErrors.expired' | transloco }}</p>
+    @if (!quoteExpired()) {
+      <section aria-labelledby="partner-offers-title">
+        <h3 id="partner-offers-title">{{ 'partnerQuote.offersTitle' | transloco }}</h3>
+        @if (!quoteReadOnly()) {
+          <p>{{ 'partnerQuote.selectionInstructions' | transloco }}</p>
         }
-        @if (offerSelection(); as state) {
-          @if (state.acceptance ?? state.selection; as selection) {
-            <section
-              class="selection-summary"
-              aria-live="polite"
-              data-testid="partner-saved-selection"
-            >
-              <h4>
-                {{
-                  (state.acceptance
-                    ? 'partnerQuote.acceptanceReadOnly'
-                    : 'partnerQuote.savedSelection'
-                  ) | transloco
-                }}
-              </h4>
-              <strong>{{ selection.offerName }}</strong>
-              <p>
-                {{
-                  selection.premium.amount
-                    | currency: selection.premium.currency : 'symbol-narrow' : '1.0-2'
-                }}
-                / {{ 'offers.premiumLabels.' + selection.periodicity | transloco }}
-              </p>
-              <p>{{ selection.selectedAt | date: 'medium' }}</p>
-              @if (state.offerStatus === 'expired' || state.offerStatus === 'withdrawn') {
-                <p role="status">{{ 'partnerQuote.offerErrors.unavailable' | transloco }}</p>
-              }
-            </section>
-          }
+        @if (offersBusy()) {
+          <p role="status">
+            {{ (savingSelection() ? 'offers.savingSelection' : 'offers.loading') | transloco }}
+          </p>
         }
-        <div class="offers-grid">
-          @for (offer of snapshot.ofertas; track offer.ofertaId) {
-            <article
-              class="plan-card"
-              [class.recommended]="offer.recomendada"
-              [class.selected]="isOfferSelected(offer)"
-              [attr.data-offer-id]="offer.ofertaId"
-            >
-              @if (offer.recomendada) {
-                <span>{{ 'offers.recommendedBadge' | transloco }}</span>
-              }
-              @if (isOfferSelected(offer)) {
-                <span>{{ 'offers.selectedBadge' | transloco }}</span>
-              }
-              <h4>{{ offer.nombre }}</h4>
-              <p>{{ offer.descripcion }}</p>
-              <strong>
-                {{ offer.prima.monto | currency: offer.prima.moneda : 'symbol-narrow' : '1.0-2' }}
-                / {{ 'offers.premiumLabels.' + offer.periodicidad | transloco }}
-              </strong>
-              <p>{{ offer.coberturaPrincipal }}</p>
-              <p>{{ 'offers.deductible' | transloco }}: {{ offer.deducible }}</p>
-              <p>{{ 'offers.term' | transloco }}: {{ offer.vigencia }}</p>
-              <details>
-                <summary>{{ 'partnerQuote.offerConditions' | transloco }}</summary>
-                <ul>
-                  @for (condition of offer.condiciones; track $index) {
-                    <li>{{ condition }}</li>
-                  } @empty {
-                    <li>{{ 'quoteRequest.productDetails.noConditions' | transloco }}</li>
-                  }
-                </ul>
-                <h4>{{ 'partnerQuote.offerCoverages' | transloco }}</h4>
-                <ul>
-                  @for (coverage of offer.coberturas; track $index) {
-                    <li>{{ coverage }}</li>
-                  } @empty {
-                    <li>{{ 'quoteRequest.productDetails.noCoverages' | transloco }}</li>
-                  }
-                </ul>
-                <dl>
-                  @for (factor of offer.factores; track $index) {
-                    <dt>{{ factor.descripcion }}</dt>
-                    <dd>{{ factor.valor }}</dd>
-                  }
-                </dl>
-                @if (offer.beneficiosAdicionales.length) {
+        @if (offerErrorKey(); as key) {
+          <div class="error" role="alert">
+            <p>{{ key | transloco }}</p>
+            @if (pendingOfferSelection()) {
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="offersBusy() || retrySeconds() > 0"
+                (click)="retryOfferSelection()"
+              >
+                {{ 'partnerQuote.retrySelection' | transloco }}
+              </button>
+            } @else {
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="offersBusy() || retrySeconds() > 0"
+                (click)="loadOffers()"
+              >
+                {{ 'common.retry' | transloco }}
+              </button>
+            }
+            @if (offerSnapshot() || pendingOfferSelection()) {
+              <button
+                mat-button
+                type="button"
+                [disabled]="offersBusy() || retrySeconds() > 0"
+                (click)="recoverOfferSelection()"
+              >
+                {{ 'offers.refreshSelection' | transloco }}
+              </button>
+            }
+          </div>
+        }
+        @if (offersMissing() && !offersBusy() && !quoteReadOnly()) {
+          <p role="status">{{ 'partnerQuote.offersNotPrepared' | transloco }}</p>
+          <button
+            mat-flat-button
+            type="button"
+            data-testid="partner-prepare-offers"
+            [disabled]="retrySeconds() > 0"
+            (click)="loadOffers(true)"
+          >
+            {{ 'partnerQuote.prepareOffers' | transloco }}
+          </button>
+        }
+        @if (offerSnapshot(); as snapshot) {
+          <p>{{ 'offers.validity' | transloco }}: {{ snapshot.vigenteHasta | date: 'medium' }}</p>
+          @if (choicesExpired()) {
+            <p role="status">{{ 'partnerQuote.offerErrors.expired' | transloco }}</p>
+          }
+          @if (offerSelection(); as state) {
+            @if (state.acceptance ?? state.selection; as selection) {
+              <section
+                class="selection-summary"
+                aria-live="polite"
+                data-testid="partner-saved-selection"
+              >
+                <h4>
+                  {{
+                    (state.acceptance
+                      ? 'partnerQuote.acceptanceReadOnly'
+                      : 'partnerQuote.savedSelection'
+                    ) | transloco
+                  }}
+                </h4>
+                <strong>{{ selection.offerName }}</strong>
+                <p>
+                  {{
+                    selection.premium.amount
+                      | currency: selection.premium.currency : 'symbol-narrow' : '1.0-2'
+                  }}
+                  / {{ 'offers.premiumLabels.' + selection.periodicity | transloco }}
+                </p>
+                <p>{{ selection.selectedAt | date: 'medium' }}</p>
+                @if (state.offerStatus === 'expired' || state.offerStatus === 'withdrawn') {
+                  <p role="status">{{ 'partnerQuote.offerErrors.unavailable' | transloco }}</p>
+                }
+              </section>
+            }
+          }
+          <div class="offers-grid">
+            @for (offer of snapshot.ofertas; track offer.ofertaId) {
+              <article
+                class="plan-card"
+                [class.recommended]="offer.recomendada"
+                [class.selected]="isOfferSelected(offer)"
+                [attr.data-offer-id]="offer.ofertaId"
+              >
+                @if (offer.recomendada) {
+                  <span>{{ 'offers.recommendedBadge' | transloco }}</span>
+                }
+                @if (isOfferSelected(offer)) {
+                  <span>{{ 'offers.selectedBadge' | transloco }}</span>
+                }
+                <h4>{{ offer.nombre }}</h4>
+                <p>{{ offer.descripcion }}</p>
+                <strong>
+                  {{ offer.prima.monto | currency: offer.prima.moneda : 'symbol-narrow' : '1.0-2' }}
+                  / {{ 'offers.premiumLabels.' + offer.periodicidad | transloco }}
+                </strong>
+                <p>{{ offer.coberturaPrincipal }}</p>
+                <p>{{ 'offers.deductible' | transloco }}: {{ offer.deducible }}</p>
+                <p>{{ 'offers.term' | transloco }}: {{ offer.vigencia }}</p>
+                <details>
+                  <summary>{{ 'partnerQuote.offerConditions' | transloco }}</summary>
                   <ul>
-                    @for (benefit of offer.beneficiosAdicionales; track $index) {
-                      <li>{{ benefit }}</li>
+                    @for (condition of offer.condiciones; track $index) {
+                      <li>{{ condition }}</li>
+                    } @empty {
+                      <li>{{ 'quoteRequest.productDetails.noConditions' | transloco }}</li>
                     }
                   </ul>
+                  <h4>{{ 'partnerQuote.offerCoverages' | transloco }}</h4>
+                  <ul>
+                    @for (coverage of offer.coberturas; track $index) {
+                      <li>{{ coverage }}</li>
+                    } @empty {
+                      <li>{{ 'quoteRequest.productDetails.noCoverages' | transloco }}</li>
+                    }
+                  </ul>
+                  <dl>
+                    @for (factor of offer.factores; track $index) {
+                      <dt>{{ factor.descripcion }}</dt>
+                      <dd>{{ factor.valor }}</dd>
+                    }
+                  </dl>
+                  @if (offer.beneficiosAdicionales.length) {
+                    <ul>
+                      @for (benefit of offer.beneficiosAdicionales; track $index) {
+                        <li>{{ benefit }}</li>
+                      }
+                    </ul>
+                  }
+                </details>
+                @if (!quoteReadOnly()) {
+                  <div class="plan-actions">
+                    <button
+                      mat-flat-button
+                      type="button"
+                      data-testid="partner-select-offer"
+                      [disabled]="!isOfferSelectable(offer)"
+                      (click)="selectOffer(offer)"
+                    >
+                      {{
+                        (isOfferSelected(offer)
+                          ? 'offers.selectedBadge'
+                          : 'partnerQuote.selectOffer'
+                        ) | transloco
+                      }}
+                    </button>
+                  </div>
                 }
-              </details>
-              <div class="plan-actions">
-                <button
-                  mat-flat-button
-                  type="button"
-                  data-testid="partner-select-offer"
-                  [disabled]="!isOfferSelectable(offer)"
-                  (click)="selectOffer(offer)"
-                >
-                  {{
-                    (isOfferSelected(offer) ? 'offers.selectedBadge' : 'partnerQuote.selectOffer')
-                      | transloco
-                  }}
-                </button>
-              </div>
-            </article>
-          } @empty {
-            <p role="status">{{ 'offers.empty.body' | transloco }}</p>
-          }
-        </div>
-      }
-    </section>
-    @if (offerExpired()) {
+              </article>
+            } @empty {
+              <p role="status">{{ 'offers.empty.body' | transloco }}</p>
+            }
+          </div>
+        }
+      </section>
+    }
+    @if (offerExpired() && !quoteReadOnly()) {
       <p>{{ 'partnerQuote.historicalOffer' | transloco }}</p>
     }
     <details>
@@ -317,7 +332,7 @@
       </article>
     </details>
   }
-  @if (operationId() && !loading()) {
+  @if (operationId() && !loading() && !quoteReadOnly()) {
     <p>{{ 'partnerQuote.newWarning' | transloco }}</p>
     <button
       mat-button

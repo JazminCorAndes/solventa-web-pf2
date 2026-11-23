@@ -488,12 +488,13 @@
   "quoteRequest": {
     "back": "Volver a cotizaciones",
     "title": "Solicitar cotización",
-    "subtitle": "Completa los datos para generar una propuesta personalizada.",
+    "subtitle": "Revisa la información registrada y completa solo los datos del seguro.",
     "selectedInsurance": "Seguro seleccionado",
     "selectInsurancePlaceholder": "Selecciona un seguro",
     "changeInsurance": "Elegir seguro",
     "unavailableProduct": "No disponible para cotizar",
     "loadingProducts": "Cargando seguros disponibles",
+    "profileLoading": "Consultando tu información registrada",
     "emptyProducts": "No hay seguros disponibles en este momento.",
     "productDetails": {
       "mainCoverages": "Coberturas principales",
@@ -592,6 +593,8 @@
     },
     "errors": {
       "products": "No fue posible cargar los seguros disponibles.",
+      "profileUnavailable": "No fue posible consultar tu información registrada. Reintenta antes de solicitar una cotización.",
+      "profileIncomplete": "Faltan datos registrados necesarios para cotizar. Solicita la actualización de tu perfil antes de continuar.",
       "destinations": "No fue posible cargar los países disponibles.",
       "unavailable": "No fue posible enviar la solicitud en este momento. Inténtalo nuevamente.",
       "productUnavailable": "El seguro seleccionado ya no está disponible.",
@@ -693,7 +696,25 @@
       "invalid": "El perfil recibido no es completo, vigente o no corresponde a esta solicitud. No se mostrarán sus datos."
     }
   },
+  "partnerRequests": {
+    "title": "Solicitudes",
+    "subtitle": "Consulta todas las cotizaciones realizadas por tu organización y su estado actual.",
+    "caption": "Cada cotización se muestra por separado.",
+    "request": "Solicitud / seguro",
+    "selectedOffer": "Oferta elegida",
+    "status": "Estado",
+    "viewRequest": "Ver solicitud",
+    "noSelection": "Sin elección de oferta",
+    "loading": "Consultando solicitudes",
+    "empty": "Esta organización aún no tiene cotizaciones."
+  },
   "quoteSummary": {
+    "reject": "Rechazar solicitud",
+    "rejectPrompt": "¿Rechazar esta solicitud? Esta decisión se guardará y no contratará ni pagará ningún seguro.",
+    "retryRejection": "Reintentar el mismo rechazo",
+    "rejectUncertain": "No se pudo confirmar el rechazo. Consulta su estado o reintenta la misma decisión antes de realizar otra.",
+    "rejectChanged": "La solicitud cambió o ya no permite el rechazo. Revisa su estado actual.",
+    "stateError": "No se pudo actualizar el estado de esta solicitud.",
     "eyebrow": "Resumen",
     "title": "Mis cotizaciones",
     "subtitle": "Consulta todas tus cotizaciones y continúa cada proceso donde lo dejaste.",
@@ -711,6 +732,10 @@
     "phone": "Teléfono",
     "viewOffers": "Ver ofertas",
     "status": {
+      "pendiente": "Pendiente",
+      "completada": "Completada",
+      "rechazada": "Rechazada",
+      "vencida": "Vencida",
       "received": "Solicitud recibida",
       "inProgress": "Solicitud en proceso",
       "active": "Activa",

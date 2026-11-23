@@ -248,6 +248,31 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     return { operation, snapshot, offer: snapshot.ofertas[1] };
   }
 
+  it.each(['vencida', 'completada', 'rechazada'] as const)(
+    'preserves authoritative %s and prevents new offer/selection operations',
+    async (status) => {
+      fillCustomer();
+      const request = await submit();
+      const operation = { ...result(request.request.body), estadoSolicitud: status };
+      operation.oferta.vigenteHasta = '2000-01-01T00:00:00Z';
+      request.flush(operation);
+      if (status === 'vencida') http.expectNone(offersUrl(operation));
+      else flushOffers(operation);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('h3[role=status]').textContent).toContain(
+        es.quoteSummary.status[status],
+      );
+      expect(fixture.nativeElement.querySelector('[data-testid=partner-select-offer]')).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid=partner-prepare-offers]'),
+      ).toBeNull();
+      panel.loadOffers(true);
+      panel.newOperation();
+      http.expectNone((pending) => pending.method === 'POST' || pending.method === 'PUT');
+      expect(panel.result()?.operationId).toBe(operation.operationId);
+    },
+  );
+
   function expectConfirmedReferences(response: PartnerQuoteResult): void {
     expect(
       fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]')?.textContent,

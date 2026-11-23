@@ -13,6 +13,27 @@
   @if (resumeErrorKey) {
     <p role="alert">{{ resumeErrorKey | transloco }}</p>
   }
+  @if (rejectionError(); as message) {
+    <p role="alert">{{ message | transloco }}</p>
+    @if (pendingRejection(); as attempt) {
+      <button
+        mat-stroked-button
+        type="button"
+        [disabled]="rejectionBusy()"
+        (click)="retryRejection()"
+      >
+        {{ 'quoteSummary.retryRejection' | transloco }}
+      </button>
+      <button
+        mat-stroked-button
+        type="button"
+        [disabled]="rejectionBusy()"
+        (click)="refreshState(attempt.requestId)"
+      >
+        {{ 'quoteSummary.viewStatus' | transloco }}
+      </button>
+    }
+  }
   @if (loading()) {
     <p role="status">{{ 'quoteSummary.loading' | transloco }}</p>
   } @else if (error()) {
@@ -56,30 +77,47 @@
               <dt>{{ 'quoteSummary.phone' | transloco }}</dt>
               <dd>{{ quote.phone }}</dd>
             </div>
+            @if (
+              card.state.selectionState?.acceptance ?? card.state.selectionState?.selection;
+              as selection
+            ) {
+              <div>
+                <dt>{{ 'partnerRequests.selectedOffer' | transloco }}</dt>
+                <dd>{{ selection.offerName }}</dd>
+              </div>
+            }
           </dl>
         </mat-card-content>
 
-        <mat-card-actions align="end">
-          @if (!card.progress.requiresProfile || profileAvailability()[quote.id]) {
-            <a
-              mat-flat-button
-              [routerLink]="card.progress.path"
-              [queryParams]="{ solicitud: quote.id }"
-            >
-              {{ 'quoteSummary.' + card.progress.action | transloco }}
-            </a>
-          } @else {
-            <button mat-flat-button type="button" disabled>
-              {{ 'quoteSummary.' + card.progress.action | transloco }}
-            </button>
-          }
-        </mat-card-actions>
+        @if (card.state.status === 'pendiente' || card.state.status === 'completada') {
+          <mat-card-actions align="end">
+            @if (!card.progress.requiresProfile || profileAvailability()[quote.id]) {
+              <a
+                mat-flat-button
+                [routerLink]="card.progress.path"
+                [queryParams]="{ solicitud: quote.id }"
+              >
+                {{ 'quoteSummary.' + card.progress.action | transloco }}
+              </a>
+            } @else {
+              <button mat-flat-button type="button" disabled>
+                {{ 'quoteSummary.' + card.progress.action | transloco }}
+              </button>
+            }
+            @if (canReject(card)) {
+              <button mat-stroked-button type="button" (click)="reject(card)">
+                {{ 'quoteSummary.reject' | transloco }}
+              </button>
+            }
+          </mat-card-actions>
+        }
       </mat-card>
       @if (card.progress.requiresProfile) {
         <app-profiling-panel
           [showDetails]="false"
           [requestId]="quote.id"
           (availabilityChange)="setProfileAvailability(quote.id, $event)"
+          (expiredProfile)="refreshState(quote.id)"
         />
       }
     } @empty {

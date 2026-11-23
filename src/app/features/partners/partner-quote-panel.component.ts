@@ -184,6 +184,11 @@ export class PartnerQuotePanelComponent implements OnInit {
   readonly offerErrorKey = signal<string | null>(null);
   readonly pendingOfferSelection = signal<ProvisionalSelectionRequest | null>(null);
   readonly offersBusy = computed(() => this.offersLoading() || this.savingSelection());
+  readonly quoteReadOnly = computed(() => {
+    const status = this.result()?.estadoSolicitud;
+    return status !== undefined && status !== 'pendiente';
+  });
+  readonly quoteExpired = computed(() => this.result()?.estadoSolicitud === 'vencida');
   readonly form = this.builder.nonNullable.group({
     socioId: ['', Validators.required],
     tipoDocumento: this.builder.nonNullable.control<DocumentType>('cc'),
@@ -374,6 +379,7 @@ export class PartnerQuotePanelComponent implements OnInit {
   }
 
   newOperation(): void {
+    if (this.quoteReadOnly()) return;
     if (this.loading() || this.offersBusy() || this.pendingOfferSelection() || this.retrySeconds())
       return;
     void this.router
@@ -444,6 +450,8 @@ export class PartnerQuotePanelComponent implements OnInit {
     const operation = this.result();
     if (
       !operation ||
+      this.quoteExpired() ||
+      (create && this.quoteReadOnly()) ||
       !this.ownsOfferContext(operation) ||
       this.offersBusy() ||
       this.pendingOfferSelection() ||
@@ -508,6 +516,7 @@ export class PartnerQuotePanelComponent implements OnInit {
     const state = this.offerSelection();
     return (
       !!snapshot &&
+      !this.quoteReadOnly() &&
       !!state &&
       this.ownsOfferContext() &&
       snapshot.estado === 'vigente' &&
@@ -543,6 +552,7 @@ export class PartnerQuotePanelComponent implements OnInit {
     const request = this.pendingOfferSelection();
     if (
       !operation ||
+      this.quoteReadOnly() ||
       !request ||
       this.offersBusy() ||
       this.retrySeconds() ||

@@ -33,7 +33,7 @@ function parseClients(body: unknown): QuotedPartnerClient[] {
   }
   const clients = new Map<string, QuotedPartnerClient>();
   for (const value of body.clientes) {
-    if (!isClient(value)) throw new Error('Invalid quoted client.');
+    if (!isQuotedPartnerClient(value)) throw new Error('Invalid quoted client.');
     const key = value.clienteId.toLowerCase();
     const previous = clients.get(key);
     if (
@@ -60,7 +60,7 @@ function parseClients(body: unknown): QuotedPartnerClient[] {
   );
 }
 
-function isClient(value: unknown): value is QuotedPartnerClient {
+export function isQuotedPartnerClient(value: unknown): value is QuotedPartnerClient {
   if (!value || typeof value !== 'object') return false;
   return (
     'clienteId' in value &&

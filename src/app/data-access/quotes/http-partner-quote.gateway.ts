@@ -38,6 +38,7 @@ export interface PartnerQuoteResult {
   clienteId: string;
   productoId: string;
   estado: 'completada';
+  estadoSolicitud?: 'pendiente' | 'completada' | 'rechazada' | 'vencida';
   perfilamientoReferencia: string;
   solicitudId: string;
   cotizacionId: string;
@@ -463,12 +464,23 @@ function parseResult(body: unknown, operationId: string, socioId: string): Partn
     throw new InvalidPartnerQuoteResponse();
   }
   const oferta = parseOffer(body.oferta);
+  const estadoSolicitud = 'estadoSolicitud' in body ? body.estadoSolicitud : undefined;
+  if (
+    estadoSolicitud !== undefined &&
+    estadoSolicitud !== 'pendiente' &&
+    estadoSolicitud !== 'completada' &&
+    estadoSolicitud !== 'rechazada' &&
+    estadoSolicitud !== 'vencida'
+  ) {
+    throw new InvalidPartnerQuoteResponse();
+  }
   return {
     operationId,
     socioId,
     clienteId: body.clienteId,
     productoId: body.productoId,
     estado: body.estado,
+    ...(estadoSolicitud !== undefined ? { estadoSolicitud } : {}),
     perfilamientoReferencia: body.perfilamientoReferencia,
     solicitudId: body.solicitudId,
     cotizacionId: body.cotizacionId,

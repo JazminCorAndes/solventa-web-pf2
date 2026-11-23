@@ -488,12 +488,13 @@
   "quoteRequest": {
     "back": "Back to quotes",
     "title": "Request a quote",
-    "subtitle": "Complete the details to generate a personalized proposal.",
+    "subtitle": "Review your registered information and complete only the insurance details.",
     "selectedInsurance": "Selected insurance",
     "selectInsurancePlaceholder": "Select insurance",
     "changeInsurance": "Choose insurance",
     "unavailableProduct": "Unavailable for quotes",
     "loadingProducts": "Loading available insurance",
+    "profileLoading": "Retrieving your registered information",
     "emptyProducts": "There are no insurance products available at this time.",
     "productDetails": {
       "mainCoverages": "Main coverages",
@@ -592,6 +593,8 @@
     },
     "errors": {
       "products": "Available insurance products could not be loaded.",
+      "profileUnavailable": "Your registered information could not be retrieved. Retry before requesting a quote.",
+      "profileIncomplete": "Required registered details are missing. Request an update to your profile before continuing.",
       "destinations": "Available destination countries could not be loaded.",
       "unavailable": "The request could not be sent at this time. Please try again.",
       "productUnavailable": "The selected insurance is no longer available.",
@@ -693,7 +696,25 @@
       "invalid": "The profile is incomplete, expired or does not match this request. Its data will not be shown."
     }
   },
+  "partnerRequests": {
+    "title": "Requests",
+    "subtitle": "Review every quotation made by your organization and its current status.",
+    "caption": "Each quotation is shown separately.",
+    "request": "Request / insurance",
+    "selectedOffer": "Chosen offer",
+    "status": "Status",
+    "viewRequest": "View request",
+    "noSelection": "No offer chosen",
+    "loading": "Loading requests",
+    "empty": "This organization has no quotations yet."
+  },
   "quoteSummary": {
+    "reject": "Reject request",
+    "rejectPrompt": "Reject this request? Your decision will be saved without purchasing or paying for insurance.",
+    "retryRejection": "Retry the same rejection",
+    "rejectUncertain": "Rejection could not be confirmed. Check its status or retry the same decision before making another.",
+    "rejectChanged": "This request changed or can no longer be rejected. Check its current status.",
+    "stateError": "The status of this request could not be refreshed.",
     "eyebrow": "Summary",
     "title": "My quotes",
     "subtitle": "Review all your quotes and continue each process where you left off.",
@@ -711,6 +732,10 @@
     "phone": "Phone",
     "viewOffers": "View offers",
     "status": {
+      "pendiente": "Pending",
+      "completada": "Completed",
+      "rechazada": "Rejected",
+      "vencida": "Expired",
       "received": "Request received",
       "inProgress": "Request in progress",
       "active": "Active",

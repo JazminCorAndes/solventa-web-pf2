@@ -3,12 +3,14 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  ClientProfileIncompleteError,
   InsuranceProductUnavailableError,
   InsuranceProductNotFoundError,
   QuoteRequestUnavailableError,
 } from '../../core/quotes/quote-request.errors';
 import { QuoteRequestGateway } from '../../core/quotes/quote-request.gateway';
 import {
+  ClientQuoteProfile,
   DocumentType,
   InsuranceProduct,
   InsuranceProductDetail,
@@ -29,6 +31,14 @@ interface TravelDestinationsResponse {
 export class HttpQuoteRequestGateway implements QuoteRequestGateway {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiBaseUrl}/v1`;
+
+  loadClientProfile(): Observable<ClientQuoteProfile> {
+    return this.http
+      .get<unknown>(`${this.apiUrl}/clientes/me/perfil`, {
+        headers: new HttpHeaders({ 'API-Version': '1' }),
+      })
+      .pipe(map(toClientQuoteProfile));
+  }
 
   loadRequest(id: string): Observable<QuoteRequestRecord> {
     return this.http
@@ -92,6 +102,14 @@ export class HttpQuoteRequestGateway implements QuoteRequestGateway {
       .pipe(
         map((response) => toQuoteRequest(response, request)),
         catchError((error: unknown) => {
+          if (
+            error instanceof HttpErrorResponse &&
+            error.status === 422 &&
+            isRecord(error.error) &&
+            error.error['code'] === 'datos_cliente_incompletos'
+          ) {
+            return throwError(() => new ClientProfileIncompleteError());
+          }
           if (profilingErrorKey(error)) {
             return throwError(() => error);
           }
@@ -208,11 +226,17 @@ function toQuoteRequest(
     throw new QuoteRequestUnavailableError();
   }
   const productData = response['datosProducto'] as Record<string, string>;
+  const derivedBirthDate =
+    'productId' in expected &&
+    ['life', 'mortgage-life'].includes(expected.productId) &&
+    !('birthDate' in expected.productData) &&
+    isDateOnly(productData['birthDate']);
   if (
     ('id' in expected && response['id'] !== expected.id) ||
     ('productId' in expected &&
       (response['productoId'] !== expected.productId ||
-        Object.keys(productData).length !== Object.keys(expected.productData).length ||
+        Object.keys(productData).length !==
+          Object.keys(expected.productData).length + (derivedBirthDate ? 1 : 0) ||
         !Object.entries(expected.productData).every(([key, value]) => productData[key] === value)))
   ) {
     throw new QuoteRequestUnavailableError();
@@ -237,4 +261,38 @@ function nonempty(value: unknown): value is string {
 
 function isDocumentType(value: unknown): value is DocumentType {
   return value === 'cc' || value === 'ce' || value === 'passport' || value === 'ppt';
+}
+
+function isDateOnly(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    Number.isFinite(Date.parse(`${value}T00:00:00Z`)) &&
+    new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value
+  );
+}
+
+function toClientQuoteProfile(response: unknown): ClientQuoteProfile {
+  if (
+    !isRecord(response) ||
+    !nonempty(response['clienteId']) ||
+    !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(response['clienteId']) ||
+    !nonempty(response['nombre']) ||
+    !isDocumentType(response['tipoDocumento']) ||
+    !nonempty(response['numeroDocumento']) ||
+    !nonempty(response['correo']) ||
+    !(response['telefono'] === null || nonempty(response['telefono'])) ||
+    !(response['fechaNacimiento'] === null || isDateOnly(response['fechaNacimiento']))
+  ) {
+    throw new Error('Invalid registered client profile response');
+  }
+  return {
+    clientId: response['clienteId'],
+    fullName: response['nombre'],
+    documentType: response['tipoDocumento'],
+    nationalId: response['numeroDocumento'],
+    email: response['correo'],
+    phone: response['telefono'],
+    birthDate: response['fechaNacimiento'],
+  };
 }

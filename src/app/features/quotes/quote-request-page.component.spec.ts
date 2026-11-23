@@ -28,6 +28,7 @@ import {
   QuoteRequestStorage,
 } from '../../core/quotes/quote-request-storage.service';
 import { QuoteRequestPageComponent } from './quote-request-page.component';
+import { createClientQuoteProfile } from '../../../testing/quotes/client-profile.testing';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.component';
@@ -77,6 +78,9 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadClientProfile = vi
+    .fn<QuoteRequestGateway['loadClientProfile']>()
+    .mockImplementation(() => of(createClientQuoteProfile('client-001')));
   loadProductDetail = vi.fn<QuoteRequestGateway['loadProductDetail']>();
 
   loadRequest(): Observable<QuoteRequestRecord> {
@@ -339,9 +343,12 @@ describe('QuoteRequestPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('1023456789');
     expect(fixture.nativeElement.querySelector('#national-id')).toBeNull();
     expect(fixture.nativeElement.querySelector('#quote-phone')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('1990-01-01');
+    expect(fixture.nativeElement.querySelector('[formControlName=birthDate]')).toBeNull();
+    expect(component.form.get('birthDate')).toBeNull();
   });
 
-  it('shows a single unavailable label when the backend session has no identity details', () => {
+  it('usa el perfil registrado aunque la sesion no incluya sus datos personales', () => {
     user.set({
       id: 'client-001',
       name: 'Natalia Córdoba',
@@ -351,9 +358,37 @@ describe('QuoteRequestPageComponent', () => {
     fixture.detectChanges();
 
     const profileValues = fixture.nativeElement.querySelectorAll('.profile-summary dd');
-    expect(profileValues[0].textContent.trim()).toBe('quoteRequest.profileUnavailable');
+    expect(profileValues[0].textContent.trim()).toContain('1023456789');
     expect(profileValues[1].textContent.trim()).toBe('cliente@solventa.co');
-    expect(profileValues[2].textContent.trim()).toBe('quoteRequest.profileUnavailable');
+    expect(profileValues[2].textContent.trim()).toBe('+573001234567');
+    expect(profileValues[3].textContent.trim()).toBe('1990-01-01');
+  });
+
+  it('fecha registrada ausente no se inventa ni permite cotizar vida', () => {
+    gateway.loadClientProfile.mockReturnValue(
+      of({
+        ...createClientQuoteProfile('client-001'),
+        birthDate: null,
+      }),
+    );
+    component.loadRegisteredProfile();
+    component.form.controls.productId.setValue('life');
+    fixture.detectChanges();
+    component.submit();
+    expect(gateway.submitCalls).toBe(0);
+    expect(component.registeredProfile()?.birthDate).toBeNull();
+    expect(component.errorKey()).toBe('quoteRequest.errors.profileIncomplete');
+    expect(fixture.nativeElement.querySelector('[formControlName=birthDate]')).toBeNull();
+  });
+
+  it('no expone informacion de un perfil de otra sesion', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    gateway.loadClientProfile.mockReturnValue(of(createClientQuoteProfile('other-client')));
+    component.loadRegisteredProfile();
+    fixture.detectChanges();
+    expect(component.registeredProfile()).toBeNull();
+    expect(component.profileComplete()).toBe(false);
+    expect(fixture.nativeElement.querySelectorAll('.profile-summary dd')).toHaveLength(0);
   });
 
   it('removes characters that are not accepted by a Colombian plate', () => {
@@ -454,8 +489,8 @@ describe('QuoteRequestPageComponent', () => {
   it.each([
     {
       productId: 'life',
-      fields: { birthDate: new Date(1990, 0, 1) },
-      data: { birthDate: '1990-01-01' },
+      fields: {},
+      data: {},
     },
     {
       productId: 'device-protection',
@@ -469,8 +504,8 @@ describe('QuoteRequestPageComponent', () => {
     },
     {
       productId: 'mortgage-life',
-      fields: { birthDate: new Date(1990, 0, 1), mortgageBalance: '180000000' },
-      data: { birthDate: '1990-01-01', mortgageBalance: '180000000' },
+      fields: { mortgageBalance: '180000000' },
+      data: { mortgageBalance: '180000000' },
     },
   ])(
     'envía exclusivamente los datos de $productId sin exigir placa',
@@ -597,7 +632,6 @@ describe('QuoteRequestPageComponent', () => {
     fillWeatherForm(component);
     component.form.patchValue({
       productId: 'mortgage-life',
-      birthDate: new Date(1980, 4, 15),
       mortgageBalance: '200000000',
       location: '',
       insuredAmount: '',
@@ -605,7 +639,7 @@ describe('QuoteRequestPageComponent', () => {
     component.submit();
     expect(gateway.lastRequest).toEqual({
       productId: 'mortgage-life',
-      productData: { birthDate: '1980-05-15', mortgageBalance: '200000000' },
+      productData: { mortgageBalance: '200000000' },
     });
   });
 

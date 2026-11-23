@@ -7,6 +7,7 @@ import {
   inject,
   OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -32,11 +33,13 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { distinctUntilChanged, finalize, startWith, Subscription, take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import {
+  ClientProfileIncompleteError,
   InsuranceProductUnavailableError,
   InsuranceProductNotFoundError,
   QuoteRequestUnavailableError,
 } from '../../core/quotes/quote-request.errors';
 import {
+  ClientQuoteProfile,
   FLIGHT_COVERAGE_TYPES,
   InsuranceProductDetail,
   QuoteRequestRecord,
@@ -89,6 +92,16 @@ export class QuoteRequestPageComponent implements OnInit {
 
   readonly quotes = inject(QuoteRequestService);
   readonly user = inject(AuthService).user;
+  private profileOwnerId: string | null = null;
+  private profileRequest?: Subscription;
+  private readonly profileState = signal<ClientProfileState>({ status: 'idle' });
+  readonly profileStatus = computed(() => this.profileState().status);
+  readonly registeredProfile = computed(() => {
+    const state = this.profileState();
+    return state.status === 'ready' && state.profile.clientId === this.user()?.id
+      ? state.profile
+      : null;
+  });
   readonly partnerMode = this.route.snapshot.data['partnerMode'] === true;
   readonly partnerPanel = viewChild(PartnerQuotePanelComponent);
   readonly partnerLocked = signal(false);
@@ -126,7 +139,6 @@ export class QuoteRequestPageComponent implements OnInit {
       }),
       departureDate: this.formBuilder.control<Date | null>(null),
       returnDate: this.formBuilder.control<Date | null>(null),
-      birthDate: this.formBuilder.control<Date | null>(null),
       deviceType: [''],
       brandModel: [''],
       purchaseValue: [''],
@@ -148,6 +160,13 @@ export class QuoteRequestPageComponent implements OnInit {
   );
   private readonly productId = toSignal(this.form.controls.productId.valueChanges, {
     initialValue: this.form.controls.productId.value,
+  });
+  readonly profileComplete = computed(() => {
+    const profile = this.registeredProfile();
+    return (
+      !!profile?.phone &&
+      (!['life', 'mortgage-life'].includes(this.productId()) || !!profile.birthDate)
+    );
   });
   private readonly destinationValue = toSignal(this.form.controls.destination.valueChanges, {
     initialValue: this.form.controls.destination.value,
@@ -176,8 +195,8 @@ export class QuoteRequestPageComponent implements OnInit {
     );
   });
   readonly documentTypeLabelKey = computed(() =>
-    this.user()?.documentType
-      ? `quoteRequest.documentTypes.${this.user()?.documentType}`
+    this.registeredProfile()?.documentType
+      ? `quoteRequest.documentTypes.${this.registeredProfile()?.documentType}`
       : 'quoteRequest.profileUnavailable',
   );
   readonly filteredTravelDestinations = computed(() => {
@@ -192,6 +211,12 @@ export class QuoteRequestPageComponent implements OnInit {
 
   constructor() {
     effect(() => {
+      const id = this.user()?.id ?? null;
+      if (!this.partnerMode && id !== this.profileOwnerId) {
+        untracked(() => this.loadRegisteredProfile());
+      }
+    });
+    effect(() => {
       if (
         this.quotes.catalogStatus() !== 'ready' ||
         this.selectedProduct()?.id !== this.requestedDetailId
@@ -199,6 +224,34 @@ export class QuoteRequestPageComponent implements OnInit {
         this.clearProductDetails();
       }
     });
+  }
+
+  loadRegisteredProfile(): void {
+    if (this.partnerMode) return;
+    this.profileRequest?.unsubscribe();
+    const ownerId = this.user()?.id ?? null;
+    this.profileOwnerId = ownerId;
+    this.profileState.set({ status: ownerId ? 'loading' : 'error' });
+    if (!ownerId) return;
+    this.profileRequest = this.quotes
+      .loadClientProfile()
+      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (profile) => {
+          if (this.user()?.id !== ownerId) return;
+          if (profile.clientId !== ownerId) {
+            console.error('Registered quote profile does not belong to the current session.');
+            this.profileState.set({ status: 'error' });
+            return;
+          }
+          this.profileState.set({ status: 'ready', profile });
+        },
+        error: () => {
+          if (this.user()?.id !== ownerId) return;
+          console.error('Registered quote profile could not be loaded.');
+          this.profileState.set({ status: 'error' });
+        },
+      });
   }
 
   loadProductDetails(): void {
@@ -275,6 +328,10 @@ export class QuoteRequestPageComponent implements OnInit {
     if (this.submitting() || this.submittedRequest() || this.partnerLocked()) {
       return;
     }
+    if (!this.partnerMode && !this.profileComplete()) {
+      this.errorKey.set('quoteRequest.errors.profileIncomplete');
+      return;
+    }
 
     this.attempted.set(true);
     this.errorKey.set(null);
@@ -322,14 +379,19 @@ export class QuoteRequestPageComponent implements OnInit {
         error: (error: unknown) => {
           this.errorKey.set(
             profilingErrorKey(error) ??
-              (error instanceof QuoteRequestUnavailableError
-                ? 'quoteRequest.errors.unavailable'
-                : error instanceof InsuranceProductUnavailableError
-                  ? 'quoteRequest.errors.productUnavailable'
-                  : 'quoteRequest.errors.unexpected'),
+              (error instanceof ClientProfileIncompleteError
+                ? 'quoteRequest.errors.profileIncomplete'
+                : error instanceof QuoteRequestUnavailableError
+                  ? 'quoteRequest.errors.unavailable'
+                  : error instanceof InsuranceProductUnavailableError
+                    ? 'quoteRequest.errors.productUnavailable'
+                    : 'quoteRequest.errors.unexpected'),
           );
           if (profilingErrorKey(error)) {
             this.profilingPanel()?.reload();
+          }
+          if (error instanceof ClientProfileIncompleteError) {
+            this.loadRegisteredProfile();
           }
         },
       });
@@ -384,9 +446,6 @@ export class QuoteRequestPageComponent implements OnInit {
         this.form.controls.destination.setValidators([required, destinationSelectionValidator]);
         this.form.controls.departureDate.setValidators(required);
         this.form.controls.returnDate.setValidators(required);
-        break;
-      case 'life':
-        this.form.controls.birthDate.setValidators(required);
         break;
       case 'device-protection':
         this.form.controls.deviceType.setValidators([
@@ -444,9 +503,7 @@ export class QuoteRequestPageComponent implements OnInit {
         this.form.controls.monthlyPayment.setValidators([required, positiveInteger]);
         break;
       case 'mortgage-life':
-        if (!this.partnerMode) {
-          this.form.controls.birthDate.setValidators(required);
-        } else {
+        if (this.partnerMode) {
           this.form.controls.creditReference.setValidators([
             required,
             Validators.pattern(/^[A-Za-z0-9-]{4,30}$/),
@@ -476,7 +533,7 @@ export class QuoteRequestPageComponent implements OnInit {
         };
       }
       case 'life':
-        return { birthDate: toIsoDate(value.birthDate) };
+        return {};
       case 'device-protection':
         return {
           deviceType: value.deviceType.trim(),
@@ -510,7 +567,6 @@ export class QuoteRequestPageComponent implements OnInit {
               referenciaCredito: value.creditReference.trim().toUpperCase(),
             }
           : {
-              birthDate: toIsoDate(value.birthDate),
               mortgageBalance: value.mortgageBalance,
             };
       default:
@@ -525,6 +581,9 @@ type ProductDetailsState =
   | { status: 'ready'; productId: string; detail: InsuranceProductDetail }
   | { status: 'error'; productId: string; messageKey: string };
 
+type ClientProfileState =
+  { status: 'idle' | 'loading' | 'error' } | { status: 'ready'; profile: ClientQuoteProfile };
+
 type FormControlName = keyof QuoteRequestPageComponent['form']['controls'];
 
 const PRODUCT_CONTROL_NAMES = [
@@ -532,7 +591,6 @@ const PRODUCT_CONTROL_NAMES = [
   'destination',
   'departureDate',
   'returnDate',
-  'birthDate',
   'deviceType',
   'brandModel',
   'purchaseValue',
