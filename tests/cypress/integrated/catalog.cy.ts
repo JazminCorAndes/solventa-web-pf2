@@ -174,8 +174,10 @@ describe('Catalogo integrado: detalle recibido y una cotizacion desde la UI', ()
           cy.get('.product-details').should('contain.text', value);
         }
       });
+      cy.visit('/app/consentimiento');
       cy.contains('button', 'Autorizar perfilamiento').click();
       cy.contains('button', 'Revocar autorización').should('be.visible');
+      cy.visit(`/app/cotizaciones/solicitar?producto=${product.id}`);
       fillProduct(product);
       cy.get('button[type=submit]').should('be.enabled').click();
       cy.wait('@catalogQuote', { log: false }).then(({ request, response }) => {
@@ -213,8 +215,13 @@ describe('Catalogo integrado: detalle recibido y una cotizacion desde la UI', ()
         expect(quotePosts, 'unico POSTcotizacion, emitido por la UI').to.eq(1);
         expect(
           observed.filter((item) => item.status >= 400),
-          'solo la consulta inicial sin consentimiento',
+          'solo las consultas iniciales sin consentimiento en solicitud y consentimiento',
         ).to.deep.eq([
+          {
+            method: 'GET',
+            path: '/api/v1/consentimientos/perfilamiento',
+            status: 404,
+          },
           {
             method: 'GET',
             path: '/api/v1/consentimientos/perfilamiento',

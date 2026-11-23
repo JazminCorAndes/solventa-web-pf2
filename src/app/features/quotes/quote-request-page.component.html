@@ -672,6 +672,7 @@
 
     @if (!partnerMode) {
       <app-profiling-panel
+        [showDetails]="false"
         [requestId]="submittedRequest()?.id ?? null"
         (availabilityChange)="profilingReady.set($event)"
       />

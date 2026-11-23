@@ -726,6 +726,12 @@ no una verificación del entorno principal desplegado, ni datos de producción.
 
 ### Historial de cotizaciones y continuación
 
+El panel de información de perfilamiento, sus fuentes y los controles de autorización
+y revocación se muestran únicamente en `/app/consentimiento`. Solicitar cotización
+y el historial siguen comprobando consentimiento, perfil y vigencia internamente;
+no permiten continuar sin una autorización válida. Sus enlaces a Consentimiento
+conservan la solicitud en `solicitud` para consultar allí el perfil asociado.
+
 `/app/cotizaciones` consulta el dashboard autenticado y recupera cada solicitud mediante
 `GET /v1/solicitudes-cotizacion/{id}`. Muestra tarjetas independientes, ordenadas por
 fecha, sin depender de la última solicitud de `sessionStorage`. El backend calcula y

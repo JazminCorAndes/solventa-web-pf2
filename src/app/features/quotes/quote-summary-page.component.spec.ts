@@ -220,6 +220,10 @@ describe('QuoteSummaryPageComponent', () => {
       fixture.detectChanges();
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('app-profiling-panel mat-card')).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('a[href^="/app/consentimiento?solicitud="]'),
+      ).not.toBeNull();
 
       vi.advanceTimersByTime(15 * 60000);
       fixture.detectChanges();

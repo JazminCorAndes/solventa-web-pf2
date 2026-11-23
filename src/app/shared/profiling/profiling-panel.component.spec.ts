@@ -72,6 +72,35 @@ describe('ProfilingPanelComponent', () => {
     fixture.detectChanges();
   }
 
+  it('mantiene la validación del perfil sin mostrar detalles ni controles fuera de consentimiento', () => {
+    fixture.componentRef.setInput('showDetails', false);
+    const availability = vi.fn();
+    component.availabilityChange.subscribe(availability);
+    openProfile();
+    expect(gateway.loadConsent).toHaveBeenCalledOnce();
+    expect(gateway.loadProfile).toHaveBeenCalledWith('AQT-2026-123456');
+    expect(availability).toHaveBeenLastCalledWith(true);
+    expect(fixture.nativeElement.querySelector('mat-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('details')).toBeNull();
+    const link = fixture.nativeElement.querySelector('a');
+    expect(link.getAttribute('href')).toBe('/app/consentimiento?solicitud=AQT-2026-123456');
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+  });
+
+  it('no habilita la cotización sin consentimiento aunque sus detalles no sean visibles', () => {
+    fixture.componentRef.setInput('showDetails', false);
+    gateway.loadConsent.mockReturnValue(of(null));
+    const availability = vi.fn();
+    component.availabilityChange.subscribe(availability);
+    fixture.detectChanges();
+    expect(availability).toHaveBeenLastCalledWith(false);
+    expect(gateway.loadProfile).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('mat-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a').getAttribute('href')).toBe(
+      '/app/consentimiento',
+    );
+  });
+
   it('no consulta fuentes sin consentimiento y autoriza con version cero', () => {
     gateway.loadConsent.mockReturnValue(of(null));
     fixture.detectChanges();

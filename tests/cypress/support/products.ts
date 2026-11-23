@@ -85,9 +85,12 @@ export function login(email: string, password: string) {
 }
 
 export function openQuote(product: Product) {
-  cy.visit(`/app/cotizaciones/solicitar?producto=${product.id}`);
-  cy.get('.product-copy strong').should('not.be.empty');
+  cy.visit('/app/consentimiento');
   cy.contains('button', 'Autorizar perfilamiento').click();
   cy.contains('button', 'Revocar autorización').should('be.visible');
+  cy.visit(`/app/cotizaciones/solicitar?producto=${product.id}`);
+  cy.get('.product-copy strong').should('not.be.empty');
+  cy.contains('Información de perfilamiento').should('not.exist');
+  cy.contains('button', 'Revocar autorización').should('not.exist');
   cy.get('button[type=submit]').should('be.enabled');
 }

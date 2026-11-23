@@ -392,6 +392,8 @@ describe('QuoteRequestPageComponent', () => {
     const panel = fixture.debugElement.query(By.directive(ProfilingPanelComponent))
       .componentInstance as ProfilingPanelComponent;
     expect(panel.requestId).toBeNull();
+    expect(panel.showDetails).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-profiling-panel mat-card')).toBeNull();
     expect(component.profilingReady()).toBe(true);
     panel.availabilityChange.emit(false);
     component.submit();

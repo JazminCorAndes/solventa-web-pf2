@@ -57,6 +57,7 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
   private subscription?: Subscription;
   private expiration?: ReturnType<typeof setTimeout>;
   @Input() requestId: string | null = null;
+  @Input() showDetails = true;
   @Output() readonly availabilityChange = new EventEmitter<boolean>();
   readonly consent = signal<ProfilingConsent | null>(null);
   readonly profile = signal<RiskProfile | null>(null);

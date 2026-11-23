@@ -4,6 +4,7 @@ import { consent, mockBackend, password, quoteId, syntheticUser } from '../suppo
 describe('UI determinista: productos y consentimiento (sin persistencia real)', () => {
   beforeEach(() => {
     mockBackend();
+    cy.intercept('GET', '/api/v1/destinos-viaje').as('quoteDestinations');
     login(syntheticUser.correo, password);
   });
 
@@ -35,7 +36,10 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
 
   it('no cotiza sin consentimiento y bloquea nuevamente al revocarlo', () => {
     cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.disabled');
+    cy.contains('Información de perfilamiento').should('not.exist');
+    cy.get('app-profiling-panel a[href="/app/consentimiento"]').click();
     cy.get('app-profiling-panel time')
       .invoke('attr', 'datetime')
       .then((vigenteHasta) => {
@@ -55,26 +59,31 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
             },
           });
       });
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.enabled');
     cy.reload();
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.enabled');
+    cy.visit('/app/consentimiento');
     cy.contains('button', 'Revocar autorización').click();
     cy.contains('[role=group]', '¿Confirmas la revocación?').should('be.visible');
     cy.get('@consent.all').should('have.length', 1);
     cy.contains('button', 'Conservar autorización').click();
     cy.contains('[role=group]', '¿Confirmas la revocación?').should('not.exist');
-    cy.get('button[type=submit]').should('be.enabled');
+    cy.contains('button', 'Revocar autorización').should('be.visible');
     cy.contains('button', 'Revocar autorización').click();
     cy.contains('button', 'Confirmar revocación').click();
     cy.wait('@consent').its('request.body').should('deep.eq', { autorizado: false, version: 1 });
     cy.contains('app-profiling-panel [role=status]', 'Autorización revocada').should('be.visible');
-    cy.reload();
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.disabled');
     cy.get('@quote.all').should('have.length', 0);
   });
 
   it('registra el rechazo informado y permite autorizar con la siguiente version', () => {
-    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.visit('/app/consentimiento');
     cy.contains('button', 'Rechazar perfilamiento').click();
     cy.wait('@consent').then(({ request, response }) => {
       expect(request.body).to.include({ autorizado: false, version: 0 });
@@ -85,13 +94,18 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
       expect(response?.body).to.include({ estado: 'rechazado', version: 1 });
     });
     cy.contains('app-profiling-panel [role=status]', 'Autorización rechazada').should('be.visible');
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.disabled');
     cy.get('@quote.all').should('have.length', 0);
+    cy.visit('/app/consentimiento');
     cy.contains('button', 'Autorizar perfilamiento').click();
     cy.wait('@consent').then(({ request, response }) => {
       expect(request.body).to.include({ autorizado: true, version: 1 });
       expect(response?.body).to.include({ estado: 'autorizado', version: 2 });
     });
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.enabled');
   });
 
@@ -106,10 +120,12 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
       },
     });
     cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
+    cy.get('button[type=submit]').should('be.disabled');
+    cy.visit('/app/consentimiento');
     cy.contains('app-profiling-panel [role=status]', 'La evidencia anterior es incompleta').should(
       'be.visible',
     );
-    cy.get('button[type=submit]').should('be.disabled');
     cy.get('@quote.all').should('have.length', 0);
   });
 
@@ -117,11 +133,13 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     cy.intercept('PUT', '/api/v1/consentimientos/perfilamiento', {
       body: { ...consent(), actorId: undefined },
     }).as('incompleteConsent');
-    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.visit('/app/consentimiento');
     cy.contains('button', 'Autorizar perfilamiento').click();
     cy.wait('@incompleteConsent');
     cy.get('app-profiling-panel [role=alert]').should('be.visible');
     cy.contains('button', 'Revocar autorización').should('not.exist');
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.disabled');
     cy.get('@quote.all').should('have.length', 0);
   });
