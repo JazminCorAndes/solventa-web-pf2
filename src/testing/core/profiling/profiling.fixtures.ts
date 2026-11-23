@@ -1,4 +1,4 @@
-import { ProfilingConsent, RiskProfile } from './profiling.models';
+import { ProfilingConsent, RiskProfile } from '../../../app/core/profiling/profiling.models';
 
 export function createConsent(): ProfilingConsent {
   return {

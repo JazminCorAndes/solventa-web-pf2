@@ -1,15 +1,15 @@
 import { inject, Injectable } from '@angular/core';
 import { defer, Observable, of, throwError } from 'rxjs';
-import { AuthService } from '../../core/auth/auth.service';
-import { ProfilingError } from '../../core/profiling/profiling.errors';
-import { ProfilingGateway } from '../../core/profiling/profiling.gateway';
+import { AuthService } from '../../../app/core/auth/auth.service';
+import { ProfilingError } from '../../../app/core/profiling/profiling.errors';
+import { ProfilingGateway } from '../../../app/core/profiling/profiling.gateway';
 import {
   consentIsCurrent,
   consentRequestIssues,
   ConsentDecision,
   ProfilingConsent,
   RiskProfile,
-} from '../../core/profiling/profiling.models';
+} from '../../../app/core/profiling/profiling.models';
 
 @Injectable()
 export class MockProfilingGateway implements ProfilingGateway {

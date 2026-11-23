@@ -86,7 +86,6 @@ La aceptación 202 debe contener sólo `mensaje`, con uno de los dos textos del 
 `Si existe una cuenta con ese correo, el administrador recibira un enlace de recuperacion.`
 Otros textos, campos o cuerpos se rechazan. Ambos se traducen al mismo estado Web
 neutro; la respuesta original no se muestra al solicitante.
-El modo mock falla explícitamente: no envía correo ni cambia contraseñas.
 Backend implementa Amazon SES con remitente y URL pública configurados por entorno.
 La modalidad académica administrada dirige todos los enlaces al buzón administrador
 configurado en backend; el administrador autoriza el cambio. La recuperación normal
@@ -142,38 +141,25 @@ cd solventa-web-pf2
 pnpm install --frozen-lockfile
 ```
 
-## Desarrollo local con mocks
+## Desarrollo conectado al backend
 
 ```bash
 pnpm start
 ```
 
-La aplicación estará disponible en `http://localhost:4200`. Este modo usa los adaptadores
-simulados y no requiere ejecutar el backend.
+La aplicación estará disponible en `http://localhost:4200`. Tanto `pnpm start` como
+`pnpm start:aws` usan el API Gateway vigente en AWS; requieren una cuenta registrada
+y las autorizaciones del backend. `pnpm start:backend` conserva el proxy al BFF local.
+Todos los gateways de negocio son HTTP, con el interceptor de autenticación y la
+restauración de sesión activos en todas las configuraciones. No existe modo mock,
+catálogo ficticio ni fallback a datos locales; se mantienen carga, vacíos y errores
+explícitos según las respuestas del servicio.
 
-Credenciales:
-
-```text
-Usuario: cliente@solventa.co
-Contraseña: Solventa123!
-```
-
-El tablero incluye una póliza académica vigente para recorrer sin backend:
-
-- consulta de la póliza en la sección **Mis pólizas**, con listado, detalle y vigencia;
-- reporte y carga de evidencias de un siniestro;
-- renovación con pago simulado;
-- simulación y confirmación de una modificación versionada;
-- revisión de liquidación, confirmación y resultado de una cancelación académica.
-
-El siniestro paramétrico `70000000-0000-4000-8000-000000000001` permite comprobar
-el resultado automático de HU31: está disponible en `/app/siniestros` y su detalle
-aparece como **Paramétrico**, **Pagado** y conserva el historial desde el evento
-hasta la indemnización.
-
-Los mocks viven solo en memoria durante la sesión de la aplicación. Recargar reinicia
-renovaciones, modificaciones, cancelaciones, reportes y evidencias. Las configuraciones `local` y
-`backend` siguen usando los adaptadores HTTP reales.
+Los dobles y fixtures necesarios para las suites viven exclusivamente en `src/testing`
+y en archivos de prueba. No forman parte del grafo de dependencias de la aplicación
+ni de sus builds. Las pruebas verifican también esa separación. Las suites unitarias
+compilan la configuración HTTP `local` (`/api`) para conservar sus interceptaciones
+controladas; esto no cambia el backend de `pnpm start` ni de `pnpm start:aws`.
 
 En la consulta de modificación, `opcional` e `incluida` son independientes:
 una cobertura no incluida puede no estar disponible como adicional. Se conserva
@@ -212,7 +198,6 @@ El resultado conserva referencia, motivo, fecha y liquidación del servicio. Se 
 el dashboard y se vuelve al detalle contextual, que reconoce el estado `cancelada` y
 permite consultar el resultado sin ofrecer renovación o modificación. La vigencia
 original no se confunde con la fecha efectiva de cancelación.
-El mock es solo académico, con liquidación prefijada y estado en memoria.
 No se ejecutan cobros ni devoluciones reales, KYC o firma. Esta integración no acredita
 criterios de aceptación de Jira: no se dispone de acceso a esa herramienta.
 
@@ -220,8 +205,8 @@ criterios de aceptación de Jira: no se dispone de acceso a esa herramienta.
 
 El menú **Reportar siniestro** y las pólizas vigentes del inicio abren
 `/app/siniestros/reportar`, protegido por la sesión de cliente existente. Este flujo
-usa el adaptador en memoria con `pnpm start` y el backend real en las configuraciones
-`local` y `backend`. El mock conserva la clave de idempotencia durante la sesión.
+usa el backend real en todas las configuraciones y conserva la clave de idempotencia
+durante la sesión.
 
 Requiere el contrato de siniestros del BFF: `GET /v1/siniestros/polizas` devuelve
 `{polizas:[{id,tipo,fechaInicio,fechaFin,estado:'vigente'}]}`; las fechas de vigencia
@@ -248,9 +233,7 @@ sin confirmar. El navegador no es la fuente de verdad: únicamente se presenta
 
 El menú **Siniestros** abre `/app/siniestros`, con carga, vacío, error y acceso
 denegado explícitos, actualización y enlaces al detalle y al reporte. Conserva una
-consulta opcional por UUID. Sigue la estructura de listado y nuevo reporte del
-[mock de referencia](https://juanes545.github.io/solventa-web/#/app/claims),
-manteniendo las rutas españolas y los componentes existentes.
+consulta opcional por UUID, manteniendo las rutas españolas y los componentes existentes.
 
 `GET /v1/siniestros` devuelve `{siniestros: ClaimRecord[]}` del cliente identificado
 por JWT; no se envía identidad de cliente, cuerpo ni parámetros. El contrato no
@@ -265,8 +248,7 @@ lugar, póliza y fechas, y enlaza a `/app/siniestros/:claimId` para consultar es
 historial y evidencias existentes. El detalle permite volver al listado. No se
 añaden operaciones de evaluación, peritaje, pago ni bandeja interna.
 
-El modo mock lista el caso paramétrico académico y los reportes creados en memoria,
-sin duplicarlos por reintentos. Backend de referencia:
+Backend de referencia:
 `Migue765/backend-solventa@cdc1f849`, contrato `contracts/openapi/siniestros-v1.yaml`.
 Jira no estuvo disponible: este refinamiento no declara verificados sus criterios
 de aceptación.
@@ -292,9 +274,8 @@ adaptadores están en `src/app/**/claims/*.spec.ts`.
 ### Adjuntar evidencias privadas (SOL-176)
 
 Desde el detalle autorizado `/app/siniestros/:id`, **Consultar evidencias y límites**
-carga la política vigente y los metadatos confirmados. En modo mock, las cargas,
-fragmentos, confirmaciones, cancelaciones y descargas se conservan en memoria. En modo
-HTTP se usa exclusivamente la respuesta del backend. El selector acepta los MIME, tamaños, cantidad y
+carga la política vigente y los metadatos confirmados. Se usa exclusivamente la respuesta
+del backend. El selector acepta los MIME, tamaños, cantidad y
 duración MP4 declarados por `GET /v1/siniestros/configuracion-evidencias`, sin
 sustituir una política inválida por valores locales.
 
@@ -362,13 +343,6 @@ pago y ofrece crear una nueva cotización. No se transforma en aprobación ni se
 reintenta automáticamente con una clave nueva. Los errores de perfilamiento
 conservan sus mensajes y recuperación propios.
 
-Credenciales del adaptador simulado:
-
-```text
-Correo: cliente@solventa.co
-Contraseña: Solventa123!
-```
-
 ## Desarrollo local con backend
 
 Este modo conecta el frontend con el BFF Web, identidad y cotización. Se necesitan
@@ -376,8 +350,7 @@ los repositorios `solventa-web-pf2` y `backend-solventa`, con versiones compatib
 contrato multirramo descrito más adelante. Los cambios de API de esta funcionalidad
 deben estar presentes en el backend antes de cotizar vuelos con pérdida de conexión o clima.
 
-No existe fallback automático a mocks: si el backend no está disponible, la aplicación informa
-el error. Para volver a los mocks, se debe detener el servidor y ejecutar `pnpm start`.
+Si el backend no está disponible, la aplicación informa el error sin fabricar datos.
 
 ### 1. Preparar y ejecutar los servicios
 
@@ -434,8 +407,7 @@ Antes de enviar el registro, la web obtiene `GET /v1/usuarios/desafio` y cifra l
 contraseña como se detalla abajo; `contrasena` no aparece en el cuerpo HTTP del alta.
 Un backend anterior que ignore los campos nuevos no es compatible con esta pantalla.
 
-El registro requiere backend real: el modo mock no crea cuentas ni presenta un
-registro ficticio como exitoso. No uses cuentas reales para verificar esta rama.
+El registro requiere backend real. No uses cuentas reales para verificar esta rama.
 
 ### 3. Ejecutar el frontend conectado
 
@@ -506,7 +478,7 @@ necesarios HTTPS, protección frente a XSS y validación/replay autoritativos en
 No acredita el transporte entre servicios internos.
 
 El alcance es **login y registro web** y exige HTTPS fuera de desarrollo local. No cambian móvil,
-refresh, logout, la gestión de sesión ni los adaptadores mock sin HTTP.
+refresh, logout ni la gestión de sesión.
 `ENCRYPTED_LOGIN_ENABLED` activa ambos contratos en el backend compatible; con el flag
 activo, el BFF rechaza `contrasena` y cuerpos que mezclen contraseña en claro y JWE.
 Para rollout, prepara primero el backend compatible y coordina la activación del flag
@@ -666,8 +638,7 @@ y puede responder conflicto si los datos difieren. Angular no puede cotejar un c
 que no conserva. La acción explícita «Iniciar otro perfilamiento» descarta el UUID
 pendiente; no debe usarse como reintento de una operación cuyo resultado se desconoce.
 
-Solo el modo explícito `mock` usa `MockAdvisorProfilingGateway`, con operaciones en
-memoria; las pruebas usan dobles de sesión/HTTP. No existe fallback del modo backend.
+Las pruebas usan dobles de sesión/HTTP, fuera del runtime; la aplicación no tiene fallback local.
 El contrato de referencia es el BFF integrado en `af676d0` de `backend-solventa`.
 Las pruebas controladas no acreditan un despliegue ni una ejecución productiva.
 
@@ -769,7 +740,7 @@ de pago simulado; no habilita un segundo pago ni supone emisión de una póliza 
 | `production`  | URL del API Gateway      | `pnpm build`                               |
 | `backend`     | URL del API Gateway      | `pnpm start:aws`, `pnpm build:aws`         |
 | `local`       | `/api` (proxy a `:5001`) | `pnpm start:backend`, `pnpm build:backend` |
-| `development` | `/api` (sin uso, mocks)  | `pnpm start`, `pnpm build:dev`             |
+| `development` | URL del API Gateway      | `pnpm start`, `pnpm build:dev`             |
 
 El frontend se sigue publicando en GitHub Pages. El CORS lo resuelve el API Gateway, que permite
 los orígenes `https://jazmincorandes.github.io` y `http://localhost:4200`, los encabezados
@@ -929,8 +900,8 @@ El formulario conectado no solicita documento ni contacto: el BFF los obtiene de
 La creación envía solamente `{ productoId, datosProducto }`, junto con una clave de
 idempotencia. Los datos de riesgo dependen del ramo; para automotriz incluyen `vehiclePlate`.
 Las primas y selecciones conservan la moneda devuelta por el BFF (COP en el backend actual),
-sin convertirla ni presentarla como UF. Se conservan prima y periodicidad propias del ramo;
-los adaptadores mock usan COP y no fabrican mensualidades.
+sin convertirla ni presentarla como UF. Se conservan prima y periodicidad propias del ramo,
+sin fabricar mensualidades.
 
 El panel permite autorizar, rechazar y revocar; envía la versión vigente, o `0` para la primera
 decisión. Ante un conflicto se exige recargar antes de volver a escribir. La autorización
@@ -1013,8 +984,7 @@ Los estados `rechazado`, `revocado` y `vencido` bloquean el perfil y permiten un
 La evidencia legada sin actor, fuentes, datos o términos válidos nunca habilita cotización;
 se conserva su versión para registrar una nueva decisión explícita, sin migración automática.
 Los permisos parciales tampoco habilitan consultas a fuentes ni generación de perfil.
-Un GET no renueva la evidencia ni su versión. El mock respeta esos estados y conserva la
-fecha autorizada al revocar, pero sigue siendo solo una ayuda de desarrollo en memoria.
+Un GET no renueva la evidencia ni su versión.
 
 El despliegue debe coordinarse con backend: no publicar esta web contra el contrato anterior
 ni desplegar SOL326 dejando indefinidamente el cliente que solo envía el booleano.
@@ -1061,9 +1031,8 @@ Contratos consumidos (todos con token Bearer):
 | GET       | `/v1/solicitudes-cotizacion/{id}/perfilamiento`         | Leer el perfil usado por la solicitud                                   |
 | GET / PUT | `/v1/solicitudes-cotizacion/{id}/ofertas` / `seleccion` | Revalidación del perfil en el backend                                   |
 
-En modo mock el consentimiento y los perfiles se conservan solamente en memoria, separados por
-usuario. Al recargar la aplicación se debe autorizar y crear otra solicitud. No hay llamadas a
-proveedores financieros reales. Los componentes usan los estilos y tokens existentes; no se ha
+El consentimiento y los perfiles se consultan en el backend, bajo la sesión autorizada.
+Los componentes usan los estilos y tokens existentes; no se ha
 verificado fidelidad visual con Figma.
 
 ### Prueba local contra AWS
@@ -1098,18 +1067,18 @@ https://jazmincorandes.github.io/solventa-web-pf2/
 ```
 
 GitHub Pages solo sirve el frontend estático; el backend se ejecuta en AWS. Para iniciar
-sesión se necesita una cuenta registrada en ese backend, no las credenciales del modo mock.
+sesión se necesita una cuenta registrada en ese backend.
 
 ## Comandos disponibles
 
 | Comando                        | Descripción                                                  |
 | ------------------------------ | ------------------------------------------------------------ |
-| `pnpm start`                   | Inicia el desarrollo con adaptadores simulados               |
+| `pnpm start`                   | Inicia el desarrollo conectado al backend en AWS             |
 | `pnpm start:backend`           | Inicia el desarrollo conectado al BFF local                  |
 | `pnpm start:aws`               | Inicia el desarrollo conectado al backend en AWS             |
 | `pnpm build`                   | Genera el build de producción conectado al backend           |
 | `pnpm build:pages`             | Compila producción para la subruta Pages y genera `404.html` |
-| `pnpm build:dev`               | Genera un build de desarrollo con mocks                      |
+| `pnpm build:dev`               | Genera un build de desarrollo conectado al backend en AWS    |
 | `pnpm build:backend`           | Genera un build de desarrollo conectado al BFF local         |
 | `pnpm build:aws`               | Genera un build de desarrollo conectado al API en AWS        |
 | `pnpm test`                    | Ejecuta las pruebas en modo interactivo                      |
@@ -1215,8 +1184,7 @@ En la misma solicitud se muestran la descripción y `coberturasPrincipales` reci
 Los importes decimales se conservan como cadenas junto a su moneda, sin convertirlos a `number`.
 Cambiar de producto o salir cancela la lectura y retira el detalle anterior; una carga o un error
 de detalle bloquea la continuación hasta recuperar datos válidos. Un producto no disponible
-permite consultar su detalle, pero no cotizar. El modo mock no inventa coberturas ni condiciones:
-el detalle requiere conexión con el backend.
+permite consultar su detalle, pero no cotizar. El detalle requiere conexión con el backend.
 
 En vuelos, `coverageType` admite `delay-cancellation`, `missed-connection` y
 `comprehensive`. El backend mantiene las solicitudes antiguas sin ese campo como
@@ -1230,19 +1198,16 @@ La fecha final climática no puede preceder al inicio y el periodo admite hasta
 366 días, contando ambas fechas. Estos campos son decisiones del contrato de
 cotización; el enunciado no define un proveedor ni un umbral meteorológico concreto.
 
-En modo mock, el catálogo y las ofertas son ejemplos locales, no una tarifa actuarial
-personalizada. Las ofertas respetan el ramo y la cobertura elegidos; un producto
-desconocido no recibe ofertas automotrices por defecto. En modo backend se consultan
-las ofertas del servicio y se envía la selección con su versión. El cálculo y las
+El catálogo y las ofertas se consultan en el servicio y la selección se envía con su versión.
+Las ofertas respetan el ramo y la cobertura elegidos; un producto desconocido no recibe
+ofertas automotrices por defecto. El cálculo y las
 fuentes externas que ese servicio simule siguen siendo simulados: usar HTTP no los
 convierte en integraciones reales. Cotizar no emite una póliza ni activa monitoreo,
 aceptación formal o pagos de siniestros.
 
 ## Autenticación de desarrollo
 
-En modo mock, los datos no salen del navegador y la sesión se conserva en `sessionStorage`.
-
-En modo backend la sesión se maneja con tokens JWT (ver «Autenticación con tokens»): el access
+La sesión se maneja con tokens JWT (ver «Autenticación con tokens»): el access
 token no se persiste y el refresh token se guarda en `sessionStorage`. Al iniciar la aplicación
 se renueva la sesión con el backend.
 
@@ -1288,9 +1253,8 @@ GitHub Actions ejecuta en cada pull request dirigido a `master` o `develop`:
 ## Alcance actual
 
 La aplicación incluye inicio de sesión, sesión de cliente, rutas protegidas, cierre de sesión,
-dashboard, solicitud de cotización y comparación de ofertas. Autenticación, solicitudes y
-ofertas pueden ejecutarse con adaptadores simulados o contra el BFF real. El dashboard continúa
-usando datos simulados.
+dashboard, solicitud de cotización y comparación de ofertas. Todos estos flujos usan
+los adaptadores HTTP del backend, sin datos mock de la aplicación.
 
 En modo backend, las solicitudes y selecciones quedan persistidas por el servicio de
 cotización. `sessionStorage` conserva la referencia necesaria para reanudar el flujo en la
@@ -1373,7 +1337,7 @@ en mensualidades. Las decisiones de suscripción en revisión/rechazada y las sa
 no habilitan nuevos intentos de pago.
 Esta simulación requiere el modo backend: no cobra dinero ni abre un checkout real.
 La póliza académica depende de la emisión confirmada por el servicio y no acredita
-cobertura real, documento ni firma. No se implementa un éxito ficticio en el modo mock.
+cobertura real, documento ni firma. No se implementa un éxito ficticio cuando el backend falla.
 Siniestros, detalle de pólizas, notificaciones y recuperación de contraseña permanecen
 fuera del alcance actual.
 

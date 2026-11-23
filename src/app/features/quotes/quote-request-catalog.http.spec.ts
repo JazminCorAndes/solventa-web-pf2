@@ -12,7 +12,7 @@ import { environment } from '../../../environments/environment';
 import { authInterceptor } from '../../core/auth/auth.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
 import { OFFER_SELECTION_STORAGE } from '../../core/offers/offer-selection-storage.service';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { QUOTE_REQUEST_GATEWAY } from '../../core/quotes/quote-request.gateway';
 import {
@@ -42,14 +42,12 @@ const unavailableProduct = {
 };
 
 describe('Catalogo integrado con el formulario y HTTP autenticado', () => {
-  const originalMode = environment.dataAccessMode;
   let fixture: ComponentFixture<QuoteRequestPageComponent>;
   let page: QuoteRequestPageComponent;
   let http: HttpTestingController;
   let select: MatSelectHarness;
 
   beforeEach(async () => {
-    environment.dataAccessMode = 'backend';
     await TestBed.configureTestingModule({
       imports: [
         QuoteRequestPageComponent,
@@ -119,7 +117,6 @@ describe('Catalogo integrado con el formulario y HTTP autenticado', () => {
 
   afterEach(() => {
     http.verify();
-    environment.dataAccessMode = originalMode;
   });
 
   it.each([

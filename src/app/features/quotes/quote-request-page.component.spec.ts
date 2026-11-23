@@ -29,8 +29,7 @@ import {
 } from '../../core/quotes/quote-request-storage.service';
 import { QuoteRequestPageComponent } from './quote-request-page.component';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
-import { environment } from '../../../environments/environment';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.component';
 
 const PRODUCT: InsuranceProduct = {
@@ -122,7 +121,6 @@ class TestOfferSelectionStorage implements OfferSelectionStorage {
 }
 
 describe('QuoteRequestPageComponent', () => {
-  const originalMode = environment.dataAccessMode;
   let fixture: ComponentFixture<QuoteRequestPageComponent>;
   let component: QuoteRequestPageComponent;
   let gateway: TestQuoteRequestGateway;
@@ -141,7 +139,6 @@ describe('QuoteRequestPageComponent', () => {
       phone: '+573001234567',
     });
 
-    environment.dataAccessMode = 'mock';
     await TestBed.configureTestingModule({
       imports: [
         QuoteRequestPageComponent,
@@ -177,10 +174,6 @@ describe('QuoteRequestPageComponent', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => {
-    environment.dataAccessMode = originalMode;
-  });
-
   it('shows an accessible empty catalog after a successful empty response', () => {
     fillValidForm(component);
     vi.spyOn(gateway, 'loadProducts').mockReturnValue(of([]));
@@ -201,12 +194,12 @@ describe('QuoteRequestPageComponent', () => {
     expect(gateway.submitCalls).toBe(0);
   });
 
-  it('does not fabricate product details when running without the backend', () => {
+  it('waits for an explicit HTTP detail request instead of fabricating product details', () => {
     fillValidForm(component);
     fixture.detectChanges();
     const overview = fixture.nativeElement.querySelector('.product-overview');
-    expect(overview.textContent).toContain('quoteRequest.productDetails.backendRequired');
-    expect(overview.querySelector('button')).toBeNull();
+    expect(overview.textContent).toContain('quoteRequest.productDetails.view');
+    expect(overview.querySelector('button')).not.toBeNull();
     expect(overview.querySelector('.product-details')).toBeNull();
     expect(gateway.loadProductDetail).not.toHaveBeenCalled();
   });
@@ -294,9 +287,8 @@ describe('QuoteRequestPageComponent', () => {
     });
   });
 
-  it('usa identidad de sesion sin pedir documento o contacto en modo backend', () => {
+  it('usa identidad de sesion sin pedir documento o contacto', () => {
     fixture.destroy();
-    environment.dataAccessMode = 'backend';
     fixture = TestBed.createComponent(QuoteRequestPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

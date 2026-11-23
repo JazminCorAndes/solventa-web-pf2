@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { defer, Observable, of } from 'rxjs';
-import { PolicyModificationGateway } from '../../core/policies/policy-modification.gateway';
+import { PolicyModificationGateway } from '../../../app/core/policies/policy-modification.gateway';
 import {
   ModificationImpact,
   ModificationProposal,
@@ -10,7 +10,7 @@ import {
   PolicyCoverage,
   PolicyModificationError,
   PolicyVersion,
-} from '../../core/policies/policy-modification.models';
+} from '../../../app/core/policies/policy-modification.models';
 import { MOCK_POLICY_ID } from '../mock/mock.constants';
 
 const PLAN_PRICES: Record<Plan, number> = {

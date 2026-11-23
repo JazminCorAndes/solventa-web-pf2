@@ -66,9 +66,7 @@
                 }
               </ul>
               @let details = productDetails();
-              @if (!backendProductDetails) {
-                <p role="status">{{ 'quoteRequest.productDetails.backendRequired' | transloco }}</p>
-              } @else if (details.status === 'idle') {
+              @if (details.status === 'idle') {
                 <button mat-button type="button" (click)="loadProductDetails()">
                   {{ 'quoteRequest.productDetails.view' | transloco }}
                 </button>

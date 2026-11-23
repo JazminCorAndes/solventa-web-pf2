@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { ReportFilters } from '../../core/reports/operational-report.models';
-import { MockOperationalReportGateway } from './mock-operational-report.gateway';
+import { MockOperationalReportGateway } from '../../../testing/data-access/reports/mock-operational-report.gateway';
 
 const FILTERS: ReportFilters = {
   from: '2026-11-01',

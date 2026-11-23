@@ -28,7 +28,7 @@ import {
 } from '../../core/quotes/quote-request-storage.service';
 import { QuoteSummaryPageComponent } from './quote-summary-page.component';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 
 const RECORD: QuoteRequestRecord = {
   id: 'AQT-2026-123456',

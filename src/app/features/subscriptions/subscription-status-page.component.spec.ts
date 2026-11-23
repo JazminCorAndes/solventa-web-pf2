@@ -6,7 +6,6 @@ import { ActivatedRoute, provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth/auth.service';
 import es from '../../../../public/assets/i18n/es.json';
 import { OFFER_GATEWAY } from '../../core/offers/offer.gateway';
@@ -48,7 +47,6 @@ const SUBSCRIPTION: SubscriptionRecord = {
 };
 
 describe('SubscriptionStatusPageComponent', () => {
-  const originalMode = environment.dataAccessMode;
   let fixture: ComponentFixture<SubscriptionStatusPageComponent>;
   const load = vi.fn();
   const subscription = signal<SubscriptionRecord | null>(SUBSCRIPTION);
@@ -58,7 +56,6 @@ describe('SubscriptionStatusPageComponent', () => {
   const offers = { loadSelection: vi.fn() };
 
   beforeEach(async () => {
-    environment.dataAccessMode = 'backend';
     load.mockClear();
     paymentGateway.load.mockReset().mockReturnValue(of(null));
     paymentGateway.confirm.mockReset().mockReturnValue(of(CONFIRMED_PAYMENT));
@@ -91,7 +88,6 @@ describe('SubscriptionStatusPageComponent', () => {
   });
 
   afterEach(() => {
-    environment.dataAccessMode = originalMode;
     window.sessionStorage.removeItem(`solventa.payment.attempt.${SUBSCRIPTION.id}`);
     window.sessionStorage.removeItem(`solventa.payment.receipt.${SUBSCRIPTION.id}`);
   });

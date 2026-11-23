@@ -23,7 +23,7 @@ import { BrowserQuoteRequestStorage, QUOTE_REQUEST_STORAGE } from './quote-reque
 import { QuoteRequestService } from './quote-request.service';
 import { quoteResumeGuard } from './quote-resume.guard';
 import { PROFILING_GATEWAY } from '../profiling/profiling.gateway';
-import { createConsent, createProfile } from '../profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { of } from 'rxjs';
 
 @Component({ template: '' })

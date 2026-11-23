@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { defer, Observable, of } from 'rxjs';
-import { PolicyRenewalGateway } from '../../core/policies/policy-renewal.gateway';
+import { PolicyRenewalGateway } from '../../../app/core/policies/policy-renewal.gateway';
 import {
   PolicyRenewalError,
   Renewal,
   RenewalEligibility,
   RenewalSubmission,
-} from '../../core/policies/policy-renewal.models';
+} from '../../../app/core/policies/policy-renewal.models';
 import { MOCK_POLICY_ID } from '../mock/mock.constants';
 
 const CONDITIONS_HASH = 'c'.repeat(64);

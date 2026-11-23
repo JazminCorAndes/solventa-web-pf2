@@ -1,7 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { computed, effect, inject, Injectable, OnDestroy, signal, untracked } from '@angular/core';
 import { finalize, Subject, takeUntil } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { HttpPolicyDocumentGateway } from '../../data-access/policies/http-policy-document.gateway';
 import { AuthService } from '../auth/auth.service';
 import {
@@ -27,7 +26,6 @@ export class PolicyDocumentService implements OnDestroy {
   private readonly attemptState = signal<DocumentAcceptanceAttempt | null>(null);
   private readonly receiptState = signal<DocumentAcceptance | null>(null);
 
-  readonly available = environment.dataAccessMode === 'backend';
   readonly document = computed(() => (this.ownsSession() ? this.documentState() : null));
   readonly attempt = computed(() => (this.ownsSession() ? this.attemptState() : null));
   readonly receipt = computed(() => (this.ownsSession() ? this.receiptState() : null));
@@ -89,7 +87,6 @@ export class PolicyDocumentService implements OnDestroy {
     if (!preserveReceipt) this.receiptState.set(null);
     this.consent.set(false);
     this.error.set(null);
-    if (!this.available) return;
     if (!this.ownsSession()) {
       this.error.set('session');
       return;

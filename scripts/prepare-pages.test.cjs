@@ -11,7 +11,8 @@ const {
   writeFileSync,
 } = require('node:fs');
 const { tmpdir } = require('node:os');
-const { join } = require('node:path');
+const { join, relative } = require('node:path');
+const ts = require('typescript');
 const { test } = require('node:test');
 
 const script = join(__dirname, 'prepare-pages.cjs');
@@ -23,13 +24,48 @@ test('production and AWS backend configurations use HTTPS without a production r
   ].architect.build;
   assert.equal(build.defaultConfiguration, 'production');
   assert.deepEqual(build.configurations.production.fileReplacements ?? [], []);
-  for (const file of ['environment.ts', 'environment.backend.ts']) {
+  for (const file of ['environment.ts', 'environment.backend.ts', 'environment.development.ts']) {
     const source = readFileSync(join(root, 'src', 'environments', file), 'utf8');
     const url = source.match(/apiBaseUrl:\s*'([^']+)'/);
     assert.ok(url, `Missing API URL in ${file}`);
     assert.equal(new URL(url[1]).protocol, 'https:', file);
-    assert.match(source, /dataAccessMode:\s*'backend'/);
+    assert.doesNotMatch(source, /dataAccessMode|mock/);
   }
+});
+
+test('application dependency graph excludes test doubles, business fixtures and mock mode', () => {
+  const root = join(__dirname, '..');
+  const config = ts.readConfigFile(join(root, 'tsconfig.app.json'), ts.sys.readFile);
+  const options = ts.parseJsonConfigFileContent(config.config, ts.sys, root).options;
+  const visited = new Set();
+  function visit(file) {
+    if (visited.has(file)) return;
+    visited.add(file);
+    assert.doesNotMatch(
+      relative(root, file),
+      /(^|[\\/])testing[\\/]|\.spec\.ts$|\.testing\.ts$|mock[-.]|\.fixtures\.ts$/,
+    );
+    const source = readFileSync(file, 'utf8');
+    assert.doesNotMatch(source, /\bMock[A-Z]\w*|\bdataAccessMode\b/);
+    const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+    function check(node) {
+      const module =
+        ts.isImportDeclaration(node) || ts.isExportDeclaration(node)
+          ? node.moduleSpecifier
+          : ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+            ? node.arguments[0]
+            : undefined;
+      if (module && ts.isStringLiteral(module) && module.text.startsWith('.')) {
+        const resolved = ts.resolveModuleName(module.text, file, options, ts.sys).resolvedModule;
+        assert.ok(resolved, `Unresolved runtime import: ${module.text} in ${file}`);
+        visit(resolved.resolvedFileName);
+      }
+      ts.forEachChild(node, check);
+    }
+    check(ast);
+  }
+  visit(join(root, 'src', 'main.ts'));
+  assert.ok(visited.size > 1);
 });
 
 function withBuild(html, check) {

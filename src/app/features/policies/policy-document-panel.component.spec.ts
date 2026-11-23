@@ -33,12 +33,10 @@ const POLICY: DashboardPolicy = {
 };
 
 describe('PolicyDocumentPanelComponent', () => {
-  const originalMode = environment.dataAccessMode;
   let fixture: ComponentFixture<PolicyDocumentPanelComponent>;
   let http: HttpTestingController;
 
   beforeEach(async () => {
-    environment.dataAccessMode = 'backend';
     sessionStorage.clear();
     await TestBed.configureTestingModule({
       imports: [
@@ -63,7 +61,6 @@ describe('PolicyDocumentPanelComponent', () => {
   });
 
   afterEach(() => {
-    environment.dataAccessMode = originalMode;
     http.verify();
     sessionStorage.clear();
   });

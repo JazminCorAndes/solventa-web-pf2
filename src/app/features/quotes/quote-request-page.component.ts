@@ -30,7 +30,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { distinctUntilChanged, finalize, startWith, Subscription, take } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   InsuranceProductUnavailableError,
@@ -156,7 +155,6 @@ export class QuoteRequestPageComponent implements OnInit {
   readonly selectedProduct = computed(
     () => this.products().find((product) => product.id === this.productId()) ?? null,
   );
-  readonly backendProductDetails = environment.dataAccessMode === 'backend';
   private readonly productDetailsState = signal<ProductDetailsState>({ status: 'idle' });
   private productDetailsRequest: Subscription | undefined;
   private requestedDetailId: string | null = null;
@@ -207,7 +205,6 @@ export class QuoteRequestPageComponent implements OnInit {
     const product = this.selectedProduct();
     if (
       !product ||
-      !this.backendProductDetails ||
       this.quotes.catalogStatus() !== 'ready' ||
       this.productDetails().status === 'loading'
     ) {

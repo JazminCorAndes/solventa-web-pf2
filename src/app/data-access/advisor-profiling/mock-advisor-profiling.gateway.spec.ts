@@ -1,6 +1,6 @@
 import { firstValueFrom } from 'rxjs';
 import { MortgageProfilingRequest } from '../../core/advisor-profiling/advisor-profiling.models';
-import { MockAdvisorProfilingGateway } from './mock-advisor-profiling.gateway';
+import { MockAdvisorProfilingGateway } from '../../../testing/data-access/advisor-profiling/mock-advisor-profiling.gateway';
 
 describe('MockAdvisorProfilingGateway', () => {
   const request: MortgageProfilingRequest = {

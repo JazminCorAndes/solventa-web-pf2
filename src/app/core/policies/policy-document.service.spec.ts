@@ -34,13 +34,11 @@ const NEXT_DOCUMENT: PolicyDocument = {
 };
 
 describe('PolicyDocumentService', () => {
-  const originalMode = environment.dataAccessMode;
   let service: PolicyDocumentService;
   let http: HttpTestingController;
   const user = signal<AuthUser | null>(CLIENT);
 
   beforeEach(() => {
-    environment.dataAccessMode = 'backend';
     sessionStorage.clear();
     user.set(CLIENT);
     TestBed.configureTestingModule({
@@ -56,7 +54,6 @@ describe('PolicyDocumentService', () => {
   });
 
   afterEach(() => {
-    environment.dataAccessMode = originalMode;
     http.verify();
     vi.restoreAllMocks();
     vi.useRealTimers();

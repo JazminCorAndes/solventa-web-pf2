@@ -13,7 +13,7 @@ import { AUTH_STORAGE } from '../../core/auth/auth-storage.service';
 import { authInterceptor } from '../../core/auth/auth.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
 import { TestAuthGateway, TestAuthStorage } from '../../core/auth/auth.testing';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { HttpProfilingGateway } from '../../data-access/profiling/http-profiling.gateway';
 

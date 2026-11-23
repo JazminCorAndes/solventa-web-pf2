@@ -1,20 +1,20 @@
 import { inject, Injectable } from '@angular/core';
 import { delay, map, Observable, of, throwError } from 'rxjs';
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService } from '../../../app/core/auth/auth.service';
 import {
   InsuranceProductUnavailableError,
   QuoteRequestUnavailableError,
-} from '../../core/quotes/quote-request.errors';
-import { QuoteRequestGateway } from '../../core/quotes/quote-request.gateway';
+} from '../../../app/core/quotes/quote-request.errors';
+import { QuoteRequestGateway } from '../../../app/core/quotes/quote-request.gateway';
 import {
   InsuranceProduct,
   InsuranceProductDetail,
   QuoteRequestDraft,
   QuoteRequestRecord,
   TravelDestination,
-} from '../../core/quotes/quote-request.models';
+} from '../../../app/core/quotes/quote-request.models';
 import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
-import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
+import { QUOTE_REQUEST_STORAGE } from '../../../app/core/quotes/quote-request-storage.service';
 
 const PRODUCTS: InsuranceProduct[] = [
   {

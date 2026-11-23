@@ -6,7 +6,7 @@ import en from '../../../../public/assets/i18n/en.json';
 import es from '../../../../public/assets/i18n/es.json';
 import { of, Subject, throwError } from 'rxjs';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import {
   ConsentRequest,
   createConsentRequest,
