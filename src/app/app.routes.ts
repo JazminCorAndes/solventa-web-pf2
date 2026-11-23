@@ -65,6 +65,17 @@ export const routes: Routes = [
         title: 'Consentimiento | Solventa',
       },
       {
+        path: 'socios/clientes',
+        pathMatch: 'full',
+        canActivate: [partnerGuard],
+        data: { partnerScope: 'clientes:consultar', partnerMode: true },
+        loadComponent: () =>
+          import('./features/partners/partner-clients-page.component').then(
+            (component) => component.PartnerClientsPageComponent,
+          ),
+        title: 'Clientes cotizados | Solventa',
+      },
+      {
         path: 'socios/clientes/consultar',
         canActivate: [partnerGuard],
         data: { partnerScope: 'clientes:consultar', partnerMode: true },

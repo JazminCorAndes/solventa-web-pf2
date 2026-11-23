@@ -273,6 +273,22 @@
       "operations": "Authorized operations"
     }
   },
+  "partnerClients": {
+    "title": "Quoted customers",
+    "subtitle": "Customers with completed quotes from the selected partner.",
+    "choosePartner": "Select an authorized partner to view their quoted customers.",
+    "loading": "Loading quoted customers…",
+    "tableCaption": "Unique mortgage life customers",
+    "client": "Customer",
+    "document": "Document",
+    "actions": "Actions",
+    "notAuthorized": "Details unavailable with current consent",
+    "empty": "This partner has no customers with completed mortgage life quotes yet.",
+    "refresh": "Refresh customers",
+    "individual": "Authorized individual lookup",
+    "unavailable": "The customer list could not be loaded. Try again.",
+    "back": "Back to quoted customers"
+  },
   "clientInformation": {
     "eyebrow": "Authorized query",
     "title": "Client information",

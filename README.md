@@ -808,6 +808,28 @@ esa validación ni prueban conectividad con AWS.
 
 ## Cotización de socios (SOL195)
 
+### Clientes cotizados del socio
+
+La entrada **Clientes** del portal abre `/app/socios/clientes`. Consulta
+`GET /v1/socios/clientes?socioId=...&productoId=mortgage-life` con Bearer y
+`API-Version: 1`, contexto de `/v1/socios/actual` y alcance `clientes:consultar`.
+La organización se selecciona entre las autorizadas; no se consulta el dashboard
+personal del cliente ni un directorio global.
+
+El backend enumera únicamente clientes asociados a cotizaciones completadas y
+persistidas del socio y producto. La web deduplica por `clienteId` estable y no
+admite duplicados contradictorios. La respuesta contiene `clientes`, con
+`clienteId`, `nombre`, `tipoDocumento`, `numeroDocumentoEnmascarado` y
+`consentimientoEstado`; los datos personales son nulos sin consentimiento vigente.
+No se reconstruyen nombres o documentos ni se muestran contactos o riesgo.
+El cambio de organización/sesión descarta el listado y cancela la lectura anterior.
+Carga, vacío y errores se presentan explícitamente, sin datos de sustitución.
+
+**Ver detalle** conserva la consulta individual autorizada en
+`/app/socios/clientes/consultar`, precarga únicamente el identificador y requiere
+una acción explícita; el backend vuelve a comprobar consentimiento. Una
+actualización de la web no publica esta API en AWS: requiere el backend compatible.
+
 El portal de socios (SOL194) habilita `/app/socios/cotizaciones/solicitar` solo con
 contexto validado de `GET /v1/socios/actual` y alcance `perfilamientos:crear`. Se reutilizan
 los campos y validaciones de vida hipotecaria, único producto habilitado en este flujo.

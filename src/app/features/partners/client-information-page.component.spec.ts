@@ -254,6 +254,29 @@ describe('ClientInformationPageComponent', () => {
     expect(gateway.consult).not.toHaveBeenCalled();
   });
 
+  it('prefills the selected stable client without issuing a consultation and returns to its partner list', () => {
+    queryChanges.next(convertToParamMap({ socio: 'BANCO-001', cliente: CLIENT_ID }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.getRawValue()).toMatchObject({
+      searchMode: 'id',
+      clienteId: CLIENT_ID,
+    });
+    expect(gateway.consult).not.toHaveBeenCalled();
+    expect(gateway.load).not.toHaveBeenCalled();
+    fixture.componentInstance.backToClients();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/app/socios/clientes'], {
+      queryParams: { socio: 'BANCO-001' },
+    });
+  });
+
+  it('rejects malformed client identifiers in the detail link', () => {
+    queryChanges.next(convertToParamMap({ socio: 'BANCO-001', cliente: 'invalid' }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.errorKey()).toBe('clientInformation.errors.invalid');
+    expect(fixture.componentInstance.form.controls.clienteId.value).toBe('');
+    expect(gateway.consult).not.toHaveBeenCalled();
+  });
+
   it('uses hidden partner context and renders only authorized result data', async () => {
     gateway.consult.mockImplementation((request: ClientInformationRequest) =>
       of(resultFor(request)),

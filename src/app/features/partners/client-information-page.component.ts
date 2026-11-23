@@ -71,6 +71,9 @@ interface ConsultationScope {
   template: `
     <section class="page">
       <header>
+        <button mat-button type="button" (click)="backToClients()">
+          {{ 'partnerClients.back' | transloco }}
+        </button>
         <h1>{{ 'clientInformation.title' | transloco }}</h1>
         <p>{{ 'clientInformation.subtitle' | transloco }}</p>
       </header>
@@ -352,6 +355,7 @@ export class ClientInformationPageComponent {
   private readonly contextInvalidated = new Subject<void>();
   private activeContext: string | null = null;
   private routeOperation: string | null | undefined;
+  private routeClient: string | null | undefined;
   private requestGeneration = 0;
   readonly context = inject(PartnerContextService).context;
   readonly loading = signal(false);
@@ -393,7 +397,8 @@ export class ClientInformationPageComponent {
       const context = this.contextKey();
       const partnerId = this.partner()?.socioId ?? null;
       const operationId = this.queryParams().get('operacion');
-      untracked(() => this.synchronizeRoute(context, partnerId, operationId));
+      const clientId = this.queryParams().get('cliente');
+      untracked(() => this.synchronizeRoute(context, partnerId, operationId, clientId));
     });
   }
 
@@ -401,20 +406,33 @@ export class ClientInformationPageComponent {
     context: string,
     partnerId: string | null,
     operationId: string | null,
+    clientId: string | null,
   ): void {
     const contextChanged = context !== this.activeContext;
-    if (!contextChanged && operationId === this.routeOperation) return;
+    const clientChanged = clientId !== this.routeClient;
+    if (!contextChanged && !clientChanged && operationId === this.routeOperation) return;
     this.activeContext = context;
     this.routeOperation = operationId;
+    this.routeClient = clientId;
     // Saving our own operation in the URL must not replace its POST with an early GET.
-    if (!contextChanged && operationId === this.operationId()) return;
+    if (!contextChanged && !clientChanged && operationId === this.operationId()) return;
 
     this.resetState();
     if (!this.context() || !partnerId) {
       this.errorKey.set('clientInformation.errors.forbidden');
       return;
     }
-    if (!operationId) return;
+    if (!operationId) {
+      if (clientId !== null) {
+        if (!UUID_PATTERN.test(clientId)) {
+          this.errorKey.set('clientInformation.errors.invalid');
+          return;
+        }
+        this.form.controls.searchMode.setValue('id');
+        this.form.controls.clienteId.setValue(clientId);
+      }
+      return;
+    }
     if (!UUID_PATTERN.test(operationId)) {
       this.errorKey.set('clientInformation.errors.invalid');
       return;
@@ -573,9 +591,15 @@ export class ClientInformationPageComponent {
     this.resetState();
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { operacion: null },
+      queryParams: { operacion: null, cliente: null },
       queryParamsHandling: 'merge',
       replaceUrl: true,
+    });
+  }
+
+  backToClients(): void {
+    void this.router.navigate(['/app/socios/clientes'], {
+      queryParams: { socio: this.partner()?.socioId },
     });
   }
 

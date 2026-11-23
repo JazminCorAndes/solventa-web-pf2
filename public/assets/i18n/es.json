@@ -273,6 +273,22 @@
       "operations": "Operaciones autorizadas"
     }
   },
+  "partnerClients": {
+    "title": "Clientes cotizados",
+    "subtitle": "Clientes con cotizaciones completadas por el socio seleccionado.",
+    "choosePartner": "Selecciona un socio autorizado para consultar sus clientes cotizados.",
+    "loading": "Consultando clientes cotizados…",
+    "tableCaption": "Clientes únicos para vida hipotecaria",
+    "client": "Cliente",
+    "document": "Documento",
+    "actions": "Acciones",
+    "notAuthorized": "Datos no disponibles con el consentimiento actual",
+    "empty": "Este socio aún no tiene clientes con cotizaciones completadas de vida hipotecaria.",
+    "refresh": "Actualizar clientes",
+    "individual": "Consulta individual autorizada",
+    "unavailable": "No fue posible obtener el listado de clientes. Inténtalo de nuevo.",
+    "back": "Volver a clientes cotizados"
+  },
   "clientInformation": {
     "eyebrow": "Consulta autorizada",
     "title": "Información del cliente",

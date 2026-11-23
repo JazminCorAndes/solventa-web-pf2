@@ -120,7 +120,7 @@ describe('Partner navigation through production routes', () => {
     ).not.toBeNull();
     expect(
       harness.routeNativeElement?.querySelector(
-        `a[href="/app/socios/clientes/consultar?socio=${CONTEXT.socios[0].socioId}"]`,
+        `a[href="/app/socios/clientes?socio=${CONTEXT.socios[0].socioId}"]`,
       ),
     ).not.toBeNull();
     expect(harness.routeNativeElement?.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
@@ -129,6 +129,24 @@ describe('Partner navigation through production routes', () => {
     expect(menu.querySelector('a[href="/app/cotizaciones"]')).toBeNull();
     expect(JSON.stringify(storage.stored)).not.toContain('secret');
     expect(JSON.stringify(storage.stored)).not.toContain('partner-access');
+  });
+
+  it('opens the quoted customer list through its authenticated partner route', async () => {
+    await login();
+    const socioId = CONTEXT.socios[0].socioId;
+    const navigation = harness.navigateByUrl(`/app/socios/clientes?socio=${socioId}`);
+    (await vi.waitFor(() => http.expectOne(`${API}/v1/socios/actual`))).flush(CONTEXT);
+    await navigation;
+    const request = await vi.waitFor(() =>
+      http.expectOne(`${API}/v1/socios/clientes?socioId=${socioId}&productoId=mortgage-life`),
+    );
+    expect(request.request.headers.get('Authorization')).toBe('Bearer partner-access');
+    expect(request.request.headers.get('API-Version')).toBe('1');
+    request.flush({ clientes: [] });
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.textContent).toContain('Clientes cotizados');
+    expect(harness.routeNativeElement?.querySelector('form')).toBeNull();
+    http.expectNone(`${API}/v1/clientes/me/dashboard`);
   });
 
   it.each([403, 429, 503])(
