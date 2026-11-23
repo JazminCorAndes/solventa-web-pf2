@@ -11,7 +11,7 @@
     "emptyHint": "Cuando reportes un evento, podrás consultarlo aquí.",
     "registered": "Reporte registrado",
     "registrationNote": "El registro confirma la recepción del reporte, no su aprobación ni su estado vigente. Consulta el detalle para ver el estado y el historial.",
-    "viewDetail": "Ver estado, historial y evidencias",
+    "viewDetail": "Ver detalle",
     "location": "Lugar del evento",
     "lookup": "Consultar por número de siniestro",
     "back": "Volver a mis siniestros"
@@ -857,7 +857,7 @@
     }
   },
   "policyDocument": {
-    "title": "Documento y aceptación de póliza",
+    "title": "Documento de póliza",
     "simulation": "SIMULACIÓN · SIN VALIDEZ LEGAL",
     "backendRequired": "La consulta, descarga y aceptación requieren el backend. Este modo no fabrica documentos ni firmas.",
     "loading": "Consultando el documento vigente",
@@ -880,7 +880,7 @@
     "noCoverages": "El servicio no informa coberturas para este documento. No se agregan coberturas del resumen ni del catálogo.",
     "conditions": "Condiciones",
     "summaryDiffers": "El resumen de la póliza difiere del documento actual. Esta sección muestra los datos autoritativos del servicio; actualiza Mis pólizas para contrastarlos.",
-    "download": "Descargar documento",
+    "download": "Descargar PDF",
     "downloading": "Verificando archivo antes de descargar",
     "acceptanceTitle": "Aceptación del documento",
     "acceptanceScope": "Solo registra tu aceptación académica del documento, versión y hash mostrados. No activa, renueva ni modifica la póliza y no tiene efecto legal.",

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of, throwError, Subject } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
@@ -112,7 +112,18 @@ describe('QuoteSummaryPageComponent', () => {
     return fixture.nativeElement as HTMLElement;
   };
 
-  it('loads every own request and resumes the same ID after completed payment/emission', () => {
+  it('explains an expired-profile recovery even when there are no actionable quotations', () => {
+    entries = [];
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ error: 'expired' }) } },
+    });
+    const root = render();
+    expect(root.querySelector('[role=alert]')?.textContent).toContain(es.profiling.errors.expired);
+    expect(root.querySelector('.summary-card')).toBeNull();
+    expect(quotes.loadRequest).not.toHaveBeenCalled();
+  });
+
+  it('excludes purchased quotations without loading their details or continuation', () => {
     entries = [
       historyEntry({
         status: 'completada',
@@ -123,22 +134,17 @@ describe('QuoteSummaryPageComponent', () => {
       }),
     ];
     const root = render();
-    expect(root.textContent).toContain('Seguro Automotriz Total');
-    expect(root.textContent).toContain('Completada');
-    expect(
-      root.querySelector(`a[href="/app/cotizaciones/suscripcion/detalle?solicitud=${RECORD.id}"]`),
-    ).not.toBeNull();
+    expect(root.querySelector('.summary-card')).toBeNull();
+    expect(quotes.loadRequest).not.toHaveBeenCalled();
     expect(root.querySelector('app-profiling-panel')).toBeNull();
     expect(history.loadClientHistory).toHaveBeenCalledWith(USER.id);
   });
 
-  it('shows only the authoritative expired state and historical card, without messages or actions', () => {
+  it('excludes expired quotations without loading their details', () => {
     entries = [historyEntry({ status: 'vencida' })];
     const root = render();
-    const card = root.querySelector('.summary-card')!;
-    expect(card.textContent).toContain('Vencida');
-    expect(card.textContent).toContain(RECORD.id);
-    expect(card.querySelector('button, a, mat-card-actions')).toBeNull();
+    expect(root.querySelector('.summary-card')).toBeNull();
+    expect(quotes.loadRequest).not.toHaveBeenCalled();
     expect(root.querySelector('app-profiling-panel')).toBeNull();
     expect(root.textContent).not.toContain(es.profiling.errors.expired);
   });
@@ -196,7 +202,7 @@ describe('QuoteSummaryPageComponent', () => {
     );
     const root = render();
     expect(history.loadClientState).toHaveBeenCalledWith(RECORD.id, USER.id);
-    expect(root.textContent).toContain('Vencida');
+    expect(root.querySelector('.summary-card')).toBeNull();
     expect(root.querySelector('app-profiling-panel')).toBeNull();
     expect(root.textContent).not.toContain(es.profiling.errors.expired);
   });
@@ -214,6 +220,17 @@ describe('QuoteSummaryPageComponent', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('keeps actionable requests when history also contains purchased and expired entries', () => {
+    entries = [
+      historyEntry(),
+      historyEntry({ requestId: 'AQT-2026-BOUGHT', status: 'completada' }),
+      historyEntry({ requestId: 'AQT-2026-EXPIRED', status: 'vencida' }),
+    ];
+    const root = render();
+    expect(root.querySelectorAll('.summary-card')).toHaveLength(1);
+    expect(quotes.loadRequest).toHaveBeenCalledExactlyOnceWith(RECORD.id);
   });
 
   it('persists explicit rejection and recovers it from authoritative state and reload', () => {

@@ -69,18 +69,8 @@
           </a>
           <a
             mat-list-item
-            routerLink="/app/siniestros/reportar"
-            routerLinkActive="active-link"
-            (click)="keyboard.closeForNavigation()"
-          >
-            <app-icon matListItemIcon name="claim" />
-            <span matListItemTitle>{{ 'claims.title' | transloco }}</span>
-          </a>
-          <a
-            mat-list-item
             routerLink="/app/siniestros"
             routerLinkActive="active-link"
-            [routerLinkActiveOptions]="{ exact: true }"
             (click)="keyboard.closeForNavigation()"
           >
             <app-icon matListItemIcon name="claim" />

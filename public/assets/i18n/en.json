@@ -11,7 +11,7 @@
     "emptyHint": "When you report an event, you can find it here.",
     "registered": "Report registered",
     "registrationNote": "Registration confirms receipt, not approval or the current claim status. Open the detail to see its status and history.",
-    "viewDetail": "View status, history and evidence",
+    "viewDetail": "View details",
     "location": "Event location",
     "lookup": "Look up a claim number",
     "back": "Back to my claims"
@@ -857,7 +857,7 @@
     }
   },
   "policyDocument": {
-    "title": "Policy document and acceptance",
+    "title": "Policy document",
     "simulation": "SIMULATION · NOT LEGALLY VALID",
     "backendRequired": "Viewing, downloading and accepting require the backend. This mode does not fabricate documents or signatures.",
     "loading": "Loading the current document",
@@ -880,7 +880,7 @@
     "noCoverages": "The service reports no coverages for this document. No coverages are added from the summary or catalog.",
     "conditions": "Conditions",
     "summaryDiffers": "The policy summary differs from the current document. This section shows authoritative service data; refresh My policies to compare.",
-    "download": "Download document",
+    "download": "Download PDF",
     "downloading": "Verifying the file before downloading",
     "acceptanceTitle": "Document acceptance",
     "acceptanceScope": "Only records your academic acceptance of the displayed document, version and hash. It does not activate, renew or modify the policy and has no legal effect.",

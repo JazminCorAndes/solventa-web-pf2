@@ -114,7 +114,7 @@ export class QuoteRequestPageComponent implements OnInit {
               product.id === 'mortgage-life' &&
               this.partnerPanel()?.allowedProductIds().includes(product.id),
           )
-      : this.quotes.products(),
+      : this.quotes.products().filter((product) => product.id !== 'parametric'),
   );
   readonly today = startOfToday();
   readonly tomorrow = new Date(

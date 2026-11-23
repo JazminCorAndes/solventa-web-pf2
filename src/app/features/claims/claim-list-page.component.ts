@@ -18,12 +18,15 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { finalize, Subscription, take } from 'rxjs';
+import { finalize, forkJoin, map, of, Subscription, switchMap, take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { CLAIM_GATEWAY } from '../../core/claims/claim.gateway';
 import { CLAIM_UUID, ClaimRecord } from '../../core/claims/claim.models';
+import { CLAIM_STATUS_GATEWAY } from '../../core/claims/claim-status.gateway';
+import { ClaimState } from '../../core/claims/claim-status.models';
 
 type ListStatus = 'loading' | 'ready' | 'error' | 'forbidden' | 'session';
+type ClaimListItem = ClaimRecord & { currentState: ClaimState };
 
 @Component({
   selector: 'app-claim-list-page',
@@ -43,12 +46,13 @@ type ListStatus = 'loading' | 'ready' | 'error' | 'forbidden' | 'session';
 })
 export class ClaimListPageComponent {
   private readonly gateway = inject(CLAIM_GATEWAY);
+  private readonly statusGateway = inject(CLAIM_STATUS_GATEWAY);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly i18n = inject(TranslocoService);
   private readonly ownerId = signal<string | null>(null);
-  private readonly records = signal<ClaimRecord[]>([]);
+  private readonly records = signal<ClaimListItem[]>([]);
   private readonly listStatus = signal<ListStatus>('loading');
   private request?: Subscription;
 
@@ -101,6 +105,22 @@ export class ClaimListPageComponent {
     this.request = this.gateway
       .list()
       .pipe(
+        switchMap((records) =>
+          records.length
+            ? forkJoin(
+                records.map((record) =>
+                  this.statusGateway.load(record.id).pipe(
+                    map((status): ClaimListItem => {
+                      if (status.id !== record.id || status.policyId !== record.polizaId) {
+                        throw new Error('Claim status does not match the listed report.');
+                      }
+                      return { ...record, currentState: status.state };
+                    }),
+                  ),
+                ),
+              )
+            : of([] as ClaimListItem[]),
+        ),
         take(1),
         takeUntilDestroyed(this.destroyRef),
         finalize(() => {

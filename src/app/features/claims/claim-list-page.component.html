@@ -51,14 +51,15 @@
     }
     @case ('ready') {
       @if (claims().length) {
-        <p class="registration-note">{{ 'claimList.registrationNote' | transloco }}</p>
         <ul class="claim-list" [attr.aria-label]="'claimList.title' | transloco">
           @for (claim of claims(); track claim.id) {
             <li>
               <article class="claim-card" data-testid="claim-list-item">
                 <div class="card-heading">
                   <h2>{{ claim.tipoEvento }}</h2>
-                  <span class="registration-badge">{{ 'claimList.registered' | transloco }}</span>
+                  <span class="registration-badge">
+                    {{ 'claimStatus.states.' + claim.currentState | transloco }}
+                  </span>
                 </div>
                 <p class="claim-number">{{ 'claimStatus.claimId' | transloco }} · {{ claim.id }}</p>
                 <p class="description">{{ claim.descripcion }}</p>

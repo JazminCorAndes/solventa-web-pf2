@@ -182,11 +182,11 @@ export class PolicyDocumentService implements OnDestroy {
         next: (bytes) => {
           if (!this.ownsSession()) return;
           try {
-            const url = URL.createObjectURL(new Blob([bytes], { type: 'text/html;charset=utf-8' }));
+            const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
             try {
               const anchor = this.browserDocument.createElement('a');
               anchor.href = url;
-              anchor.download = `poliza-${document.polizaId}-${document.documentoId}.html`;
+              anchor.download = `poliza-${document.polizaId}-${document.documentoId}.pdf`;
               anchor.click();
             } finally {
               setTimeout(() => URL.revokeObjectURL(url), 0);

@@ -46,6 +46,12 @@ describe('ClaimListPageComponent with HTTP and claim routes', () => {
   const root = () => harness.routeNativeElement!;
   const text = () => root().textContent ?? '';
   const render = () => harness.detectChanges();
+  const flushList = () => {
+    http.expectOne(URL).flush({ siniestros: [record] });
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/clientes/me/siniestros/${CLAIM_ID}`)
+      .flush(CLAIM_STATUS_RESPONSE);
+  };
 
   beforeEach(async () => {
     user.set(TEST_USER);
@@ -78,27 +84,28 @@ describe('ClaimListPageComponent with HTTP and claim routes', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows loading, report fields and receipt semantics without fabricating a current state', () => {
+  it('shows the reported fields and the authoritative current state, not the receipt state', () => {
     expect(text()).toContain(es.claimList.loading);
-    http.expectOne(URL).flush({ siniestros: [record] });
+    flushList();
     render();
     expect(text()).toContain(record.tipoEvento);
     expect(text()).toContain(record.descripcion);
     expect(text()).toContain(record.lugar);
     expect(text()).toContain(record.polizaId);
-    expect(text()).toContain(es.claimList.registered);
-    expect(text()).toContain(es.claimList.registrationNote);
+    expect(text()).toContain(es.claimStatus.states.en_inspeccion);
+    expect(text()).not.toContain(es.claimList.registrationNote);
     expect(text()).not.toContain(es.claimStatus.states.en_evaluacion);
     expect(root().querySelector('[data-testid="claim-list-item"]')).not.toBeNull();
   });
 
   it('links list to the existing detail, history, evidence and back to a fresh list', async () => {
-    http.expectOne(URL).flush({ siniestros: [record] });
+    flushList();
     render();
     const href = root().querySelector<HTMLAnchorElement>(
       `a[href="/app/siniestros/${CLAIM_ID}"]`,
     )!.pathname;
     await harness.navigateByUrl(href, ClaimStatusPageComponent);
+    expect(root().querySelector('[data-testid="claim-id-input"]')).toBeNull();
     http
       .expectOne(`${environment.apiBaseUrl}/v1/clientes/me/siniestros/${CLAIM_ID}`)
       .flush(CLAIM_STATUS_RESPONSE);
@@ -131,7 +138,7 @@ describe('ClaimListPageComponent with HTTP and claim routes', () => {
 
   it('discards stale records on refresh, shows an explicit failure and can retry', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    http.expectOne(URL).flush({ siniestros: [record] });
+    flushList();
     component.refresh();
     render();
     expect(root().querySelector('[data-testid="claim-list-item"]')).toBeNull();
@@ -140,7 +147,7 @@ describe('ClaimListPageComponent with HTTP and claim routes', () => {
     expect(text()).toContain(es.claimList.error);
     expect(text()).not.toContain(es.claimList.empty);
     root().querySelector<HTMLButtonElement>('[data-testid="claim-list-error"] button')!.click();
-    http.expectOne(URL).flush({ siniestros: [record] });
+    flushList();
     render();
     expect(text()).toContain(record.tipoEvento);
   });
@@ -157,7 +164,7 @@ describe('ClaimListPageComponent with HTTP and claim routes', () => {
     const pending = http.expectOne(URL);
     component.refresh();
     expect(pending.cancelled).toBe(true);
-    http.expectOne(URL).flush({ siniestros: [record] });
+    flushList();
     expect(component.claims()).toHaveLength(1);
     user.set({ ...TEST_USER, id: 'another-client' });
     expect(component.claims()).toEqual([]);
@@ -176,6 +183,28 @@ describe('ClaimListPageComponent with HTTP and claim routes', () => {
     http.expectNone(URL);
     expect(component.claims()).toEqual([]);
     expect(text()).toContain(es.claimList.session);
+  });
+
+  it('shows an explicit failure if a listed claim status is unavailable or mismatched', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    http.expectOne(URL).flush({ siniestros: [record] });
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/clientes/me/siniestros/${CLAIM_ID}`)
+      .flush({ ...CLAIM_STATUS_RESPONSE, polizaId: 'another-policy' });
+    render();
+    expect(text()).toContain(es.claimList.error);
+    expect(root().querySelector('[data-testid="claim-list-item"]')).toBeNull();
+  });
+
+  it('cancels pending status reads on account change and never displays old records', () => {
+    http.expectOne(URL).flush({ siniestros: [record] });
+    const status = http.expectOne(
+      `${environment.apiBaseUrl}/v1/clientes/me/siniestros/${CLAIM_ID}`,
+    );
+    user.set(null);
+    render();
+    expect(status.cancelled).toBe(true);
+    expect(component.claims()).toEqual([]);
   });
 
   it('retains optional UUID lookup and rejects invalid input without navigation', () => {

@@ -23,42 +23,41 @@ Actions se ejecuta automáticamente. Un colaborador solicita Jenkins con un come
 Los reportes HTML/XML se conservan en Jenkins privado. No se exige un porcentaje mínimo nuevo.
 Consulta [la guía de CI](docs/ci.md) para ver alcance, nombres y lectura de resultados.
 
-## Documento académico y aceptación simulada
+## Documento de póliza en PDF
 
-La vista web conserva el aviso de alcance legal y el consentimiento explícito de
-aceptación, sin repetir el párrafo «Documento académico» debajo del título.
+La vista web conserva el aviso de alcance legal, sin controles de firma o aceptación
+simulada en el detalle de **Mis pólizas**.
 
-El detalle en `/app/polizas/:policyId` consulta el documento autenticado del cliente,
-muestra su contenido estructurado como texto y permite una aceptación explícita
-ligada a `documentoId`, `versionPoliza` y `contenidoHash`. Desde una suscripción
+El detalle en `/app/polizas/:policyId` consulta el documento autenticado del cliente
+y muestra su contenido estructurado como texto. Las aceptaciones ya registradas y
+sus contratos se conservan, pero no se ofrecen nuevas desde esta pantalla. Desde una suscripción
 emitida se accede a **Mis pólizas**; la suscripción no expone un identificador de
 póliza y no se inventa uno. No se implementa firma legal ni se cambia el ciclo de vida.
 
-Esta función requiere modo backend: no genera HTML ni aceptaciones de demostración.
-Depende de [Migue765/backend-solventa#135](https://github.com/Migue765/backend-solventa/pull/135),
-rama `feature/refina-documento-firma`, contrato `documento-poliza-web-v1.yaml` en
-`5b6ebceecdd7c74758b8e6487914eab1a7c3b09f`. La existencia del PR no implica despliegue.
-Consume `GET .../polizas/{id}/documento`, `POST .../polizas/{id}/aceptaciones` y
-`GET .../polizas/{id}/documentos/{documentoId}/descarga` bajo `/v1/clientes/me`.
-La descarga verifica SHA-256 sobre el `ArrayBuffer` original contra el DTO,
-el tipo HTML UTF-8 y los encabezados de integridad/seguridad cuando son visibles.
-En llamadas cross-origin no depende de encabezados no expuestos por CORS:
-usa el hash del DTO y un nombre `.html` propio formado solo por UUID validados.
-El HTML nunca se inserta en el DOM de la aplicación.
+Consume `GET .../polizas/{id}/documento` y
+`GET .../polizas/{id}/documentos/{documentoId}/descarga/pdf` bajo `/v1/clientes/me`.
+El backend genera una representación PDF con la marca Solventa desde el snapshot
+persistido, sin modificar el documento canónico HTML, sus IDs, versiones, hashes ni
+aceptaciones históricas. La descarga HTML existente se conserva por compatibilidad;
+la web no inserta ese HTML ni genera documentos de sustitución.
 
-Antes del POST se conserva la clave UUID y el cuerpo exacto en `sessionStorage`,
-aislados por cliente/póliza. Un timeout, 503 o resultado inválido conserva el intento
-para recuperarlo sin otra clave incluso tras recargar. Un 409 por documento
-desactualizado obliga a consultar y aceptar expresamente la nueva versión;
-un conflicto de idempotencia bloquea el reenvío. Un cambio de cuenta oculta el
-contenido y cancela las peticiones de la cuenta anterior.
+La descarga exige `application/pdf`, un archivo válido de hasta 1 MiB y dos encabezados
+legibles: `X-Content-SHA256` debe coincidir con el SHA-256 de los bytes PDF;
+`X-Document-Content-SHA256` debe coincidir con `contenidoHash` del DTO canónico.
+El hash HTML no se reutiliza como hash PDF. Ambos encabezados deben exponerse por CORS
+para llamadas cross-origin. El nombre `.pdf` propio usa exclusivamente UUID validados;
+no depende de que `Content-Disposition` esté expuesto. Si falta un encabezado, el
+archivo está corrupto o no coincide con el snapshot, se muestra un error sin descargar.
+Un cambio de cuenta oculta el contenido y cancela las peticiones anteriores.
+La consulta del documento puede materializar un snapshot documental en el backend;
+la representación PDF no crea una compra, aceptación ni cambio de cobertura.
 
 Comprobaciones focales:
 `pnpm exec ng test --watch=false "--include=src/app/**/*policy-document*.spec.ts"`,
 `node tests/cypress/run.cjs ui policy-document.cy.ts` y `pnpm build`.
 La suite `ui` controla HTTP y no acredita E2E contra servicios ni criterios de Jira.
-La [suite opt-in `document`](tests/cypress/README.md) verifica consulta, aceptación
-y descarga con el BFF y Pólizas/SQLite sintéticos de esa rama; solo sesión y dashboard
+La [suite opt-in `document`](tests/cypress/README.md) verifica consulta, persistencia
+y descarga PDF con el BFF y Pólizas/SQLite sintéticos; solo sesión y dashboard
 se controlan. Tampoco acredita login/pagos reales ni un despliegue.
 
 ## Tecnologías
@@ -203,8 +202,9 @@ criterios de aceptación de Jira: no se dispone de acceso a esa herramienta.
 
 ### Reportar un siniestro (SOL-175)
 
-El menú **Reportar siniestro** y las pólizas vigentes del inicio abren
-`/app/siniestros/reportar`, protegido por la sesión de cliente existente. Este flujo
+El menú **Siniestros** muestra los reportes propios y permite abrir **Reportar siniestro**.
+Las pólizas vigentes del inicio también abren `/app/siniestros/reportar`,
+protegido por la sesión de cliente existente. Este flujo
 usa el backend real en todas las configuraciones y conserva la clave de idempotencia
 durante la sesión.
 
@@ -242,10 +242,14 @@ descendente y desempate por identificador). Un fallo o respuesta inválida no se
 convierte en una lista vacía ni deja resultados anteriores visibles; un cambio de
 cuenta cancela la consulta y descarta los datos. No hay persistencia local del listado.
 
-El badge **Reporte registrado** es únicamente el acuse durable: no significa
-aprobado ni estado vigente. Cada reporte muestra su evento, descripción original,
+El listado consulta además `GET /v1/clientes/me/siniestros/:id` por cada reporte
+y presenta su estado vigente, validando que ID y póliza coincidan. No confunde
+el acuse `registrado` con aprobación ni con el estado actual. Una consulta de
+estado fallida muestra error y permite reintentar, sin inventar estados.
+Cada reporte muestra su evento, descripción original,
 lugar, póliza y fechas, y enlaza a `/app/siniestros/:claimId` para consultar estado,
-historial y evidencias existentes. El detalle permite volver al listado. No se
+historial y evidencias existentes. El detalle permite volver al listado y no
+repite el buscador por UUID del listado. No se
 añaden operaciones de evaluación, peritaje, pago ni bandeja interna.
 
 Backend de referencia:
@@ -706,9 +710,12 @@ no permiten continuar sin una autorización válida. Sus enlaces a Consentimient
 conservan la solicitud en `solicitud` para consultar allí el perfil asociado.
 
 `/app/cotizaciones` consulta `GET /v1/solicitudes-cotizacion` y recupera los datos de
-cada solicitud mediante `GET /v1/solicitudes-cotizacion/{id}`. No depende del dashboard,
-su límite de resultados ni la última solicitud local. Cada cotización conserva su fila,
-identificador y selección provisional o aceptación persistida, incluida la elección del socio.
+cada solicitud visible mediante `GET /v1/solicitudes-cotizacion/{id}`. No depende del dashboard,
+su límite de resultados ni la última solicitud local. **Mis cotizaciones** excluye
+las completadas (ya compradas) y vencidas según el estado del servidor, tanto al cargar
+como al actualizar una tarjeta. No borra el historial del backend ni las pólizas.
+Las restantes conservan su identificador y selección provisional o aceptación persistida,
+incluida la elección del socio.
 
 El estado superior proviene exclusivamente del backend: `pendiente`, `completada`,
 `rechazada` o `vencida`. Calcular o seleccionar una oferta no completa una cotización.
@@ -721,8 +728,8 @@ La guarda consulta `GET /v1/solicitudes-cotizacion/{id}/estado` incluso con enla
 vencida/rechazada vuelve al historial y completada conserva el acceso al detalle.
 El perfil y consentimiento siguen verificándose para ofertas no aceptadas. Si el panel
 detecta un perfil vencido, se consulta el estado autoritativo antes de cambiar la tarjeta;
-no se declara vencida por el reloj del navegador. Una tarjeta vencida conserva su ficha,
-sin aviso de renovar perfil ni botones de ofertas, reintento, nueva solicitud o consentimiento.
+no se declara vencida por el reloj del navegador. Cuando el servidor confirma que está
+vencida o completada, la tarjeta desaparece de esta lista.
 
 El cliente puede rechazar explícitamente una solicitud pendiente antes de la aceptación:
 confirmación visible y `PUT /v1/solicitudes-cotizacion/{id}/rechazo` con cuerpo `{}` y

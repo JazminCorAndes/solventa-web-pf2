@@ -15,7 +15,7 @@ export const products = [
       returnDate: futureDate(20),
     },
   },
-  { id: 'life', fields: { 'birth-date': '1990-01-15' }, data: { birthDate: '1990-01-15' } },
+  { id: 'life', fields: {}, data: {} },
   {
     id: 'device-protection',
     fields: {
@@ -58,8 +58,8 @@ export const products = [
   },
   {
     id: 'mortgage-life',
-    fields: { 'mortgage-birth-date': '1990-01-15', 'mortgage-balance': '180000000' },
-    data: { birthDate: '1990-01-15', mortgageBalance: '180000000' },
+    fields: { 'mortgage-balance': '180000000' },
+    data: { mortgageBalance: '180000000' },
   },
 ] as const;
 

@@ -1,5 +1,6 @@
 import { fillProduct, futureDate, login, openQuote, products } from '../support/products';
 import { consent, mockBackend, password, quoteId, syntheticUser } from '../support/ui-backend';
+import { historyDto } from '../../../src/testing/quotes/quote-history.testing';
 
 describe('UI determinista: productos y consentimiento (sin persistencia real)', () => {
   beforeEach(() => {
@@ -8,12 +9,78 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     login(syntheticUser.correo, password);
   });
 
-  for (const product of products) {
+  it('retira vuelo del selector sin retirar clima paramétrico', () => {
+    openQuote(products[0]);
+    cy.get('mat-select').click();
+    cy.get('mat-option').should('have.length', products.length - 1);
+    cy.contains('mat-option', /^parametric$/).should('not.exist');
+    cy.contains('mat-option', 'parametric-weather').should('be.visible');
+  });
+
+  it('omite cotizaciones compradas y vencidas sin consultar sus detalles', () => {
+    openQuote(products[0]);
+    const boughtId = 'AQT-2026-COMPRADA01';
+    const expiredId = 'AQT-2026-VENCIDA001';
+    const entry = (id: string, overrides: Record<string, unknown> = {}) =>
+      historyDto({
+        operationId: null,
+        socioId: null,
+        solicitudId: id,
+        productoId: 'automotive',
+        estadoSeleccion: { solicitudId: id, seleccion: null, aceptacion: null, estadoOferta: null },
+        ...overrides,
+      });
+    cy.intercept('GET', '/api/v1/solicitudes-cotizacion', {
+      solicitudes: [
+        entry(quoteId),
+        entry(boughtId, {
+          cotizacionId: '44444444-4444-4444-8444-444444444444',
+          estado: 'completada',
+          completadaEn: new Date().toISOString(),
+          pagoEstado: 'confirmado',
+          emisionEstado: 'emitida',
+        }),
+        entry(expiredId, {
+          cotizacionId: '55555555-5555-4555-8555-555555555555',
+          estado: 'vencida',
+          validaHasta: '2000-01-01T00:00:00Z',
+        }),
+      ],
+    }).as('history');
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}`, {
+      id: quoteId,
+      productoId: 'automotive',
+      tipoCliente: 'persona_natural',
+      tipoDocumento: 'cc',
+      identificacion: syntheticUser.identificacion,
+      datosProducto: products[0].data,
+      correo: syntheticUser.correo,
+      telefono: syntheticUser.telefono,
+      estado: 'recibida',
+      creadaEn: new Date().toISOString(),
+    }).as('pendingDetails');
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${boughtId}`, { statusCode: 500 }).as(
+      'boughtDetails',
+    );
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${expiredId}`, { statusCode: 500 }).as(
+      'expiredDetails',
+    );
+    cy.visit('/app/cotizaciones');
+    cy.wait(['@history', '@pendingDetails']);
+    cy.get('.summary-card').should('have.length', 1).and('contain.text', quoteId);
+    cy.get('.summary-card').should('not.contain.text', boughtId).and('not.contain.text', expiredId);
+    cy.get('@boughtDetails.all').should('have.length', 0);
+    cy.get('@expiredDetails.all').should('have.length', 0);
+  });
+
+  for (const product of products.filter((product) => product.id !== 'parametric')) {
     it(`${product.id}: obligatorios y contrato completo al solicitar`, () => {
       openQuote(product);
-      cy.get('button[type=submit]').click();
-      cy.contains('[role=alert]', 'Completa correctamente').should('be.visible');
-      cy.get('@quote.all').should('have.length', 0);
+      if (Object.keys(product.fields).length || product.id === 'travel') {
+        cy.get('button[type=submit]').click();
+        cy.contains('[role=alert]', 'Completa correctamente').should('be.visible');
+        cy.get('@quote.all').should('have.length', 0);
+      }
       fillProduct(product);
       cy.get('button[type=submit]').click();
       cy.wait('@quote').then(({ request, response }) => {
@@ -304,6 +371,20 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
 
   it('no abre planes de una solicitud cuyo perfil ya vencio al recuperarla', () => {
     cy.expectConsoleError('The quote process could not be recovered.', 422, 'perfil_vencido');
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/estado`, {
+      body: historyDto({
+        operationId: null,
+        socioId: null,
+        solicitudId: quoteId,
+        productoId: 'travel',
+        estadoSeleccion: {
+          solicitudId: quoteId,
+          seleccion: null,
+          aceptacion: null,
+          estadoOferta: null,
+        },
+      }),
+    });
     cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}`, {
       id: quoteId,
       productoId: 'travel',

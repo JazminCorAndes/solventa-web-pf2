@@ -54,16 +54,22 @@ export class QuoteSummaryPageComponent implements OnInit {
   private readonly ownerId = signal<string | null>(null);
   private readonly resumeError = inject(ActivatedRoute).snapshot.queryParamMap.get('error');
   readonly resumeErrorKey =
-    this.resumeError === 'consent'
-      ? 'profiling.errors.consent'
-      : this.resumeError === 'resume'
-        ? 'quoteSummary.resumeError'
-        : null;
+    this.resumeError === 'expired'
+      ? 'profiling.errors.expired'
+      : this.resumeError === 'consent'
+        ? 'profiling.errors.consent'
+        : this.resumeError === 'resume'
+          ? 'quoteSummary.resumeError'
+          : null;
   readonly profileAvailability = signal<Record<string, boolean>>({});
   readonly loading = signal(true);
   readonly error = signal(false);
   private readonly cardsState = signal<QuoteCard[]>([]);
-  readonly cards = computed(() => (this.ownerId() === this.user()?.id ? this.cardsState() : []));
+  readonly cards = computed(() =>
+    this.ownerId() === this.user()?.id
+      ? this.cardsState().filter((card) => !['completada', 'vencida'].includes(card.state.status))
+      : [],
+  );
   readonly rejectionBusy = signal(false);
   readonly rejectionError = signal<string | null>(null);
   readonly pendingRejection = signal<RejectionAttempt | null>(null);
@@ -129,7 +135,10 @@ export class QuoteSummaryPageComponent implements OnInit {
     this.loadRequest = this.history
       .loadClientHistory(owner)
       .pipe(
-        switchMap((entries) => {
+        switchMap((history) => {
+          const entries = history.filter(
+            (entry) => !['completada', 'vencida'].includes(entry.status),
+          );
           return (
             entries.length
               ? forkJoin(entries.map((entry) => this.gateway.loadRequest(entry.requestId)))
