@@ -778,6 +778,9 @@ credenciales.
 
 ### Publicar esta versión en GitHub Pages
 
+El icono de pestaña usa `public/favicon.svg`, con el mismo escudo de `BrandComponent`.
+Su enlace relativo respeta la subruta Pages y localhost.
+
 El workflow separado `.github/workflows/pages.yml` publica únicamente después del CI
 exitoso de un `push` a `master`, tras integrar la release siguiendo sus protecciones.
 No publica desde ramas feature, develop ni PRs. Reutiliza el sitio compilado por CI,
