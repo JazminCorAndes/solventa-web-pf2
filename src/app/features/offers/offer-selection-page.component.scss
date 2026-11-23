@@ -272,6 +272,12 @@ h1 {
   background: var(--solventa-color-error-surface);
 }
 
+.continue-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--solventa-space-6);
+}
+
 .state-panel {
   display: grid;
   min-height: 320px;
@@ -309,7 +315,7 @@ h1 {
     flex-direction: column;
   }
 
-  .continue-bar button {
+  .continue-bar a {
     width: 100%;
   }
 }

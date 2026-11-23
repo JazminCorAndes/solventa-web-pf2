@@ -224,6 +224,10 @@ describe('OfferSelectionPageComponent', () => {
     });
 
     expect(service.canContinue()).toBe(true);
+    const root = fixture.nativeElement as HTMLElement;
+    const continuation = root.querySelector<HTMLAnchorElement>('.continue-bar a')!;
+    expect(root.querySelector('.offers-grid .continue-bar')).toBeNull();
+    expect(continuation.getAttribute('href')).toBe('/app/cotizaciones/aceptacion');
     expect(button.disabled).toBe(true);
     expect(navigate).toHaveBeenCalledWith(['/app/cotizaciones/aceptacion']);
   });

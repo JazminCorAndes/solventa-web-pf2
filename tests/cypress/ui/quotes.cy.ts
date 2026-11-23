@@ -34,6 +34,36 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     });
   }
 
+  it('separa la revisión de toda la grilla, la alinea a la derecha y adapta su ancho en móvil', () => {
+    cy.viewport(1280, 900);
+    openQuote(products[0]);
+    fillProduct(products[0]);
+    cy.get('button[type=submit]').click();
+    cy.contains('button', 'Seleccionar oferta').click();
+    cy.location('pathname').should('eq', '/app/cotizaciones/aceptacion');
+    cy.get('a[href="/app/cotizaciones/ofertas"]').click();
+    cy.get('.offers-grid .continue-bar').should('not.exist');
+    cy.get('.continue-bar a')
+      .should('contain.text', 'Revisar selección')
+      .and('have.attr', 'href', '/app/cotizaciones/aceptacion');
+    cy.get('.offers-page').should(($page) => {
+      const grid = $page[0].querySelector('.offers-grid')!.getBoundingClientRect();
+      const button = $page[0].querySelector('.continue-bar a')!.getBoundingClientRect();
+      expect(button.top - grid.bottom, 'separación superior en escritorio').to.be.at.least(24);
+      expect(Math.abs(button.right - grid.right), 'alineación derecha').to.be.at.most(1);
+    });
+    cy.viewport(390, 844);
+    cy.get('.offers-page').should(($page) => {
+      const grid = $page[0].querySelector('.offers-grid')!.getBoundingClientRect();
+      const button = $page[0].querySelector('.continue-bar a')!.getBoundingClientRect();
+      expect(button.top - grid.bottom, 'separación superior en móvil').to.be.at.least(24);
+      expect(Math.abs(button.width - grid.width), 'ancho disponible').to.be.at.most(1);
+      expect(button.right, 'sin desbordamiento horizontal').to.be.at.most(390);
+    });
+    cy.get('.continue-bar a').click();
+    cy.location('pathname').should('eq', '/app/cotizaciones/aceptacion');
+  });
+
   it('no cotiza sin consentimiento y bloquea nuevamente al revocarlo', () => {
     cy.visit('/app/cotizaciones/solicitar?producto=automotive');
     cy.wait('@quoteDestinations');
