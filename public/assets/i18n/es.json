@@ -801,7 +801,6 @@
   "policyDocument": {
     "title": "Documento y aceptación de póliza",
     "simulation": "SIMULACIÓN · SIN VALIDEZ LEGAL",
-    "disclaimer": "Documento académico. No es una póliza legal ni una firma electrónica real.",
     "backendRequired": "La consulta, descarga y aceptación requieren el backend. Este modo no fabrica documentos ni firmas.",
     "loading": "Consultando el documento vigente",
     "refresh": "Consultar documento actualizado",
@@ -1099,29 +1098,8 @@
   },
   "claimEvidence": {
     "addAfterReport": "Agregar fotos, video o recibo",
+    "fileHelp": "Puedes incluir fotos o video del daño y una imagen o PDF del recibo.",
     "capture": {
-      "photo": "Tomar foto",
-      "video": "Capturar video",
-      "help": "La cámara es opcional y depende de tu navegador. No usamos el micrófono. También puedes elegir un archivo.",
-      "subject": "Puedes incluir fotos o video del daño y una imagen o PDF del recibo.",
-      "unsupported": "Este navegador no permite abrir la cámara aquí. Elige un archivo JPG, PNG, PDF o MP4 válido.",
-      "noMp4": "Este navegador no puede grabar MP4 compatible. Elige un archivo MP4 válido. No cambies la extensión de WebM, HEIC o QuickTime.",
-      "denied": "No diste permiso de cámara. Puedes habilitarlo en el navegador o elegir un archivo.",
-      "unavailable": "No pudimos usar la cámara. Revisa si otra aplicación la ocupa o elige un archivo.",
-      "requesting": "Esperando permiso de cámara. Puedes cancelar.",
-      "recording": "Grabando sin audio. La grabación se detiene al alcanzar la duración permitida.",
-      "size": "La grabación superó el tamaño permitido y se descartó. Graba un video más corto o elige otro MP4.",
-      "cancelled": "Captura descartada. No se envió ningún archivo.",
-      "preview": "Vista previa de la cámara",
-      "photoPreview": "Foto capturada, aún sin adjuntar",
-      "videoPreview": "Video capturado, aún sin adjuntar",
-      "notUploaded": "Revisa la captura. Usarla la añade a la selección; todavía debes adjuntarla.",
-      "shutter": "Capturar foto",
-      "start": "Iniciar grabación",
-      "stop": "Detener grabación",
-      "keep": "Usar captura",
-      "discard": "Descartar captura",
-      "close": "Cerrar cámara",
       "date": "Captura según el dispositivo"
     },
     "location": {

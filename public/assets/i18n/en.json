@@ -801,7 +801,6 @@
   "policyDocument": {
     "title": "Policy document and acceptance",
     "simulation": "SIMULATION · NOT LEGALLY VALID",
-    "disclaimer": "Academic document. This is not a legal policy or a real electronic signature.",
     "backendRequired": "Viewing, downloading and accepting require the backend. This mode does not fabricate documents or signatures.",
     "loading": "Loading the current document",
     "refresh": "Check the current document",
@@ -1099,29 +1098,8 @@
   },
   "claimEvidence": {
     "addAfterReport": "Add photos, video or receipt",
+    "fileHelp": "You can include photos or video of the damage and an image or PDF of the receipt.",
     "capture": {
-      "photo": "Take photo",
-      "video": "Capture video",
-      "help": "The camera is optional and depends on your browser. We do not use the microphone. You can also choose a file.",
-      "subject": "You can include photos or video of the damage and an image or PDF of the receipt.",
-      "unsupported": "This browser cannot open the camera here. Choose a valid JPG, PNG, PDF or MP4 file.",
-      "noMp4": "This browser cannot record compatible MP4. Choose a valid MP4 file. Do not rename WebM, HEIC or QuickTime extensions.",
-      "denied": "Camera permission was denied. You can enable it in your browser or choose a file.",
-      "unavailable": "We could not use the camera. Check whether another app is using it or choose a file.",
-      "requesting": "Waiting for camera permission. You can cancel.",
-      "recording": "Recording without audio. Recording stops at the allowed duration.",
-      "size": "The recording exceeded the allowed size and was discarded. Record a shorter video or choose another MP4.",
-      "cancelled": "Capture discarded. No file was uploaded.",
-      "preview": "Live camera preview",
-      "photoPreview": "Captured photo, not yet attached",
-      "videoPreview": "Captured video, not yet attached",
-      "notUploaded": "Review your capture. Using it adds it to your selection; you still need to attach it.",
-      "shutter": "Capture photo",
-      "start": "Start recording",
-      "stop": "Stop recording",
-      "keep": "Use capture",
-      "discard": "Discard capture",
-      "close": "Close camera",
       "date": "Device capture time"
     },
     "location": {

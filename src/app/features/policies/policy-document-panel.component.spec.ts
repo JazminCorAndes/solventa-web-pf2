@@ -84,6 +84,8 @@ describe('PolicyDocumentPanelComponent', () => {
       },
     });
     expect(root.textContent).toContain(es.policyDocument.simulation);
+    expect(root.textContent).not.toContain('Documento académico. No es una póliza legal');
+    expect(root.textContent).toContain(es.policyDocument.consent);
     expect(root.textContent).toContain('139.900');
     expect(root.textContent).toContain('noviembre');
     expect(root.textContent).toContain('Asistencia académica');
