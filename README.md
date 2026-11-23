@@ -1,6 +1,6 @@
 # Solventa Web
 
-Aplicación web de Solventa para Proyecto Final II de la Universidad de los Andes.
+Aplicación web de Solventa para el Proyecto Final II de la Universidad de los Andes.
 
 Este repositorio contiene la base técnica de la aplicación web. El alcance funcional se
 gestiona en Jira y las decisiones visuales deben seguir la versión más reciente de Figma.
