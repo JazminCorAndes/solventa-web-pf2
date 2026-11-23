@@ -1,8 +1,14 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { map, Observable, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import {
+  OfferSelectionState,
+  ProvisionalOfferSelection,
+  ProvisionalSelectionRequest,
+} from '../../core/offers/offer.models';
 import { DocumentType, QuoteProductData } from '../../core/quotes/quote-request.models';
+import { toProvisionalSelection, toSelectionState } from '../offers/http-offer.gateway';
 
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -83,6 +89,37 @@ export interface PartnerOfferTraceability {
   }>;
 }
 
+export interface PartnerOfferOption {
+  ofertaId: string;
+  version: number;
+  nombre: string;
+  descripcion: string;
+  prima: { monto: string; moneda: string };
+  periodicidad: PartnerRecommendedOffer['periodicidad'];
+  recomendada: boolean;
+  coberturaPrincipal: string;
+  deducible: string;
+  vigencia: string;
+  coberturas: string[];
+  condiciones: string[];
+  beneficiosAdicionales: string[];
+  factores: { codigo: string; descripcion: string; valor: string }[];
+}
+
+export interface PartnerOfferSnapshot {
+  ofertaId: string;
+  operationId: string;
+  socioId: string;
+  clienteId: string;
+  productoId: string;
+  solicitudId: string;
+  cotizacionId: string;
+  estado: 'vigente' | 'vencida';
+  calculadaEn: string;
+  vigenteHasta: string;
+  ofertas: PartnerOfferOption[];
+}
+
 export class InvalidPartnerQuoteResponse extends Error {
   constructor() {
     super('Invalid partner quote response.');
@@ -131,6 +168,244 @@ export class HttpPartnerQuoteGateway {
       })
       .pipe(map((body) => parseResult(body, operationId, socioId)));
   }
+
+  loadOfferSnapshot(operation: PartnerQuoteResult): Observable<PartnerOfferSnapshot> {
+    return this.http
+      .get<unknown>(`${this.url}/${encodeURIComponent(operation.operationId)}/oferta`, {
+        params: { socioId: operation.socioId },
+        headers: { 'API-Version': '1' },
+      })
+      .pipe(map((body) => parseSnapshot(body, operation)));
+  }
+
+  createOfferSnapshot(operation: PartnerQuoteResult): Observable<PartnerOfferSnapshot> {
+    return this.http
+      .post<unknown>(
+        `${this.url}/${encodeURIComponent(operation.operationId)}/oferta`,
+        {},
+        {
+          params: { socioId: operation.socioId },
+          headers: { 'API-Version': '1', 'Idempotency-Key': operation.operationId },
+        },
+      )
+      .pipe(map((body) => parseSnapshot(body, operation)));
+  }
+
+  loadOfferSelection(operation: PartnerQuoteResult): Observable<OfferSelectionState> {
+    return this.http
+      .get<unknown>(
+        `${this.url}/${encodeURIComponent(operation.operationId)}/seleccion-provisional`,
+        { params: { socioId: operation.socioId }, headers: { 'API-Version': '1' } },
+      )
+      .pipe(map((body) => toSelectionState(body, operation.solicitudId)));
+  }
+
+  saveOfferSelection(
+    operation: PartnerQuoteResult,
+    request: ProvisionalSelectionRequest,
+  ): Observable<ProvisionalOfferSelection> {
+    if (
+      request.quoteId !== operation.solicitudId ||
+      !UUID_PATTERN.test(request.offerId) ||
+      !UUID_PATTERN.test(request.idempotencyKey) ||
+      !Number.isSafeInteger(request.offerVersion) ||
+      request.offerVersion < 1 ||
+      !Number.isSafeInteger(request.expectedRevision) ||
+      request.expectedRevision < 0
+    ) {
+      return throwError(() => new InvalidPartnerQuoteResponse());
+    }
+    return this.http
+      .put<unknown>(
+        `${this.url}/${encodeURIComponent(operation.operationId)}/seleccion-provisional`,
+        {
+          ofertaId: request.offerId,
+          version: request.offerVersion,
+          revisionEsperada: request.expectedRevision,
+        },
+        {
+          params: { socioId: operation.socioId },
+          headers: { 'API-Version': '1', 'Idempotency-Key': request.idempotencyKey },
+        },
+      )
+      .pipe(
+        map((body) => {
+          const selection = toProvisionalSelection(body);
+          if (
+            request.quoteId !== operation.solicitudId ||
+            selection.quoteId !== operation.solicitudId ||
+            selection.offerId !== request.offerId ||
+            selection.offerVersion !== request.offerVersion ||
+            selection.revision !== request.expectedRevision + 1
+          ) {
+            throw new InvalidPartnerQuoteResponse();
+          }
+          return selection;
+        }),
+      );
+  }
+}
+
+function objectRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  return value as Record<string, unknown>;
+}
+
+function stringField(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  if (!isNonEmptyString(value)) throw new InvalidPartnerQuoteResponse();
+  return value;
+}
+
+function uuidField(record: Record<string, unknown>, key: string): string {
+  const value = stringField(record, key);
+  if (!UUID_PATTERN.test(value)) throw new InvalidPartnerQuoteResponse();
+  return value;
+}
+
+function instantField(record: Record<string, unknown>, key: string): string {
+  const value = stringField(record, key);
+  if (!Number.isFinite(Date.parse(value))) throw new InvalidPartnerQuoteResponse();
+  return value;
+}
+
+function integerField(record: Record<string, unknown>, key: string): number {
+  const value = record[key];
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  return value;
+}
+
+function stringsField(record: Record<string, unknown>, key: string): string[] {
+  const value = record[key];
+  if (!Array.isArray(value) || !value.every(isNonEmptyString)) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  return [...value];
+}
+
+function parseSnapshot(value: unknown, operation: PartnerQuoteResult): PartnerOfferSnapshot {
+  const body = objectRecord(value);
+  const estado = body['estado'];
+  if (
+    body['operationId'] !== operation.operationId ||
+    body['socioId'] !== operation.socioId ||
+    body['clienteId'] !== operation.clienteId ||
+    body['productoId'] !== operation.productoId ||
+    body['solicitudId'] !== operation.solicitudId ||
+    body['cotizacionId'] !== operation.cotizacionId ||
+    (estado !== 'vigente' && estado !== 'vencida') ||
+    !isHash(body['hashContenido']) ||
+    !Array.isArray(body['ofertas'])
+  ) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  const decision = objectRecord(body['decision']);
+  if (!isHash(decision['hashDecision'])) throw new InvalidPartnerQuoteResponse();
+  stringField(decision, 'modelo');
+  uuidField(decision, 'reglaId');
+  stringField(decision, 'reglaVersion');
+  const risk = objectRecord(body['riesgo']);
+  uuidField(risk, 'perfilId');
+  integerField(risk, 'version');
+  stringField(risk, 'modeloVersion');
+  stringField(risk, 'score');
+  uuidField(risk, 'consentimientoId');
+  integerField(risk, 'consentimientoVersion');
+  instantField(risk, 'calculadoEn');
+  instantField(risk, 'vigenteHasta');
+  if (
+    !['A', 'B', 'C'].some((level) => level === risk['nivel']) ||
+    typeof risk['fallbackUsed'] !== 'boolean' ||
+    !Array.isArray(body['fuentes'])
+  ) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  for (const value of body['fuentes']) {
+    const source = objectRecord(value);
+    if (
+      !['open_finance', 'open_data'].some((name) => name === source['nombre']) ||
+      typeof source['simulada'] !== 'boolean'
+    ) {
+      throw new InvalidPartnerQuoteResponse();
+    }
+    stringField(source, 'version');
+    stringField(source, 'indicadorRiesgo');
+    instantField(source, 'consultadaEn');
+    instantField(source, 'vigenteHasta');
+  }
+  const variables = objectRecord(body['variables']);
+  for (const key of ['baseAsegurada', 'tasa', 'factorPerfil', 'score']) {
+    stringField(variables, key);
+  }
+  integerField(variables, 'duracion');
+  if (variables['moneda'] !== 'COP' || !isPeriodicity(variables['periodicidad'])) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  const ofertas = body['ofertas'].map(parseSnapshotOffer);
+  if (new Set(ofertas.map((offer) => offer.ofertaId)).size !== ofertas.length) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  return {
+    ofertaId: uuidField(body, 'ofertaId'),
+    operationId: operation.operationId,
+    socioId: operation.socioId,
+    clienteId: operation.clienteId,
+    productoId: operation.productoId,
+    solicitudId: operation.solicitudId,
+    cotizacionId: operation.cotizacionId,
+    estado,
+    calculadaEn: instantField(body, 'calculadaEn'),
+    vigenteHasta: instantField(body, 'vigenteHasta'),
+    ofertas,
+  };
+}
+
+function parseSnapshotOffer(value: unknown): PartnerOfferOption {
+  const offer = objectRecord(value);
+  const premium = objectRecord(offer['prima']);
+  const monto = stringField(premium, 'monto');
+  const periodicidad = offer['periodicidad'];
+  const recomendada = offer['recomendada'];
+  if (
+    !/^\d+\.\d{2}$/.test(monto) ||
+    premium['moneda'] !== 'COP' ||
+    !isPeriodicity(periodicidad) ||
+    typeof recomendada !== 'boolean' ||
+    !Array.isArray(offer['factores'])
+  ) {
+    throw new InvalidPartnerQuoteResponse();
+  }
+  return {
+    ofertaId: uuidField(offer, 'ofertaId'),
+    version: integerField(offer, 'version'),
+    nombre: stringField(offer, 'nombre'),
+    descripcion: stringField(offer, 'descripcion'),
+    prima: { monto, moneda: 'COP' },
+    periodicidad,
+    recomendada,
+    coberturaPrincipal: stringField(offer, 'coberturaPrincipal'),
+    deducible: stringField(offer, 'deducible'),
+    vigencia: stringField(offer, 'vigencia'),
+    coberturas: stringsField(offer, 'coberturas'),
+    condiciones: stringsField(offer, 'condiciones'),
+    beneficiosAdicionales: stringsField(offer, 'beneficiosAdicionales'),
+    factores: offer['factores'].map((value) => {
+      const factor = objectRecord(value);
+      return {
+        codigo: stringField(factor, 'codigo'),
+        descripcion: stringField(factor, 'descripcion'),
+        valor: stringField(factor, 'valor'),
+      };
+    }),
+  };
+}
+
+function isPeriodicity(value: unknown): value is PartnerRecommendedOffer['periodicidad'] {
+  return ['mensual', 'por_viaje', 'por_vuelo', 'por_periodo'].some((item) => item === value);
 }
 
 function parseClientLookup(body: unknown): PartnerClientLookup {

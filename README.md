@@ -850,6 +850,23 @@ Documento y cuerpo de la operación no se persisten en el navegador.
 Preparar otra operación es una acción explícita, diferente de reintentar, y advierte
 que puede generar otra cotización.
 
+La recomendación original se conserva como detalle, no como selección automática.
+El socio consulta los planes mediante `GET .../{operationId}/oferta?socioId=...`;
+solo un `404 oferta_no_encontrada` permite la acción explícita `POST` con cuerpo `{}`.
+El snapshot conserva cada UUID de **plan**, distinto del UUID del snapshot, precio,
+condiciones y vigencia originales. No se usa la recomendación como respuesta de respaldo.
+Antes de habilitar la elección se consulta
+`GET .../{operationId}/seleccion-provisional?socioId=...`.
+La elección explícita usa `PUT` en esa misma ruta, `API-Version: 1`, una clave UUID
+por intento y `{ ofertaId, version, revisionEsperada }`. El recibo debe avanzar exactamente
+una revisión; se lee después el estado persistido antes de mostrar la elección.
+La recarga recupera la misma operación, opciones y selección sin crear otra cotización.
+Los conflictos requieren consultar el estado actual; un resultado incierto conserva
+cuerpo y clave para reintentar o recuperar sin otro intento. Consentimiento, organización,
+sesión, vigencia y aceptación final limitan las acciones. La selección es provisional:
+no acepta contratos, inicia pagos ni envía comunicaciones al cliente.
+Estas rutas de selección requieren el backend compatible antes de publicar la interfaz.
+
 Desplegar primero el backend compatible con SOL194/SOL195/SOL203, incluidos los
 encabezados CORS `API-Version` y `Retry-After` (expuesto para lectura), antes de publicar
 este frontend. La publicación sigue el workflow Pages descrito arriba: PRs/develop

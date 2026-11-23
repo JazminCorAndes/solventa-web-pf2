@@ -217,7 +217,11 @@ function toOffer(response: OfferResponse): InsuranceOffer {
   };
 }
 
-function toSelection(response: SelectionResponse): SelectedOfferRecord {
+function toSelection(value: unknown): SelectedOfferRecord {
+  if (!value || typeof value !== 'object') {
+    throw new Error('The selection response is invalid.');
+  }
+  const response = value as Partial<SelectionResponse>;
   if (
     !response ||
     typeof response !== 'object' ||
@@ -225,6 +229,7 @@ function toSelection(response: SelectionResponse): SelectedOfferRecord {
     !response.solicitudId ||
     typeof response.ofertaId !== 'string' ||
     !response.ofertaId ||
+    typeof response.version !== 'number' ||
     !Number.isSafeInteger(response.version) ||
     response.version < 1 ||
     typeof response.nombreOferta !== 'string' ||
@@ -245,9 +250,14 @@ function toSelection(response: SelectionResponse): SelectedOfferRecord {
   };
 }
 
-function toProvisionalSelection(response: ProvisionalSelectionResponse): ProvisionalOfferSelection {
+export function toProvisionalSelection(value: unknown): ProvisionalOfferSelection {
+  if (!value || typeof value !== 'object') {
+    throw new Error('The provisional selection revision or validity is invalid.');
+  }
+  const response = value as Partial<ProvisionalSelectionResponse>;
   const selection = toSelection(response);
   if (
+    typeof response.revision !== 'number' ||
     !Number.isSafeInteger(response.revision) ||
     response.revision < 1 ||
     typeof response.vigenteHasta !== 'string' ||
@@ -264,8 +274,12 @@ function toProvisionalSelection(response: ProvisionalSelectionResponse): Provisi
   };
 }
 
-function toSelectionState(response: SelectionStateResponse, quoteId: string): OfferSelectionState {
-  if (!response || typeof response !== 'object' || response.solicitudId !== quoteId) {
+export function toSelectionState(value: unknown, quoteId: string): OfferSelectionState {
+  if (!value || typeof value !== 'object') {
+    throw new Error('The selection state does not match the requested quote.');
+  }
+  const response = value as Partial<SelectionStateResponse>;
+  if (response.solicitudId !== quoteId) {
     throw new Error('The selection state does not match the requested quote.');
   }
   const selection = response.seleccion === null ? null : toProvisionalSelection(response.seleccion);
@@ -299,7 +313,7 @@ function selectionError(error: unknown): unknown {
   return offerUnavailableError(error) ?? error;
 }
 
-function toPremium(response: PremiumResponse): {
+function toPremium(response: Partial<PremiumResponse>): {
   premium: Money;
   periodicity: PremiumPeriodicity;
 } {
@@ -324,15 +338,17 @@ function toMoney(response: MoneyResponse | null | undefined): Money {
   return { amount, currency: response.moneda };
 }
 
-function toStatus(status: OfferResponse['estado']): OfferStatus {
-  const statuses: Record<OfferResponse['estado'], OfferStatus> = {
-    disponible: 'available',
-    aceptada: 'accepted',
-    vencida: 'expired',
-    retirada: 'withdrawn',
-  };
-  if (!Object.hasOwn(statuses, status)) {
-    throw new Error('The offer contains an invalid status.');
+function toStatus(status: unknown): OfferStatus {
+  switch (status) {
+    case 'disponible':
+      return 'available';
+    case 'aceptada':
+      return 'accepted';
+    case 'vencida':
+      return 'expired';
+    case 'retirada':
+      return 'withdrawn';
+    default:
+      throw new Error('The offer contains an invalid status.');
   }
-  return statuses[status];
 }

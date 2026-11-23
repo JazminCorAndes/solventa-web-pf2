@@ -7,6 +7,11 @@ import { TranslocoTestingModule } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
 import { environment } from '../../../environments/environment';
+import {
+  partnerEmptySelectionResponse,
+  partnerSelectionResponse,
+  partnerSnapshotResponse,
+} from '../../../testing/partners/partner-offers.testing';
 import { authInterceptor } from '../../core/auth/auth.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
 import { OFFER_SELECTION_STORAGE } from '../../core/offers/offer-selection-storage.service';
@@ -44,7 +49,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
   let router: Router;
   let navigate: ReturnType<typeof vi.spyOn>;
   let query: Record<string, string>;
-  const context = signal({
+  const defaultContext = {
     apiVersion: '1',
     usuario: {
       id: 'partner-user',
@@ -58,9 +63,11 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
       { socioId: 'BANCO-002', productos: ['life'] },
     ],
     alcances: ['perfilamientos:crear'],
-  });
+  };
+  const context = signal(defaultContext);
 
   beforeEach(async () => {
+    context.set(defaultContext);
     query = { socio: 'BANCO-001' };
     await TestBed.configureTestingModule({
       imports: [
@@ -216,6 +223,31 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     return http.expectOne(endpoint);
   }
 
+  function offersUrl(operation: PartnerQuoteResult, resource = 'oferta'): string {
+    return `${endpoint}/${operation.operationId}/${resource}?socioId=${operation.socioId}`;
+  }
+
+  function flushOffers(operation: PartnerQuoteResult) {
+    const snapshot = partnerSnapshotResponse(operation);
+    const request = http.expectOne(offersUrl(operation));
+    expect(request.request.method).toBe('GET');
+    request.flush(snapshot);
+    http
+      .expectOne(offersUrl(operation, 'seleccion-provisional'))
+      .flush(partnerEmptySelectionResponse(operation));
+    fixture.detectChanges();
+    return snapshot;
+  }
+
+  async function readyOffers() {
+    fillCustomer();
+    const request = await submit();
+    const operation = result(request.request.body);
+    request.flush(operation);
+    const snapshot = flushOffers(operation);
+    return { operation, snapshot, offer: snapshot.ofertas[1] };
+  }
+
   function expectConfirmedReferences(response: PartnerQuoteResult): void {
     expect(
       fixture.nativeElement.querySelector('[data-testid="partner-profile-reference"]')?.textContent,
@@ -266,6 +298,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     ).toBeNull();
     const response = result(request.request.body);
     request.flush(response);
+    flushOffers(response);
     fixture.detectChanges();
     expectConfirmedReferences(response);
     const text = fixture.nativeElement.textContent;
@@ -332,6 +365,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
         'Se aplicó una degradación trazable por fuente_no_disponible; la oferta conserva esta condición para su revisión.',
     });
     request.flush(response);
+    flushOffers(response);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Disponibilidad de datos');
@@ -346,10 +380,12 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     const response = result(original);
     response.oferta.vigenteHasta = '2020-01-01T00:00:00Z';
     request.flush(response);
+    flushOffers(response);
     fixture.destroy();
     query = { socio: original.socioId, operacion: original.operationId };
     createPage();
     http.expectOne(`${endpoint}/${original.operationId}?socioId=BANCO-001`).flush(response);
+    flushOffers(response);
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
@@ -374,6 +410,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     const response = result(request.request.body);
     response.oferta.vigenteHasta = '2026-11-01T07:00:02-05:00';
     request.flush(response);
+    flushOffers(response);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.completed);
     vi.advanceTimersByTime(1999);
@@ -393,6 +430,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     const response = result(request.request.body);
     response.oferta.vigenteHasta = '2020-01-01T00:00:00Z';
     request.flush(response);
+    flushOffers(response);
     panel.newOperation();
     await Promise.resolve();
     fixture.detectChanges();
@@ -415,6 +453,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     const response = result(request.request.body);
     response.oferta.vigenteHasta = new Date(Date.now() + 31 * 86_400_000).toISOString();
     request.flush(response);
+    flushOffers(response);
     vi.advanceTimersByTime(2_147_483_647);
     expect(panel.offerExpired()).toBe(false);
     const expiryChange = vi.spyOn(panel.offerExpired, 'set');
@@ -431,6 +470,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
       const request = await submit();
       const response = result(request.request.body);
       request.flush(response);
+      flushOffers(response);
       panel.recover();
       http
         .expectOne(`${endpoint}/${response.operationId}?socioId=BANCO-001`)
@@ -540,6 +580,7 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     expect(retry.request.headers.get('Idempotency-Key')).toBe(original.operationId);
     const response = result(original);
     retry.flush(response);
+    flushOffers(response);
     fixture.detectChanges();
     expectConfirmedReferences(response);
     expect(panel.result()?.solicitudId).toBe('AQT-2026-123456');
@@ -563,7 +604,9 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     panel.retry();
     const retry = http.expectOne(endpoint);
     expect(retry.request.body.operationId).toBe(id);
-    retry.flush(result(retry.request.body));
+    const response = result(retry.request.body);
+    retry.flush(response);
+    flushOffers(response);
   });
 
   it('recarga solo con GET y conserva operacion al reintroducir datos tras fallo reintentable', async () => {
@@ -583,14 +626,18 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     fillCustomer();
     const retry = await submit();
     expect(retry.request.body).toEqual(original);
-    retry.flush(result(original));
+    const response = result(original);
+    retry.flush(response);
+    flushOffers(response);
   });
 
   it('recupera resultado persistido sin crear otra solicitud ni exponer datos ajenos', async () => {
     fillCustomer();
     const request = await submit();
     const original: PartnerQuoteRequest = request.request.body;
-    request.flush(result(original));
+    const initial = result(original);
+    request.flush(initial);
+    flushOffers(initial);
     fixture.destroy();
     query = { socio: original.socioId, operacion: original.operationId };
     createPage();
@@ -604,11 +651,236 @@ describe('Cotizacion socio integrada con formulario y HTTP autenticado', () => {
     panel.recover();
     const response = result(original);
     http.expectOne(`${endpoint}/${original.operationId}?socioId=BANCO-001`).flush(response);
+    flushOffers(response);
     fixture.detectChanges();
     expect(panel.result()?.operationId).toBe(original.operationId);
     expectConfirmedReferences(response);
     expect(panel.form.controls.numeroDocumento.value).toBe('');
     expect(page.form.controls.creditReference.value).toBe('');
     http.expectNone(endpoint);
+  });
+
+  it('muestra los tres planes y persiste el segundo solo tras PUT y GET confirmado, incluso al recargar', async () => {
+    const { operation, offer } = await readyOffers();
+    const cards = fixture.nativeElement.querySelectorAll('[data-offer-id]');
+    expect(cards).toHaveLength(3);
+    expect(cards[0].textContent).toContain(es.offers.recommendedBadge);
+    expect(fixture.nativeElement.querySelector('.plan-card.selected')).toBeNull();
+    const buttons = fixture.nativeElement.querySelectorAll('[data-testid=partner-select-offer]');
+    expect(buttons[1].disabled).toBe(false);
+    buttons[1].click();
+    fixture.detectChanges();
+    const request = http.expectOne(offersUrl(operation, 'seleccion-provisional'));
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({
+      ofertaId: offer.ofertaId,
+      version: offer.version,
+      revisionEsperada: 0,
+    });
+    expect(request.request.headers.get('Authorization')).toBe('Bearer synthetic-test-token');
+    expect(request.request.headers.get('Idempotency-Key')).toMatch(
+      /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i,
+    );
+    const selection = partnerSelectionResponse(operation, offer);
+    request.flush(selection);
+    expect(panel.isOfferSelected(offer)).toBe(false);
+    http.expectOne(offersUrl(operation, 'seleccion-provisional')).flush({
+      solicitudId: operation.solicitudId,
+      seleccion: selection,
+      aceptacion: null,
+      estadoOferta: 'disponible',
+    });
+    fixture.detectChanges();
+    expect(panel.isOfferSelected(offer)).toBe(true);
+    expect(fixture.nativeElement.querySelector('.plan-card.selected').textContent).toContain(
+      offer.nombre,
+    );
+    expect(
+      fixture.nativeElement.querySelector('[data-testid=partner-saved-selection]').textContent,
+    ).toContain(offer.nombre);
+    expect(panel.pendingOfferSelection()).toBeNull();
+    http.expectNone((request) =>
+      /\/v1\/solicitudes-cotizacion|pagos|suscripciones/.test(request.url),
+    );
+    expect(navigate).not.toHaveBeenCalledWith(['/app/cotizaciones/seleccion']);
+
+    fixture.destroy();
+    query = { socio: operation.socioId, operacion: operation.operationId };
+    createPage();
+    http.expectOne(`${endpoint}/${operation.operationId}?socioId=BANCO-001`).flush(operation);
+    http.expectOne(offersUrl(operation)).flush(partnerSnapshotResponse(operation));
+    http.expectOne(offersUrl(operation, 'seleccion-provisional')).flush({
+      solicitudId: operation.solicitudId,
+      seleccion: selection,
+      aceptacion: null,
+      estadoOferta: 'disponible',
+    });
+    fixture.detectChanges();
+    expect(panel.isOfferSelected(offer)).toBe(true);
+    expect(
+      fixture.nativeElement.querySelector('[data-testid=partner-saved-selection]').textContent,
+    ).toContain(offer.nombre);
+    http.expectNone((request) => request.method !== 'GET');
+  });
+
+  it('GET ausente permite POST de ofertas explicito y nunca elige automaticamente', async () => {
+    fillCustomer();
+    const request = await submit();
+    const operation = result(request.request.body);
+    request.flush(operation);
+    http
+      .expectOne(offersUrl(operation))
+      .flush({ code: 'oferta_no_encontrada' }, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    http.expectNone((request) => request.method === 'POST');
+    expect(panel.offerSelection()).toBeNull();
+    fixture.nativeElement.querySelector('[data-testid=partner-prepare-offers]').click();
+    const prepare = http.expectOne(offersUrl(operation));
+    expect(prepare.request.method).toBe('POST');
+    expect(prepare.request.body).toEqual({});
+    prepare.flush(partnerSnapshotResponse(operation));
+    http
+      .expectOne(offersUrl(operation, 'seleccion-provisional'))
+      .flush(partnerEmptySelectionResponse(operation));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('[data-offer-id]')).toHaveLength(3);
+    expect(panel.offerSelection()?.selection).toBeNull();
+    http.expectNone((request) => request.method === 'PUT');
+  });
+
+  it('fallo ambiguo conserva cuerpo y clave, bloquea otra operacion y reintenta la misma eleccion', async () => {
+    const { operation, snapshot, offer } = await readyOffers();
+    panel.selectOffer(offer);
+    const request = http.expectOne(offersUrl(operation, 'seleccion-provisional'));
+    const body = request.request.body;
+    const key = request.request.headers.get('Idempotency-Key');
+    request.error(new ProgressEvent('network'));
+    expect(panel.pendingOfferSelection()).not.toBeNull();
+    expect(panel.offerErrorKey()).toBe('partnerQuote.offerErrors.uncertain');
+    panel.selectOffer(snapshot.ofertas[2]);
+    panel.newOperation();
+    panel.recover();
+    http.expectNone((request) => request.method !== 'GET');
+    expect(panel.result()?.operationId).toBe(operation.operationId);
+    panel.retryOfferSelection();
+    const retry = http.expectOne(offersUrl(operation, 'seleccion-provisional'));
+    expect(retry.request.body).toEqual(body);
+    expect(retry.request.headers.get('Idempotency-Key')).toBe(key);
+    retry.flush(partnerSelectionResponse(operation, offer));
+    http.expectOne(offersUrl(operation, 'seleccion-provisional')).flush({
+      solicitudId: operation.solicitudId,
+      seleccion: partnerSelectionResponse(operation, offer),
+      aceptacion: null,
+      estadoOferta: 'disponible',
+    });
+    expect(panel.isOfferSelected(offer)).toBe(true);
+    expect(panel.pendingOfferSelection()).toBeNull();
+  });
+
+  it('recupera eleccion tras respuesta perdida sin volver a enviar PUT', async () => {
+    const { operation, offer } = await readyOffers();
+    panel.selectOffer(offer);
+    http
+      .expectOne(offersUrl(operation, 'seleccion-provisional'))
+      .error(new ProgressEvent('network'));
+    panel.recoverOfferSelection();
+    const recovery = http.expectOne(offersUrl(operation, 'seleccion-provisional'));
+    expect(recovery.request.method).toBe('GET');
+    recovery.flush({
+      solicitudId: operation.solicitudId,
+      seleccion: partnerSelectionResponse(operation, offer),
+      aceptacion: null,
+      estadoOferta: 'disponible',
+    });
+    expect(panel.pendingOfferSelection()).toBeNull();
+    expect(panel.isOfferSelected(offer)).toBe(true);
+    expect(panel.offerErrorKey()).toBeNull();
+    http.expectNone((request) => request.method === 'PUT');
+  });
+
+  it('conflicto CAS exige leer seleccion antes de elegir con nueva revision', async () => {
+    const { operation, snapshot, offer } = await readyOffers();
+    panel.selectOffer(offer);
+    http
+      .expectOne(offersUrl(operation, 'seleccion-provisional'))
+      .flush({ code: 'seleccion_desactualizada' }, { status: 409, statusText: 'Conflict' });
+    expect(panel.pendingOfferSelection()).toBeNull();
+    expect(panel.isOfferSelectable(snapshot.ofertas[2])).toBe(false);
+    panel.recoverOfferSelection();
+    http.expectOne(offersUrl(operation, 'seleccion-provisional')).flush({
+      solicitudId: operation.solicitudId,
+      seleccion: partnerSelectionResponse(operation, snapshot.ofertas[0], 3),
+      aceptacion: null,
+      estadoOferta: 'disponible',
+    });
+    panel.selectOffer(offer);
+    const changed = http.expectOne(offersUrl(operation, 'seleccion-provisional'));
+    expect(changed.request.body.revisionEsperada).toBe(3);
+    changed.flush(partnerSelectionResponse(operation, offer, 4));
+    http.expectOne(offersUrl(operation, 'seleccion-provisional')).flush({
+      solicitudId: operation.solicitudId,
+      seleccion: partnerSelectionResponse(operation, offer, 4),
+      aceptacion: null,
+      estadoOferta: 'disponible',
+    });
+    expect(panel.offerSelection()?.selection?.revision).toBe(4);
+  });
+
+  it('vencimiento exacto bloquea seleccion sin sustituir precios historicos', async () => {
+    vi.useFakeTimers();
+    const { operation, offer } = await readyOffers();
+    const before = panel.offerSnapshot();
+    vi.advanceTimersByTime(Date.parse(operation.oferta.vigenteHasta) - Date.now());
+    fixture.detectChanges();
+    expect(panel.choicesExpired()).toBe(true);
+    expect(panel.isOfferSelectable(offer)).toBe(false);
+    panel.selectOffer(offer);
+    expect(panel.offerSnapshot()).toEqual(before);
+    http.expectNone((request) => request.method === 'PUT');
+  });
+
+  it('aceptacion final queda solo lectura, sin iniciar negocio por el socio', async () => {
+    const { operation, snapshot, offer } = await readyOffers();
+    panel.recoverOfferSelection();
+    const selection = partnerSelectionResponse(operation, offer);
+    http.expectOne(offersUrl(operation, 'seleccion-provisional')).flush({
+      solicitudId: operation.solicitudId,
+      seleccion: selection,
+      aceptacion: selection,
+      estadoOferta: 'aceptada',
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.acceptanceReadOnly);
+    expect(panel.isOfferSelectable(snapshot.ofertas[0])).toBe(false);
+    panel.selectOffer(snapshot.ofertas[0]);
+    http.expectNone((request) => request.method !== 'GET');
+  });
+
+  it('consentimiento revocado borra ofertas y seleccion sin datos parciales', async () => {
+    const { operation, offer } = await readyOffers();
+    panel.selectOffer(offer);
+    http
+      .expectOne(offersUrl(operation, 'seleccion-provisional'))
+      .flush({ code: 'consentimiento_invalido' }, { status: 403, statusText: 'Forbidden' });
+    fixture.detectChanges();
+    expect(panel.result()).toBeNull();
+    expect(panel.offerSnapshot()).toBeNull();
+    expect(panel.offerSelection()).toBeNull();
+    expect(panel.pendingOfferSelection()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(es.partnerQuote.errors.consent);
+    expect(fixture.nativeElement.querySelectorAll('[data-offer-id]')).toHaveLength(0);
+  });
+
+  it('cambio de sesion cancela lectura y descarta ofertas previas', async () => {
+    const { operation } = await readyOffers();
+    panel.recoverOfferSelection();
+    const read = http.expectOne(offersUrl(operation, 'seleccion-provisional'));
+    context.set({ ...defaultContext, usuario: { ...defaultContext.usuario, id: 'another-user' } });
+    fixture.detectChanges();
+    expect(read.cancelled).toBe(true);
+    expect(panel.result()).toBeNull();
+    expect(panel.offerSnapshot()).toBeNull();
+    expect(panel.offerSelection()).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('[data-offer-id]')).toHaveLength(0);
   });
 });
