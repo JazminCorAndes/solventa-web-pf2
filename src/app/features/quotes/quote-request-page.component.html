@@ -66,9 +66,7 @@
                 }
               </ul>
               @let details = productDetails();
-              @if (!backendProductDetails) {
-                <p role="status">{{ 'quoteRequest.productDetails.backendRequired' | transloco }}</p>
-              } @else if (details.status === 'idle') {
+              @if (details.status === 'idle') {
                 <button mat-button type="button" (click)="loadProductDetails()">
                   {{ 'quoteRequest.productDetails.view' | transloco }}
                 </button>
@@ -163,36 +161,47 @@
                 (lockedChange)="setPartnerLocked($event)"
                 (loadingChange)="submitting.set($event)"
               />
-            } @else if (user(); as currentUser) {
+            } @else {
               <section class="profile-summary" aria-labelledby="profile-summary-title">
                 <h3 id="profile-summary-title">{{ 'quoteRequest.profileData' | transloco }}</h3>
-                <dl>
-                  <div>
-                    <dt>{{ 'quoteRequest.documentType' | transloco }}</dt>
-                    <dd>
-                      @if (currentUser.documentType) {
-                        {{ documentTypeLabelKey() | transloco }}
-                        @if (currentUser.nationalId) {
-                          · {{ currentUser.nationalId }}
-                        }
-                      } @else {
-                        {{
-                          currentUser.nationalId ?? ('quoteRequest.profileUnavailable' | transloco)
-                        }}
-                      }
-                    </dd>
+                @if (profileStatus() === 'loading') {
+                  <p role="status">{{ 'quoteRequest.profileLoading' | transloco }}</p>
+                } @else if (profileStatus() === 'error') {
+                  <div class="inline-alert error" role="alert">
+                    {{ 'quoteRequest.errors.profileUnavailable' | transloco }}
+                    <button mat-button type="button" (click)="loadRegisteredProfile()">
+                      {{ 'common.retry' | transloco }}
+                    </button>
                   </div>
-                  <div>
-                    <dt>{{ 'quoteRequest.email' | transloco }}</dt>
-                    <dd>{{ currentUser.email }}</dd>
-                  </div>
-                  <div>
-                    <dt>{{ 'quoteRequest.phone' | transloco }}</dt>
-                    <dd>
-                      {{ currentUser.phone ?? ('quoteRequest.profileUnavailable' | transloco) }}
-                    </dd>
-                  </div>
-                </dl>
+                }
+                @if (registeredProfile(); as profile) {
+                  <p>{{ profile.fullName }}</p>
+                  <dl>
+                    <div>
+                      <dt>{{ 'quoteRequest.documentType' | transloco }}</dt>
+                      <dd>{{ documentTypeLabelKey() | transloco }} · {{ profile.nationalId }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ 'quoteRequest.email' | transloco }}</dt>
+                      <dd>{{ profile.email }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ 'quoteRequest.phone' | transloco }}</dt>
+                      <dd>
+                        {{ profile.phone ?? ('quoteRequest.profileUnavailable' | transloco) }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{{ 'quoteRequest.fields.birthDate' | transloco }}</dt>
+                      <dd>
+                        {{ profile.birthDate ?? ('quoteRequest.profileUnavailable' | transloco) }}
+                      </dd>
+                    </div>
+                  </dl>
+                  @if (!profileComplete()) {
+                    <p role="alert">{{ 'quoteRequest.errors.profileIncomplete' | transloco }}</p>
+                  }
+                }
               </section>
             }
 
@@ -280,23 +289,6 @@
                     <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
                   } @else if (showError('returnDate') || showTravelDateError()) {
                     <mat-error>{{ 'quoteRequest.validation.returnDate' | transloco }}</mat-error>
-                  }
-                </mat-form-field>
-              }
-              @case ('life') {
-                <label for="birth-date">{{ 'quoteRequest.fields.birthDate' | transloco }}</label>
-                <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                  <input
-                    matInput
-                    id="birth-date"
-                    formControlName="birthDate"
-                    [matDatepicker]="lifeBirthDatePicker"
-                    [max]="today"
-                  />
-                  <mat-datepicker-toggle matIconSuffix [for]="lifeBirthDatePicker" />
-                  <mat-datepicker #lifeBirthDatePicker startView="multi-year" />
-                  @if (showError('birthDate')) {
-                    <mat-error>{{ 'quoteRequest.validation.required' | transloco }}</mat-error>
                   }
                 </mat-form-field>
               }
@@ -575,28 +567,6 @@
                         }
                       </mat-form-field>
                     </div>
-                  } @else {
-                    <div>
-                      <label for="mortgage-birth-date">{{
-                        'quoteRequest.fields.birthDate' | transloco
-                      }}</label>
-                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                        <input
-                          matInput
-                          id="mortgage-birth-date"
-                          formControlName="birthDate"
-                          [matDatepicker]="mortgageBirthDatePicker"
-                          [max]="today"
-                        />
-                        <mat-datepicker-toggle matIconSuffix [for]="mortgageBirthDatePicker" />
-                        <mat-datepicker #mortgageBirthDatePicker startView="multi-year" />
-                        @if (showError('birthDate')) {
-                          <mat-error>{{
-                            'quoteRequest.validation.required' | transloco
-                          }}</mat-error>
-                        }
-                      </mat-form-field>
-                    </div>
                   }
                   <div>
                     <label for="mortgage-balance">{{
@@ -647,7 +617,7 @@
                 !!submittedRequest() ||
                 partnerLocked() ||
                 productUnavailable() ||
-                (!partnerMode && !profilingReady())
+                (!partnerMode && (!profilingReady() || !profileComplete()))
               "
             >
               @if (submitting()) {
@@ -672,6 +642,7 @@
 
     @if (!partnerMode) {
       <app-profiling-panel
+        [showDetails]="false"
         [requestId]="submittedRequest()?.id ?? null"
         (availabilityChange)="profilingReady.set($event)"
       />

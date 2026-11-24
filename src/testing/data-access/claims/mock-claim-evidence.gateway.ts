@@ -1,12 +1,12 @@
 import { inject, Injectable } from '@angular/core';
 import { defer, Observable, of } from 'rxjs';
-import { ClaimEvidenceGateway } from '../../core/claims/claim-evidence.gateway';
+import { ClaimEvidenceGateway } from '../../../app/core/claims/claim-evidence.gateway';
 import {
   ClaimEvidence,
   EvidencePolicy,
   EvidenceUpload,
   EvidenceUploadBody,
-} from '../../core/claims/claim-evidence.models';
+} from '../../../app/core/claims/claim-evidence.models';
 import { MockClaimsStore } from './mock-claims.store';
 
 interface StoredUpload {

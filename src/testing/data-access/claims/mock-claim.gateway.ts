@@ -1,13 +1,13 @@
 import { inject, Injectable } from '@angular/core';
 import { defer, Observable, of } from 'rxjs';
-import { ClaimGateway } from '../../core/claims/claim.gateway';
+import { ClaimGateway } from '../../../app/core/claims/claim.gateway';
 import {
   CLAIM_UUID,
   ClaimInput,
   ClaimPolicy,
   ClaimRecord,
   isClaimInput,
-} from '../../core/claims/claim.models';
+} from '../../../app/core/claims/claim.models';
 import { MockClaimsStore } from './mock-claims.store';
 
 @Injectable()

@@ -1,5 +1,6 @@
 import { login } from '../support/products';
 import { mockBackend, password, syntheticUser } from '../support/ui-backend';
+import { CLAIM_STATUS_RESPONSE } from '../../../src/app/core/claims/claim-status.testing';
 
 const policy = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -14,7 +15,9 @@ const storageKey = `solventa.claim-attempt.${syntheticUser.id}`;
 
 function openReport() {
   login(syntheticUser.correo, password);
-  cy.contains('a', 'Reportar siniestro').click();
+  cy.contains('a', 'Siniestros').click();
+  cy.wait('@claims');
+  cy.contains('a', 'Reportar siniestro').first().click();
   cy.location('pathname').should('eq', '/app/siniestros/reportar');
   cy.wait('@policies');
   cy.wait('@catalog');
@@ -43,6 +46,7 @@ function receipt(body: object) {
 describe('SOL-175: interfaz local con HTTP controlado, no acredita persistencia real', () => {
   beforeEach(() => {
     mockBackend();
+    cy.intercept('GET', '/api/v1/siniestros', { siniestros: [] }).as('claims');
     cy.intercept('GET', '/api/v1/siniestros/polizas', {
       body: { polizas: [policy] },
     }).as('policies');
@@ -59,6 +63,34 @@ describe('SOL-175: interfaz local con HTTP controlado, no acredita persistencia 
         ],
       },
     }).as('catalog');
+  });
+
+  it('abre la lista con estado actual y el detalle sin repetir el buscador', () => {
+    cy.intercept('GET', '/api/v1/siniestros', {
+      siniestros: [
+        receipt({
+          polizaId: policy.id,
+          fechaEvento: '2025-01-10T12:00:00Z',
+          tipoEvento: 'Colision',
+          descripcion: description,
+          lugar: 'Bogota',
+        }),
+      ],
+    }).as('claims');
+    cy.intercept('GET', `/api/v1/clientes/me/siniestros/${claimId}`, {
+      ...CLAIM_STATUS_RESPONSE,
+      id: claimId,
+      polizaId: policy.id,
+    }).as('currentState');
+    login(syntheticUser.correo, password);
+    cy.contains('a', 'Siniestros').click();
+    cy.wait(['@claims', '@currentState']);
+    cy.get('[data-testid="claim-list-item"]').should('contain.text', 'En inspección');
+    cy.get(`a[href="/app/siniestros/${claimId}"]`).click();
+    cy.wait('@currentState');
+    cy.get('[data-testid="claim-summary"]').should('contain.text', 'En inspección');
+    cy.get('[data-testid="claim-id-input"]').should('not.exist');
+    cy.get('[data-testid="claim-history-entry"]').should('have.length', 3);
   });
 
   it('CA1/CA2: selecciona poliza vigente y valida campos sin enviar formularios invalidos', () => {

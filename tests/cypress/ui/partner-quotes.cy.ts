@@ -167,6 +167,7 @@ describe('SOL-198/205: formulario y oferta socio (HTTP controlado, no AWS)', () 
         cy.get('[data-testid=partner-profile-reference]')
           .should('have.text', result!.body.perfilamientoReferencia)
           .and('be.visible');
+        cy.contains('summary', 'Ver la recomendación original y su explicación').click();
         cy.contains(result!.body.oferta.nombre).should('be.visible');
         cy.contains(result!.body.oferta.explicacion.resumen).should('be.visible');
         cy.contains('99.000').should('be.visible');

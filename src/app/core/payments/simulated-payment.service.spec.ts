@@ -2,7 +2,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of, Subject, throwError } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
 import { OFFER_GATEWAY } from '../offers/offer.gateway';
 import { SIMULATED_PAYMENT_GATEWAY } from './simulated-payment.gateway';
@@ -20,7 +19,6 @@ import {
 } from './simulated-payment.testing';
 
 describe('SimulatedPaymentService', () => {
-  const originalMode = environment.dataAccessMode;
   const gateway = { load: vi.fn(), confirm: vi.fn() };
   const offers = { loadSelection: vi.fn() };
   const storageKey = `solventa.payment.attempt.${PAYMENT_SUBSCRIPTION.id}`;
@@ -29,7 +27,6 @@ describe('SimulatedPaymentService', () => {
   const user = signal<{ id: string } | null>({ id: PAYMENT_OWNER_ID });
 
   beforeEach(() => {
-    environment.dataAccessMode = 'backend';
     vi.resetAllMocks();
     user.set({ id: PAYMENT_OWNER_ID });
     window.sessionStorage.removeItem(storageKey);
@@ -48,7 +45,6 @@ describe('SimulatedPaymentService', () => {
   });
 
   afterEach(() => {
-    environment.dataAccessMode = originalMode;
     window.sessionStorage.removeItem(storageKey);
     window.sessionStorage.removeItem(receiptKey);
     vi.restoreAllMocks();
@@ -797,17 +793,12 @@ describe('SimulatedPaymentService', () => {
     expect(service.errorKey()).toBe('payment.errors.unavailable');
   });
 
-  it('does not fabricate a successful payment in mock mode', async () => {
-    const mode = environment.dataAccessMode;
-    environment.dataAccessMode = 'mock';
-    try {
-      const mockService = TestBed.runInInjectionContext(() => new SimulatedPaymentService());
-      await firstValueFrom(mockService.load(PAYMENT_SUBSCRIPTION));
-      expect(mockService.available).toBe(false);
-      expect(mockService.payment()).toBeNull();
-      expect(gateway.load).not.toHaveBeenCalled();
-    } finally {
-      environment.dataAccessMode = mode;
-    }
+  it('does not fabricate a successful payment when the backend is unavailable', async () => {
+    gateway.load.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+    await firstValueFrom(service.load(PAYMENT_SUBSCRIPTION));
+    expect(service.payment()).toBeNull();
+    expect(service.errorKey()).toBe('payment.errors.unavailable');
+    expect(gateway.load).toHaveBeenCalledOnce();
+    expect(gateway.confirm).not.toHaveBeenCalled();
   });
 });

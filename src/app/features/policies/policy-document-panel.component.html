@@ -2,196 +2,123 @@
   <header>
     <span class="simulation-label">{{ 'policyDocument.simulation' | transloco }}</span>
     <h2 id="policy-document-title">{{ 'policyDocument.title' | transloco }}</h2>
-    <p>{{ 'policyDocument.disclaimer' | transloco }}</p>
   </header>
 
-  @if (!documents.available) {
-    <p role="status">{{ 'policyDocument.backendRequired' | transloco }}</p>
-  } @else {
-    @if (documents.loading()) {
-      <div class="loading" role="status">
-        <mat-spinner diameter="28" />
-        <span>{{ 'policyDocument.loading' | transloco }}</span>
-      </div>
-    }
-    @if (documents.error(); as error) {
-      <p class="notice" role="alert">{{ 'policyDocument.errors.' + error | transloco }}</p>
-    }
-    @if (documents.notice() === 'outdated') {
-      <p class="notice" role="status">{{ 'policyDocument.outdated' | transloco }}</p>
-    }
-    <button
-      mat-stroked-button
-      type="button"
-      [disabled]="documents.loading() || documents.accepting() || documents.downloading()"
-      (click)="documents.load(policy().id)"
-    >
-      {{ 'policyDocument.refresh' | transloco }}
-    </button>
+  @if (documents.loading()) {
+    <div class="loading" role="status">
+      <mat-spinner diameter="28" />
+      <span>{{ 'policyDocument.loading' | transloco }}</span>
+    </div>
+  }
+  @if (documents.error(); as error) {
+    <p class="notice" role="alert">{{ 'policyDocument.errors.' + error | transloco }}</p>
+  }
+  @if (documents.notice() === 'outdated') {
+    <p class="notice" role="status">{{ 'policyDocument.outdated' | transloco }}</p>
+  }
+  <button
+    mat-stroked-button
+    type="button"
+    [disabled]="documents.loading() || documents.accepting() || documents.downloading()"
+    (click)="documents.load(policy().id)"
+  >
+    {{ 'policyDocument.refresh' | transloco }}
+  </button>
 
-    @if (documents.receipt(); as receipt) {
-      @if (receipt.id !== documents.document()?.aceptacionActual?.id) {
-        <p class="notice" role="status">
-          {{ 'policyDocument.receipt' | transloco }}: {{ receipt.documentoId }} ·
-          {{ receipt.aceptadaEn | date: 'medium' : undefined : dateLocale }}.
-          {{ 'policyDocument.receiptScope' | transloco }}
-        </p>
+  @if (documents.document(); as document) {
+    <article class="document-content">
+      <h3>{{ document.contenido.producto.nombre }}</h3>
+      <p class="notice">{{ document.aviso }}</p>
+      @if (summaryDiffers()) {
+        <p role="status">{{ 'policyDocument.summaryDiffers' | transloco }}</p>
       }
-    }
-    @if (documents.document(); as document) {
-      <article class="document-content">
-        <h3>{{ document.contenido.producto.nombre }}</h3>
-        <p class="notice">{{ document.aviso }}</p>
-        @if (summaryDiffers()) {
-          <p role="status">{{ 'policyDocument.summaryDiffers' | transloco }}</p>
-        }
-        <dl>
-          <div>
-            <dt>{{ 'policyDocument.policy' | transloco }}</dt>
-            <dd>{{ document.polizaId }}</dd>
-          </div>
-          <div>
-            <dt>{{ 'policyDocument.status' | transloco }}</dt>
-            <dd>{{ 'policyDocument.states.' + document.contenido.estado | transloco }}</dd>
-          </div>
-          <div>
-            <dt>{{ 'policyDocument.term' | transloco }}</dt>
-            <dd>
-              {{ document.contenido.vigencia.inicio | date: 'longDate' : undefined : dateLocale }}
-              —
-              {{ document.contenido.vigencia.fin | date: 'longDate' : undefined : dateLocale }}
-            </dd>
-          </div>
-          <div>
-            <dt>{{ 'policyDocument.premium' | transloco }}</dt>
-            <dd>
-              @if (document.contenido.prima; as premium) {
-                {{ premiumLabel(premium.monto) }}
-                · {{ 'policyDocument.monthly' | transloco }}
-              } @else {
-                {{ 'policyDocument.unavailable' | transloco }}
-              }
-            </dd>
-          </div>
-          <div>
-            <dt>{{ 'policyDocument.version' | transloco }}</dt>
-            <dd>{{ document.versionPoliza ?? ('policyDocument.notVersioned' | transloco) }}</dd>
-          </div>
-          <div>
-            <dt>{{ 'policyDocument.plan' | transloco }}</dt>
-            <dd>{{ document.contenido.plan ?? ('policyDocument.unavailable' | transloco) }}</dd>
-          </div>
-          <div>
-            <dt>{{ 'policyDocument.documentId' | transloco }}</dt>
-            <dd>{{ document.documentoId }}</dd>
-          </div>
-          <div>
-            <dt>{{ 'policyDocument.hash' | transloco }}</dt>
-            <dd class="hash">{{ document.contenidoHash }}</dd>
-          </div>
-        </dl>
-        <h3>{{ 'policyDocument.coverages' | transloco }}</h3>
-        @if (document.contenido.coberturas.length) {
-          <ul>
-            @for (coverage of document.contenido.coberturas; track $index) {
-              <li>
-                <strong>{{ coverage.nombre }}</strong
-                >:
-                {{ coverage.descripcion }}
-                <span>
-                  —
-                  {{
-                    (coverage.incluida ? 'policyDocument.included' : 'policyDocument.excluded')
-                      | transloco
-                  }}
-                </span>
-              </li>
+      <dl>
+        <div>
+          <dt>{{ 'policyDocument.policy' | transloco }}</dt>
+          <dd>{{ document.polizaId }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'policyDocument.status' | transloco }}</dt>
+          <dd>{{ 'policyDocument.states.' + document.contenido.estado | transloco }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'policyDocument.term' | transloco }}</dt>
+          <dd>
+            {{ document.contenido.vigencia.inicio | date: 'longDate' : undefined : dateLocale }}
+            —
+            {{ document.contenido.vigencia.fin | date: 'longDate' : undefined : dateLocale }}
+          </dd>
+        </div>
+        <div>
+          <dt>{{ 'policyDocument.premium' | transloco }}</dt>
+          <dd>
+            @if (document.contenido.prima; as premium) {
+              {{ premiumLabel(premium.monto) }}
+              · {{ 'policyDocument.monthly' | transloco }}
+            } @else {
+              {{ 'policyDocument.unavailable' | transloco }}
             }
-          </ul>
-        } @else {
-          <p>{{ 'policyDocument.noCoverages' | transloco }}</p>
-        }
-        <h3>{{ 'policyDocument.conditions' | transloco }}</h3>
+          </dd>
+        </div>
+        <div>
+          <dt>{{ 'policyDocument.version' | transloco }}</dt>
+          <dd>{{ document.versionPoliza ?? ('policyDocument.notVersioned' | transloco) }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'policyDocument.plan' | transloco }}</dt>
+          <dd>{{ document.contenido.plan ?? ('policyDocument.unavailable' | transloco) }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'policyDocument.documentId' | transloco }}</dt>
+          <dd>{{ document.documentoId }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'policyDocument.hash' | transloco }}</dt>
+          <dd class="hash">{{ document.contenidoHash }}</dd>
+        </div>
+      </dl>
+      <h3>{{ 'policyDocument.coverages' | transloco }}</h3>
+      @if (document.contenido.coberturas.length) {
         <ul>
-          @for (condition of document.contenido.condiciones; track $index) {
-            <li>{{ condition }}</li>
-          } @empty {
-            <li>{{ 'policyDocument.unavailable' | transloco }}</li>
+          @for (coverage of document.contenido.coberturas; track $index) {
+            <li>
+              <strong>{{ coverage.nombre }}</strong
+              >:
+              {{ coverage.descripcion }}
+              <span>
+                —
+                {{
+                  (coverage.incluida ? 'policyDocument.included' : 'policyDocument.excluded')
+                    | transloco
+                }}
+              </span>
+            </li>
           }
         </ul>
-        <button
-          mat-stroked-button
-          type="button"
-          class="download-document"
-          [disabled]="documents.downloading() || documents.loading()"
-          [attr.aria-busy]="documents.downloading()"
-          (click)="documents.download()"
-        >
-          {{
-            (documents.downloading() ? 'policyDocument.downloading' : 'policyDocument.download')
-              | transloco
-          }}
-        </button>
-      </article>
-
-      <section class="acceptance" aria-labelledby="policy-acceptance-title">
-        <h3 id="policy-acceptance-title">{{ 'policyDocument.acceptanceTitle' | transloco }}</h3>
-        <p>{{ 'policyDocument.acceptanceScope' | transloco }}</p>
-        @if (document.aceptacionActual; as acceptance) {
-          <p role="status">
-            <strong>{{ 'policyDocument.accepted' | transloco }}</strong>
-            {{ acceptance.aceptadaEn | date: 'medium' : undefined : dateLocale }}
-          </p>
-          <p>{{ 'policyDocument.reference' | transloco }}: {{ acceptance.id }}</p>
-        } @else if (documents.attempt()) {
-          <p role="status">{{ 'policyDocument.pending' | transloco }}</p>
-          <button
-            mat-flat-button
-            type="button"
-            class="recover-acceptance"
-            [disabled]="!documents.canRecover()"
-            [attr.aria-busy]="documents.accepting()"
-            (click)="documents.recover()"
-          >
-            {{ 'policyDocument.recover' | transloco }}
-          </button>
-        } @else {
-          <p role="status">{{ 'policyDocument.notAccepted' | transloco }}</p>
-          <mat-checkbox
-            [checked]="documents.consent()"
-            [disabled]="documents.accepting() || documents.loading() || !!documents.error()"
-            (change)="documents.consent.set($event.checked)"
-          >
-            {{ 'policyDocument.consent' | transloco }}
-          </mat-checkbox>
-          <button
-            mat-flat-button
-            type="button"
-            class="accept-document"
-            [disabled]="!documents.canAccept()"
-            [attr.aria-busy]="documents.accepting()"
-            (click)="documents.accept()"
-          >
-            {{ 'policyDocument.accept' | transloco }}
-          </button>
-        }
-      </section>
-
-      @if (document.historialAceptaciones.length) {
-        <details>
-          <summary>{{ 'policyDocument.history' | transloco }}</summary>
-          <ul>
-            @for (entry of document.historialAceptaciones; track entry.id) {
-              <li>
-                {{ entry.aceptadaEn | date: 'medium' : undefined : dateLocale }} ·
-                {{ 'policyDocument.documentId' | transloco }}: {{ entry.documentoId }} ·
-                {{ 'policyDocument.version' | transloco }}:
-                {{ entry.versionPoliza ?? ('policyDocument.notVersioned' | transloco) }}
-              </li>
-            }
-          </ul>
-        </details>
+      } @else {
+        <p>{{ 'policyDocument.noCoverages' | transloco }}</p>
       }
-    }
+      <h3>{{ 'policyDocument.conditions' | transloco }}</h3>
+      <ul>
+        @for (condition of document.contenido.condiciones; track $index) {
+          <li>{{ condition }}</li>
+        } @empty {
+          <li>{{ 'policyDocument.unavailable' | transloco }}</li>
+        }
+      </ul>
+      <button
+        mat-stroked-button
+        type="button"
+        class="download-document"
+        [disabled]="documents.downloading() || documents.loading()"
+        [attr.aria-busy]="documents.downloading()"
+        (click)="documents.download()"
+      >
+        {{
+          (documents.downloading() ? 'policyDocument.downloading' : 'policyDocument.download')
+            | transloco
+        }}
+      </button>
+    </article>
   }
 </section>

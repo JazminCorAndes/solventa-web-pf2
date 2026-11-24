@@ -63,15 +63,15 @@ describe('PartnerHomePageComponent', () => {
     expect(host.querySelectorAll('.partner-card')).toHaveLength(2);
   });
 
-  it('links to client lookup only with the clientes:consultar scope', () => {
+  it('links to quoted clients only with the clientes:consultar scope', () => {
     const base = realContext as PartnerContext;
     context.set(base);
     let host = render();
-    expect(host.querySelector('a[href*="clientes/consultar"]')).not.toBeNull();
+    expect(host.querySelector('a[href*="/socios/clientes"]')).not.toBeNull();
 
     context.set({ ...base, alcances: ['perfilamientos:crear'] });
     host = render();
-    expect(host.querySelector('a[href*="clientes/consultar"]')).toBeNull();
+    expect(host.querySelector('a[href*="/socios/clientes"]')).toBeNull();
     expect(host.querySelector('a[href*="cotizaciones/solicitar"]')).not.toBeNull();
     expect(metric(host, 'operations')).toBe('1');
   });

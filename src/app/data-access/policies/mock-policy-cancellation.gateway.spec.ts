@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
-import { MockDashboardGateway } from '../dashboard/mock-dashboard.gateway';
-import { MOCK_POLICY_ID } from '../mock/mock.constants';
-import { MockPolicyCancellationGateway } from './mock-policy-cancellation.gateway';
+import { MockDashboardGateway } from '../../../testing/data-access/dashboard/mock-dashboard.gateway';
+import { MOCK_POLICY_ID } from '../../../testing/data-access/mock/mock.constants';
+import { MockPolicyCancellationGateway } from '../../../testing/data-access/policies/mock-policy-cancellation.gateway';
 
 describe('Academic policy cancellation mock', () => {
   it('replays the same request and reflects cancellation on return to policies', async () => {

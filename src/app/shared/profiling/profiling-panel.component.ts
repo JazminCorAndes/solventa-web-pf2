@@ -57,7 +57,9 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
   private subscription?: Subscription;
   private expiration?: ReturnType<typeof setTimeout>;
   @Input() requestId: string | null = null;
+  @Input() showDetails = true;
   @Output() readonly availabilityChange = new EventEmitter<boolean>();
+  @Output() readonly expiredProfile = new EventEmitter<void>();
   readonly consent = signal<ProfilingConsent | null>(null);
   readonly profile = signal<RiskProfile | null>(null);
   readonly loading = signal(false);
@@ -267,6 +269,7 @@ export class ProfilingPanelComponent implements OnInit, OnChanges, OnDestroy {
     this.authorized.set(false);
     this.errorKey.set(profilingErrorKey(error) ?? 'profiling.errors.unavailable');
     this.availabilityChange.emit(false);
+    if (this.errorKey() === 'profiling.errors.expired') this.expiredProfile.emit();
   }
 
   private expireAt(dates: string[], errorKey: string): void {

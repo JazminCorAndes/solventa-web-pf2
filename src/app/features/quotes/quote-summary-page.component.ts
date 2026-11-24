@@ -6,19 +6,25 @@ import {
   inject,
   OnInit,
   signal,
+  effect,
+  computed,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
-import { forkJoin, map, of, switchMap } from 'rxjs';
-import { DASHBOARD_GATEWAY } from '../../core/dashboard/dashboard.gateway';
-import { DashboardSnapshot } from '../../core/dashboard/dashboard.models';
+import { forkJoin, map, of, switchMap, Subscription, take, finalize } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { AuthService } from '../../core/auth/auth.service';
 import { QUOTE_REQUEST_GATEWAY } from '../../core/quotes/quote-request.gateway';
 import { QuoteRequestRecord } from '../../core/quotes/quote-request.models';
-import { quoteProgress } from '../../core/quotes/quote-progress';
+import {
+  HttpQuoteHistoryGateway,
+  QuoteHistoryEntry,
+} from '../../data-access/quotes/http-quote-history.gateway';
 import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.component';
 
 @Component({
@@ -38,8 +44,14 @@ import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.
 export class QuoteSummaryPageComponent implements OnInit {
   readonly quotes = inject(QuoteRequestService);
   private readonly gateway = inject(QUOTE_REQUEST_GATEWAY);
-  private readonly dashboard = inject(DASHBOARD_GATEWAY);
+  private readonly history = inject(HttpQuoteHistoryGateway);
+  private readonly user = inject(AuthService).user;
+  private readonly translations = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
+  private loadRequest?: Subscription;
+  private rejectionRequest?: Subscription;
+  private stateRequests = new Subscription();
+  private readonly ownerId = signal<string | null>(null);
   private readonly resumeError = inject(ActivatedRoute).snapshot.queryParamMap.get('error');
   readonly resumeErrorKey =
     this.resumeError === 'expired'
@@ -52,9 +64,22 @@ export class QuoteSummaryPageComponent implements OnInit {
   readonly profileAvailability = signal<Record<string, boolean>>({});
   readonly loading = signal(true);
   readonly error = signal(false);
-  readonly cards = signal<
-    Array<{ request: QuoteRequestRecord; progress: ReturnType<typeof quoteProgress> }>
-  >([]);
+  private readonly cardsState = signal<QuoteCard[]>([]);
+  readonly cards = computed(() =>
+    this.ownerId() === this.user()?.id
+      ? this.cardsState().filter((card) => !['completada', 'vencida'].includes(card.state.status))
+      : [],
+  );
+  readonly rejectionBusy = signal(false);
+  readonly rejectionError = signal<string | null>(null);
+  readonly pendingRejection = signal<RejectionAttempt | null>(null);
+
+  constructor() {
+    effect(() => {
+      const owner = this.user()?.id ?? null;
+      if (owner !== this.ownerId()) untracked(() => this.load());
+    });
+  }
 
   productName(request: QuoteRequestRecord): string {
     return (
@@ -87,43 +112,69 @@ export class QuoteSummaryPageComponent implements OnInit {
   }
 
   load(): void {
+    this.loadRequest?.unsubscribe();
+    const owner = this.user()?.id ?? null;
+    if (this.ownerId() !== owner) {
+      this.rejectionRequest?.unsubscribe();
+      this.stateRequests.unsubscribe();
+      this.stateRequests = new Subscription();
+      this.rejectionBusy.set(false);
+      this.pendingRejection.set(null);
+      this.rejectionError.set(null);
+    }
+    this.ownerId.set(owner);
     this.loading.set(true);
     this.error.set(false);
-    this.cards.set([]);
+    this.cardsState.set([]);
     this.profileAvailability.set({});
-    this.dashboard
-      .load()
+    if (!owner) {
+      this.error.set(true);
+      this.loading.set(false);
+      return;
+    }
+    this.loadRequest = this.history
+      .loadClientHistory(owner)
       .pipe(
-        switchMap((snapshot) => {
-          const ids = [
-            ...new Set(
-              snapshot.quotes.flatMap((quote) => (quote.requestId ? [quote.requestId] : [])),
-            ),
-          ];
+        switchMap((history) => {
+          const entries = history.filter(
+            (entry) => !['completada', 'vencida'].includes(entry.status),
+          );
           return (
-            ids.length
-              ? forkJoin(ids.map((id) => this.gateway.loadRequest(id)))
+            entries.length
+              ? forkJoin(entries.map((entry) => this.gateway.loadRequest(entry.requestId)))
               : of([] as QuoteRequestRecord[])
-          ).pipe(map((requests) => ({ snapshot, requests })));
+          ).pipe(
+            map((requests) =>
+              entries.map((state, index): QuoteCard => {
+                const request = requests[index];
+                if (request.id !== state.requestId || request.productId !== state.productId) {
+                  throw new Error('Quote details do not match the authenticated history.');
+                }
+                return { request, state, progress: continuation(state) };
+              }),
+            ),
+          );
         }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: ({
-          snapshot,
-          requests,
-        }: {
-          snapshot: DashboardSnapshot;
-          requests: QuoteRequestRecord[];
-        }) => {
-          this.cards.set(
-            requests
-              .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-              .map((request) => ({ request, progress: quoteProgress(request.id, snapshot) })),
-          );
+        next: (cards) => {
+          if (this.user()?.id !== owner) return;
+          this.cardsState.set(cards);
+          const pending = this.pendingRejection();
+          if (
+            pending &&
+            cards.some(
+              (card) =>
+                card.state.requestId === pending.requestId && card.state.status !== 'pendiente',
+            )
+          ) {
+            this.pendingRejection.set(null);
+          }
           this.loading.set(false);
         },
         error: (error: unknown) => {
+          if (this.user()?.id !== owner) return;
           console.error('Quote history could not be loaded.', error);
           this.error.set(true);
           this.loading.set(false);
@@ -132,6 +183,161 @@ export class QuoteSummaryPageComponent implements OnInit {
   }
 
   setProfileAvailability(id: string, available: boolean): void {
+    const previous = this.profileAvailability()[id];
     this.profileAvailability.update((current) => ({ ...current, [id]: available }));
+    if (previous && !available) this.refreshState(id);
   }
+
+  refreshState(id: string): void {
+    const owner = this.user()?.id;
+    if (!owner) return;
+    const request = this.history
+      .loadClientState(id, owner)
+      .pipe(
+        map((state) => this.validateState(state)),
+        take(1),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (state) => {
+          if (this.user()?.id !== owner) return;
+          this.applyState(state);
+          if (state.status !== 'pendiente' && this.pendingRejection()?.requestId === id) {
+            this.pendingRejection.set(null);
+            this.rejectionError.set(null);
+          }
+        },
+        error: () => {
+          if (this.user()?.id === owner) this.rejectionError.set('quoteSummary.stateError');
+        },
+      });
+    this.stateRequests.add(request);
+  }
+
+  canReject(card: QuoteCard): boolean {
+    return (
+      card.state.status === 'pendiente' &&
+      !card.state.selectionState?.acceptance &&
+      !this.rejectionBusy() &&
+      !this.pendingRejection()
+    );
+  }
+
+  reject(card: QuoteCard): void {
+    if (
+      !this.canReject(card) ||
+      !window.confirm(this.translations.translate('quoteSummary.rejectPrompt'))
+    )
+      return;
+    const attempt = {
+      requestId: card.request.id,
+      quoteId: card.state.quoteId,
+      key: crypto.randomUUID(),
+    };
+    this.pendingRejection.set(attempt);
+    this.sendRejection(attempt);
+  }
+
+  retryRejection(): void {
+    const attempt = this.pendingRejection();
+    if (attempt && !this.rejectionBusy()) this.sendRejection(attempt);
+  }
+
+  private sendRejection(attempt: RejectionAttempt): void {
+    const owner = this.user()?.id;
+    if (!owner) return;
+    this.rejectionBusy.set(true);
+    this.rejectionError.set(null);
+    this.rejectionRequest = this.history
+      .reject(attempt.requestId, attempt.quoteId, attempt.key)
+      .pipe(
+        switchMap(() => this.history.loadClientState(attempt.requestId, owner)),
+        map((state) => this.validateState(state)),
+        take(1),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.rejectionBusy.set(false)),
+      )
+      .subscribe({
+        next: (state) => {
+          if (this.user()?.id !== owner) return;
+          this.applyState(state);
+          if (state.status !== 'pendiente') this.pendingRejection.set(null);
+          else this.rejectionError.set('quoteSummary.rejectUncertain');
+        },
+        error: (error: unknown) => {
+          if (this.user()?.id !== owner) return;
+          if (
+            error instanceof HttpErrorResponse &&
+            [400, 401, 403, 404, 409, 422].includes(error.status)
+          ) {
+            this.pendingRejection.set(null);
+            this.rejectionError.set('quoteSummary.rejectChanged');
+            this.refreshState(attempt.requestId);
+          } else this.rejectionError.set('quoteSummary.rejectUncertain');
+        },
+      });
+  }
+
+  private validateState(state: QuoteHistoryEntry): QuoteHistoryEntry {
+    const card = this.cardsState().find((item) => item.request.id === state.requestId);
+    if (
+      !card ||
+      card.state.quoteId !== state.quoteId ||
+      card.request.productId !== state.productId
+    ) {
+      throw new Error('Refreshed quote state does not match its historical details.');
+    }
+    return state;
+  }
+
+  private applyState(state: QuoteHistoryEntry): void {
+    this.cardsState.update((cards) =>
+      cards.map((card) => {
+        if (
+          card.request.id !== state.requestId ||
+          ((card.state.status === 'completada' || card.state.status === 'rechazada') &&
+            state.status !== card.state.status) ||
+          Date.parse(state.updatedAt) < Date.parse(card.state.updatedAt)
+        )
+          return card;
+        return { ...card, state, progress: continuation(state) };
+      }),
+    );
+  }
+}
+
+interface RejectionAttempt {
+  requestId: string;
+  quoteId: string;
+  key: string;
+}
+interface QuoteCard {
+  request: QuoteRequestRecord;
+  state: QuoteHistoryEntry;
+  progress: ReturnType<typeof continuation>;
+}
+function continuation(state: QuoteHistoryEntry) {
+  const terminal = state.status !== 'pendiente';
+  const subscription = !!state.emissionStatus;
+  const accepted = !!state.selectionState?.acceptance;
+  return {
+    status: state.status,
+    requiresProfile: !terminal && !subscription && !accepted,
+    path:
+      state.status === 'completada'
+        ? '/app/cotizaciones/suscripcion/detalle'
+        : subscription
+          ? '/app/cotizaciones/suscripcion'
+          : accepted
+            ? '/app/cotizaciones/aceptacion'
+            : '/app/cotizaciones/ofertas',
+    action:
+      state.status === 'completada'
+        ? 'viewSubscription'
+        : subscription
+          ? 'viewStatus'
+          : accepted
+            ? 'continueAcceptance'
+            : 'viewOffers',
+  };
 }

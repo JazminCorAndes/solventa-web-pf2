@@ -9,7 +9,6 @@ import {
   untracked,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { DashboardPolicy } from '../../core/dashboard/dashboard.models';
@@ -18,7 +17,7 @@ import { PolicyDocumentService } from '../../core/policies/policy-document.servi
 @Component({
   selector: 'app-policy-document-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, MatButtonModule, MatCheckboxModule, MatProgressSpinnerModule, TranslocoPipe],
+  imports: [DatePipe, MatButtonModule, MatProgressSpinnerModule, TranslocoPipe],
   providers: [PolicyDocumentService],
   templateUrl: './policy-document-panel.component.html',
   styleUrl: './policy-document-panel.component.scss',

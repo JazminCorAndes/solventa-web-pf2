@@ -244,9 +244,10 @@ describe('HU44 real con recuperación explícita de despacho HTTP y tres resulta
         else cy.visit('/app/socios');
         cy.get(`.partner-card[aria-label="${fixture.socioId}"]`)
           .should('have.length', 1)
-          .find('a[href^="/app/socios/clientes/consultar"]')
+          .find('a[href^="/app/socios/clientes"]')
           .should('have.length', 1)
           .click();
+        cy.get('a[href^="/app/socios/clientes/consultar"]').click();
         cy.location('search').should((search) =>
           expect(new URLSearchParams(search).get('socio')).to.eq(fixture.socioId),
         );

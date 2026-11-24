@@ -1,121 +1,84 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
-import { Observable, of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
-import { DASHBOARD_GATEWAY } from '../../core/dashboard/dashboard.gateway';
-import { DASHBOARD_SNAPSHOT, EMPTY_DASHBOARD } from '../../core/dashboard/dashboard.testing';
-import { DashboardSnapshot } from '../../core/dashboard/dashboard.models';
-import {
-  OFFER_SELECTION_STORAGE,
-  OfferSelectionStorage,
-} from '../../core/offers/offer-selection-storage.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { AuthUser } from '../../core/auth/auth.models';
 import {
   QUOTE_REQUEST_GATEWAY,
   QuoteRequestGateway,
 } from '../../core/quotes/quote-request.gateway';
-import {
-  InsuranceProduct,
-  QuoteRequestDraft,
-  QuoteRequestRecord,
-  QuoteProductData,
-  TravelDestination,
-} from '../../core/quotes/quote-request.models';
-import {
-  QUOTE_REQUEST_STORAGE,
-  QuoteRequestStorage,
-} from '../../core/quotes/quote-request-storage.service';
-import { QuoteSummaryPageComponent } from './quote-summary-page.component';
+import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
+import { OFFER_SELECTION_STORAGE } from '../../core/offers/offer-selection-storage.service';
+import { QuoteRequestRecord } from '../../core/quotes/quote-request.models';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
+import { HISTORY_CLIENT_ID, historyEntry } from '../../../testing/quotes/quote-history.testing';
+import {
+  HttpQuoteHistoryGateway,
+  QuoteHistoryEntry,
+} from '../../data-access/quotes/http-quote-history.gateway';
+import { QuoteSummaryPageComponent } from './quote-summary-page.component';
 
 const RECORD: QuoteRequestRecord = {
   id: 'AQT-2026-123456',
   status: 'received',
-  createdAt: '2026-10-11T12:00:00.000Z',
+  createdAt: '2026-10-11T12:00:00Z',
   productId: 'automotive',
   customerType: 'natural',
   documentType: 'cc',
   nationalId: '12345678-9',
   productData: { vehiclePlate: 'ABC123' },
-  email: 'cliente@solventa.co',
+  email: 'cliente@example.test',
   phone: '+573001234567',
 };
-
-class TestQuoteRequestGateway implements QuoteRequestGateway {
-  loadProductDetail = vi.fn<QuoteRequestGateway['loadProductDetail']>();
-
-  loadRequest(id: string): Observable<QuoteRequestRecord> {
-    return of({ ...RECORD, id });
-  }
-  loadProducts(): Observable<InsuranceProduct[]> {
-    return of([
-      {
-        id: 'automotive',
-        name: 'Seguro Automotriz Total',
-        description: 'Protección para el vehículo',
-        available: true,
-        mainCoverages: [],
-      },
-    ]);
-  }
-
-  loadTravelDestinations(): Observable<TravelDestination[]> {
-    return of([{ code: 'CO', name: 'Colombia' }]);
-  }
-
-  submitRequest(request: QuoteRequestDraft): Observable<QuoteRequestRecord> {
-    return of({ ...request, ...RECORD });
-  }
-}
-
-class TestQuoteRequestStorage implements QuoteRequestStorage {
-  request: QuoteRequestRecord | null = RECORD;
-
-  read(): QuoteRequestRecord | null {
-    return this.request;
-  }
-
-  write(request: QuoteRequestRecord): void {
-    this.request = request;
-  }
-
-  clear(): void {
-    this.request = null;
-  }
-}
-
-class TestOfferSelectionStorage implements OfferSelectionStorage {
-  read(): null {
-    return null;
-  }
-  write(): void {}
-  clear(): void {}
-}
+const USER: AuthUser = {
+  id: HISTORY_CLIENT_ID,
+  name: 'Cliente',
+  email: RECORD.email,
+  role: 'client',
+};
 
 describe('QuoteSummaryPageComponent', () => {
   let fixture: ComponentFixture<QuoteSummaryPageComponent>;
-  let storage: TestQuoteRequestStorage;
-  let snapshot: DashboardSnapshot;
-  const dashboard = { load: vi.fn() };
-  const profiling = {
-    loadConsent: vi.fn(() => of(createConsent())),
-    loadProfile: vi.fn((id: string) => of(createProfile(id))),
+  let entries: QuoteHistoryEntry[];
+  const user = signal<AuthUser | null>(USER);
+  const history = {
+    loadClientHistory: vi.fn(),
+    loadClientState: vi.fn(),
+    reject: vi.fn(),
   };
-
+  const quotes: Partial<QuoteRequestGateway> = {
+    loadRequest: vi.fn(),
+    loadProducts: vi.fn(() =>
+      of([
+        {
+          id: 'automotive',
+          name: 'Seguro Automotriz Total',
+          description: '',
+          available: true,
+          mainCoverages: [],
+        },
+      ]),
+    ),
+    loadTravelDestinations: vi.fn(() => of([])),
+  };
+  const profiling = { loadConsent: vi.fn(), loadProfile: vi.fn() };
   beforeEach(async () => {
-    snapshot = {
-      ...DASHBOARD_SNAPSHOT,
-      quotes: DASHBOARD_SNAPSHOT.quotes.map((quote) => ({ ...quote, requestId: RECORD.id })),
-      subscriptions: DASHBOARD_SNAPSHOT.subscriptions.map((subscription) => ({
-        ...subscription,
-        requestId: RECORD.id,
-        validUntil: '2099-01-01T00:00:00Z',
-      })),
-    };
-    dashboard.load.mockReset().mockImplementation(() => of(snapshot));
-    profiling.loadConsent.mockReset().mockImplementation(() => of(createConsent()));
+    user.set(USER);
+    entries = [historyEntry()];
+    history.loadClientHistory.mockReset().mockImplementation(() => of(entries));
+    history.loadClientState
+      .mockReset()
+      .mockImplementation(() => of(historyEntry({ status: 'vencida' })));
+    history.reject.mockReset().mockReturnValue(of({ status: 'rechazada' }));
+    vi.mocked(quotes.loadRequest!)
+      .mockReset()
+      .mockImplementation((id) => of({ ...RECORD, id }));
+    profiling.loadConsent.mockReset().mockReturnValue(of(createConsent()));
     profiling.loadProfile.mockReset().mockImplementation((id: string) => of(createProfile(id)));
     await TestBed.configureTestingModule({
       imports: [
@@ -127,202 +90,223 @@ describe('QuoteSummaryPageComponent', () => {
       ],
       providers: [
         provideRouter([]),
-        { provide: DASHBOARD_GATEWAY, useValue: dashboard },
-        { provide: QUOTE_REQUEST_GATEWAY, useClass: TestQuoteRequestGateway },
-        { provide: QUOTE_REQUEST_STORAGE, useClass: TestQuoteRequestStorage },
-        { provide: OFFER_SELECTION_STORAGE, useClass: TestOfferSelectionStorage },
+        { provide: AuthService, useValue: { user } },
+        { provide: HttpQuoteHistoryGateway, useValue: history },
+        { provide: QUOTE_REQUEST_GATEWAY, useValue: quotes },
         {
-          provide: PROFILING_GATEWAY,
-          useValue: profiling,
+          provide: QUOTE_REQUEST_STORAGE,
+          useValue: { read: () => null, write: vi.fn(), clear: vi.fn() },
         },
+        {
+          provide: OFFER_SELECTION_STORAGE,
+          useValue: { read: () => null, write: vi.fn(), clear: vi.fn() },
+        },
+        { provide: PROFILING_GATEWAY, useValue: profiling },
       ],
     }).compileComponents();
-
-    storage = TestBed.inject(QUOTE_REQUEST_STORAGE) as TestQuoteRequestStorage;
   });
-
-  it('loads persisted quotes and links paid requests to subscription details without profiling', () => {
-    storage.request = null;
+  const render = () => {
     fixture = TestBed.createComponent(QuoteSummaryPageComponent);
     fixture.detectChanges();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  };
 
-    expect(fixture.nativeElement.textContent).toContain('AQT-2026-123456');
-    expect(fixture.nativeElement.textContent).toContain('Seguro Automotriz Total');
+  it('explains an expired-profile recovery even when there are no actionable quotations', () => {
+    entries = [];
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ error: 'expired' }) } },
+    });
+    const root = render();
+    expect(root.querySelector('[role=alert]')?.textContent).toContain(es.profiling.errors.expired);
+    expect(root.querySelector('.summary-card')).toBeNull();
+    expect(quotes.loadRequest).not.toHaveBeenCalled();
+  });
+
+  it('excludes purchased quotations without loading their details or continuation', () => {
+    entries = [
+      historyEntry({
+        status: 'completada',
+        paymentStatus: 'confirmado',
+        emissionStatus: 'emitida',
+        completedAt: '2026-11-01T12:00:00Z',
+        validUntil: '2000-01-01T00:00:00Z',
+      }),
+    ];
+    const root = render();
+    expect(root.querySelector('.summary-card')).toBeNull();
+    expect(quotes.loadRequest).not.toHaveBeenCalled();
+    expect(root.querySelector('app-profiling-panel')).toBeNull();
+    expect(history.loadClientHistory).toHaveBeenCalledWith(USER.id);
+  });
+
+  it('excludes expired quotations without loading their details', () => {
+    entries = [historyEntry({ status: 'vencida' })];
+    const root = render();
+    expect(root.querySelector('.summary-card')).toBeNull();
+    expect(quotes.loadRequest).not.toHaveBeenCalled();
+    expect(root.querySelector('app-profiling-panel')).toBeNull();
+    expect(root.textContent).not.toContain(es.profiling.errors.expired);
+  });
+
+  it('retains explicit rejection instead of expiring it and exposes no continuation', () => {
+    entries = [
+      historyEntry({
+        status: 'rechazada',
+        rejectedAt: '2026-11-01T12:00:00Z',
+        validUntil: '2000-01-01T00:00:00Z',
+      }),
+    ];
+    const root = render();
+    expect(root.querySelector('.summary-card')?.textContent).toContain('Rechazada');
+    expect(root.querySelector('.summary-card a, .summary-card button')).toBeNull();
+  });
+
+  it('keeps pending quotations separate, including the persisted partner choice', () => {
+    entries = [
+      historyEntry(),
+      historyEntry({
+        requestId: 'AQT-2026-654321',
+        quoteId: '44444444-4444-4444-8444-444444444444',
+        selectionState: {
+          quoteId: 'AQT-2026-654321',
+          acceptance: null,
+          offerStatus: 'available',
+          selection: {
+            quoteId: 'AQT-2026-654321',
+            offerId: '55555555-5555-4555-8555-555555555555',
+            offerVersion: 1,
+            offerName: 'Plan elegido por socio',
+            premium: { amount: 15000, currency: 'COP' },
+            periodicity: 'mensual',
+            selectedAt: '2026-11-01T12:00:00Z',
+            confirmed: false,
+            revision: 1,
+            validUntil: '2099-01-01T00:00:00Z',
+          },
+        },
+      }),
+    ];
+    const root = render();
+    expect(root.querySelectorAll('.summary-card')).toHaveLength(2);
+    expect(root.textContent).toContain('Plan elegido por socio');
     expect(
-      fixture.nativeElement.querySelector(
-        `a[href="/app/cotizaciones/suscripcion/detalle?solicitud=${RECORD.id}"]`,
-      ),
+      root.querySelector('a[href="/app/cotizaciones/ofertas?solicitud=AQT-2026-654321"]'),
     ).not.toBeNull();
-    expect(fixture.nativeElement.textContent).toContain('Activa');
-    expect(fixture.nativeElement.querySelector('app-profiling-panel')).toBeNull();
+    expect(root.textContent).toContain('Pendiente');
   });
 
-  it('shows an empty state before the first quote request', () => {
-    storage.request = null;
-    snapshot = EMPTY_DASHBOARD;
-    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.cards()).toEqual([]);
-    expect(
-      fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
-    ).not.toBeNull();
-  });
-
-  it('muestra la referencia hipotecaria del contrato con su etiqueta traducida', () => {
-    const request: QuoteRequestRecord = {
-      ...RECORD,
-      productId: 'mortgage-life',
-      productData: { mortgageBalance: '180000000', referenciaCredito: 'WEB-E2E-HIPOTECA' },
-    };
-    vi.spyOn(TestBed.inject(QUOTE_REQUEST_GATEWAY), 'loadRequest').mockReturnValue(of(request));
-    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.textContent).toContain(es.quoteRequest.fields.creditReference);
-    expect(fixture.nativeElement.textContent).toContain('WEB-E2E-HIPOTECA');
-    expect(fixture.nativeElement.textContent).not.toContain(
-      'quoteRequest.fields.referenciaCredito',
-    );
-    expect(request.productData['referenciaCredito']).toBe('WEB-E2E-HIPOTECA');
-  });
-
-  it('does not link an expired unselected profile to offers or renew consent', () => {
-    snapshot = {
-      ...snapshot,
-      quotes: snapshot.quotes.map((quote) => ({ ...quote, selection: null })),
-      subscriptions: [],
-      payments: [],
-    };
+  it('asks the server for state after an expired profile read, not the browser clock', () => {
     profiling.loadProfile.mockReturnValueOnce(
       throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'perfil_vencido' } })),
     );
-    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain(es.profiling.errors.expired);
-    expect(
-      fixture.nativeElement.querySelector('a[href="/app/cotizaciones/solicitar"]'),
-    ).not.toBeNull();
+    const root = render();
+    expect(history.loadClientState).toHaveBeenCalledWith(RECORD.id, USER.id);
+    expect(root.querySelector('.summary-card')).toBeNull();
+    expect(root.querySelector('app-profiling-panel')).toBeNull();
+    expect(root.textContent).not.toContain(es.profiling.errors.expired);
   });
 
-  it('removes continuation at the profile deadline without creating another request', () => {
+  it('refreshes authoritative state at profile deadline without inventing expiration', () => {
     vi.useFakeTimers();
     try {
-      snapshot = {
-        ...snapshot,
-        quotes: snapshot.quotes.map((quote) => ({ ...quote, selection: null })),
-        subscriptions: [],
-        payments: [],
-      };
-      fixture = TestBed.createComponent(QuoteSummaryPageComponent);
-      fixture.detectChanges();
-      fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).not.toBeNull();
-
+      history.loadClientState.mockReturnValue(of(historyEntry()));
+      const root = render();
       vi.advanceTimersByTime(15 * 60000);
       fixture.detectChanges();
-
-      expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).toBeNull();
-      expect(fixture.nativeElement.textContent).toContain(es.profiling.errors.expired);
-      expect(profiling.loadProfile).toHaveBeenCalledOnce();
-    } finally {
+      expect(history.loadClientState).toHaveBeenCalledWith(RECORD.id, USER.id);
+      expect(root.querySelector('.status')?.textContent).toContain('Pendiente');
       fixture.destroy();
+    } finally {
       vi.useRealTimers();
     }
   });
 
-  it('recovers the continuation only after a failed profile read succeeds', () => {
-    snapshot = {
-      ...snapshot,
-      quotes: snapshot.quotes.map((quote) => ({ ...quote, selection: null })),
-      subscriptions: [],
-      payments: [],
-    };
-    profiling.loadProfile.mockReturnValueOnce(
-      throwError(() => new HttpErrorResponse({ status: 503 })),
-    );
-    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).toBeNull();
-
-    (
-      fixture.nativeElement.querySelector('app-profiling-panel button') as HTMLButtonElement
-    ).click();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('a[href*="/ofertas"]')).not.toBeNull();
-    expect(profiling.loadProfile).toHaveBeenCalledTimes(2);
+  it('keeps actionable requests when history also contains purchased and expired entries', () => {
+    entries = [
+      historyEntry(),
+      historyEntry({ requestId: 'AQT-2026-BOUGHT', status: 'completada' }),
+      historyEntry({ requestId: 'AQT-2026-EXPIRED', status: 'vencida' }),
+    ];
+    const root = render();
+    expect(root.querySelectorAll('.summary-card')).toHaveLength(1);
+    expect(quotes.loadRequest).toHaveBeenCalledExactlyOnceWith(RECORD.id);
   });
 
-  it.each<QuoteProductData>([{ coverageType: 'missed-connection' }, { weatherEvent: 'drought' }])(
-    'traduce los valores de cobertura sin mostrar códigos al cliente',
-    (productData) => {
-      fixture = TestBed.createComponent(QuoteSummaryPageComponent);
-      fixture.detectChanges();
-      const detail = fixture.componentInstance.productDetails({ ...RECORD, productData })[0];
-      expect(detail.valueKey).toBe(
-        'coverageType' in productData
-          ? 'quoteRequest.flightCoverages.missed-connection'
-          : 'quoteRequest.weatherEvents.drought',
+  it('persists explicit rejection and recovers it from authoritative state and reload', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const rejected = historyEntry({ status: 'rechazada', rejectedAt: '2026-11-01T12:00:00Z' });
+    history.loadClientState.mockReturnValue(of(rejected));
+    const root = render();
+    fixture.componentInstance.reject(fixture.componentInstance.cards()[0]);
+    fixture.detectChanges();
+    expect(history.reject.mock.calls[0].slice(0, 2)).toEqual([RECORD.id, entries[0].quoteId]);
+    expect(history.reject.mock.calls[0][2]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(root.querySelector('.status')?.textContent).toContain('Rechazada');
+    expect(root.querySelector('.summary-card button, .summary-card a')).toBeNull();
+    entries = [rejected];
+    fixture.componentInstance.load();
+    fixture.detectChanges();
+    expect(root.querySelector('.status')?.textContent).toContain('Rechazada');
+  });
+
+  it('does not reject on cancelled confirmation and retries an uncertain result using the same key', () => {
+    const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render();
+    const card = fixture.componentInstance.cards()[0];
+    fixture.componentInstance.reject(card);
+    expect(history.reject).not.toHaveBeenCalled();
+    confirmation.mockReturnValue(true);
+    history.reject.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+    fixture.componentInstance.reject(card);
+    fixture.componentInstance.retryRejection();
+    expect(history.reject.mock.calls[1]).toEqual(history.reject.mock.calls[0]);
+    expect(fixture.componentInstance.canReject(card)).toBe(false);
+  });
+
+  it('drops history when authenticated owner changes', () => {
+    const root = render();
+    user.set(null);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.cards()).toEqual([]);
+    expect(root.querySelector('.summary-card')).toBeNull();
+  });
+  it('cancels an in-flight rejection and clears its attempt when the owner leaves', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const pending = new Subject<unknown>();
+    history.reject.mockReturnValue(pending);
+    render();
+    fixture.componentInstance.reject(fixture.componentInstance.cards()[0]);
+    expect(pending.observed).toBe(true);
+    user.set(null);
+    fixture.detectChanges();
+    expect(pending.observed).toBe(false);
+    expect(fixture.componentInstance.pendingRejection()).toBeNull();
+    expect(fixture.componentInstance.rejectionBusy()).toBe(false);
+  });
+  it('does not replace terminal rejection with an older concurrent pending read', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const delayed = new Subject<QuoteHistoryEntry>();
+    history.loadClientState
+      .mockReturnValueOnce(delayed)
+      .mockReturnValue(
+        of(historyEntry({ status: 'rechazada', rejectedAt: '2026-11-01T12:00:00Z' })),
       );
-    },
-  );
-
-  it('renders every quote separately with its own state and next step', () => {
-    snapshot = {
-      ...snapshot,
-      quotes: [
-        ...snapshot.quotes,
-        { ...snapshot.quotes[0], id: 'quote-pending', requestId: 'pending', selection: null },
-        { ...snapshot.quotes[0], id: 'quote-selected', requestId: 'selected' },
-        { ...snapshot.quotes[0], id: 'quote-expired', requestId: 'expired' },
-        { ...snapshot.quotes[0], id: 'quote-payment', requestId: 'payment' },
-      ],
-      subscriptions: [
-        ...snapshot.subscriptions,
-        {
-          ...snapshot.subscriptions[0],
-          id: 'expired-sub',
-          requestId: 'expired',
-          validUntil: '2000-01-01T00:00:00Z',
-        },
-        {
-          ...snapshot.subscriptions[0],
-          id: 'pending-sub',
-          requestId: 'payment',
-          saga: { ...snapshot.subscriptions[0].saga, status: 'pago_pendiente' },
-        },
-      ],
-    };
-    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
-    fixture.detectChanges();
-    const cards: HTMLElement[] = Array.from(
-      fixture.nativeElement.querySelectorAll('.summary-card'),
-    );
-    expect(cards).toHaveLength(5);
-    expect(cards[0].textContent).toContain('Activa');
-    expect(cards[1].textContent).toContain('Solicitud en proceso');
-    expect(cards[1].querySelector('a')?.getAttribute('href')).toContain(
-      '/ofertas?solicitud=pending',
-    );
-    expect(cards[2].textContent).toContain('Continuar aceptación');
-    expect(cards[3].textContent).toContain('Vencida');
-    expect(cards[4].textContent).toContain('Proceder al pago');
-    expect(cards[4].querySelector('a')?.getAttribute('href')).toContain(
-      '/suscripcion?solicitud=payment',
-    );
+    render();
+    fixture.componentInstance.refreshState(RECORD.id);
+    fixture.componentInstance.reject(fixture.componentInstance.cards()[0]);
+    delayed.next(historyEntry());
+    expect(fixture.componentInstance.cards()[0].state.status).toBe('rechazada');
   });
 
-  it('shows an explicit retry if persisted history fails instead of displaying a cached last quote', () => {
-    dashboard.load.mockReturnValueOnce(throwError(() => new Error('offline')));
-    fixture = TestBed.createComponent(QuoteSummaryPageComponent);
+  it('distinguishes empty history from a failed read and retries without cached fixtures', () => {
+    history.loadClientHistory.mockReturnValueOnce(throwError(() => new Error('offline')));
+    const root = render();
+    expect(root.querySelector('[role=alert]')).not.toBeNull();
+    expect(root.querySelector('.summary-card')).toBeNull();
+    entries = [];
+    fixture.componentInstance.load();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.summary-card')).toBeNull();
-    fixture.nativeElement.querySelector('button').click();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.summary-card')).not.toBeNull();
+    expect(root.querySelector('.empty-card')).not.toBeNull();
   });
 });

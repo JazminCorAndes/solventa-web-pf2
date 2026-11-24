@@ -1,8 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
-import { ClaimNotFoundError } from '../../core/claims/claim-status.errors';
-import { ClaimStatusGateway } from '../../core/claims/claim-status.gateway';
-import { ClaimStatus } from '../../core/claims/claim-status.models';
+import { ClaimNotFoundError } from '../../../app/core/claims/claim-status.errors';
+import { ClaimStatusGateway } from '../../../app/core/claims/claim-status.gateway';
+import { ClaimStatus } from '../../../app/core/claims/claim-status.models';
 import { MockClaimsStore } from './mock-claims.store';
 
 @Injectable()

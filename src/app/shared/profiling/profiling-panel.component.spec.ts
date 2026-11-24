@@ -6,7 +6,7 @@ import en from '../../../../public/assets/i18n/en.json';
 import es from '../../../../public/assets/i18n/es.json';
 import { of, Subject, throwError } from 'rxjs';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import {
   ConsentRequest,
   createConsentRequest,
@@ -38,7 +38,8 @@ describe('ProfilingPanelComponent', () => {
               profiling: {
                 simulated: 'Datos simulados. No es una consulta financiera real.',
                 additionalSource: 'Adaptador adicional: {{ name }}',
-                cachedEvidence: 'Evidencia en caché vigente y simulada.',
+                cachedEvidence: es.profiling.cachedEvidence,
+                version: es.profiling.version,
                 defaultEvidence: 'Este perfil incluye valores predeterminados del modelo.',
                 sourceReason: 'Motivo informado por el servicio',
                 sourceReasons: es.profiling.sourceReasons,
@@ -71,6 +72,35 @@ describe('ProfilingPanelComponent', () => {
     fixture.detectChanges();
   }
 
+  it('mantiene la validación del perfil sin mostrar detalles ni controles fuera de consentimiento', () => {
+    fixture.componentRef.setInput('showDetails', false);
+    const availability = vi.fn();
+    component.availabilityChange.subscribe(availability);
+    openProfile();
+    expect(gateway.loadConsent).toHaveBeenCalledOnce();
+    expect(gateway.loadProfile).toHaveBeenCalledWith('AQT-2026-123456');
+    expect(availability).toHaveBeenLastCalledWith(true);
+    expect(fixture.nativeElement.querySelector('mat-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('details')).toBeNull();
+    const link = fixture.nativeElement.querySelector('a');
+    expect(link.getAttribute('href')).toBe('/app/consentimiento?solicitud=AQT-2026-123456');
+    expect(gateway.saveConsent).not.toHaveBeenCalled();
+  });
+
+  it('no habilita la cotización sin consentimiento aunque sus detalles no sean visibles', () => {
+    fixture.componentRef.setInput('showDetails', false);
+    gateway.loadConsent.mockReturnValue(of(null));
+    const availability = vi.fn();
+    component.availabilityChange.subscribe(availability);
+    fixture.detectChanges();
+    expect(availability).toHaveBeenLastCalledWith(false);
+    expect(gateway.loadProfile).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('mat-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a').getAttribute('href')).toBe(
+      '/app/consentimiento',
+    );
+  });
+
   it('no consulta fuentes sin consentimiento y autoriza con version cero', () => {
     gateway.loadConsent.mockReturnValue(of(null));
     fixture.detectChanges();
@@ -93,11 +123,13 @@ describe('ProfilingPanelComponent', () => {
     expect(component.authorized()).toBe(true);
   });
 
-  it('muestra perfil completo y fuentes simuladas de la solicitud', () => {
+  it('muestra perfil completo y fuentes sin avisos redundantes de simulación', () => {
     openProfile();
     expect(component.profile()?.solicitudId).toBe('AQT-2026-123456');
     expect(component.profile()?.fuentes).toHaveLength(2);
-    expect(fixture.nativeElement.textContent).toContain('No es una consulta financiera real.');
+    expect(fixture.nativeElement.textContent).not.toContain('No es una consulta financiera real.');
+    expect(fixture.nativeElement.textContent).not.toContain('Fuente simulada');
+    expect(fixture.nativeElement.textContent).toContain(es.profiling.version);
     expect(fixture.nativeElement.textContent).toContain('0.250000');
   });
 
@@ -115,7 +147,7 @@ describe('ProfilingPanelComponent', () => {
     openProfile();
     expect(component.profile()).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Adaptador adicional: adaptador_qa');
-    expect(fixture.nativeElement.textContent).toContain('Evidencia en caché vigente y simulada.');
+    expect(fixture.nativeElement.textContent).toContain(es.profiling.cachedEvidence);
     const reasons: HTMLElement[] = Array.from(
       fixture.nativeElement.querySelectorAll('.source-reason'),
     );
@@ -159,9 +191,7 @@ describe('ProfilingPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Este perfil incluye valores predeterminados del modelo.',
     );
-    expect(fixture.nativeElement.textContent).not.toContain(
-      'Evidencia en caché vigente y simulada.',
-    );
+    expect(fixture.nativeElement.textContent).not.toContain(es.profiling.cachedEvidence);
     const states: HTMLElement[] = Array.from(
       fixture.nativeElement.querySelectorAll('.source-state'),
     );

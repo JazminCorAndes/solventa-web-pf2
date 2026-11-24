@@ -10,6 +10,10 @@ import {
   QuoteRequestUnavailableError,
 } from '../../core/quotes/quote-request.errors';
 import productDetail from './testing/insurance-product-detail.json';
+import {
+  clientQuoteProfileResponse,
+  createClientQuoteProfile,
+} from '../../../testing/quotes/client-profile.testing';
 
 describe('HttpQuoteRequestGateway', () => {
   let gateway: HttpQuoteRequestGateway;
@@ -37,6 +41,76 @@ describe('HttpQuoteRequestGateway', () => {
     estado: 'recibida',
     creadaEn: '2026-10-11T18:00:00Z',
   };
+
+  it('lee el perfil registrado en el endpoint autenticado sin datos personales en query', async () => {
+    const result = firstValueFrom(gateway.loadClientProfile());
+    const request = http.expectOne(`${environment.apiBaseUrl}/v1/clientes/me/perfil`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.keys()).toEqual([]);
+    expect(request.request.headers.get('API-Version')).toBe('1');
+    request.flush(clientQuoteProfileResponse());
+    await expect(result).resolves.toEqual(createClientQuoteProfile());
+  });
+
+  it.each([
+    { fechaNacimiento: '2026-02-30' },
+    { fechaNacimiento: '1990-01-01T00:00:00Z' },
+    { fechaNacimiento: undefined },
+    { clienteId: 'no-uuid' },
+    { telefono: 3001234567 },
+  ])('rechaza datos de perfil mal formados sin valores de respaldo: %j', async (change) => {
+    const result = firstValueFrom(gateway.loadClientProfile());
+    const assertion = expect(result).rejects.toBeInstanceOf(Error);
+    http.expectOne(`${environment.apiBaseUrl}/v1/clientes/me/perfil`).flush({
+      ...clientQuoteProfileResponse(),
+      ...change,
+    });
+    await assertion;
+  });
+
+  it('mantiene ausencia real de datos registrados sin inventar fecha ni telefono', async () => {
+    const result = firstValueFrom(gateway.loadClientProfile());
+    http.expectOne(`${environment.apiBaseUrl}/v1/clientes/me/perfil`).flush({
+      ...clientQuoteProfileResponse(),
+      fechaNacimiento: null,
+      telefono: null,
+    });
+    await expect(result).resolves.toMatchObject({ birthDate: null, phone: null });
+  });
+
+  it.each<QuoteRequestDraft>([
+    { productId: 'life', productData: {} },
+    { productId: 'mortgage-life', productData: { mortgageBalance: '180000000' } },
+  ])(
+    'envia $productId sin capturar nacimiento y acepta solo el dato derivado por backend',
+    async (draft) => {
+      const result = firstValueFrom(gateway.submitRequest(draft));
+      const request = http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion`);
+      expect(request.request.body).toEqual({
+        productoId: draft.productId,
+        datosProducto: draft.productData,
+      });
+      request.flush({
+        ...receipt,
+        productoId: draft.productId,
+        datosProducto: { ...draft.productData, birthDate: '1990-01-01' },
+      });
+      await expect(result).resolves.toMatchObject({
+        productData: { ...draft.productData, birthDate: '1990-01-01' },
+      });
+    },
+  );
+
+  it('no acepta datos personales derivados invalidos como recibo de vida', async () => {
+    const result = firstValueFrom(gateway.submitRequest({ productId: 'life', productData: {} }));
+    const assertion = expect(result).rejects.toBeInstanceOf(QuoteRequestUnavailableError);
+    http.expectOne(`${environment.apiBaseUrl}/v1/solicitudes-cotizacion`).flush({
+      ...receipt,
+      productoId: 'life',
+      datosProducto: { birthDate: '2026-02-30' },
+    });
+    await assertion;
+  });
 
   it.each([
     {},

@@ -11,6 +11,11 @@ import { PROFILING_GATEWAY } from '../profiling/profiling.gateway';
 import { ProfilingClock } from '../profiling/profiling-clock.service';
 import { ProfilingError, profilingErrorKey } from '../profiling/profiling.errors';
 import { consentIsCurrent, profileIsCurrent } from '../profiling/profiling.models';
+import { AuthService } from '../auth/auth.service';
+import {
+  HttpQuoteHistoryGateway,
+  QuoteHistoryEntry,
+} from '../../data-access/quotes/http-quote-history.gateway';
 
 export const quoteResumeGuard: CanActivateFn = (route) => {
   const id = route.queryParamMap.get('solicitud');
@@ -23,6 +28,23 @@ export const quoteResumeGuard: CanActivateFn = (route) => {
   const offers = inject(OFFER_GATEWAY);
   const path = route.routeConfig?.path ?? '';
   const subscriptionRoute = path.includes('suscripcion');
+  const history = inject(HttpQuoteHistoryGateway);
+  const user = inject(AuthService).user;
+  const owner = user()?.id;
+  if (!owner) return router.createUrlTree(['/app/cotizaciones']);
+  const historicalDestination = (state: QuoteHistoryEntry) => {
+    if (user()?.id !== owner || state.status === 'vencida' || state.status === 'rechazada') {
+      selections.clear();
+      subscriptions.clear();
+      return router.createUrlTree(['/app/cotizaciones']);
+    }
+    if (state.status === 'completada' && !subscriptionRoute) {
+      return router.createUrlTree(['/app/cotizaciones/suscripcion/detalle'], {
+        queryParams: { solicitud: state.requestId },
+      });
+    }
+    return null;
+  };
   const recoverError = (error: unknown) => {
     console.error('The quote process could not be recovered.', error);
     selections.clear();
@@ -101,19 +123,36 @@ export const quoteResumeGuard: CanActivateFn = (route) => {
     );
   if (!id) {
     const requestId = quotes.latestRequest()?.id;
-    if (!requestId || subscriptionRoute) {
+    if (!requestId) {
       return destination();
     }
-    return recoverSelection(requestId).pipe(catchError(recoverError));
+    return history.loadClientState(requestId, owner).pipe(
+      switchMap((state) => {
+        const terminal = historicalDestination(state);
+        return terminal
+          ? of(terminal)
+          : subscriptionRoute
+            ? of(destination())
+            : recoverSelection(requestId);
+      }),
+      catchError(recoverError),
+    );
   }
   return forkJoin({
     request: inject(QUOTE_REQUEST_GATEWAY).loadRequest(id),
     subscription: inject(SUBSCRIPTION_GATEWAY).load(id),
+    state: history.loadClientState(id, owner),
   }).pipe(
-    switchMap(({ request, subscription }) => {
-      if (request.id !== id || (subscription && subscription.quoteId !== id)) {
+    switchMap(({ request, subscription, state }) => {
+      if (
+        request.id !== id ||
+        state.productId !== request.productId ||
+        (subscription && subscription.quoteId !== id)
+      ) {
         throw new Error('The recovered flow does not match the requested quote.');
       }
+      const terminal = historicalDestination(state);
+      if (terminal) return of(terminal);
       selections.clear();
       subscriptions.clear();
       quotes.activate(request);

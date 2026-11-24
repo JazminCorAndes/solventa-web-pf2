@@ -10,10 +10,10 @@ import {
   QUOTE_REQUEST_STORAGE,
   QuoteRequestStorage,
 } from '../../core/quotes/quote-request-storage.service';
-import { MockOfferGateway } from './mock-offer.gateway';
+import { MockOfferGateway } from '../../../testing/data-access/offers/mock-offer.gateway';
 import { OfferSelectionChangedError, OfferUnavailableError } from '../../core/offers/offer.errors';
-import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
-import { createProfile } from '../../core/profiling/profiling.fixtures';
+import { MockProfilingGateway } from '../../../testing/data-access/profiling/mock-profiling.gateway';
+import { createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { ProfilingError } from '../../core/profiling/profiling.errors';
 
 const REQUEST: QuoteRequestRecord = {

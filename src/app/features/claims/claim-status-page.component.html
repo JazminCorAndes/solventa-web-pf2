@@ -19,17 +19,19 @@
     }
   </header>
 
-  <form class="claim-lookup" [formGroup]="lookupForm" (ngSubmit)="search()" novalidate>
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'claimStatus.lookupLabel' | transloco }}</mat-label>
-      <input matInput formControlName="claimId" autocomplete="off" data-testid="claim-id-input" />
-      <mat-hint>{{ 'claimStatus.lookupHint' | transloco }}</mat-hint>
-      <mat-error>{{ 'claimStatus.lookupInvalid' | transloco }}</mat-error>
-    </mat-form-field>
-    <button mat-flat-button type="submit" [disabled]="claims.status() === 'loading'">
-      {{ 'claimStatus.lookupSubmit' | transloco }}
-    </button>
-  </form>
+  @if (!claimId()) {
+    <form class="claim-lookup" [formGroup]="lookupForm" (ngSubmit)="search()" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'claimStatus.lookupLabel' | transloco }}</mat-label>
+        <input matInput formControlName="claimId" autocomplete="off" data-testid="claim-id-input" />
+        <mat-hint>{{ 'claimStatus.lookupHint' | transloco }}</mat-hint>
+        <mat-error>{{ 'claimStatus.lookupInvalid' | transloco }}</mat-error>
+      </mat-form-field>
+      <button mat-flat-button type="submit" [disabled]="claims.status() === 'loading'">
+        {{ 'claimStatus.lookupSubmit' | transloco }}
+      </button>
+    </form>
+  }
 
   @if (claimId()) {
     @switch (claims.status()) {

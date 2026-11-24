@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthUser } from '../../core/auth/auth.models';
 import { createConsentRequest } from '../../core/profiling/profiling.models';
-import { MockProfilingGateway } from './mock-profiling.gateway';
+import { MockProfilingGateway } from '../../../testing/data-access/profiling/mock-profiling.gateway';
 
 describe('MockProfilingGateway', () => {
   let gateway: MockProfilingGateway;

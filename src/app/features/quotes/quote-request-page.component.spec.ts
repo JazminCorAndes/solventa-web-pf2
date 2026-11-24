@@ -28,9 +28,9 @@ import {
   QuoteRequestStorage,
 } from '../../core/quotes/quote-request-storage.service';
 import { QuoteRequestPageComponent } from './quote-request-page.component';
+import { createClientQuoteProfile } from '../../../testing/quotes/client-profile.testing';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
-import { environment } from '../../../environments/environment';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { ProfilingPanelComponent } from '../../shared/profiling/profiling-panel.component';
 
 const PRODUCT: InsuranceProduct = {
@@ -78,6 +78,9 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadClientProfile = vi
+    .fn<QuoteRequestGateway['loadClientProfile']>()
+    .mockImplementation(() => of(createClientQuoteProfile('client-001')));
   loadProductDetail = vi.fn<QuoteRequestGateway['loadProductDetail']>();
 
   loadRequest(): Observable<QuoteRequestRecord> {
@@ -122,7 +125,6 @@ class TestOfferSelectionStorage implements OfferSelectionStorage {
 }
 
 describe('QuoteRequestPageComponent', () => {
-  const originalMode = environment.dataAccessMode;
   let fixture: ComponentFixture<QuoteRequestPageComponent>;
   let component: QuoteRequestPageComponent;
   let gateway: TestQuoteRequestGateway;
@@ -141,7 +143,6 @@ describe('QuoteRequestPageComponent', () => {
       phone: '+573001234567',
     });
 
-    environment.dataAccessMode = 'mock';
     await TestBed.configureTestingModule({
       imports: [
         QuoteRequestPageComponent,
@@ -177,10 +178,6 @@ describe('QuoteRequestPageComponent', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => {
-    environment.dataAccessMode = originalMode;
-  });
-
   it('shows an accessible empty catalog after a successful empty response', () => {
     fillValidForm(component);
     vi.spyOn(gateway, 'loadProducts').mockReturnValue(of([]));
@@ -201,12 +198,12 @@ describe('QuoteRequestPageComponent', () => {
     expect(gateway.submitCalls).toBe(0);
   });
 
-  it('does not fabricate product details when running without the backend', () => {
+  it('waits for an explicit HTTP detail request instead of fabricating product details', () => {
     fillValidForm(component);
     fixture.detectChanges();
     const overview = fixture.nativeElement.querySelector('.product-overview');
-    expect(overview.textContent).toContain('quoteRequest.productDetails.backendRequired');
-    expect(overview.querySelector('button')).toBeNull();
+    expect(overview.textContent).toContain('quoteRequest.productDetails.view');
+    expect(overview.querySelector('button')).not.toBeNull();
     expect(overview.querySelector('.product-details')).toBeNull();
     expect(gateway.loadProductDetail).not.toHaveBeenCalled();
   });
@@ -294,9 +291,8 @@ describe('QuoteRequestPageComponent', () => {
     });
   });
 
-  it('usa identidad de sesion sin pedir documento o contacto en modo backend', () => {
+  it('usa identidad de sesion sin pedir documento o contacto', () => {
     fixture.destroy();
-    environment.dataAccessMode = 'backend';
     fixture = TestBed.createComponent(QuoteRequestPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -347,9 +343,12 @@ describe('QuoteRequestPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('1023456789');
     expect(fixture.nativeElement.querySelector('#national-id')).toBeNull();
     expect(fixture.nativeElement.querySelector('#quote-phone')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('1990-01-01');
+    expect(fixture.nativeElement.querySelector('[formControlName=birthDate]')).toBeNull();
+    expect(component.form.get('birthDate')).toBeNull();
   });
 
-  it('shows a single unavailable label when the backend session has no identity details', () => {
+  it('usa el perfil registrado aunque la sesion no incluya sus datos personales', () => {
     user.set({
       id: 'client-001',
       name: 'Natalia Córdoba',
@@ -359,9 +358,37 @@ describe('QuoteRequestPageComponent', () => {
     fixture.detectChanges();
 
     const profileValues = fixture.nativeElement.querySelectorAll('.profile-summary dd');
-    expect(profileValues[0].textContent.trim()).toBe('quoteRequest.profileUnavailable');
+    expect(profileValues[0].textContent.trim()).toContain('1023456789');
     expect(profileValues[1].textContent.trim()).toBe('cliente@solventa.co');
-    expect(profileValues[2].textContent.trim()).toBe('quoteRequest.profileUnavailable');
+    expect(profileValues[2].textContent.trim()).toBe('+573001234567');
+    expect(profileValues[3].textContent.trim()).toBe('1990-01-01');
+  });
+
+  it('fecha registrada ausente no se inventa ni permite cotizar vida', () => {
+    gateway.loadClientProfile.mockReturnValue(
+      of({
+        ...createClientQuoteProfile('client-001'),
+        birthDate: null,
+      }),
+    );
+    component.loadRegisteredProfile();
+    component.form.controls.productId.setValue('life');
+    fixture.detectChanges();
+    component.submit();
+    expect(gateway.submitCalls).toBe(0);
+    expect(component.registeredProfile()?.birthDate).toBeNull();
+    expect(component.errorKey()).toBe('quoteRequest.errors.profileIncomplete');
+    expect(fixture.nativeElement.querySelector('[formControlName=birthDate]')).toBeNull();
+  });
+
+  it('no expone informacion de un perfil de otra sesion', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    gateway.loadClientProfile.mockReturnValue(of(createClientQuoteProfile('other-client')));
+    component.loadRegisteredProfile();
+    fixture.detectChanges();
+    expect(component.registeredProfile()).toBeNull();
+    expect(component.profileComplete()).toBe(false);
+    expect(fixture.nativeElement.querySelectorAll('.profile-summary dd')).toHaveLength(0);
   });
 
   it('removes characters that are not accepted by a Colombian plate', () => {
@@ -392,6 +419,8 @@ describe('QuoteRequestPageComponent', () => {
     const panel = fixture.debugElement.query(By.directive(ProfilingPanelComponent))
       .componentInstance as ProfilingPanelComponent;
     expect(panel.requestId).toBeNull();
+    expect(panel.showDetails).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-profiling-panel mat-card')).toBeNull();
     expect(component.profilingReady()).toBe(true);
     panel.availabilityChange.emit(false);
     component.submit();
@@ -460,8 +489,8 @@ describe('QuoteRequestPageComponent', () => {
   it.each([
     {
       productId: 'life',
-      fields: { birthDate: new Date(1990, 0, 1) },
-      data: { birthDate: '1990-01-01' },
+      fields: {},
+      data: {},
     },
     {
       productId: 'device-protection',
@@ -475,8 +504,8 @@ describe('QuoteRequestPageComponent', () => {
     },
     {
       productId: 'mortgage-life',
-      fields: { birthDate: new Date(1990, 0, 1), mortgageBalance: '180000000' },
-      data: { birthDate: '1990-01-01', mortgageBalance: '180000000' },
+      fields: { mortgageBalance: '180000000' },
+      data: { mortgageBalance: '180000000' },
     },
   ])(
     'envía exclusivamente los datos de $productId sin exigir placa',
@@ -492,7 +521,7 @@ describe('QuoteRequestPageComponent', () => {
   );
 
   it.each(['delay-cancellation', 'missed-connection', 'comprehensive'])(
-    'cotiza vuelos con cobertura %s',
+    'no ofrece ni cotiza el evento parametrico vuelo aunque se inyecte la cobertura %s',
     (coverageType) => {
       const flightDate = futureDay(10);
       component.form.patchValue({
@@ -503,19 +532,12 @@ describe('QuoteRequestPageComponent', () => {
         coverageType,
       });
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('#flight-coverage')).not.toBeNull();
+      expect(component.products().some((product) => product.id === 'parametric')).toBe(false);
+      expect(fixture.nativeElement.querySelector('#flight-coverage')).toBeNull();
 
       component.submit();
 
-      expect(gateway.lastRequest).toEqual({
-        productId: 'parametric',
-        productData: {
-          airline: 'Avianca',
-          flightNumber: 'AV123',
-          flightDate: isoDate(flightDate),
-          coverageType,
-        },
-      });
+      expect(gateway.submitCalls).toBe(0);
     },
   );
 
@@ -603,7 +625,6 @@ describe('QuoteRequestPageComponent', () => {
     fillWeatherForm(component);
     component.form.patchValue({
       productId: 'mortgage-life',
-      birthDate: new Date(1980, 4, 15),
       mortgageBalance: '200000000',
       location: '',
       insuredAmount: '',
@@ -611,7 +632,7 @@ describe('QuoteRequestPageComponent', () => {
     component.submit();
     expect(gateway.lastRequest).toEqual({
       productId: 'mortgage-life',
-      productData: { birthDate: '1980-05-15', mortgageBalance: '200000000' },
+      productData: { mortgageBalance: '200000000' },
     });
   });
 

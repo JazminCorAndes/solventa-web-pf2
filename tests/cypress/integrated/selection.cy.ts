@@ -319,7 +319,7 @@ describe('Preseleccion integrada: A a B, recuperacion y aceptacion explicita', (
         phase = 'subscribed';
       });
       cy.location('pathname').should('eq', '/app/cotizaciones/suscripcion');
-      cy.contains('button', 'Confirmar pago simulado').should('be.enabled');
+      cy.contains('button', 'Confirmar pago').should('be.enabled');
       cy.go('back');
       cy.location('pathname').should('eq', '/app/cotizaciones/aceptacion');
       cy.contains('.confirmation-banner', 'Selección confirmada').should('be.visible');

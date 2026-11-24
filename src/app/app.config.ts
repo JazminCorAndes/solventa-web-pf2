@@ -19,18 +19,14 @@ import { AUTH_STORAGE, BrowserAuthStorage } from './core/auth/auth-storage.servi
 import { DASHBOARD_GATEWAY } from './core/dashboard/dashboard.gateway';
 import { CLAIM_GATEWAY } from './core/claims/claim.gateway';
 import { HttpClaimGateway } from './data-access/claims/http-claim.gateway';
-import { MockClaimGateway } from './data-access/claims/mock-claim.gateway';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
 import { OFFER_GATEWAY } from './core/offers/offer.gateway';
 import {
   BrowserOfferSelectionStorage,
   OFFER_SELECTION_STORAGE,
 } from './core/offers/offer-selection-storage.service';
-import { MockAuthGateway } from './data-access/auth/mock-auth.gateway';
 import { HttpAuthGateway } from './data-access/auth/http-auth.gateway';
 import { HttpDashboardGateway } from './data-access/dashboard/http-dashboard.gateway';
-import { MockDashboardGateway } from './data-access/dashboard/mock-dashboard.gateway';
-import { MockOfferGateway } from './data-access/offers/mock-offer.gateway';
 import { HttpOfferGateway } from './data-access/offers/http-offer.gateway';
 import { SUBSCRIPTION_GATEWAY } from './core/subscriptions/subscription.gateway';
 import {
@@ -38,19 +34,15 @@ import {
   SUBSCRIPTION_STORAGE,
 } from './core/subscriptions/subscription-storage.service';
 import { HttpSubscriptionGateway } from './data-access/subscriptions/http-subscription.gateway';
-import { MockSubscriptionGateway } from './data-access/subscriptions/mock-subscription.gateway';
 import { QUOTE_REQUEST_GATEWAY } from './core/quotes/quote-request.gateway';
 import {
   BrowserQuoteRequestStorage,
   QUOTE_REQUEST_STORAGE,
 } from './core/quotes/quote-request-storage.service';
-import { MockQuoteRequestGateway } from './data-access/quotes/mock-quote-request.gateway';
 import { HttpQuoteRequestGateway } from './data-access/quotes/http-quote-request.gateway';
-import { environment } from '../environments/environment';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { PROFILING_GATEWAY } from './core/profiling/profiling.gateway';
 import { HttpProfilingGateway } from './data-access/profiling/http-profiling.gateway';
-import { MockProfilingGateway } from './data-access/profiling/mock-profiling.gateway';
 import { SIMULATED_PAYMENT_GATEWAY } from './core/payments/simulated-payment.gateway';
 import { HttpSimulatedPaymentGateway } from './data-access/payments/http-simulated-payment.gateway';
 import { ADVISOR_PROFILING_GATEWAY } from './core/advisor-profiling/advisor-profiling.gateway';
@@ -58,102 +50,89 @@ import {
   ADVISOR_PROFILING_STORAGE,
   BrowserAdvisorProfilingStorage,
 } from './core/advisor-profiling/advisor-profiling-storage.service';
-import { MockAdvisorProfilingGateway } from './data-access/advisor-profiling/mock-advisor-profiling.gateway';
 import { HttpAdvisorProfilingGateway } from './data-access/advisor-profiling/http-advisor-profiling.gateway';
 import { CLAIM_STATUS_GATEWAY } from './core/claims/claim-status.gateway';
 import { HttpClaimStatusGateway } from './data-access/claims/http-claim-status.gateway';
-import { MockClaimStatusGateway } from './data-access/claims/mock-claim-status.gateway';
 import { CLAIM_EVIDENCE_GATEWAY } from './core/claims/claim-evidence.gateway';
 import { HttpClaimEvidenceGateway } from './data-access/claims/http-claim-evidence.gateway';
-import { MockClaimEvidenceGateway } from './data-access/claims/mock-claim-evidence.gateway';
 import { POLICY_RENEWAL_GATEWAY } from './core/policies/policy-renewal.gateway';
 import { HttpPolicyRenewalGateway } from './data-access/policies/http-policy-renewal.gateway';
-import { MockPolicyRenewalGateway } from './data-access/policies/mock-policy-renewal.gateway';
 import { POLICY_MODIFICATION_GATEWAY } from './core/policies/policy-modification.gateway';
 import { HttpPolicyModificationGateway } from './data-access/policies/http-policy-modification.gateway';
-import { MockPolicyModificationGateway } from './data-access/policies/mock-policy-modification.gateway';
 import { POLICY_CANCELLATION_GATEWAY } from './core/policies/policy-cancellation.gateway';
 import { HttpPolicyCancellationGateway } from './data-access/policies/http-policy-cancellation.gateway';
-import { MockPolicyCancellationGateway } from './data-access/policies/mock-policy-cancellation.gateway';
 import { OPERATIONAL_REPORT_GATEWAY } from './core/reports/operational-report.gateway';
 import { HttpOperationalReportGateway } from './data-access/reports/http-operational-report.gateway';
-import { MockOperationalReportGateway } from './data-access/reports/mock-operational-report.gateway';
 import { ADVISOR_EXCEPTIONS_GATEWAY } from './core/advisor-exceptions/advisor-exceptions.gateway';
 import { HttpAdvisorExceptionsGateway } from './data-access/advisor-exceptions/http-advisor-exceptions.gateway';
-import { MockAdvisorExceptionsGateway } from './data-access/advisor-exceptions/mock-advisor-exceptions.gateway';
 
 registerLocaleData(localeEsCo);
-
-const backendMode = environment.dataAccessMode === 'backend';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors(backendMode ? [authInterceptor] : [])),
+    provideHttpClient(withInterceptors([authInterceptor])),
     provideRouter(routes),
     { provide: LOCALE_ID, useValue: 'es-CO' },
-    { provide: AUTH_GATEWAY, useClass: backendMode ? HttpAuthGateway : MockAuthGateway },
+    { provide: AUTH_GATEWAY, useClass: HttpAuthGateway },
     { provide: AUTH_STORAGE, useClass: BrowserAuthStorage },
     {
       provide: DASHBOARD_GATEWAY,
-      useClass: backendMode ? HttpDashboardGateway : MockDashboardGateway,
+      useClass: HttpDashboardGateway,
     },
     {
       provide: CLAIM_STATUS_GATEWAY,
-      useClass: backendMode ? HttpClaimStatusGateway : MockClaimStatusGateway,
+      useClass: HttpClaimStatusGateway,
     },
     {
       provide: CLAIM_EVIDENCE_GATEWAY,
-      useClass: backendMode ? HttpClaimEvidenceGateway : MockClaimEvidenceGateway,
+      useClass: HttpClaimEvidenceGateway,
     },
     {
       provide: POLICY_RENEWAL_GATEWAY,
-      useClass: backendMode ? HttpPolicyRenewalGateway : MockPolicyRenewalGateway,
+      useClass: HttpPolicyRenewalGateway,
     },
     {
       provide: POLICY_MODIFICATION_GATEWAY,
-      useClass: backendMode ? HttpPolicyModificationGateway : MockPolicyModificationGateway,
+      useClass: HttpPolicyModificationGateway,
     },
     {
       provide: POLICY_CANCELLATION_GATEWAY,
-      ...(backendMode
-        ? { useClass: HttpPolicyCancellationGateway }
-        : { useExisting: MockPolicyCancellationGateway }),
+      useClass: HttpPolicyCancellationGateway,
     },
     {
       provide: OPERATIONAL_REPORT_GATEWAY,
-      useClass: backendMode ? HttpOperationalReportGateway : MockOperationalReportGateway,
+      useClass: HttpOperationalReportGateway,
     },
     {
       provide: CLAIM_GATEWAY,
-      useClass: backendMode ? HttpClaimGateway : MockClaimGateway,
+      useClass: HttpClaimGateway,
     },
-    { provide: OFFER_GATEWAY, useClass: backendMode ? HttpOfferGateway : MockOfferGateway },
+    { provide: OFFER_GATEWAY, useClass: HttpOfferGateway },
     { provide: OFFER_SELECTION_STORAGE, useClass: BrowserOfferSelectionStorage },
     {
       provide: SUBSCRIPTION_GATEWAY,
-      useClass: backendMode ? HttpSubscriptionGateway : MockSubscriptionGateway,
+      useClass: HttpSubscriptionGateway,
     },
     { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
     { provide: SIMULATED_PAYMENT_GATEWAY, useClass: HttpSimulatedPaymentGateway },
     {
       provide: ADVISOR_PROFILING_GATEWAY,
-      useClass: backendMode ? HttpAdvisorProfilingGateway : MockAdvisorProfilingGateway,
+      useClass: HttpAdvisorProfilingGateway,
     },
     {
       provide: ADVISOR_EXCEPTIONS_GATEWAY,
-      useClass: backendMode ? HttpAdvisorExceptionsGateway : MockAdvisorExceptionsGateway,
+      useClass: HttpAdvisorExceptionsGateway,
     },
     { provide: ADVISOR_PROFILING_STORAGE, useClass: BrowserAdvisorProfilingStorage },
     {
       provide: QUOTE_REQUEST_GATEWAY,
-      useClass: backendMode ? HttpQuoteRequestGateway : MockQuoteRequestGateway,
+      useClass: HttpQuoteRequestGateway,
     },
     { provide: QUOTE_REQUEST_STORAGE, useClass: BrowserQuoteRequestStorage },
-    MockProfilingGateway,
     {
       provide: PROFILING_GATEWAY,
-      ...(backendMode ? { useClass: HttpProfilingGateway } : { useExisting: MockProfilingGateway }),
+      useClass: HttpProfilingGateway,
     },
     provideTransloco({
       config: {
@@ -165,21 +144,17 @@ export const appConfig: ApplicationConfig = {
       },
       loader: TranslocoHttpLoader,
     }),
-    ...(backendMode
-      ? [
-          provideAppInitializer(() =>
-            firstValueFrom(
-              inject(AuthService)
-                .synchronizeSession()
-                .pipe(
-                  catchError((error: unknown) => {
-                    console.error('The remote session could not be restored.', error);
-                    return of(undefined);
-                  }),
-                ),
-            ),
+    provideAppInitializer(() =>
+      firstValueFrom(
+        inject(AuthService)
+          .synchronizeSession()
+          .pipe(
+            catchError((error: unknown) => {
+              console.error('The remote session could not be restored.', error);
+              return of(undefined);
+            }),
           ),
-        ]
-      : []),
+      ),
+    ),
   ],
 };

@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { ModificationProposal } from '../../core/policies/policy-modification.models';
-import { MOCK_POLICY_ID } from '../mock/mock.constants';
-import { MockPolicyModificationGateway } from './mock-policy-modification.gateway';
+import { MOCK_POLICY_ID } from '../../../testing/data-access/mock/mock.constants';
+import { MockPolicyModificationGateway } from '../../../testing/data-access/policies/mock-policy-modification.gateway';
 
 const KEY = '22222222-2222-4222-8222-222222222222';
 const PROPOSAL: ModificationProposal = {

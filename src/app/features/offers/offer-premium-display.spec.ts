@@ -9,7 +9,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { QuoteRequestService } from '../../core/quotes/quote-request.service';
 import { SubscriptionService } from '../../core/subscriptions/subscription.service';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
-import { createConsent } from '../../core/profiling/profiling.fixtures';
+import { createConsent } from '../../../testing/core/profiling/profiling.fixtures';
 import {
   InsuranceOffer,
   OfferCalculation,

@@ -13,7 +13,7 @@ import { AUTH_STORAGE } from '../../core/auth/auth-storage.service';
 import { authInterceptor } from '../../core/auth/auth.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
 import { TestAuthGateway, TestAuthStorage } from '../../core/auth/auth.testing';
-import { createConsent } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { HttpProfilingGateway } from '../../data-access/profiling/http-profiling.gateway';
 
@@ -96,5 +96,26 @@ describe('Registration and consent through application routes', () => {
     );
     harness.detectChanges();
     expect(host.textContent).toContain(es.profiling.consentStatus.revocado);
+  });
+
+  it('shows the associated profile only in consent and refreshes it when the request changes', async () => {
+    await firstValueFrom(
+      TestBed.inject(AuthService).login({ email: 'cliente@solventa.co', password: 'Test123!' }),
+    );
+    for (const id of ['AQT-2026-123456', 'AQT-2026-654321']) {
+      await harness.navigateByUrl(`/app/consentimiento?solicitud=${id}`);
+      http.expectOne(consentUrl).flush(createConsent(), {
+        headers: { Date: new Date().toUTCString() },
+      });
+      const request = http.expectOne(
+        `${environment.apiBaseUrl}/v1/solicitudes-cotizacion/${id}/perfilamiento`,
+      );
+      expect(request.request.headers.get('Authorization')).toBe('Bearer access-1');
+      request.flush(createProfile(id), { headers: { Date: new Date().toUTCString() } });
+      harness.detectChanges();
+      expect(harness.routeNativeElement?.textContent).toContain(es.profiling.title);
+      expect(harness.routeNativeElement?.textContent).toContain(id);
+      expect(harness.routeNativeElement?.querySelector('.metrics')).not.toBeNull();
+    }
   });
 });

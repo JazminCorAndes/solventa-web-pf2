@@ -61,12 +61,7 @@
           </li>
         }
       </ul>
-      <app-claim-evidence-capture
-        [policy]="policy"
-        [disabled]="evidence.busy() || !!locatingKey()"
-        (captured)="capture($event)"
-      />
-      <p>{{ 'claimEvidence.capture.subject' | transloco }}</p>
+      <p>{{ 'claimEvidence.fileHelp' | transloco }}</p>
       <input
         id="evidence-files"
         type="file"

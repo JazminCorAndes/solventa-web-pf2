@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { defer, Observable, of } from 'rxjs';
-import { OperationalReportGateway } from '../../core/reports/operational-report.gateway';
+import { OperationalReportGateway } from '../../../app/core/reports/operational-report.gateway';
 import {
   OperationalReport,
   OperationalReportError,
@@ -9,7 +9,7 @@ import {
   ReportDownload,
   ReportFilters,
   ReportOptions,
-} from '../../core/reports/operational-report.models';
+} from '../../../app/core/reports/operational-report.models';
 
 const FINGERPRINT = 'e'.repeat(64);
 

@@ -1,10 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { ClaimInput } from '../../core/claims/claim.models';
-import { MOCK_PARAMETRIC_CLAIM_ID, MOCK_POLICY_ID } from '../mock/mock.constants';
-import { MockClaimEvidenceGateway } from './mock-claim-evidence.gateway';
-import { MockClaimGateway } from './mock-claim.gateway';
-import { MockClaimStatusGateway } from './mock-claim-status.gateway';
+import {
+  MOCK_PARAMETRIC_CLAIM_ID,
+  MOCK_POLICY_ID,
+} from '../../../testing/data-access/mock/mock.constants';
+import { MockClaimEvidenceGateway } from '../../../testing/data-access/claims/mock-claim-evidence.gateway';
+import { MockClaimGateway } from '../../../testing/data-access/claims/mock-claim.gateway';
+import { MockClaimStatusGateway } from '../../../testing/data-access/claims/mock-claim-status.gateway';
 
 const KEY = '33333333-3333-4333-8333-333333333333';
 const PAYLOAD: ClaimInput = {

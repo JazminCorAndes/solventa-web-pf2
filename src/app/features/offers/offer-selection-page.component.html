@@ -213,9 +213,11 @@
       }
     </div>
     @if (offers.canContinue()) {
-      <a mat-flat-button routerLink="/app/cotizaciones/aceptacion">
-        {{ 'offers.continue' | transloco }} →
-      </a>
+      <div class="continue-bar">
+        <a mat-flat-button routerLink="/app/cotizaciones/aceptacion">
+          {{ 'offers.continue' | transloco }} →
+        </a>
+      </div>
     }
   }
 </section>
