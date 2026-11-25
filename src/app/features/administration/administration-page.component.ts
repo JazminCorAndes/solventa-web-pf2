@@ -121,7 +121,7 @@ export class AdministrationPageComponent {
       const id = this.claimId();
       const queue = this.queue();
       this.version();
-      const context = JSON.stringify([ownerId, this.auth.user()?.role, id, queue]);
+      const context = JSON.stringify([ownerId, this.portalPath(), id, queue]);
       if (context !== this.context) {
         this.context = context;
         this.saved.set(false);

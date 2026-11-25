@@ -112,21 +112,22 @@ describe('AdministrationPageComponent', () => {
       motivo: 'Revisión documentada',
     });
 
-    it('reutiliza revisión para asesor autorizado y bloquea al perder el permiso', async () => {
-      user.set({ ...USER, role: 'advisor', permissions: ['siniestros:revisar'] });
-      fixture.detectChanges();
-      await fixture.whenStable();
-      expect(component.portalPath()).toBe('/asesor');
-      expect(component.canDecide()).toBe(true);
-      user.set({ ...USER, role: 'advisor', permissions: ['reportes:operativos'] });
-      fixture.detectChanges();
-      await fixture.whenStable();
-      expect(component.claim()).toBeNull();
-      expect(component.loadError()).toBe('forbidden');
-      component.submit();
-      expect(gateway.decide).not.toHaveBeenCalled();
-    });
     expect(component.canDecide()).toBe(false);
+  });
+
+  it('reutiliza revisión para asesor autorizado y bloquea al perder el permiso', async () => {
+    user.set({ ...USER, role: 'advisor', permissions: ['siniestros:revisar'] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.portalPath()).toBe('/asesor');
+    expect(component.canDecide()).toBe(true);
+    user.set({ ...USER, role: 'advisor', permissions: ['reportes:operativos'] });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.claim()).toBeNull();
+    expect(component.loadError()).toBe('forbidden');
+    component.submit();
+    expect(gateway.decide).not.toHaveBeenCalled();
   });
 
   it('conserva UUID y cuerpo ante 503, incluso después de cambiar el formulario', () => {
@@ -219,13 +220,21 @@ describe('AdministrationPageComponent', () => {
     expect(component.canDecide()).toBe(false);
   });
 
-  it('no cancela una decisión por renovar el usuario de la misma sesión', async () => {
-    component.form.controls.motivo.setValue('Revisión documentada');
-    component.submit();
-    user.set({ ...USER });
-    fixture.detectChanges();
-    await fixture.whenStable();
-    expect(component.submitting()).toBe(true);
-    expect(gateway.claim).toHaveBeenCalledTimes(1);
-  });
+  it.each(['administrator', 'advisor'] as const)(
+    'no cancela una decisión por renovar el usuario %s de la misma sesión',
+    async (role) => {
+      const sessionUser: AuthUser = { ...USER, role, permissions: ['siniestros:revisar'] };
+      user.set(sessionUser);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const loadCount = gateway.claim.mock.calls.length;
+      component.form.controls.motivo.setValue('Revisión documentada');
+      component.submit();
+      user.set({ ...sessionUser, permissions: [...sessionUser.permissions!] });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(component.submitting()).toBe(true);
+      expect(gateway.claim).toHaveBeenCalledTimes(loadCount);
+    },
+  );
 });
