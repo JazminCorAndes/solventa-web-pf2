@@ -9,11 +9,11 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     login(syntheticUser.correo, password);
   });
 
-  it('retira vuelo del selector sin retirar clima paramétrico', () => {
+  it('ofrece vuelos y clima paramétrico en el selector', () => {
     openQuote(products[0]);
     cy.get('mat-select').click();
-    cy.get('mat-option').should('have.length', products.length - 1);
-    cy.contains('mat-option', /^parametric$/).should('not.exist');
+    cy.get('mat-option').should('have.length', products.length);
+    cy.contains('mat-option', /^\s*parametric\s*$/).should('be.visible');
     cy.contains('mat-option', 'parametric-weather').should('be.visible');
   });
 
@@ -73,7 +73,7 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     cy.get('@expiredDetails.all').should('have.length', 0);
   });
 
-  for (const product of products.filter((product) => product.id !== 'parametric')) {
+  for (const product of products) {
     it(`${product.id}: obligatorios y contrato completo al solicitar`, () => {
       openQuote(product);
       if (Object.keys(product.fields).length || product.id === 'travel') {
