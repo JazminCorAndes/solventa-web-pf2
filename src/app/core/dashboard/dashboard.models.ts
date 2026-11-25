@@ -51,6 +51,16 @@ export type DashboardPayment = DashboardPaymentBase &
     | { status: 'pendiente'; createdAt: string; code: 'resultado_no_confirmado' }
   );
 
+export type PolicyIndemnification =
+  | {
+      status: 'pagada';
+      amount: DashboardMoney;
+      paidAt: string;
+      reference: string;
+      simulated: true;
+    }
+  | { status: 'pendiente' | 'rechazada'; currency: string; simulated: true };
+
 export interface DashboardPolicy {
   id: string;
   subscriptionId: string;
@@ -59,6 +69,7 @@ export interface DashboardPolicy {
   endDate: string;
   status: string;
   simulated: true;
+  indemnification?: PolicyIndemnification | null;
 }
 
 export interface DashboardSnapshot {

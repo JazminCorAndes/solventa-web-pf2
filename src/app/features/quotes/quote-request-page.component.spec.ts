@@ -521,7 +521,7 @@ describe('QuoteRequestPageComponent', () => {
   );
 
   it.each(['delay-cancellation', 'missed-connection', 'comprehensive'])(
-    'no ofrece ni cotiza el evento parametrico vuelo aunque se inyecte la cobertura %s',
+    'cotiza el vuelo con sus datos normalizados y cobertura %s',
     (coverageType) => {
       const flightDate = futureDay(10);
       component.form.patchValue({
@@ -532,12 +532,20 @@ describe('QuoteRequestPageComponent', () => {
         coverageType,
       });
       fixture.detectChanges();
-      expect(component.products().some((product) => product.id === 'parametric')).toBe(false);
-      expect(fixture.nativeElement.querySelector('#flight-coverage')).toBeNull();
+      expect(component.products().some((product) => product.id === 'parametric')).toBe(true);
+      expect(fixture.nativeElement.querySelector('#flight-coverage')).not.toBeNull();
 
       component.submit();
 
-      expect(gateway.submitCalls).toBe(0);
+      expect(gateway.lastRequest).toEqual({
+        productId: 'parametric',
+        productData: {
+          airline: 'Avianca',
+          flightNumber: 'AV123',
+          flightDate: isoDate(flightDate),
+          coverageType,
+        },
+      });
     },
   );
 

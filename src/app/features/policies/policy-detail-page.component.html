@@ -33,6 +33,57 @@
 
     <app-policy-document-panel [policy]="currentPolicy" />
 
+    @if (currentPolicy.type === 'parametric' || currentPolicy.indemnification) {
+      <article class="detail-card indemnification-card" data-testid="policy-indemnification">
+        <div class="section-heading">
+          <h2>{{ 'policies.indemnification.title' | transloco }}</h2>
+          <p>{{ 'policies.indemnification.subtitle' | transloco }}</p>
+        </div>
+        @if (currentPolicy.indemnification; as indemnification) {
+          @if (indemnification.status === 'pagada') {
+            <p class="status-badge">{{ 'policies.indemnification.paid' | transloco }}</p>
+            <p>{{ 'policies.indemnification.simulated' | transloco }}</p>
+            <dl>
+              <div>
+                <dt>{{ 'policies.indemnification.amount' | transloco }}</dt>
+                <dd>
+                  {{
+                    indemnification.amount.amount
+                      | currency: indemnification.amount.currency : 'code' : '1.2-2' : dateLocale
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ 'policies.indemnification.paidAt' | transloco }}</dt>
+                <dd>{{ indemnification.paidAt | date: 'medium' : undefined : dateLocale }}</dd>
+              </div>
+              <div class="wide">
+                <dt>{{ 'policies.indemnification.reference' | transloco }}</dt>
+                <dd>{{ indemnification.reference }}</dd>
+              </div>
+            </dl>
+          } @else {
+            <p role="status">
+              {{
+                'policies.indemnification.' +
+                  (indemnification.status === 'pendiente' ? 'pending' : 'rejected') | transloco
+              }}
+            </p>
+          }
+        } @else {
+          <p role="status">
+            {{
+              'policies.indemnification.' +
+                (currentPolicy.indemnification === null ? 'none' : 'unavailable') | transloco
+            }}
+          </p>
+        }
+        <button mat-stroked-button type="button" (click)="dashboard.load()">
+          {{ 'policies.refresh' | transloco }}
+        </button>
+      </article>
+    }
+
     <div class="detail-grid">
       <article class="detail-card">
         <div class="section-heading">
