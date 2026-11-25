@@ -189,6 +189,31 @@ describe('HttpAuthGateway', () => {
   });
 
   describe('login', () => {
+    it('mantiene administrador sin socios en login, renovación y sesión actual', async () => {
+      const usuario = { ...USER_RESPONSE, rol: 'administrador' };
+      const loggedIn = firstValueFrom(gateway.login({ email: usuario.correo, password: 'secret' }));
+      (await flushChallenge()).flush({ ...TOKEN_RESPONSE, usuario });
+      const grant = await loggedIn;
+      expect(grant.session.user.role).toBe('administrator');
+      expect(grant.session.user.partnerIds).toBeUndefined();
+      const renewed = firstValueFrom(gateway.refresh('refresh'));
+      http.expectOne(`${SESSIONS}/renovar`).flush({ ...TOKEN_RESPONSE, usuario });
+      expect((await renewed).session.user).toEqual(grant.session.user);
+      const current = firstValueFrom(gateway.currentSession());
+      http.expectOne(`${SESSIONS}/actual`).flush({ usuario, expiraEn: TOKEN_RESPONSE.expiraEn });
+      expect((await current)?.user).toEqual(grant.session.user);
+    });
+
+    it('rechaza un administrador asociado a un socio', async () => {
+      const result = firstValueFrom(gateway.refresh('refresh'));
+      const rejected = expect(result).rejects.toBeInstanceOf(AuthenticationUnavailableError);
+      http.expectOne(`${SESSIONS}/renovar`).flush({
+        ...TOKEN_RESPONSE,
+        usuario: { ...USER_RESPONSE, rol: 'administrador', socios: ['BANCO-001'] },
+      });
+      await rejected;
+    });
+
     it('accepts the real partner role and preserves authorized organizations', async () => {
       const result = firstValueFrom(
         gateway.login({ email: 'socio@example.com', password: 'secret' }),

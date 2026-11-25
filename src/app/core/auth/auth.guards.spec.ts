@@ -1,5 +1,47 @@
-import { safePostLoginUrl } from './auth.guards';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRouteSnapshot, provideRouter, Router, UrlTree } from '@angular/router';
+import { firstValueFrom, isObservable, of } from 'rxjs';
+import { administratorGuard, safePostLoginUrl } from './auth.guards';
+import { AuthUser } from './auth.models';
+import { AuthService } from './auth.service';
 import { TEST_USER } from './auth.testing';
+
+describe('administratorGuard', () => {
+  it.each([
+    ['client', '/app/dashboard'],
+    ['partner', '/app/socios'],
+    ['advisor', '/asesor/perfilamientos/nuevo'],
+    ['administrator', null],
+  ] satisfies [AuthUser['role'], string | null][])(
+    'protege el portal interno frente al rol %s',
+    async (role, home) => {
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter([]),
+          {
+            provide: AuthService,
+            useValue: {
+              getAccessToken: () => of('access'),
+              hasActiveSession: () => true,
+              user: () => ({ ...TEST_USER, role }),
+            },
+          },
+        ],
+      });
+      const router = TestBed.inject(Router);
+      const result = TestBed.runInInjectionContext(() =>
+        administratorGuard(new ActivatedRouteSnapshot(), router.routerState.snapshot),
+      );
+      if (!isObservable(result)) throw new Error('Expected asynchronous authorization.');
+      const authorization = await firstValueFrom(result);
+      if (home === null) expect(authorization).toBe(true);
+      else {
+        expect(authorization).toBeInstanceOf(UrlTree);
+        if (authorization instanceof UrlTree) expect(router.serializeUrl(authorization)).toBe(home);
+      }
+    },
+  );
+});
 
 describe('safePostLoginUrl', () => {
   it('accepts internal authenticated routes', () => {
@@ -26,6 +68,25 @@ describe('safePostLoginUrl', () => {
       '/app/socios/cotizaciones/solicitar',
     );
     expect(safePostLoginUrl('/app/socios-falso', partner)).toBe('/app/socios');
+  });
+
+  it('limita los retornos administrativos al portal interno', () => {
+    const admin = { ...TEST_USER, role: 'administrator' as const };
+    expect(safePostLoginUrl('/administracion/siniestros/123', admin)).toBe(
+      '/administracion/siniestros/123',
+    );
+    for (const url of [
+      null,
+      '/app/dashboard',
+      '/app/socios',
+      '/asesor/excepciones',
+      '//example.com',
+      '/administracion\\evil',
+      '/administracion-falsa/colas',
+    ]) {
+      expect(safePostLoginUrl(url, admin)).toBe('/administracion/colas/revision');
+    }
+    expect(safePostLoginUrl('/administracion/colas/revision', TEST_USER)).toBe('/app/dashboard');
   });
 
   it('dirige al asesor solo a su portal y rechaza retornos de cliente o socio', () => {

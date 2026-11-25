@@ -22,7 +22,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: 'client' | 'partner' | 'advisor';
+  role: 'client' | 'partner' | 'advisor' | 'administrator';
   partnerIds?: string[];
   documentType?: DocumentType;
   nationalId?: string;
