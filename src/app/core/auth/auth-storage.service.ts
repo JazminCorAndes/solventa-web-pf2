@@ -70,6 +70,9 @@ function isStoredAuth(value: unknown): value is StoredAuth {
     typeof user.name === 'string' &&
     typeof user.email === 'string' &&
     (user.role === 'client' ||
+      (user.role === 'administrator' &&
+        (user.partnerIds === undefined ||
+          (isPartnerIds(user.partnerIds) && user.partnerIds.length === 0))) ||
       ((user.role === 'partner' || user.role === 'advisor') &&
         isPartnerIds(user.partnerIds) &&
         (user.role === 'advisor' || user.partnerIds.length > 0))) &&

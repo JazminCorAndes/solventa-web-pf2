@@ -60,7 +60,26 @@ export const advisorGuard: CanActivateFn = (_route, state) => {
   );
 };
 
+export const administratorGuard: CanActivateFn = (_route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.getAccessToken().pipe(
+    map((token) => {
+      if (!token || !auth.hasActiveSession()) {
+        return router.createUrlTree(['/iniciar-sesion'], {
+          queryParams: { returnUrl: state.url },
+        });
+      }
+      return auth.user()?.role === 'administrator'
+        ? true
+        : router.createUrlTree([homeUrl(auth.user())]);
+    }),
+    catchError(() => of(router.createUrlTree(['/acceso-no-disponible']))),
+  );
+};
+
 export function homeUrl(user: AuthUser | null): string {
+  if (user?.role === 'administrator') return '/administracion/colas/revision';
   if (user?.role === 'advisor') return '/asesor/perfilamientos/nuevo';
   return user?.role === 'partner' ? '/app/socios' : '/app/dashboard';
 }
@@ -69,6 +88,11 @@ export function safePostLoginUrl(
   requestedUrl: string | null,
   user: AuthUser | null = null,
 ): string {
+  if (user?.role === 'administrator') {
+    return requestedUrl?.startsWith('/administracion/') && !requestedUrl.includes('\\')
+      ? requestedUrl
+      : homeUrl(user);
+  }
   if (user?.role === 'advisor') {
     return requestedUrl?.startsWith('/asesor/') && !requestedUrl.includes('\\')
       ? requestedUrl

@@ -1,0 +1,189 @@
+<h1>{{ 'administration.title' | transloco }}</h1>
+<p>{{ 'administration.scope' | transloco }}</p>
+@if (saved()) {
+  <p role="status" class="notice">{{ 'administration.saved' | transloco }}</p>
+}
+@if (loading()) {
+  <p role="status">{{ 'administration.loading' | transloco }}</p>
+}
+@if (loadError(); as error) {
+  <p role="alert">{{ 'administration.errors.' + error | transloco }}</p>
+}
+<button mat-stroked-button type="button" (click)="reload()" [disabled]="loading() || submitting()">
+  {{ 'administration.refresh' | transloco }}
+</button>
+
+@if (!claimId()) {
+  @if (queue(); as selectedQueue) {
+    <h2>{{ 'administration.queues.' + selectedQueue | transloco }}</h2>
+  }
+  @if (!loading() && !loadError() && items().length === 0) {
+    <p>{{ 'administration.empty' | transloco }}</p>
+  }
+  <div class="cards">
+    @for (item of items(); track item.id) {
+      <mat-card>
+        <mat-card-content>
+          <h3>{{ item.siniestroId }}</h3>
+          <p>{{ 'administration.states.' + item.estadoSiniestro | transloco }}</p>
+          <p>
+            {{ 'administration.assignmentStates.' + item.estado | transloco }} ·
+            {{ item.asignadaEn | date: 'medium' }}
+          </p>
+          <a mat-button [routerLink]="['/administracion/siniestros', item.siniestroId]">
+            {{ 'administration.open' | transloco }}
+          </a>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+} @else {
+  @if (claim(); as detail) {
+    <section>
+      <h2>{{ detail.siniestro.id }}</h2>
+      @if (history(); as current) {
+        <p>
+          <strong>{{ 'administration.currentState' | transloco }}:</strong>
+          {{ 'administration.states.' + current.estado | transloco }}
+        </p>
+        @if (current.asignacionActiva; as assignment) {
+          <p>
+            {{ 'administration.assignment' | transloco }}: {{ assignment.tipo }} ·
+            {{ assignment.destino }}
+          </p>
+        }
+      }
+      <dl>
+        <dt>{{ 'administration.policy' | transloco }}</dt>
+        <dd>{{ detail.siniestro.polizaId }}</dd>
+        <dt>{{ 'administration.event' | transloco }}</dt>
+        <dd>{{ detail.siniestro.tipoEvento }}</dd>
+        <dt>{{ 'administration.occurred' | transloco }}</dt>
+        <dd>{{ detail.siniestro.fechaEvento | date: 'medium' }}</dd>
+        <dt>{{ 'administration.reported' | transloco }}</dt>
+        <dd>{{ detail.siniestro.registradoEn | date: 'medium' }}</dd>
+        <dt>{{ 'administration.place' | transloco }}</dt>
+        <dd>{{ detail.siniestro.lugar }}</dd>
+        <dt>{{ 'administration.description' | transloco }}</dt>
+        <dd class="multiline">{{ detail.siniestro.descripcion }}</dd>
+      </dl>
+    </section>
+    <section>
+      <h2>{{ 'administration.evidence' | transloco }}</h2>
+      @if (downloadError(); as error) {
+        <p role="alert">{{ 'administration.errors.' + error | transloco }}</p>
+      }
+      @for (evidence of detail.evidencias; track evidence.id) {
+        <mat-card>
+          <mat-card-content>
+            <h3>{{ evidence.id }}</h3>
+            <p>
+              {{ evidence.mimeType }} · {{ evidence.tamanoBytes }} bytes ·
+              {{ evidence.creadaEn | date: 'medium' }}
+            </p>
+            @if (evidence.fechaCaptura) {
+              <p>
+                {{ 'administration.captured' | transloco }}:
+                {{ evidence.fechaCaptura | date: 'medium' }}
+              </p>
+            }
+            @if (evidence.ubicacion?.consentimiento) {
+              @let location = evidence.ubicacion!;
+              <p>
+                {{ 'administration.place' | transloco }}: {{ location.latitud }},
+                {{ location.longitud }}
+              </p>
+            }
+            <button
+              mat-button
+              type="button"
+              (click)="download(evidence)"
+              [disabled]="downloading() !== null"
+            >
+              {{ 'administration.download' | transloco }}
+            </button>
+          </mat-card-content>
+        </mat-card>
+      } @empty {
+        <p>{{ 'administration.noEvidence' | transloco }}</p>
+      }
+    </section>
+    <section>
+      <h2>{{ 'administration.decision' | transloco }}</h2>
+      @if (decisionError(); as error) {
+        <p role="alert">{{ 'administration.errors.' + error | transloco }}</p>
+      }
+      @if (pending(); as attempt) {
+        <p>{{ 'administration.pending' | transloco }}</p>
+        <p>{{ 'administration.results.' + attempt.input.resultado | transloco }}</p>
+        <p class="multiline">{{ attempt.input.motivo }}</p>
+        <button
+          mat-flat-button
+          type="button"
+          (click)="retryDecision()"
+          [disabled]="submitting() || loading() || !history() || loadError() !== null"
+        >
+          {{
+            (submitting() ? 'administration.saving' : 'administration.retryDecision') | transloco
+          }}
+        </button>
+      } @else if (canDecide()) {
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'administration.result' | transloco }}</mat-label>
+            <mat-select formControlName="resultado">
+              <mat-option value="aprobado">{{
+                'administration.results.aprobado' | transloco
+              }}</mat-option>
+              <mat-option value="rechazado">{{
+                'administration.results.rechazado' | transloco
+              }}</mat-option>
+              <mat-option value="inspeccion">{{
+                'administration.results.inspeccion' | transloco
+              }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'administration.reason' | transloco }}</mat-label>
+            <textarea matInput formControlName="motivo" rows="4" maxlength="1000"></textarea>
+            <mat-hint>{{ 'administration.reasonHint' | transloco }}</mat-hint>
+            @if (form.controls.motivo.invalid && form.controls.motivo.touched) {
+              <mat-error>{{ 'administration.reasonHint' | transloco }}</mat-error>
+            }
+          </mat-form-field>
+          <p>{{ 'administration.confirmation' | transloco }}</p>
+          <button mat-flat-button type="submit">{{ 'administration.submit' | transloco }}</button>
+        </form>
+      } @else {
+        <p>{{ 'administration.readOnly' | transloco }}</p>
+      }
+    </section>
+    @if (history(); as current) {
+      <section>
+        <h2>{{ 'administration.history' | transloco }}</h2>
+        @for (decision of current.decisiones; track decision.id) {
+          <mat-card>
+            <mat-card-content>
+              <h3>{{ 'administration.results.' + decision.resultado | transloco }}</h3>
+              <p>
+                {{ decision.decididaEn | date: 'medium' }} ·
+                {{ 'administration.origins.' + decision.origen | transloco }}
+              </p>
+              <p>
+                {{ 'administration.states.' + decision.estadoAnterior | transloco }} →
+                {{ 'administration.states.' + decision.estadoNuevo | transloco }}
+              </p>
+              <p class="multiline">{{ decision.motivo }}</p>
+              <p>
+                {{ 'administration.actor' | transloco }}:
+                {{ decision.actor.id ?? decision.actor.tipo }}
+              </p>
+            </mat-card-content>
+          </mat-card>
+        } @empty {
+          <p>{{ 'administration.noDecisions' | transloco }}</p>
+        }
+      </section>
+    }
+  }
+}

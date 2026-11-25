@@ -65,6 +65,8 @@ import { OPERATIONAL_REPORT_GATEWAY } from './core/reports/operational-report.ga
 import { HttpOperationalReportGateway } from './data-access/reports/http-operational-report.gateway';
 import { ADVISOR_EXCEPTIONS_GATEWAY } from './core/advisor-exceptions/advisor-exceptions.gateway';
 import { HttpAdvisorExceptionsGateway } from './data-access/advisor-exceptions/http-advisor-exceptions.gateway';
+import { ADMINISTRATION_GATEWAY } from './core/administration/administration.gateway';
+import { HttpAdministrationGateway } from './data-access/administration/http-administration.gateway';
 
 registerLocaleData(localeEsCo);
 
@@ -76,6 +78,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'es-CO' },
     { provide: AUTH_GATEWAY, useClass: HttpAuthGateway },
     { provide: AUTH_STORAGE, useClass: BrowserAuthStorage },
+    { provide: ADMINISTRATION_GATEWAY, useClass: HttpAdministrationGateway },
     {
       provide: DASHBOARD_GATEWAY,
       useClass: HttpDashboardGateway,

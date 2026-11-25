@@ -51,6 +51,20 @@ describe('BrowserAuthStorage', () => {
     expect(sessionStorage.getItem('solventa.auth.refresh')).toBeNull();
   });
 
+  it('restaura al administrador sin membresía y descarta asociaciones con socios', () => {
+    const user = { ...TEST_USER, role: 'administrator' as const };
+    storage.write({ ...STORED, user });
+    expect(storage.read()?.user).toEqual(user);
+    sessionStorage.setItem(
+      'solventa.auth.refresh',
+      JSON.stringify({
+        ...STORED,
+        user: { ...user, partnerIds: ['BANCO-001'] },
+      }),
+    );
+    expect(storage.read()).toBeNull();
+  });
+
   it.each([[], ['BANCO-001'], ['BANCO-001', 'BANCO-002']].map((partnerIds) => ({ partnerIds })))(
     'restaura el rol asesor con socios %j sin convertirlo en cliente',
     ({ partnerIds }) => {

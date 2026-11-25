@@ -1,0 +1,43 @@
+:host {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+section {
+  margin-block: 2rem;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+  margin-block: 1rem;
+}
+
+mat-card {
+  margin-block: 1rem;
+}
+
+form {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 680px;
+}
+
+dt {
+  font-weight: 600;
+  margin-block-start: 1rem;
+}
+
+dd {
+  margin-inline-start: 0;
+}
+
+.multiline {
+  white-space: pre-wrap;
+}
+
+.notice {
+  padding: 1rem;
+  background: var(--mat-sys-secondary-container);
+}

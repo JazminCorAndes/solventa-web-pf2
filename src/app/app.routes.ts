@@ -1,9 +1,43 @@
 import { Routes } from '@angular/router';
-import { advisorGuard, authGuard, guestGuard, portalGuard } from './core/auth/auth.guards';
+import {
+  administratorGuard,
+  advisorGuard,
+  authGuard,
+  guestGuard,
+  portalGuard,
+} from './core/auth/auth.guards';
 import { partnerGuard } from './core/partners/partner.guard';
 import { quoteResumeGuard } from './core/quotes/quote-resume.guard';
 
 export const routes: Routes = [
+  {
+    path: 'administracion',
+    canActivate: [authGuard, administratorGuard],
+    canActivateChild: [administratorGuard],
+    loadComponent: () =>
+      import('./layout/administration-layout/administration-layout.component').then(
+        (component) => component.AdministrationLayoutComponent,
+      ),
+    children: [
+      {
+        path: 'colas/:queue',
+        loadComponent: () =>
+          import('./features/administration/administration-page.component').then(
+            (component) => component.AdministrationPageComponent,
+          ),
+        title: 'Revisiones administrativas | Solventa',
+      },
+      {
+        path: 'siniestros/:claimId',
+        loadComponent: () =>
+          import('./features/administration/administration-page.component').then(
+            (component) => component.AdministrationPageComponent,
+          ),
+        title: 'Revisión de siniestro | Solventa',
+      },
+      { path: '', pathMatch: 'full', redirectTo: 'colas/revision' },
+    ],
+  },
   {
     path: 'olvide-contrasena',
     loadComponent: () =>
