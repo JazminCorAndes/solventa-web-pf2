@@ -12,7 +12,6 @@ import { AuthService } from '../../core/auth/auth.service';
 import { DashboardPolicy } from '../../core/dashboard/dashboard.models';
 import {
   ACCEPTED_DOCUMENT,
-  DOCUMENT_ACCEPTANCE,
   DOCUMENT_ACTOR_ID,
   DOCUMENT_POLICY_ID,
   POLICY_DOCUMENT,
@@ -33,12 +32,10 @@ const POLICY: DashboardPolicy = {
 };
 
 describe('PolicyDocumentPanelComponent', () => {
-  const originalMode = environment.dataAccessMode;
   let fixture: ComponentFixture<PolicyDocumentPanelComponent>;
   let http: HttpTestingController;
 
   beforeEach(async () => {
-    environment.dataAccessMode = 'backend';
     sessionStorage.clear();
     await TestBed.configureTestingModule({
       imports: [
@@ -63,7 +60,6 @@ describe('PolicyDocumentPanelComponent', () => {
   });
 
   afterEach(() => {
-    environment.dataAccessMode = originalMode;
     http.verify();
     sessionStorage.clear();
   });
@@ -84,6 +80,8 @@ describe('PolicyDocumentPanelComponent', () => {
       },
     });
     expect(root.textContent).toContain(es.policyDocument.simulation);
+    expect(root.textContent).not.toContain('Documento académico. No es una póliza legal');
+    expect(root.textContent).not.toContain(es.policyDocument.consent);
     expect(root.textContent).toContain('139.900');
     expect(root.textContent).toContain('noviembre');
     expect(root.textContent).toContain('Asistencia académica');
@@ -95,27 +93,18 @@ describe('PolicyDocumentPanelComponent', () => {
     );
   });
 
-  it('enables submission only after explicit consent and displays the backend date/reference', () => {
-    const root = show();
-    const button = root.querySelector<HTMLButtonElement>('.accept-document')!;
-    expect(button.disabled).toBe(true);
-    root.querySelector<HTMLInputElement>('mat-checkbox input')!.click();
-    fixture.detectChanges();
-    expect(button.disabled).toBe(false);
-    button.click();
-    fixture.detectChanges();
-    expect(root.querySelector<HTMLInputElement>('mat-checkbox input')).toBeNull();
-    expect(root.querySelector<HTMLButtonElement>('.recover-acceptance')?.disabled).toBe(true);
-    http
-      .expectOne(`${BASE}/aceptaciones`)
-      .flush(DOCUMENT_ACCEPTANCE, { status: 201, statusText: 'Created' });
-    http.expectOne(`${BASE}/documento`).flush(ACCEPTED_DOCUMENT);
-    fixture.detectChanges();
-    expect(root.textContent).toContain(es.policyDocument.accepted);
-    expect(root.textContent).toContain('19/11/2026');
-    expect(root.textContent).toContain(DOCUMENT_ACCEPTANCE.id);
-    expect(root.querySelector('.accept-document')).toBeNull();
-  });
+  it.each([POLICY_DOCUMENT, ACCEPTED_DOCUMENT])(
+    'keeps the document and download without signature controls or acceptance history',
+    (document) => {
+      const root = show(document);
+      expect(root.querySelector('mat-checkbox, .acceptance, details')).toBeNull();
+      expect(root.textContent).not.toContain(es.policyDocument.acceptanceTitle);
+      expect(root.querySelector('.accept-document')).toBeNull();
+      expect(root.querySelector('.recover-acceptance')).toBeNull();
+      expect(root.querySelector('.download-document')).not.toBeNull();
+      http.expectNone(`${BASE}/aceptaciones`);
+    },
+  );
 
   it('does not fabricate a missing premium from the policy summary', () => {
     const root = show({
@@ -167,23 +156,11 @@ describe('PolicyDocumentPanelComponent', () => {
     expect(root.querySelector('.download-document')).toBeNull();
   });
 
-  it('offers recovery rather than another consent after ambiguous errors', () => {
-    const root = show();
-    root.querySelector<HTMLInputElement>('mat-checkbox input')!.click();
-    fixture.detectChanges();
-    root.querySelector<HTMLButtonElement>('.accept-document')!.click();
-    http.expectOne(`${BASE}/aceptaciones`).flush({}, { status: 503, statusText: 'Unavailable' });
-    fixture.detectChanges();
-    expect(root.textContent).toContain(es.policyDocument.errors.ambiguous);
-    expect(root.querySelector<HTMLInputElement>('mat-checkbox input')).toBeNull();
-    expect(root.querySelector<HTMLButtonElement>('.recover-acceptance')?.disabled).toBe(false);
-  });
-
   it('renders all document controls in English when selected', () => {
     TestBed.inject(TranslocoService).setActiveLang('en');
     const root = show();
     expect(root.textContent).toContain(en.policyDocument.title);
-    expect(root.textContent).toContain(en.policyDocument.consent);
+    expect(root.textContent).not.toContain(en.policyDocument.consent);
     expect(root.textContent).toContain(en.policyDocument.download);
     expect(root.textContent).not.toContain('policyDocument.');
   });

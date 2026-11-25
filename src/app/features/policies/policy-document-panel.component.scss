@@ -56,25 +56,3 @@ dd {
 li + li {
   margin-top: var(--solventa-space-3);
 }
-
-.acceptance,
-details {
-  margin-top: var(--solventa-space-5);
-  padding-top: var(--solventa-space-4);
-  border-top: 1px solid var(--solventa-color-border);
-}
-
-mat-checkbox {
-  display: block;
-  margin-bottom: var(--solventa-space-4);
-}
-
-summary {
-  cursor: pointer;
-  font-weight: 700;
-}
-
-summary:focus-visible {
-  outline: 2px solid var(--solventa-color-primary);
-  outline-offset: 4px;
-}

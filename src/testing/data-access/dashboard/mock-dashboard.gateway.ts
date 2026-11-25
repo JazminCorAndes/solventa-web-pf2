@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { DashboardGateway } from '../../core/dashboard/dashboard.gateway';
-import { DashboardSnapshot } from '../../core/dashboard/dashboard.models';
+import { DashboardGateway } from '../../../app/core/dashboard/dashboard.gateway';
+import { DashboardSnapshot } from '../../../app/core/dashboard/dashboard.models';
 import { MOCK_POLICY_ID } from '../mock/mock.constants';
 import { MockPolicyCancellationGateway } from '../policies/mock-policy-cancellation.gateway';
 

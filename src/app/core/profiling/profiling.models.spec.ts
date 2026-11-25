@@ -1,4 +1,4 @@
-import { createConsent, createProfile } from './profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import {
   consentIsCurrent,
   consentRequestIssues,

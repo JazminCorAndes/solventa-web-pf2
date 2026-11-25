@@ -8,7 +8,7 @@ import es from '../../../../public/assets/i18n/es.json';
 import { environment } from '../../../environments/environment';
 import { authInterceptor } from '../../core/auth/auth.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { HttpProfilingGateway } from '../../data-access/profiling/http-profiling.gateway';
 import { ProfilingPanelComponent } from './profiling-panel.component';

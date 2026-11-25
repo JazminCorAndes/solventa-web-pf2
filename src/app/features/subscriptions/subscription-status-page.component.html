@@ -88,9 +88,7 @@
           <section class="payment-section" aria-labelledby="payment-title">
             <h2 id="payment-title">{{ 'payment.title' | transloco }}</h2>
             <p class="next-step">{{ 'payment.disclaimer' | transloco }}</p>
-            @if (!payments.available) {
-              <p role="status">{{ 'payment.backendRequired' | transloco }}</p>
-            } @else if (payments.loading()) {
+            @if (payments.loading()) {
               <p role="status">{{ 'payment.loading' | transloco }}</p>
             } @else {
               @if (payments.errorKey(); as error) {

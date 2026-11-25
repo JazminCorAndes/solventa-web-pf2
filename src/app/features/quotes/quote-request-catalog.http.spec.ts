@@ -12,7 +12,7 @@ import { environment } from '../../../environments/environment';
 import { authInterceptor } from '../../core/auth/auth.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
 import { OFFER_SELECTION_STORAGE } from '../../core/offers/offer-selection-storage.service';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { PROFILING_GATEWAY } from '../../core/profiling/profiling.gateway';
 import { QUOTE_REQUEST_GATEWAY } from '../../core/quotes/quote-request.gateway';
 import {
@@ -23,6 +23,10 @@ import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.s
 import { HttpQuoteRequestGateway } from '../../data-access/quotes/http-quote-request.gateway';
 import product from '../../data-access/quotes/testing/insurance-product-detail.json';
 import { QuoteRequestPageComponent } from './quote-request-page.component';
+import {
+  clientQuoteProfileResponse,
+  TEST_CLIENT_ID,
+} from '../../../testing/quotes/client-profile.testing';
 
 const endpoint = `${environment.apiBaseUrl}/v1/productos-seguro`;
 const secondProduct = {
@@ -42,14 +46,12 @@ const unavailableProduct = {
 };
 
 describe('Catalogo integrado con el formulario y HTTP autenticado', () => {
-  const originalMode = environment.dataAccessMode;
   let fixture: ComponentFixture<QuoteRequestPageComponent>;
   let page: QuoteRequestPageComponent;
   let http: HttpTestingController;
   let select: MatSelectHarness;
 
   beforeEach(async () => {
-    environment.dataAccessMode = 'backend';
     await TestBed.configureTestingModule({
       imports: [
         QuoteRequestPageComponent,
@@ -66,7 +68,7 @@ describe('Catalogo integrado con el formulario y HTTP autenticado', () => {
           provide: AuthService,
           useValue: {
             user: signal({
-              id: 'client-001',
+              id: TEST_CLIENT_ID,
               name: 'Cliente de prueba',
               email: 'cliente@example.com',
               role: 'client',
@@ -97,6 +99,9 @@ describe('Catalogo integrado con el formulario y HTTP autenticado', () => {
     fixture = TestBed.createComponent(QuoteRequestPageComponent);
     page = fixture.componentInstance;
     fixture.detectChanges();
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/clientes/me/perfil`)
+      .flush(clientQuoteProfileResponse());
     const catalog = http.expectOne(endpoint);
     expect(catalog.request.headers.get('Authorization')).toBe('Bearer synthetic-test-token');
     catalog.flush({
@@ -119,7 +124,6 @@ describe('Catalogo integrado con el formulario y HTTP autenticado', () => {
 
   afterEach(() => {
     http.verify();
-    environment.dataAccessMode = originalMode;
   });
 
   it.each([

@@ -6,7 +6,7 @@ import { firstValueFrom, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { authInterceptor } from '../../core/auth/auth.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
-import { createConsent, createProfile } from '../../core/profiling/profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 import { createConsentRequest } from '../../core/profiling/profiling.models';
 import { HttpProfilingGateway } from './http-profiling.gateway';
 

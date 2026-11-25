@@ -1,7 +1,10 @@
 import { inject, Injectable } from '@angular/core';
 import { defer, delay, map, Observable, of, switchMap, throwError } from 'rxjs';
-import { OfferSelectionChangedError, OfferUnavailableError } from '../../core/offers/offer.errors';
-import { OfferGateway } from '../../core/offers/offer.gateway';
+import {
+  OfferSelectionChangedError,
+  OfferUnavailableError,
+} from '../../../app/core/offers/offer.errors';
+import { OfferGateway } from '../../../app/core/offers/offer.gateway';
 import {
   InsuranceOffer,
   isProvisionalSelection,
@@ -10,16 +13,16 @@ import {
   ProvisionalOfferSelection,
   ProvisionalSelectionRequest,
   SelectedOfferRecord,
-} from '../../core/offers/offer.models';
-import { QUOTE_REQUEST_STORAGE } from '../../core/quotes/quote-request-storage.service';
-import { OFFER_SELECTION_STORAGE } from '../../core/offers/offer-selection-storage.service';
+} from '../../../app/core/offers/offer.models';
+import { QUOTE_REQUEST_STORAGE } from '../../../app/core/quotes/quote-request-storage.service';
+import { OFFER_SELECTION_STORAGE } from '../../../app/core/offers/offer-selection-storage.service';
 import { MockProfilingGateway } from '../profiling/mock-profiling.gateway';
-import { ACTIVE_MARKET } from '../../core/market/market.config';
+import { ACTIVE_MARKET } from '../../../app/core/market/market.config';
 import {
   FLIGHT_COVERAGE_TYPES,
   QuoteProductData,
   WEATHER_EVENT_TYPES,
-} from '../../core/quotes/quote-request.models';
+} from '../../../app/core/quotes/quote-request.models';
 
 interface OfferBlueprint {
   key: string;

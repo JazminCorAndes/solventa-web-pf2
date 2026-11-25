@@ -3,6 +3,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
 import {
+  partnerEmptySelectionResponse,
+  partnerSelectionResponse,
+  partnerSnapshotResponse,
+} from '../../../testing/partners/partner-offers.testing';
+import {
   HttpPartnerQuoteGateway,
   InvalidPartnerQuoteResponse,
   PartnerQuoteRequest,
@@ -135,6 +140,160 @@ describe('HttpPartnerQuoteGateway', () => {
     expect(request.request.headers.get('API-Version')).toBe('1');
     request.flush(partnerResult());
     expect(received).toHaveBeenCalledWith(partnerResult());
+  });
+
+  it('consulta los planes del socio sin calcular ni seleccionar implicitamente', () => {
+    const operation = partnerResult();
+    const received = vi.fn();
+    gateway.loadOfferSnapshot(operation).subscribe(received);
+    const request = http.expectOne(`${url}/${operationId}/oferta?socioId=BANCO-001`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.headers.get('API-Version')).toBe('1');
+    request.flush(partnerSnapshotResponse(operation));
+    expect(received.mock.calls[0][0].ofertas).toHaveLength(3);
+    expect(received.mock.calls[0][0]).not.toHaveProperty('riesgo');
+    http.expectNone((request) => request.method !== 'GET');
+  });
+
+  it('calcula el snapshot solo mediante POST explicito con operacion estable', () => {
+    const operation = partnerResult();
+    gateway.createOfferSnapshot(operation).subscribe();
+    const request = http.expectOne(`${url}/${operationId}/oferta?socioId=BANCO-001`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    expect(request.request.headers.get('Idempotency-Key')).toBe(operationId);
+    request.flush(partnerSnapshotResponse(operation));
+  });
+
+  it.each([
+    { operationId: customerId },
+    { socioId: 'OTRO-SOCIO' },
+    { clienteId: quoteId },
+    { productoId: 'otra-linea' },
+    { solicitudId: 'otra-solicitud' },
+    { cotizacionId: customerId },
+    { hashContenido: 'invalido' },
+    { estado: ['vigente'] },
+  ])('rechaza asociaciones o metadata del snapshot invalidas: %j', (change) => {
+    const failed = vi.fn();
+    gateway.loadOfferSnapshot(partnerResult()).subscribe({ error: failed });
+    http.expectOne(`${url}/${operationId}/oferta?socioId=BANCO-001`).flush({
+      ...partnerSnapshotResponse(partnerResult()),
+      ...change,
+    });
+    expect(failed).toHaveBeenCalledWith(expect.any(InvalidPartnerQuoteResponse));
+  });
+
+  it.each([
+    { periodicidad: ['mensual'] },
+    { recomendada: 'true' },
+    { prima: { monto: 'gratis', moneda: 'COP' } },
+    { ofertaId: 'invalid' },
+  ])('rechaza campos de plan invalidos sin normalizarlos: %j', (change) => {
+    const body = partnerSnapshotResponse(partnerResult());
+    const failed = vi.fn();
+    gateway.loadOfferSnapshot(partnerResult()).subscribe({ error: failed });
+    http.expectOne(`${url}/${operationId}/oferta?socioId=BANCO-001`).flush({
+      ...body,
+      ofertas: [{ ...body.ofertas[0], ...change }],
+    });
+    expect(failed).toHaveBeenCalledWith(expect.any(InvalidPartnerQuoteResponse));
+  });
+
+  it('rechaza planes duplicados en vez de mostrar opciones ambiguas', () => {
+    const body = partnerSnapshotResponse(partnerResult());
+    const failed = vi.fn();
+    gateway.loadOfferSnapshot(partnerResult()).subscribe({ error: failed });
+    http.expectOne(`${url}/${operationId}/oferta?socioId=BANCO-001`).flush({
+      ...body,
+      ofertas: [body.ofertas[0], body.ofertas[0]],
+    });
+    expect(failed).toHaveBeenCalledWith(expect.any(InvalidPartnerQuoteResponse));
+  });
+
+  it('lee la seleccion persistida sin confundir ausencia con recomendacion', () => {
+    const operation = partnerResult();
+    const received = vi.fn();
+    gateway.loadOfferSelection(operation).subscribe(received);
+    const request = http.expectOne(`${url}/${operationId}/seleccion-provisional?socioId=BANCO-001`);
+    expect(request.request.method).toBe('GET');
+    request.flush(partnerEmptySelectionResponse(operation));
+    expect(received).toHaveBeenCalledWith({
+      quoteId: operation.solicitudId,
+      selection: null,
+      acceptance: null,
+      offerStatus: null,
+    });
+  });
+
+  it('guarda UUID del plan, revision esperada y misma clave por intento', () => {
+    const operation = partnerResult();
+    const offer = partnerSnapshotResponse(operation).ofertas[1];
+    const selection = {
+      quoteId: operation.solicitudId,
+      offerId: offer.ofertaId,
+      offerVersion: offer.version,
+      expectedRevision: 0,
+      idempotencyKey: customerId,
+    };
+    const received = vi.fn();
+    gateway.saveOfferSelection(operation, selection).subscribe(received);
+    const request = http.expectOne(`${url}/${operationId}/seleccion-provisional?socioId=BANCO-001`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({
+      ofertaId: offer.ofertaId,
+      version: offer.version,
+      revisionEsperada: 0,
+    });
+    expect(request.request.headers.get('Idempotency-Key')).toBe(customerId);
+    expect(request.request.headers.get('API-Version')).toBe('1');
+    request.flush(partnerSelectionResponse(operation, offer));
+    expect(received.mock.calls[0][0].offerId).toBe(offer.ofertaId);
+    expect(received.mock.calls[0][0].confirmed).toBe(false);
+    http.expectNone((request) => /\/seleccion$|suscripciones|pagos/.test(request.url));
+  });
+
+  it.each(['solicitudId', 'ofertaId', 'version', 'revision'])(
+    'rechaza un recibo de seleccion incompatible: %s',
+    (field) => {
+      const operation = partnerResult();
+      const offer = partnerSnapshotResponse(operation).ofertas[1];
+      const failed = vi.fn();
+      gateway
+        .saveOfferSelection(operation, {
+          quoteId: operation.solicitudId,
+          offerId: offer.ofertaId,
+          offerVersion: 1,
+          expectedRevision: 0,
+          idempotencyKey: customerId,
+        })
+        .subscribe({ error: failed });
+      const body = partnerSelectionResponse(operation, offer);
+      http.expectOne(`${url}/${operationId}/seleccion-provisional?socioId=BANCO-001`).flush({
+        ...body,
+        [field]: field === 'version' ? 2 : field === 'revision' ? 0 : 'another-id',
+      });
+      expect(failed).toHaveBeenCalledWith(expect.any(Error));
+    },
+  );
+
+  it('rechaza salto de revision en recibo CAS sin tratarlo como replay valido', () => {
+    const operation = partnerResult();
+    const offer = partnerSnapshotResponse(operation).ofertas[1];
+    const failed = vi.fn();
+    gateway
+      .saveOfferSelection(operation, {
+        quoteId: operation.solicitudId,
+        offerId: offer.ofertaId,
+        offerVersion: offer.version,
+        expectedRevision: 0,
+        idempotencyKey: customerId,
+      })
+      .subscribe({ error: failed });
+    http
+      .expectOne(`${url}/${operationId}/seleccion-provisional?socioId=BANCO-001`)
+      .flush(partnerSelectionResponse(operation, offer, 2));
+    expect(failed).toHaveBeenCalledWith(expect.any(InvalidPartnerQuoteResponse));
   });
 
   it('busca al cliente sin exponer UUID ni version del consentimiento', () => {

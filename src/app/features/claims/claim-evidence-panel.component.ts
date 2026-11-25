@@ -24,12 +24,11 @@ import {
 } from '../../core/claims/claim-evidence.models';
 import { EVIDENCE_FORMATS, evidenceSize } from '../../core/claims/claim-evidence-file';
 import { ClaimEvidenceService } from '../../core/claims/claim-evidence.service';
-import { ClaimEvidenceCaptureComponent } from './claim-evidence-capture.component';
 
 @Component({
   selector: 'app-claim-evidence-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, MatButtonModule, TranslocoPipe, ClaimEvidenceCaptureComponent],
+  imports: [DatePipe, MatButtonModule, TranslocoPipe],
   providers: [ClaimEvidenceService],
   templateUrl: './claim-evidence-panel.component.html',
   styleUrl: './claim-evidence-panel.component.scss',
@@ -115,10 +114,6 @@ export class ClaimEvidencePanelComponent {
 
   get dateLocale(): string {
     return this.i18n.getActiveLang() === 'en' ? 'en-US' : 'es-CO';
-  }
-
-  async capture(result: { file: File; fechaCaptura: string }): Promise<void> {
-    await this.evidence.select([result.file], { fechaCaptura: result.fechaCaptura });
   }
 
   locate(key: string): void {

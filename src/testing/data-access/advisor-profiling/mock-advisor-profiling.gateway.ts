@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { delay, Observable, of, throwError } from 'rxjs';
-import { AdvisorProfilingGateway } from '../../core/advisor-profiling/advisor-profiling.gateway';
+import { AdvisorProfilingGateway } from '../../../app/core/advisor-profiling/advisor-profiling.gateway';
 import {
   MortgageProfilingError,
   MortgageProfilingRecord,
   MortgageProfilingRequest,
   MORTGAGE_UUID_PATTERN,
-} from '../../core/advisor-profiling/advisor-profiling.models';
+} from '../../../app/core/advisor-profiling/advisor-profiling.models';
 
 @Injectable()
 export class MockAdvisorProfilingGateway implements AdvisorProfilingGateway {

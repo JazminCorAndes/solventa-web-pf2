@@ -14,7 +14,6 @@ import {
   take,
   takeUntil,
 } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
 import { OFFER_GATEWAY } from '../offers/offer.gateway';
 import { SelectedOfferRecord } from '../offers/offer.models';
@@ -40,7 +39,6 @@ export class SimulatedPaymentService implements OnDestroy {
   private readonly paymentState = signal<SimulatedPaymentRecord | null>(null);
   private readonly selectionState = signal<SelectedOfferRecord | null>(null);
 
-  readonly available = environment.dataAccessMode === 'backend';
   readonly payment = computed(() => (this.ownsSession() ? this.paymentState() : null));
   readonly selection = computed(() => (this.ownsSession() ? this.selectionState() : null));
   readonly loading = signal(false);
@@ -140,7 +138,6 @@ export class SimulatedPaymentService implements OnDestroy {
       return of(undefined);
     }
     if (
-      !this.available ||
       subscription.status !== 'approved' ||
       !['payment_pending', 'payment_confirmed', 'issued'].includes(subscription.saga.status)
     ) {

@@ -1,6 +1,5 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable } from '@angular/core';
-import { environment } from '../../../environments/environment';
 import { CANCELLATION_REASONS, CancellationAttempt } from './policy-cancellation.models';
 import { POLICY_ID_PATTERN } from './policy-renewal.models';
 
@@ -47,6 +46,6 @@ export class PolicyCancellationAttempts {
   }
 
   private key(ownerId: string, policyId: string): string {
-    return `solventa.cancellation.${environment.dataAccessMode}.${ownerId}.${policyId.toLowerCase()}`;
+    return `solventa.cancellation.backend.${ownerId}.${policyId.toLowerCase()}`;
   }
 }

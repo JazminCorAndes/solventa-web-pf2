@@ -1,13 +1,14 @@
 import { products } from './products';
 import { compactDecrypt, exportJWK, generateKeyPair, type JWK } from 'jose';
 import { expectEncryptedLogin } from './login-crypto';
+import { historyDto } from '../../../src/testing/quotes/quote-history.testing';
 import type {
   ConsentDecision,
   ProfilingConsent,
 } from '../../../src/app/core/profiling/profiling.models';
 
 export const syntheticUser = {
-  id: 'cypress-ui-customer',
+  id: '22222222-2222-4222-8222-222222222222',
   nombre: 'Cliente Sintetico Cypress',
   correo: 'cypress-ui@example.invalid',
   rol: 'cliente',
@@ -114,6 +115,7 @@ function provisionalReceipt(offer: ReturnType<typeof offers>['ofertas'][number],
 /** Only used by ui specs. Unmatched calls fail instead of reaching a real backend. */
 export function mockBackend() {
   let savedConsent: ProfilingConsent | null = null;
+  let productId = 'automotive';
   let provisional: ReturnType<typeof provisionalReceipt> | null = null;
   const receipts = new Map<
     string,
@@ -170,6 +172,33 @@ export function mockBackend() {
   cy.intercept('POST', '/api/v1/sesiones/renovar', { body: grant(), log: false }).as('refresh');
   cy.intercept('DELETE', '/api/v1/sesiones/actual', { statusCode: 204, log: false }).as('logout');
   cy.intercept('GET', '/api/v1/clientes/me/dashboard', { body: emptyDashboard }).as('dashboard');
+  cy.intercept('GET', '/api/v1/clientes/me/perfil', {
+    clienteId: syntheticUser.id,
+    nombre: syntheticUser.nombre,
+    tipoDocumento: syntheticUser.tipoDocumento,
+    numeroDocumento: syntheticUser.identificacion,
+    correo: syntheticUser.correo,
+    telefono: syntheticUser.telefono,
+    fechaNacimiento: '1990-01-15',
+  });
+  cy.intercept('GET', '/api/v1/solicitudes-cotizacion', { solicitudes: [] });
+  cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/estado`, (request) => {
+    request.reply(
+      historyDto({
+        operationId: null,
+        socioId: null,
+        clienteId: syntheticUser.id,
+        solicitudId: quoteId,
+        productoId: productId,
+        estadoSeleccion: {
+          solicitudId: quoteId,
+          seleccion: provisional,
+          aceptacion: null,
+          estadoOferta: provisional ? 'disponible' : null,
+        },
+      }),
+    );
+  });
   cy.intercept('GET', '/api/v1/productos-seguro', {
     productos: products.map(({ id }) => ({
       id,
@@ -198,6 +227,7 @@ export function mockBackend() {
     request.reply(savedConsent);
   }).as('consent');
   cy.intercept('POST', '/api/v1/solicitudes-cotizacion', (request) => {
+    productId = request.body.productoId;
     request.reply({
       id: quoteId,
       ...request.body,
@@ -208,6 +238,10 @@ export function mockBackend() {
       identificacion: syntheticUser.identificacion,
       correo: syntheticUser.correo,
       telefono: syntheticUser.telefono,
+      datosProducto: {
+        ...request.body.datosProducto,
+        ...(['life', 'mortgage-life'].includes(productId) ? { birthDate: '1990-01-15' } : {}),
+      },
     });
   }).as('quote');
   cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/ofertas`, { body: offers() }).as(

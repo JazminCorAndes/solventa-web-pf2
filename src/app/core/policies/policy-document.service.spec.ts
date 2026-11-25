@@ -13,6 +13,7 @@ import {
   DOCUMENT_ACTOR_ID,
   DOCUMENT_POLICY_ID,
   documentBytes,
+  DOCUMENT_PDF,
   POLICY_DOCUMENT,
 } from './policy-document.testing';
 
@@ -34,13 +35,11 @@ const NEXT_DOCUMENT: PolicyDocument = {
 };
 
 describe('PolicyDocumentService', () => {
-  const originalMode = environment.dataAccessMode;
   let service: PolicyDocumentService;
   let http: HttpTestingController;
   const user = signal<AuthUser | null>(CLIENT);
 
   beforeEach(() => {
-    environment.dataAccessMode = 'backend';
     sessionStorage.clear();
     user.set(CLIENT);
     TestBed.configureTestingModule({
@@ -56,7 +55,6 @@ describe('PolicyDocumentService', () => {
   });
 
   afterEach(() => {
-    environment.dataAccessMode = originalMode;
     http.verify();
     vi.restoreAllMocks();
     vi.useRealTimers();
@@ -269,11 +267,11 @@ describe('PolicyDocumentService', () => {
 
   it('downloads only verified server bytes with a safe filename and revokes the object URL', async () => {
     vi.useFakeTimers();
-    const bytes = documentBytes('Documento de prueba');
+    const bytes = documentBytes(DOCUMENT_PDF);
     const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), (byte) =>
       byte.toString(16).padStart(2, '0'),
     ).join('');
-    load({ ...POLICY_DOCUMENT, contenidoHash: hash });
+    load();
     const create = vi.fn<(blob: Blob) => string>(() => 'blob:test-document');
     const revoke = vi.fn();
     vi.stubGlobal('URL', { createObjectURL: create, revokeObjectURL: revoke });
@@ -281,16 +279,19 @@ describe('PolicyDocumentService', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
     service.download();
-    http.expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga`).flush(bytes, {
-      headers: { 'Content-Type': 'text/html;charset=utf-8' },
+    http.expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga/pdf`).flush(bytes, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'X-Content-SHA256': hash,
+        'X-Document-Content-SHA256': POLICY_DOCUMENT.contenidoHash,
+      },
     });
     await vi.waitFor(() => expect(click).toHaveBeenCalledOnce());
     const anchor = click.mock.instances[0] as HTMLAnchorElement;
-    expect(anchor.download).toBe(
-      `poliza-${DOCUMENT_POLICY_ID}-${POLICY_DOCUMENT.documentoId}.html`,
-    );
+    expect(anchor.download).toBe(`poliza-${DOCUMENT_POLICY_ID}-${POLICY_DOCUMENT.documentoId}.pdf`);
     expect(create).toHaveBeenCalledWith(expect.any(Blob));
     expect(create.mock.calls[0][0].size).toBe(bytes.byteLength);
+    expect(create.mock.calls[0][0].type).toBe('application/pdf');
     vi.runOnlyPendingTimers();
     expect(revoke).toHaveBeenCalledWith('blob:test-document');
     vi.unstubAllGlobals();

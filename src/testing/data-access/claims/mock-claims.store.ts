@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
-import { ClaimStatus } from '../../core/claims/claim-status.models';
+import { ClaimStatus } from '../../../app/core/claims/claim-status.models';
 import {
   ClaimInput,
   ClaimPolicy,
   ClaimRecord,
   sameClaimInput,
-} from '../../core/claims/claim.models';
+} from '../../../app/core/claims/claim.models';
 import { MOCK_PARAMETRIC_CLAIM_ID, MOCK_POLICY_ID } from '../mock/mock.constants';
 
 @Injectable({ providedIn: 'root' })

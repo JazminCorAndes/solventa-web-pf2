@@ -51,7 +51,7 @@ export class HttpPolicyDocumentGateway {
   download(document: PolicyDocument): Observable<ArrayBuffer> {
     return this.http
       .get(
-        `${base(document.polizaId)}/documentos/${encodeURIComponent(document.documentoId)}/descarga`,
+        `${base(document.polizaId)}/documentos/${encodeURIComponent(document.documentoId)}/descarga/pdf`,
         { observe: 'response', responseType: 'arraybuffer' },
       )
       .pipe(
@@ -235,6 +235,7 @@ async function verifyDownload(
   const headers = response.headers;
   const contentType = headers.get('Content-Type');
   const advertisedHash = headers.get('X-Content-SHA256');
+  const sourceHash = headers.get('X-Document-Content-SHA256');
   const disposition = headers.get('Content-Disposition');
   const nosniff = headers.get('X-Content-Type-Options');
   const cache = headers.get('Cache-Control');
@@ -242,10 +243,13 @@ async function verifyDownload(
   if (
     response.status !== 200 ||
     !bytes?.byteLength ||
-    !/^text\/html\s*;\s*charset=utf-8$/i.test(contentType ?? '') ||
-    (advertisedHash !== null && advertisedHash !== expectedHash) ||
+    bytes.byteLength > 1_048_576 ||
+    !/^application\/pdf$/i.test(contentType ?? '') ||
+    !advertisedHash ||
+    !DOCUMENT_HASH.test(advertisedHash) ||
+    sourceHash !== expectedHash ||
     (disposition !== null &&
-      !/^attachment\s*;.*filename="?[^";/\\]+\.html"?(?:;|$)/i.test(disposition)) ||
+      !/^attachment\s*;.*filename="?[^";/\\]+\.pdf"?(?:;|$)/i.test(disposition)) ||
     (nosniff !== null && nosniff.toLowerCase() !== 'nosniff') ||
     (cache !== null && !/(?:^|,)\s*no-store\s*(?:,|$)/i.test(cache)) ||
     (csp !== null &&
@@ -254,12 +258,15 @@ async function verifyDownload(
   ) {
     throw new PolicyDocumentError('download');
   }
-  // The digest covers the exact server bytes, not a decoded/re-encoded HTML string or the DTO.
+  // The PDF has its own digest; the canonical DTO hash still identifies its HTML source.
   const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), (byte) =>
     byte.toString(16).padStart(2, '0'),
   ).join('');
-  if (hash !== expectedHash) throw new PolicyDocumentError('download');
-  new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  const prefix = new TextDecoder('ascii').decode(bytes.slice(0, 8));
+  const tail = new TextDecoder('ascii').decode(bytes.slice(-1024));
+  if (hash !== advertisedHash || !/^%PDF-1\.[0-9]/.test(prefix) || !/%%EOF\s*$/.test(tail)) {
+    throw new PolicyDocumentError('download');
+  }
   return bytes;
 }
 

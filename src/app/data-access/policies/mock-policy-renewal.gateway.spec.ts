@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
-import { MOCK_POLICY_ID } from '../mock/mock.constants';
-import { MockPolicyRenewalGateway } from './mock-policy-renewal.gateway';
+import { MOCK_POLICY_ID } from '../../../testing/data-access/mock/mock.constants';
+import { MockPolicyRenewalGateway } from '../../../testing/data-access/policies/mock-policy-renewal.gateway';
 
 const KEY = '11111111-1111-4111-8111-111111111111';
 

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ProfilingClock } from './profiling-clock.service';
 import { consentIsCurrent, profileIsCurrent } from './profiling.models';
-import { createConsent, createProfile } from './profiling.fixtures';
+import { createConsent, createProfile } from '../../../testing/core/profiling/profiling.fixtures';
 
 describe('ProfilingClock', () => {
   afterEach(() => vi.restoreAllMocks());

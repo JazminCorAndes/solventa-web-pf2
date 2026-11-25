@@ -49,6 +49,7 @@ const RECORD: QuoteRequestRecord = {
 };
 
 class TestQuoteRequestGateway implements QuoteRequestGateway {
+  loadClientProfile = vi.fn<QuoteRequestGateway['loadClientProfile']>();
   loadProductDetail = vi.fn<QuoteRequestGateway['loadProductDetail']>();
 
   loadRequest(): Observable<QuoteRequestRecord> {

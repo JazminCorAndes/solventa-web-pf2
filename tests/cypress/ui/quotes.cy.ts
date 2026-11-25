@@ -1,18 +1,86 @@
 import { fillProduct, futureDate, login, openQuote, products } from '../support/products';
 import { consent, mockBackend, password, quoteId, syntheticUser } from '../support/ui-backend';
+import { historyDto } from '../../../src/testing/quotes/quote-history.testing';
 
 describe('UI determinista: productos y consentimiento (sin persistencia real)', () => {
   beforeEach(() => {
     mockBackend();
+    cy.intercept('GET', '/api/v1/destinos-viaje').as('quoteDestinations');
     login(syntheticUser.correo, password);
   });
 
-  for (const product of products) {
+  it('retira vuelo del selector sin retirar clima paramétrico', () => {
+    openQuote(products[0]);
+    cy.get('mat-select').click();
+    cy.get('mat-option').should('have.length', products.length - 1);
+    cy.contains('mat-option', /^parametric$/).should('not.exist');
+    cy.contains('mat-option', 'parametric-weather').should('be.visible');
+  });
+
+  it('omite cotizaciones compradas y vencidas sin consultar sus detalles', () => {
+    openQuote(products[0]);
+    const boughtId = 'AQT-2026-COMPRADA01';
+    const expiredId = 'AQT-2026-VENCIDA001';
+    const entry = (id: string, overrides: Record<string, unknown> = {}) =>
+      historyDto({
+        operationId: null,
+        socioId: null,
+        solicitudId: id,
+        productoId: 'automotive',
+        estadoSeleccion: { solicitudId: id, seleccion: null, aceptacion: null, estadoOferta: null },
+        ...overrides,
+      });
+    cy.intercept('GET', '/api/v1/solicitudes-cotizacion', {
+      solicitudes: [
+        entry(quoteId),
+        entry(boughtId, {
+          cotizacionId: '44444444-4444-4444-8444-444444444444',
+          estado: 'completada',
+          completadaEn: new Date().toISOString(),
+          pagoEstado: 'confirmado',
+          emisionEstado: 'emitida',
+        }),
+        entry(expiredId, {
+          cotizacionId: '55555555-5555-4555-8555-555555555555',
+          estado: 'vencida',
+          validaHasta: '2000-01-01T00:00:00Z',
+        }),
+      ],
+    }).as('history');
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}`, {
+      id: quoteId,
+      productoId: 'automotive',
+      tipoCliente: 'persona_natural',
+      tipoDocumento: 'cc',
+      identificacion: syntheticUser.identificacion,
+      datosProducto: products[0].data,
+      correo: syntheticUser.correo,
+      telefono: syntheticUser.telefono,
+      estado: 'recibida',
+      creadaEn: new Date().toISOString(),
+    }).as('pendingDetails');
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${boughtId}`, { statusCode: 500 }).as(
+      'boughtDetails',
+    );
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${expiredId}`, { statusCode: 500 }).as(
+      'expiredDetails',
+    );
+    cy.visit('/app/cotizaciones');
+    cy.wait(['@history', '@pendingDetails']);
+    cy.get('.summary-card').should('have.length', 1).and('contain.text', quoteId);
+    cy.get('.summary-card').should('not.contain.text', boughtId).and('not.contain.text', expiredId);
+    cy.get('@boughtDetails.all').should('have.length', 0);
+    cy.get('@expiredDetails.all').should('have.length', 0);
+  });
+
+  for (const product of products.filter((product) => product.id !== 'parametric')) {
     it(`${product.id}: obligatorios y contrato completo al solicitar`, () => {
       openQuote(product);
-      cy.get('button[type=submit]').click();
-      cy.contains('[role=alert]', 'Completa correctamente').should('be.visible');
-      cy.get('@quote.all').should('have.length', 0);
+      if (Object.keys(product.fields).length || product.id === 'travel') {
+        cy.get('button[type=submit]').click();
+        cy.contains('[role=alert]', 'Completa correctamente').should('be.visible');
+        cy.get('@quote.all').should('have.length', 0);
+      }
       fillProduct(product);
       cy.get('button[type=submit]').click();
       cy.wait('@quote').then(({ request, response }) => {
@@ -33,9 +101,42 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     });
   }
 
+  it('separa la revisión de toda la grilla, la alinea a la derecha y adapta su ancho en móvil', () => {
+    cy.viewport(1280, 900);
+    openQuote(products[0]);
+    fillProduct(products[0]);
+    cy.get('button[type=submit]').click();
+    cy.contains('button', 'Seleccionar oferta').click();
+    cy.location('pathname').should('eq', '/app/cotizaciones/aceptacion');
+    cy.get('a[href="/app/cotizaciones/ofertas"]').click();
+    cy.get('.offers-grid .continue-bar').should('not.exist');
+    cy.get('.continue-bar a')
+      .should('contain.text', 'Revisar selección')
+      .and('have.attr', 'href', '/app/cotizaciones/aceptacion');
+    cy.get('.offers-page').should(($page) => {
+      const grid = $page[0].querySelector('.offers-grid')!.getBoundingClientRect();
+      const button = $page[0].querySelector('.continue-bar a')!.getBoundingClientRect();
+      expect(button.top - grid.bottom, 'separación superior en escritorio').to.be.at.least(24);
+      expect(Math.abs(button.right - grid.right), 'alineación derecha').to.be.at.most(1);
+    });
+    cy.viewport(390, 844);
+    cy.get('.offers-page').should(($page) => {
+      const grid = $page[0].querySelector('.offers-grid')!.getBoundingClientRect();
+      const button = $page[0].querySelector('.continue-bar a')!.getBoundingClientRect();
+      expect(button.top - grid.bottom, 'separación superior en móvil').to.be.at.least(24);
+      expect(Math.abs(button.width - grid.width), 'ancho disponible').to.be.at.most(1);
+      expect(button.right, 'sin desbordamiento horizontal').to.be.at.most(390);
+    });
+    cy.get('.continue-bar a').click();
+    cy.location('pathname').should('eq', '/app/cotizaciones/aceptacion');
+  });
+
   it('no cotiza sin consentimiento y bloquea nuevamente al revocarlo', () => {
     cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.disabled');
+    cy.contains('Información de perfilamiento').should('not.exist');
+    cy.get('app-profiling-panel a[href="/app/consentimiento"]').click();
     cy.get('app-profiling-panel time')
       .invoke('attr', 'datetime')
       .then((vigenteHasta) => {
@@ -55,26 +156,31 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
             },
           });
       });
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.enabled');
     cy.reload();
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.enabled');
+    cy.visit('/app/consentimiento');
     cy.contains('button', 'Revocar autorización').click();
     cy.contains('[role=group]', '¿Confirmas la revocación?').should('be.visible');
     cy.get('@consent.all').should('have.length', 1);
     cy.contains('button', 'Conservar autorización').click();
     cy.contains('[role=group]', '¿Confirmas la revocación?').should('not.exist');
-    cy.get('button[type=submit]').should('be.enabled');
+    cy.contains('button', 'Revocar autorización').should('be.visible');
     cy.contains('button', 'Revocar autorización').click();
     cy.contains('button', 'Confirmar revocación').click();
     cy.wait('@consent').its('request.body').should('deep.eq', { autorizado: false, version: 1 });
     cy.contains('app-profiling-panel [role=status]', 'Autorización revocada').should('be.visible');
-    cy.reload();
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.disabled');
     cy.get('@quote.all').should('have.length', 0);
   });
 
   it('registra el rechazo informado y permite autorizar con la siguiente version', () => {
-    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.visit('/app/consentimiento');
     cy.contains('button', 'Rechazar perfilamiento').click();
     cy.wait('@consent').then(({ request, response }) => {
       expect(request.body).to.include({ autorizado: false, version: 0 });
@@ -85,13 +191,18 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
       expect(response?.body).to.include({ estado: 'rechazado', version: 1 });
     });
     cy.contains('app-profiling-panel [role=status]', 'Autorización rechazada').should('be.visible');
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.disabled');
     cy.get('@quote.all').should('have.length', 0);
+    cy.visit('/app/consentimiento');
     cy.contains('button', 'Autorizar perfilamiento').click();
     cy.wait('@consent').then(({ request, response }) => {
       expect(request.body).to.include({ autorizado: true, version: 1 });
       expect(response?.body).to.include({ estado: 'autorizado', version: 2 });
     });
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.enabled');
   });
 
@@ -106,10 +217,12 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
       },
     });
     cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
+    cy.get('button[type=submit]').should('be.disabled');
+    cy.visit('/app/consentimiento');
     cy.contains('app-profiling-panel [role=status]', 'La evidencia anterior es incompleta').should(
       'be.visible',
     );
-    cy.get('button[type=submit]').should('be.disabled');
     cy.get('@quote.all').should('have.length', 0);
   });
 
@@ -117,11 +230,13 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     cy.intercept('PUT', '/api/v1/consentimientos/perfilamiento', {
       body: { ...consent(), actorId: undefined },
     }).as('incompleteConsent');
-    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.visit('/app/consentimiento');
     cy.contains('button', 'Autorizar perfilamiento').click();
     cy.wait('@incompleteConsent');
     cy.get('app-profiling-panel [role=alert]').should('be.visible');
     cy.contains('button', 'Revocar autorización').should('not.exist');
+    cy.visit('/app/cotizaciones/solicitar?producto=automotive');
+    cy.wait('@quoteDestinations');
     cy.get('button[type=submit]').should('be.disabled');
     cy.get('@quote.all').should('have.length', 0);
   });
@@ -256,6 +371,20 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
 
   it('no abre planes de una solicitud cuyo perfil ya vencio al recuperarla', () => {
     cy.expectConsoleError('The quote process could not be recovered.', 422, 'perfil_vencido');
+    cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}/estado`, {
+      body: historyDto({
+        operationId: null,
+        socioId: null,
+        solicitudId: quoteId,
+        productoId: 'travel',
+        estadoSeleccion: {
+          solicitudId: quoteId,
+          seleccion: null,
+          aceptacion: null,
+          estadoOferta: null,
+        },
+      }),
+    });
     cy.intercept('GET', `/api/v1/solicitudes-cotizacion/${quoteId}`, {
       id: quoteId,
       productoId: 'travel',

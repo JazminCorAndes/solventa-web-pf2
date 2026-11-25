@@ -65,6 +65,17 @@ export const routes: Routes = [
         title: 'Consentimiento | Solventa',
       },
       {
+        path: 'socios/clientes',
+        pathMatch: 'full',
+        canActivate: [partnerGuard],
+        data: { partnerScope: 'clientes:consultar', partnerMode: true },
+        loadComponent: () =>
+          import('./features/partners/partner-clients-page.component').then(
+            (component) => component.PartnerClientsPageComponent,
+          ),
+        title: 'Clientes cotizados | Solventa',
+      },
+      {
         path: 'socios/clientes/consultar',
         canActivate: [partnerGuard],
         data: { partnerScope: 'clientes:consultar', partnerMode: true },
@@ -83,6 +94,16 @@ export const routes: Routes = [
             (component) => component.QuoteRequestPageComponent,
           ),
         title: 'Cotización de socio | Solventa',
+      },
+      {
+        path: 'socios/solicitudes',
+        canActivate: [partnerGuard],
+        data: { partnerScope: 'perfilamientos:crear', partnerMode: true },
+        loadComponent: () =>
+          import('./features/partners/partner-requests-page.component').then(
+            (component) => component.PartnerRequestsPageComponent,
+          ),
+        title: 'Solicitudes del socio | Solventa',
       },
       {
         path: 'socios',

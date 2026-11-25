@@ -37,17 +37,17 @@ la prueba de duplicados del BFF también usa el formulario web cifrado.
 
 ## Ejecución
 
-### Documento y firma simulada (opt-in)
+### Documento PDF de póliza (opt-in)
 
-`ui/policy-document.cy.ts` prueba consentimiento, replay tras 503/recarga,
-revisión tras 409, SHA-256, descarga y tamaños escritorio/móvil con HTTP controlado.
+`ui/policy-document.cy.ts` prueba descarga PDF, integridad SHA-256, vínculo con el
+snapshot HTML, ausencia de firma y banner en escritorio/móvil con HTTP controlado.
 Ejecuta `node tests\cypress\run.cjs ui policy-document.cy.ts`.
 
 `document/policy-document.cy.ts` exige un harness backend desechable y una póliza
 sintética nueva sin aceptación. Usa BFF → Pólizas/SQLite y JWT RSA de prueba;
-solo controla la restauración de sesión y el dashboard. **No intercepta** consulta,
-aceptación ni descarga del documento. Comprueba POST 201, persistencia al recargar,
-evidencia única y SHA-256 del archivo descargado. No acredita login, pagos reales,
+solo controla la restauración de sesión y el dashboard. **No intercepta** consulta
+ni descarga del documento. Comprueba persistencia al recargar, ausencia de POST de
+aceptación, formato PDF y ambos hashes de integridad. No acredita login, pagos reales,
 E2E completo, despliegue ni firma legal.
 
 El propietario del backend prepara el harness de

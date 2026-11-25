@@ -14,6 +14,7 @@ import {
   DOCUMENT_ACCEPTANCE,
   DOCUMENT_ACTOR_ID,
   documentBytes,
+  DOCUMENT_PDF,
   DOCUMENT_POLICY_ID,
   POLICY_DOCUMENT,
 } from '../../core/policies/policy-document.testing';
@@ -154,61 +155,74 @@ describe('HttpPolicyDocumentGateway', () => {
     await expect(result).rejects.toMatchObject({ kind });
   });
 
-  it('downloads exact UTF-8 bytes and verifies the DTO hash even without CORS-exposed headers', async () => {
-    const bytes = documentBytes();
+  it('downloads PDF bytes using their own digest and the canonical source hash', async () => {
+    const bytes = documentBytes(DOCUMENT_PDF);
     const hash = await digest(bytes);
-    const document = { ...POLICY_DOCUMENT, contenidoHash: hash };
+    const document = POLICY_DOCUMENT;
     const result = firstValueFrom(gateway.download(document));
-    const request = http.expectOne(`${BASE}/documentos/${document.documentoId}/descarga`);
+    const request = http.expectOne(`${BASE}/documentos/${document.documentoId}/descarga/pdf`);
     expect(request.request.responseType).toBe('arraybuffer');
     expect(request.request.headers.get('Authorization')).toBe('Bearer document-test-token');
-    request.flush(bytes, { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+    expect(hash).not.toBe(document.contenidoHash);
+    request.flush(bytes, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'X-Content-SHA256': hash,
+        'X-Document-Content-SHA256': document.contenidoHash,
+      },
+    });
     expect(new Uint8Array(await result)).toEqual(new Uint8Array(bytes));
   });
 
   it.each<Record<string, string>>([
     { 'Content-Type': 'application/json' },
-    { 'Content-Type': 'text/html;charset=utf-8', 'X-Content-SHA256': 'wrong' },
-    { 'Content-Type': 'text/html;charset=utf-8', 'Content-Disposition': 'inline' },
-    { 'Content-Type': 'text/html;charset=utf-8', 'X-Content-Type-Options': 'invalid' },
-    { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'public' },
+    { 'X-Content-SHA256': 'wrong' },
+    { 'X-Document-Content-SHA256': 'b'.repeat(64) },
+    { 'Content-Disposition': 'inline' },
+    { 'Content-Disposition': 'attachment; filename="poliza.html"' },
+    { 'X-Content-Type-Options': 'invalid' },
+    { 'Cache-Control': 'public' },
     {
-      'Content-Type': 'text/html;charset=utf-8',
       'Content-Security-Policy': 'default-src *; sandbox allow-scripts',
     },
   ])('rejects inconsistent visible download headers', async (headers) => {
-    const bytes = documentBytes();
-    const result = firstValueFrom(
-      gateway.download({ ...POLICY_DOCUMENT, contenidoHash: await digest(bytes) }),
-    );
-    http
-      .expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga`)
-      .flush(bytes, { headers });
+    const bytes = documentBytes(DOCUMENT_PDF);
+    const result = firstValueFrom(gateway.download(POLICY_DOCUMENT));
+    http.expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga/pdf`).flush(bytes, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'X-Content-SHA256': await digest(bytes),
+        'X-Document-Content-SHA256': POLICY_DOCUMENT.contenidoHash,
+        ...headers,
+      },
+    });
     await expect(result).rejects.toMatchObject({ kind: 'download' });
   });
 
-  it('rejects altered bytes despite an advertised hash matching the DTO', async () => {
+  it('rejects altered PDF bytes despite a matching canonical source hash', async () => {
     const result = firstValueFrom(gateway.download(POLICY_DOCUMENT));
     http
-      .expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga`)
-      .flush(documentBytes(), {
+      .expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga/pdf`)
+      .flush(documentBytes(DOCUMENT_PDF + 'alterado'), {
         headers: {
-          'Content-Type': 'text/html;charset=utf-8',
-          'X-Content-SHA256': POLICY_DOCUMENT.contenidoHash,
+          'Content-Type': 'application/pdf',
+          'X-Content-SHA256': await digest(documentBytes(DOCUMENT_PDF)),
+          'X-Document-Content-SHA256': POLICY_DOCUMENT.contenidoHash,
         },
       });
     await expect(result).rejects.toMatchObject({ kind: 'download' });
   });
 
   it('accepts consistent secure visible headers', async () => {
-    const bytes = documentBytes();
+    const bytes = documentBytes(DOCUMENT_PDF);
     const hash = await digest(bytes);
-    const result = firstValueFrom(gateway.download({ ...POLICY_DOCUMENT, contenidoHash: hash }));
-    http.expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga`).flush(bytes, {
+    const result = firstValueFrom(gateway.download(POLICY_DOCUMENT));
+    http.expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga/pdf`).flush(bytes, {
       headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="poliza-academica.html"',
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="poliza-academica.pdf"',
         'X-Content-SHA256': hash,
+        'X-Document-Content-SHA256': POLICY_DOCUMENT.contenidoHash,
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
         'Content-Security-Policy': "default-src 'none'; sandbox",
@@ -217,16 +231,40 @@ describe('HttpPolicyDocumentGateway', () => {
     expect(await result).toBe(bytes);
   });
 
-  it('rejects non UTF-8 data even when its byte hash is correct', async () => {
-    const bytes = Uint8Array.from([0xff, 0xfe, 0xc3, 0x28]).buffer;
-    const result = firstValueFrom(
-      gateway.download({ ...POLICY_DOCUMENT, contenidoHash: await digest(bytes) }),
-    );
-    http.expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga`).flush(bytes, {
-      headers: { 'Content-Type': 'text/html;charset=utf-8' },
-    });
-    await expect(result).rejects.toThrow();
-  });
+  it.each(['X-Content-SHA256', 'X-Document-Content-SHA256'])(
+    'fails closed when CORS hides %s',
+    async (missing) => {
+      const bytes = documentBytes(DOCUMENT_PDF);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/pdf',
+        'X-Content-SHA256': await digest(bytes),
+        'X-Document-Content-SHA256': POLICY_DOCUMENT.contenidoHash,
+      };
+      delete headers[missing];
+      const result = firstValueFrom(gateway.download(POLICY_DOCUMENT));
+      http
+        .expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga/pdf`)
+        .flush(bytes, { headers });
+      await expect(result).rejects.toMatchObject({ kind: 'download' });
+    },
+  );
+
+  it.each([documentBytes(), documentBytes('%PDF-1.4\ntruncado'), new ArrayBuffer(1_048_577)])(
+    'rejects HTML, truncated or oversized payloads even with correct hashes',
+    async (bytes) => {
+      const result = firstValueFrom(gateway.download(POLICY_DOCUMENT));
+      http
+        .expectOne(`${BASE}/documentos/${POLICY_DOCUMENT.documentoId}/descarga/pdf`)
+        .flush(bytes, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'X-Content-SHA256': await digest(bytes),
+            'X-Document-Content-SHA256': POLICY_DOCUMENT.contenidoHash,
+          },
+        });
+      await expect(result).rejects.toMatchObject({ kind: 'download' });
+    },
+  );
 });
 
 async function digest(bytes: ArrayBuffer): Promise<string> {

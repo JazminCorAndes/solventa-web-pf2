@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { defer, Observable, of } from 'rxjs';
-import { PolicyCancellationGateway } from '../../core/policies/policy-cancellation.gateway';
+import { PolicyCancellationGateway } from '../../../app/core/policies/policy-cancellation.gateway';
 import {
   CancellationAttempt,
   CancellationSettlement,
   CancellationState,
   PolicyCancellation,
   PolicyCancellationError,
-} from '../../core/policies/policy-cancellation.models';
+} from '../../../app/core/policies/policy-cancellation.models';
 import { MOCK_POLICY_ID } from '../mock/mock.constants';
 
 const SETTLEMENT: CancellationSettlement = {

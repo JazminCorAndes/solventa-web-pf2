@@ -3,6 +3,7 @@ import { finalize, Observable, take, tap } from 'rxjs';
 import { OFFER_SELECTION_STORAGE } from '../offers/offer-selection-storage.service';
 import { QUOTE_REQUEST_GATEWAY } from './quote-request.gateway';
 import {
+  ClientQuoteProfile,
   InsuranceProduct,
   InsuranceProductDetail,
   QuoteRequestDraft,
@@ -35,6 +36,10 @@ export class QuoteRequestService {
 
   loadProductDetail(id: string): Observable<InsuranceProductDetail> {
     return this.gateway.loadProductDetail(id);
+  }
+
+  loadClientProfile(): Observable<ClientQuoteProfile> {
+    return this.gateway.loadClientProfile();
   }
 
   loadProducts(): void {

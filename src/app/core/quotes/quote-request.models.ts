@@ -37,6 +37,16 @@ export type DocumentType = 'cc' | 'ce' | 'passport' | 'ppt';
 
 export type QuoteProductData = Readonly<Record<string, string>>;
 
+export interface ClientQuoteProfile {
+  clientId: string;
+  fullName: string;
+  documentType: DocumentType;
+  nationalId: string;
+  email: string;
+  phone: string | null;
+  birthDate: string | null;
+}
+
 export interface QuoteRequestDraft {
   productId: string;
   productData: QuoteProductData;

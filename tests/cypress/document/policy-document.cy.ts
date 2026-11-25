@@ -1,7 +1,4 @@
-import type {
-  DocumentAcceptance,
-  PolicyDocument,
-} from '../../../src/app/core/policies/policy-document.models';
+import type { PolicyDocument } from '../../../src/app/core/policies/policy-document.models';
 
 interface SyntheticDocumentFixture {
   baseUrl: string;
@@ -13,7 +10,7 @@ interface SyntheticDocumentFixture {
 }
 
 describe('Documento: navegador → BFF → Polizas/SQLite sintéticos; sesión/dashboard controlados', () => {
-  it('consulta, acepta, recarga y descarga el mismo archivo persistido sin simular esos endpoints', () => {
+  it('consulta, recarga y descarga PDF del documento persistido sin nuevas aceptaciones', () => {
     cy.env<{ POLICY_DOCUMENT_FIXTURE: string; BACKEND_URL: string }>(
       ['POLICY_DOCUMENT_FIXTURE', 'BACKEND_URL'],
       { log: false },
@@ -74,32 +71,23 @@ describe('Documento: navegador → BFF → Polizas/SQLite sintéticos; sesión/d
             ],
             notificaciones: { disponibilidad: 'no_implementado' },
           });
-          let accepted: DocumentAcceptance;
+          let pdfHash: string;
           cy.intercept('GET', `/api${path}/documento`, (request) => request.continue()).as(
             'document',
           );
-          cy.intercept('POST', `/api${path}/aceptaciones`, (request) => {
-            expect(request.body).to.deep.eq({
-              documentoId: initial.documentoId,
-              versionPoliza: initial.versionPoliza,
-              contenidoHash: initial.contenidoHash,
-              aceptaSimulacion: true,
-            });
-            request.continue((response) => {
-              expect(response.statusCode).to.eq(201);
-              accepted = response.body as DocumentAcceptance;
-              expect(accepted.actorId).to.eq(fixture.actorId);
-              expect(accepted.contenidoHash).to.eq(initial.contenidoHash);
-            });
-          }).as('accept');
+          cy.intercept('POST', `/api${path}/aceptaciones`, (request) => request.continue()).as(
+            'accept',
+          );
           cy.intercept(
             'GET',
-            `/api${path}/documentos/${initial.documentoId}/descarga`,
+            `/api${path}/documentos/${initial.documentoId}/descarga/pdf`,
             (request) => {
               request.continue((response) => {
                 expect(response.statusCode).to.eq(200);
-                expect(response.headers['x-content-sha256']).to.eq(initial.contenidoHash);
-                expect(response.headers['content-type']).to.match(/^text\/html;\s*charset=utf-8$/);
+                pdfHash = String(response.headers['x-content-sha256']);
+                expect(pdfHash).to.match(/^[a-f0-9]{64}$/);
+                expect(response.headers['x-document-content-sha256']).to.eq(initial.contenidoHash);
+                expect(response.headers['content-type']).to.eq('application/pdf');
               });
             },
           ).as('download');
@@ -122,19 +110,14 @@ describe('Documento: navegador → BFF → Polizas/SQLite sintéticos; sesión/d
           });
           cy.wait('@document');
           cy.contains('.document-panel', initial.contenido.producto.nombre).should('be.visible');
-          cy.get('.accept-document').should('be.disabled');
-          cy.get('.acceptance mat-checkbox input').check();
-          cy.get('.accept-document').click();
-          cy.wait('@accept');
-          cy.contains('.acceptance', 'Aceptación simulada registrada el').should('be.visible');
+          cy.get('.accept-document, .acceptance').should('not.exist');
           cy.reload();
           cy.wait('@document');
-          cy.contains('.acceptance', 'Aceptación simulada registrada el').should('be.visible');
           cy.get('.accept-document').should('not.exist');
-          cy.get('@accept.all').should('have.length', 1);
+          cy.get('@accept.all').should('have.length', 0);
           cy.get('.download-document').click();
           cy.wait('@download');
-          const filename = `poliza-${initial.polizaId}-${initial.documentoId}.html`;
+          const filename = `poliza-${initial.polizaId}-${initial.documentoId}.pdf`;
           cy.readFile<Uint8Array>(`${Cypress.config('downloadsFolder')}/${filename}`, null, {
             log: false,
           }).then(async (bytes) => {
@@ -142,9 +125,8 @@ describe('Documento: navegador → BFF → Polizas/SQLite sintéticos; sesión/d
               new Uint8Array(await crypto.subtle.digest('SHA-256', Uint8Array.from(bytes).buffer)),
               (byte) => byte.toString(16).padStart(2, '0'),
             ).join('');
-            expect(hash, 'SHA-256 de los bytes persistidos descargados').to.eq(
-              initial.contenidoHash,
-            );
+            expect(hash, 'SHA-256 de los bytes PDF descargados').to.eq(pdfHash);
+            expect(new TextDecoder().decode(Uint8Array.from(bytes).slice(0, 5))).to.eq('%PDF-');
           });
           cy.request<PolicyDocument>({
             url: `${origin.origin}${path}/documento`,
@@ -153,8 +135,8 @@ describe('Documento: navegador → BFF → Polizas/SQLite sintéticos; sesión/d
           }).then(({ body: current }) => {
             expect(current.documentoId).to.eq(initial.documentoId);
             expect(current.contenidoHash).to.eq(initial.contenidoHash);
-            expect(current.aceptacionActual?.id).to.eq(accepted.id);
-            expect(current.historialAceptaciones).to.have.length(1);
+            expect(current.aceptacionActual).to.eq(initial.aceptacionActual);
+            expect(current.historialAceptaciones).to.deep.eq(initial.historialAceptaciones);
           });
         });
       });

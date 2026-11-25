@@ -101,6 +101,7 @@ describe('ClaimStatusPageComponent with HTTP consumer', () => {
     expect(text()).toContain(es.claimStatus.types.asistido);
     expect(find('[data-testid="claim-evidence-panel"]')).not.toBeNull();
     expect(find('[data-testid="evidence-files"]')).toBeNull();
+    expect(find('[data-testid="claim-id-input"]')).toBeNull();
   });
 
   it('adjunta evidencia desde el detalle autorizado y muestra solo éxito confirmado', async () => {
