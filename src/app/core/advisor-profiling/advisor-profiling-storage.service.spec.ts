@@ -1,20 +1,20 @@
 import { TestBed } from '@angular/core/testing';
-import { BrowserAdvisorProfilingStorage } from './advisor-profiling-storage.service';
+import { BrowserPartnerProfilingStorage } from './advisor-profiling-storage.service';
 
-const KEY = 'solventa.advisor.mortgage-profiling-operation';
+const KEY = 'solventa.partner.mortgage-profiling-operation';
 const OPERATION = {
   ownerId: 'advisor-test',
   partnerId: 'BANCO-001',
   operationId: '11111111-1111-4111-8111-111111111111',
 };
 
-describe('BrowserAdvisorProfilingStorage', () => {
-  let storage: BrowserAdvisorProfilingStorage;
+describe('BrowserPartnerProfilingStorage', () => {
+  let storage: BrowserPartnerProfilingStorage;
 
   beforeEach(() => {
     sessionStorage.clear();
-    TestBed.configureTestingModule({ providers: [BrowserAdvisorProfilingStorage] });
-    storage = TestBed.inject(BrowserAdvisorProfilingStorage);
+    TestBed.configureTestingModule({ providers: [BrowserPartnerProfilingStorage] });
+    storage = TestBed.inject(BrowserPartnerProfilingStorage);
   });
 
   it('persiste únicamente metadatos y omite propiedades adicionales', () => {

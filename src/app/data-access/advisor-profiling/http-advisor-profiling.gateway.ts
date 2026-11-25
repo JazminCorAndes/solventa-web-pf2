@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AdvisorProfilingGateway } from '../../core/advisor-profiling/advisor-profiling.gateway';
+import { PartnerProfilingGateway } from '../../core/advisor-profiling/advisor-profiling.gateway';
 import {
   MortgageProfilingError,
   MortgageProfilingErrorCode,
@@ -12,7 +12,7 @@ import {
 } from '../../core/advisor-profiling/advisor-profiling.models';
 
 @Injectable()
-export class HttpAdvisorProfilingGateway implements AdvisorProfilingGateway {
+export class HttpPartnerProfilingGateway implements PartnerProfilingGateway {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiBaseUrl}/v1/perfilamientos-hipotecarios`;
 
@@ -23,6 +23,7 @@ export class HttpAdvisorProfilingGateway implements AdvisorProfilingGateway {
         {
           operationId: request.operationId,
           socioId: request.partnerId,
+          consultaInformacionId: request.consultationId,
           productoId: 'mortgage-life',
           cliente: {
             clienteId: request.customer.id,

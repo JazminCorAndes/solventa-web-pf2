@@ -102,21 +102,21 @@ describe('AuthService', () => {
     expect(storage.stored).toBeNull();
   });
 
-  it('restaura al asesor y reemplaza sus socios con la respuesta de renovación', async () => {
+  it('restaura al asesor y reemplaza permisos con la respuesta de renovación', async () => {
     storage.stored = storedAuth({
-      user: { ...TEST_USER, role: 'advisor', partnerIds: ['SOCIO-ANTERIOR'] },
+      user: { ...TEST_USER, role: 'advisor', permissions: ['reportes:operativos'] },
     });
     const grant = grantFor('advisor-access', 'advisor-refresh');
     grant.session.user = {
       ...TEST_USER,
       role: 'advisor',
-      partnerIds: ['BANCO-001', 'BANCO-002'],
+      permissions: ['siniestros:revisar'],
     };
     gateway.refreshResult = () => of(grant);
     const service = createService();
     expect(service.user()?.role).toBe('advisor');
     await firstValueFrom(service.synchronizeSession());
-    expect(service.user()?.partnerIds).toEqual(['BANCO-001', 'BANCO-002']);
+    expect(service.user()?.permissions).toEqual(['siniestros:revisar']);
     expect(storage.stored?.user).toEqual(grant.session.user);
     expect(service.hasActiveSession()).toBe(true);
   });

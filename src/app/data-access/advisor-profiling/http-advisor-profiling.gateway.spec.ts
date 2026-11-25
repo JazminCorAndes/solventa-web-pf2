@@ -4,14 +4,15 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { MortgageProfilingRequest } from '../../core/advisor-profiling/advisor-profiling.models';
-import { HttpAdvisorProfilingGateway } from './http-advisor-profiling.gateway';
+import { HttpPartnerProfilingGateway } from './http-advisor-profiling.gateway';
 
-describe('HttpAdvisorProfilingGateway', () => {
-  let gateway: HttpAdvisorProfilingGateway;
+describe('HttpPartnerProfilingGateway', () => {
+  let gateway: HttpPartnerProfilingGateway;
   let http: HttpTestingController;
   const request: MortgageProfilingRequest = {
     operationId: '11111111-1111-4111-8111-111111111111',
     partnerId: 'SOC-CO-001',
+    consultationId: '77777777-7777-4777-8777-777777777777',
     customer: {
       id: '44444444-4444-4444-8444-444444444444',
       documentType: 'cc',
@@ -36,9 +37,9 @@ describe('HttpAdvisorProfilingGateway', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [HttpAdvisorProfilingGateway, provideHttpClient(), provideHttpClientTesting()],
+      providers: [HttpPartnerProfilingGateway, provideHttpClient(), provideHttpClientTesting()],
     });
-    gateway = TestBed.inject(HttpAdvisorProfilingGateway);
+    gateway = TestBed.inject(HttpPartnerProfilingGateway);
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -51,6 +52,7 @@ describe('HttpAdvisorProfilingGateway', () => {
     expect(pending.request.body).toEqual({
       operationId: request.operationId,
       socioId: 'SOC-CO-001',
+      consultaInformacionId: request.consultationId,
       productoId: 'mortgage-life',
       cliente: {
         clienteId: request.customer.id,

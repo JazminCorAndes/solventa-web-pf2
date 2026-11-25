@@ -36,7 +36,7 @@ describe('AdvisorExceptionsPageComponent', () => {
     name: 'Asesora de prueba',
     email: 'advisor@example.com',
     role: 'advisor',
-    partnerIds: ['BANCO-001', 'BANCO-002'],
+    permissions: ['open_finance:resolver:BANCO-001', 'open_finance:resolver:BANCO-002'],
   };
   const exception: PendingAdvisorException = {
     excepcionId: 'exception-123',
@@ -598,8 +598,8 @@ describe('AdvisorExceptionsPageComponent', () => {
     null,
     { ...advisor, role: 'client' as const },
     { ...advisor, role: 'partner' as const },
-    { ...advisor, partnerIds: [] },
-    { ...advisor, partnerIds: undefined },
+    { ...advisor, permissions: [] },
+    { ...advisor, permissions: undefined },
   ])('bloquea la pantalla sin rol advisor y socios válidos %#', async (current) => {
     user.set(current);
     fixture.detectChanges();

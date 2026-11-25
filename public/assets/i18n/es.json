@@ -1048,7 +1048,7 @@
   },
   "advisorNavigation": {
     "portal": "Portal del asesor",
-    "portalType": "Socios distribuidores",
+    "portalType": "Operación interna de siniestros",
     "title": "Portal del asesor",
     "clients": "Clientes",
     "exceptions": "Excepciones Open Finance",
@@ -1134,7 +1134,7 @@
       "reason": "Ingresa un motivo no vacío de 3 a 500 caracteres."
     },
     "errors": {
-      "advisor_context_unavailable": "Esta pantalla está disponible únicamente para asesores con socios autorizados en su sesión.",
+      "advisor_context_unavailable": "Esta pantalla requiere un permiso interno de riesgo o suscripción para resolver excepciones del socio.",
       "sesion_invalida": "Tu sesión no es válida. Inicia sesión nuevamente.",
       "socio_no_autorizado": "No tienes autorización para consultar o resolver excepciones de este socio.",
       "actor_no_autorizado": "El actor ya no tiene autorización para esta operación.",
@@ -1215,7 +1215,7 @@
       "operation_in_progress": "Esta operación sigue en curso. Reintenta con el mismo identificador.",
       "operation_retryable": "La operación no tiene un resultado confirmado. Reintenta con el mismo identificador.",
       "rate_limited": "El socio alcanzó el límite de solicitudes. Espera antes de reintentar la misma operación.",
-      "advisor_context_unavailable": "No puedes enviar un perfilamiento: esta sesión web no dispone del contexto autorizado del asesor y su socio.",
+      "partner_context_unavailable": "El perfilamiento requiere una sesión de socio autorizada y una consulta consentida completada para este cliente y producto.",
       "unexpected": "No fue posible iniciar el perfilamiento. Puedes reintentar sin crear otra operación."
     }
   },

@@ -21,6 +21,10 @@ import {
   HttpClientInformationGateway,
 } from '../../data-access/partners/http-client-information.gateway';
 import { ClientInformationPageComponent } from './client-information-page.component';
+import { PartnerProfilingService } from '../../core/advisor-profiling/advisor-profiling.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { MortgageProfilingStartPageComponent } from '../advisor/mortgage-profiling-start-page.component';
+import { By } from '@angular/platform-browser';
 
 const CLIENT_ID = '22222222-2222-4222-8222-222222222222';
 const REVIEW: ClientInformationReview = {
@@ -174,11 +178,13 @@ describe('ClientInformationPageComponent', () => {
   let query: Record<string, string>;
   let queryChanges: Subject<ReturnType<typeof convertToParamMap>>;
   let context: WritableSignal<PartnerContext | null>;
+  const startProfiling = vi.fn();
 
   beforeEach(async () => {
     query = { socio: 'BANCO-001' };
     queryChanges = new Subject();
     context = signal<PartnerContext | null>(CONTEXT);
+    startProfiling.mockReset();
     gateway = {
       consult: vi.fn(),
       load: vi.fn(),
@@ -228,10 +234,86 @@ describe('ClientInformationPageComponent', () => {
           useValue: { context: context.asReadonly() },
         },
         { provide: HttpClientInformationGateway, useValue: gateway },
+        {
+          provide: PartnerProfilingService,
+          useValue: {
+            start: startProfiling,
+            reset: vi.fn(),
+            pendingOperation: signal(null),
+            authorizedPartnerIds: () =>
+              context()?.alcances.includes('perfilamientos:crear') ? ['BANCO-001'] : [],
+          },
+        },
+        {
+          provide: AuthService,
+          useValue: {
+            user: () => ({
+              id: CONTEXT.usuario.id,
+              role: 'partner',
+              partnerIds: ['BANCO-001'],
+            }),
+            getAccessToken: () => of('partner-access'),
+          },
+        },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ClientInformationPageComponent);
     fixture.detectChanges();
+  });
+
+  it('origina desde la consulta consentida sin solicitar un listado global de clientes', async () => {
+    context.set({ ...CONTEXT, alcances: ['clientes:consultar', 'perfilamientos:crear'] });
+    fixture.detectChanges();
+    gateway.consult.mockImplementation((request: ClientInformationRequest) =>
+      of(resultFor(request)),
+    );
+    fixture.componentInstance.form.controls.documentNumber.setValue('1023456789');
+    fixture.componentInstance.submit();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const child = fixture.debugElement.query(By.directive(MortgageProfilingStartPageComponent));
+    expect(child).not.toBeNull();
+    const page = child.componentInstance as MortgageProfilingStartPageComponent;
+    const consultation = fixture.componentInstance.result()!;
+    expect(page.hasConsultation()).toBe(true);
+    expect(page.form.controls.customerId.value).toBe(CLIENT_ID);
+    expect(page.form.controls.consentId.value).toBe(consultation.consentimientoId);
+    startProfiling.mockReturnValue(
+      of({
+        operationId: '11111111-1111-4111-8111-111111111111',
+        partnerId: 'BANCO-001',
+        customerId: CLIENT_ID,
+        productId: 'mortgage-life',
+        profilingReference: 'PRF-TEST',
+        quoteRequestId: 'AQT-TEST',
+        quoteId: '99999999-9999-4999-8999-999999999999',
+        status: 'completed',
+        receivedAt: '2026-10-24T20:00:00Z',
+      }),
+    );
+    page.form.patchValue({
+      documentNumber: '1023456789',
+      birthDate: '1985-02-10',
+      phone: '+573001234567',
+      creditReference: 'HIP-001',
+      creditAmount: 310000000,
+      termMonths: 240,
+      consentVerified: true,
+    });
+    page.submit();
+    expect(startProfiling).toHaveBeenCalledWith(
+      expect.objectContaining({
+        consultationId: consultation.operationId,
+        partnerId: 'BANCO-001',
+        customer: expect.objectContaining({ id: CLIENT_ID }),
+        consent: { id: consultation.consentimientoId, version: consultation.consentimientoVersion },
+      }),
+    );
+    context.set(null);
+    fixture.detectChanges();
+    expect(
+      fixture.debugElement.query(By.directive(MortgageProfilingStartPageComponent)),
+    ).toBeNull();
   });
 
   it('WEB-F6-label focuses the empty document input through its visible Material label', () => {

@@ -5,9 +5,9 @@
     <p>{{ 'mortgageProfiling.subtitle' | transloco }}</p>
   </header>
 
-  @if (!authorizedPartnerIds().length) {
+  @if (!authorizedPartnerIds().length || !hasConsultation()) {
     <div class="inline-alert" role="alert">
-      {{ 'mortgageProfiling.errors.advisor_context_unavailable' | transloco }}
+      {{ 'mortgageProfiling.errors.partner_context_unavailable' | transloco }}
     </div>
   } @else {
     <mat-card appearance="outlined" class="partner-card">
@@ -19,7 +19,7 @@
               <mat-label>{{ 'mortgageProfiling.partnerId' | transloco }}</mat-label>
               <mat-select
                 [value]="partnerId()"
-                [disabled]="processing() || !!result() || !!pendingOperation()"
+                [disabled]="processing() || !!result() || !!pendingOperation() || !!consultation()"
                 (selectionChange)="selectPartner($event.value)"
               >
                 @for (id of authorizedPartnerIds(); track id) {
@@ -97,7 +97,7 @@
             <div class="form-grid">
               <mat-form-field appearance="outline" class="wide-field">
                 <mat-label>{{ 'mortgageProfiling.customerId' | transloco }}</mat-label>
-                <input matInput formControlName="customerId" autocomplete="off" />
+                <input matInput formControlName="customerId" autocomplete="off" readonly />
                 @if (showError('customerId')) {
                   <mat-error>{{ 'mortgageProfiling.validation.customerId' | transloco }}</mat-error>
                 }
@@ -198,6 +198,7 @@
               <input
                 matInput
                 formControlName="consentId"
+                readonly
                 placeholder="11111111-1111-4111-8111-111111111111"
               />
               @if (showError('consentId')) {
@@ -206,7 +207,7 @@
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'mortgageProfiling.consentVersion' | transloco }}</mat-label>
-              <input matInput type="number" min="1" formControlName="consentVersion" />
+              <input matInput type="number" min="1" formControlName="consentVersion" readonly />
               @if (showError('consentVersion')) {
                 <mat-error>{{
                   'mortgageProfiling.validation.consentVersion' | transloco

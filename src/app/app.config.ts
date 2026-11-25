@@ -45,12 +45,12 @@ import { PROFILING_GATEWAY } from './core/profiling/profiling.gateway';
 import { HttpProfilingGateway } from './data-access/profiling/http-profiling.gateway';
 import { SIMULATED_PAYMENT_GATEWAY } from './core/payments/simulated-payment.gateway';
 import { HttpSimulatedPaymentGateway } from './data-access/payments/http-simulated-payment.gateway';
-import { ADVISOR_PROFILING_GATEWAY } from './core/advisor-profiling/advisor-profiling.gateway';
+import { PARTNER_PROFILING_GATEWAY } from './core/advisor-profiling/advisor-profiling.gateway';
 import {
-  ADVISOR_PROFILING_STORAGE,
-  BrowserAdvisorProfilingStorage,
+  PARTNER_PROFILING_STORAGE,
+  BrowserPartnerProfilingStorage,
 } from './core/advisor-profiling/advisor-profiling-storage.service';
-import { HttpAdvisorProfilingGateway } from './data-access/advisor-profiling/http-advisor-profiling.gateway';
+import { HttpPartnerProfilingGateway } from './data-access/advisor-profiling/http-advisor-profiling.gateway';
 import { CLAIM_STATUS_GATEWAY } from './core/claims/claim-status.gateway';
 import { HttpClaimStatusGateway } from './data-access/claims/http-claim-status.gateway';
 import { CLAIM_EVIDENCE_GATEWAY } from './core/claims/claim-evidence.gateway';
@@ -120,14 +120,14 @@ export const appConfig: ApplicationConfig = {
     { provide: SUBSCRIPTION_STORAGE, useClass: BrowserSubscriptionStorage },
     { provide: SIMULATED_PAYMENT_GATEWAY, useClass: HttpSimulatedPaymentGateway },
     {
-      provide: ADVISOR_PROFILING_GATEWAY,
-      useClass: HttpAdvisorProfilingGateway,
+      provide: PARTNER_PROFILING_GATEWAY,
+      useClass: HttpPartnerProfilingGateway,
     },
     {
       provide: ADVISOR_EXCEPTIONS_GATEWAY,
       useClass: HttpAdvisorExceptionsGateway,
     },
-    { provide: ADVISOR_PROFILING_STORAGE, useClass: BrowserAdvisorProfilingStorage },
+    { provide: PARTNER_PROFILING_STORAGE, useClass: BrowserPartnerProfilingStorage },
     {
       provide: QUOTE_REQUEST_GATEWAY,
       useClass: HttpQuoteRequestGateway,

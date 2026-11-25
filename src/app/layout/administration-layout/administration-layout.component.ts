@@ -38,6 +38,9 @@ import { ThemeToggleComponent } from '../../shared/theme-toggle/theme-toggle.com
           {{ 'administration.queues.' + queue | transloco }}
         </a>
       }
+      <a mat-button routerLink="/administracion/reportes" routerLinkActive="active">
+        {{ 'advisorNavigation.reports' | transloco }}
+      </a>
     </nav>
     <main id="administration-main" tabindex="-1"><router-outlet /></main>
   `,

@@ -1,11 +1,12 @@
 import { firstValueFrom } from 'rxjs';
 import { MortgageProfilingRequest } from '../../core/advisor-profiling/advisor-profiling.models';
-import { MockAdvisorProfilingGateway } from '../../../testing/data-access/advisor-profiling/mock-advisor-profiling.gateway';
+import { MockPartnerProfilingGateway } from '../../../testing/data-access/advisor-profiling/mock-advisor-profiling.gateway';
 
-describe('MockAdvisorProfilingGateway', () => {
+describe('MockPartnerProfilingGateway', () => {
   const request: MortgageProfilingRequest = {
     operationId: '11111111-1111-4111-8111-111111111111',
     partnerId: 'SOC-CO-001',
+    consultationId: '77777777-7777-4777-8777-777777777777',
     customer: {
       id: '44444444-4444-4444-8444-444444444444',
       documentType: 'cc',
@@ -18,7 +19,7 @@ describe('MockAdvisorProfilingGateway', () => {
   };
 
   it('devuelve la misma confirmación al repetir la misma operación', async () => {
-    const gateway = new MockAdvisorProfilingGateway();
+    const gateway = new MockPartnerProfilingGateway();
     const first = await firstValueFrom(gateway.start(request));
     const replay = await firstValueFrom(gateway.start(request));
 
@@ -32,7 +33,7 @@ describe('MockAdvisorProfilingGateway', () => {
   });
 
   it('rechaza una colisión del operationId con otros datos', async () => {
-    const gateway = new MockAdvisorProfilingGateway();
+    const gateway = new MockPartnerProfilingGateway();
     await firstValueFrom(gateway.start(request));
 
     await expect(
@@ -46,7 +47,7 @@ describe('MockAdvisorProfilingGateway', () => {
   });
 
   it('expone datos incompletos y consentimiento inválido como errores identificables', async () => {
-    const gateway = new MockAdvisorProfilingGateway();
+    const gateway = new MockPartnerProfilingGateway();
 
     await expect(
       firstValueFrom(gateway.start({ ...request, customer: { ...request.customer, id: '' } })),

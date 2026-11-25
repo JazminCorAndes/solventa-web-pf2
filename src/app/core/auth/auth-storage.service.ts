@@ -70,12 +70,11 @@ function isStoredAuth(value: unknown): value is StoredAuth {
     typeof user.name === 'string' &&
     typeof user.email === 'string' &&
     (user.role === 'client' ||
-      (user.role === 'administrator' &&
+      ((user.role === 'administrator' || user.role === 'advisor') &&
         (user.partnerIds === undefined ||
           (isPartnerIds(user.partnerIds) && user.partnerIds.length === 0))) ||
-      ((user.role === 'partner' || user.role === 'advisor') &&
-        isPartnerIds(user.partnerIds) &&
-        (user.role === 'advisor' || user.partnerIds.length > 0))) &&
+      (user.role === 'partner' && isPartnerIds(user.partnerIds) && user.partnerIds.length > 0)) &&
+    (user.permissions === undefined || isPartnerIds(user.permissions)) &&
     (user.documentType === undefined ||
       user.documentType === 'cc' ||
       user.documentType === 'ce' ||

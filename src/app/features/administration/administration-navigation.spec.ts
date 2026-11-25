@@ -46,6 +46,42 @@ describe('Navegación administrativa real', () => {
   });
   afterEach(() => http.verify());
 
+  it('inicia al asesor en revisión y evita que una URL administrativa amplíe su rol', async () => {
+    storage.stored = {
+      user: TEST_USER,
+      refreshToken: 'stored-refresh',
+      refreshExpiresAt: Date.now() + 60000,
+    };
+    const navigation = harness.navigateByUrl('/asesor');
+    (await vi.waitFor(() => http.expectOne(`${API}/v1/sesiones/renovar`))).flush({
+      usuario: {
+        id: TEST_USER.id,
+        nombre: TEST_USER.name,
+        correo: TEST_USER.email,
+        rol: 'asesor',
+        permisos: ['siniestros:revisar'],
+      },
+      tokenType: 'Bearer',
+      accessToken: 'advisor-access',
+      refreshToken: 'advisor-refresh',
+      expiraEn: new Date(Date.now() + 3600000).toISOString(),
+      refreshExpiraEn: new Date(Date.now() + 86400000).toISOString(),
+    });
+    await navigation;
+    const queue = await vi.waitFor(() =>
+      http.expectOne(`${API}/v1/asesor/colas-revision/revision/asignaciones`),
+    );
+    expect(queue.request.headers.get('Authorization')).toBe('Bearer advisor-access');
+    queue.flush({ tipo: 'cola', destino: 'revision', asignaciones: [] });
+    expect(TestBed.inject(Router).url).toBe('/asesor/colas/revision');
+    await harness.navigateByUrl('/administracion/colas/revision');
+    expect(TestBed.inject(Router).url).toBe('/asesor/colas/revision');
+    http.expectNone(`${API}/v1/administracion/colas-revision/revision/asignaciones`);
+    await harness.navigateByUrl('/asesor/excepciones');
+    expect(TestBed.inject(Router).url).toBe('/acceso-no-disponible?reason=forbidden');
+    http.expectNone((request) => request.url.includes('excepciones-open-finance'));
+  });
+
   it('renueva la identidad antes de autorizar y conserva al administrador fuera del portal cliente', async () => {
     storage.stored = {
       user: TEST_USER,

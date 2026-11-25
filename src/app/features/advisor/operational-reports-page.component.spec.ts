@@ -19,6 +19,9 @@ import {
 } from '../../core/reports/operational-report.testing';
 import { HttpOperationalReportGateway } from '../../data-access/reports/http-operational-report.gateway';
 import { OperationalReportsPageComponent } from './operational-reports-page.component';
+import { AuthService } from '../../core/auth/auth.service';
+import { AuthUser } from '../../core/auth/auth.models';
+import { signal } from '@angular/core';
 
 registerLocaleData(localeEsCo);
 const BASE = `${environment.apiBaseUrl}/v1/reportes/operativos`;
@@ -28,6 +31,7 @@ const RESPONSE_FILTERS = { desde: PERIOD.from, hasta: PERIOD.to };
 describe('OperationalReportsPageComponent with HTTP consumer', () => {
   let fixture: ComponentFixture<OperationalReportsPageComponent>;
   let http: HttpTestingController;
+  const user = signal<AuthUser | null>(null);
   const root = () => fixture.nativeElement as HTMLElement;
   const find = (testId: string) => root().querySelector<HTMLElement>(`[data-testid="${testId}"]`);
   const render = () => fixture.detectChanges();
@@ -39,6 +43,13 @@ describe('OperationalReportsPageComponent with HTTP consumer', () => {
   const reportRequest = () => http.expectOne((req) => req.url === BASE);
 
   async function setup(options: object | null = OPTIONS_RESPONSE, status = 403) {
+    user.set({
+      id: 'advisor-test',
+      name: 'Asesor',
+      email: 'asesor@example.com',
+      role: 'advisor',
+      permissions: ['reportes:operativos'],
+    });
     await TestBed.configureTestingModule({
       imports: [
         OperationalReportsPageComponent,
@@ -52,6 +63,7 @@ describe('OperationalReportsPageComponent with HTTP consumer', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: OPERATIONAL_REPORT_GATEWAY, useClass: HttpOperationalReportGateway },
+        { provide: AuthService, useValue: { user } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(OperationalReportsPageComponent);
@@ -76,6 +88,21 @@ describe('OperationalReportsPageComponent with HTTP consumer', () => {
   afterEach(() => {
     http.verify();
     vi.restoreAllMocks();
+  });
+
+  it('cancela la consulta y elimina datos al retirar el permiso de reportes', async () => {
+    await setup();
+    component().query();
+    const request = reportRequest();
+    user.update((current) => current && { ...current, permissions: ['siniestros:revisar'] });
+    render();
+    expect(request.cancelled).toBe(true);
+    expect(component().report()).toBeNull();
+    expect(component().options()).toBeNull();
+    expect(component().state()).toBe('forbidden');
+    component().loadOptions();
+    component().query();
+    http.expectNone(() => true);
   });
 
   it('queries with the chosen period, product and status and shows the cut-off', async () => {

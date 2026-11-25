@@ -34,6 +34,7 @@ import {
   ReviewAttemptsService,
 } from '../../core/administration/review-attempts.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { canReviewClaims } from '../../core/auth/auth.models';
 import { CLAIM_UUID } from '../../core/claims/claim.models';
 
 @Component({
@@ -61,7 +62,7 @@ export class AdministrationPageComponent {
   private readonly document = inject(DOCUMENT);
   private readonly administratorId = computed(() => {
     const user = this.auth.user();
-    return user?.role === 'administrator' ? user.id : null;
+    return user && canReviewClaims(user) ? user.id : null;
   });
   private readonly params = toSignal(inject(ActivatedRoute).paramMap);
   private readonly version = signal(0);
@@ -69,6 +70,9 @@ export class AdministrationPageComponent {
   private context = '';
 
   readonly claimId = computed(() => this.params()?.get('claimId') ?? null);
+  readonly portalPath = computed(() =>
+    this.auth.user()?.role === 'advisor' ? '/asesor' : '/administracion',
+  );
   readonly queue = computed(() => this.params()?.get('queue') ?? null);
   readonly items = signal<ReviewQueueItem[]>([]);
   readonly claim = signal<AdministrativeClaim | null>(null);
@@ -85,7 +89,7 @@ export class AdministrationPageComponent {
     const history = this.history();
     const assignment = history?.asignacionActiva;
     return (
-      this.auth.user()?.role === 'administrator' &&
+      canReviewClaims(this.auth.user()) &&
       !this.loading() &&
       !this.loadError() &&
       !this.submitting() &&
@@ -117,7 +121,7 @@ export class AdministrationPageComponent {
       const id = this.claimId();
       const queue = this.queue();
       this.version();
-      const context = JSON.stringify([ownerId, id, queue]);
+      const context = JSON.stringify([ownerId, this.portalPath(), id, queue]);
       if (context !== this.context) {
         this.context = context;
         this.saved.set(false);
@@ -211,7 +215,8 @@ export class AdministrationPageComponent {
     const id = this.claimId();
     const attempt = this.pending();
     if (
-      user?.role !== 'administrator' ||
+      !user ||
+      !canReviewClaims(user) ||
       !id ||
       !attempt ||
       this.submitting() ||
@@ -255,7 +260,7 @@ export class AdministrationPageComponent {
   download(evidence: AdministrativeEvidence): void {
     const id = this.claimId();
     const ownerId = this.administratorId();
-    if (!id || this.downloading() || this.auth.user()?.role !== 'administrator') return;
+    if (!id || this.downloading() || !canReviewClaims(this.auth.user())) return;
     this.downloadError.set(null);
     this.downloading.set(evidence.id);
     this.gateway
