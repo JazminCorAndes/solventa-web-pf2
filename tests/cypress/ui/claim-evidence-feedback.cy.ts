@@ -141,8 +141,14 @@ describe('Evidencias: estados con HTTP sintético local, no acredita backend rea
       cy.get('[data-testid=evidence-upload]').should('not.exist');
       cy.get('[data-testid=evidence-file-error]').should(
         'contain.text',
-        width === 768 ? 'No pudimos leer' : 'ubicación sin consentimiento',
+        width === 768 ? 'El servidor no pudo validar' : 'ubicación sin consentimiento',
       );
+      cy.get('[data-testid=evidence-download]').should('not.exist');
+      if (width === 768) {
+        cy.get('[data-testid=evidence-file-error]')
+          .should('contain.text', 'No quedó adjunto')
+          .and('not.contain.text', 'contraseña');
+      }
       cy.get('[data-testid=evidence-error]').should('not.exist');
       cy.get('[data-testid=evidence-remove]').should('be.enabled');
       screenshot(`evidence-error-${width}`);

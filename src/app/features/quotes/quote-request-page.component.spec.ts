@@ -314,15 +314,15 @@ describe('QuoteRequestPageComponent', () => {
 
   it('preselects the catalog product while retaining its risk-field validation', () => {
     vi.spyOn(TestBed.inject(ActivatedRoute).snapshot.queryParamMap, 'get').mockReturnValue(
-      'parametric-weather',
+      'parametric',
     );
     const catalogFixture = TestBed.createComponent(QuoteRequestPageComponent);
     catalogFixture.detectChanges();
     const catalogComponent = catalogFixture.componentInstance;
 
-    expect(catalogComponent.selectedProduct()?.id).toBe('parametric-weather');
-    expect(catalogComponent.form.controls.location.hasError('required')).toBe(true);
-    expect(catalogComponent.form.controls.startDate.hasError('required')).toBe(true);
+    expect(catalogComponent.selectedProduct()?.id).toBe('parametric');
+    expect(catalogComponent.form.controls.airline.hasError('required')).toBe(true);
+    expect(catalogComponent.form.controls.flightDate.hasError('required')).toBe(true);
     expect(catalogComponent.form.controls.vehiclePlate.valid).toBe(true);
   });
 
@@ -521,7 +521,7 @@ describe('QuoteRequestPageComponent', () => {
   );
 
   it.each(['delay-cancellation', 'missed-connection', 'comprehensive'])(
-    'no ofrece ni cotiza el evento parametrico vuelo aunque se inyecte la cobertura %s',
+    'cotiza el vuelo con sus datos normalizados y cobertura %s',
     (coverageType) => {
       const flightDate = futureDay(10);
       component.form.patchValue({
@@ -532,37 +532,40 @@ describe('QuoteRequestPageComponent', () => {
         coverageType,
       });
       fixture.detectChanges();
-      expect(component.products().some((product) => product.id === 'parametric')).toBe(false);
-      expect(fixture.nativeElement.querySelector('#flight-coverage')).toBeNull();
+      expect(component.products().some((product) => product.id === 'parametric')).toBe(true);
+      expect(fixture.nativeElement.querySelector('#flight-coverage')).not.toBeNull();
 
       component.submit();
 
-      expect(gateway.submitCalls).toBe(0);
+      expect(gateway.lastRequest).toEqual({
+        productId: 'parametric',
+        productData: {
+          airline: 'Avianca',
+          flightNumber: 'AV123',
+          flightDate: isoDate(flightDate),
+          coverageType,
+        },
+      });
     },
   );
 
   it.each(['heavy-rain', 'drought'])(
-    'cotiza clima para %s y muestra sus campos propios',
+    'no ofrece ni cotiza clima aunque se inyecte el evento %s',
     (weatherEvent) => {
       fillWeatherForm(component);
       component.form.controls.weatherEvent.setValue(weatherEvent);
       fixture.detectChanges();
 
-      expect(fixture.nativeElement.querySelector('#weather-location')).not.toBeNull();
+      expect(component.products().some((product) => product.id === 'parametric-weather')).toBe(
+        false,
+      );
+      expect(fixture.nativeElement.querySelector('#weather-location')).toBeNull();
       expect(fixture.nativeElement.querySelector('#vehicle-plate')).toBeNull();
       expect(fixture.nativeElement.querySelector('#flight-number')).toBeNull();
       component.submit();
 
-      expect(gateway.lastRequest).toEqual({
-        productId: 'parametric-weather',
-        productData: {
-          location: 'Villavicencio, Meta',
-          weatherEvent,
-          startDate: isoDate(futureDay(10)),
-          endDate: isoDate(futureDay(20)),
-          insuredAmount: '10000000',
-        },
-      });
+      expect(gateway.submitCalls).toBe(0);
+      expect(component.form.controls.productId.hasError('unavailableProduct')).toBe(true);
     },
   );
 
@@ -577,13 +580,6 @@ describe('QuoteRequestPageComponent', () => {
     },
   );
 
-  it.each(['1', '1000000000'])('acepta el límite asegurado %s COP', (insuredAmount) => {
-    fillWeatherForm(component);
-    component.form.controls.insuredAmount.setValue(insuredAmount);
-    component.submit();
-    expect(gateway.lastRequest?.productData['insuredAmount']).toBe(insuredAmount);
-  });
-
   it.each([
     { start: 0, end: 10 },
     { start: -1, end: 10 },
@@ -594,13 +590,6 @@ describe('QuoteRequestPageComponent', () => {
     component.form.patchValue({ startDate: futureDay(start), endDate: futureDay(end) });
     component.submit();
     expect(gateway.submitCalls).toBe(0);
-  });
-
-  it('acepta un periodo de exactamente 366 días inclusive', () => {
-    fillWeatherForm(component);
-    component.form.controls.endDate.setValue(futureDay(375));
-    component.submit();
-    expect(gateway.submitCalls).toBe(1);
   });
 
   it.each(['', '   ', 'x'.repeat(121)])('rechaza una ubicación climática inválida', (location) => {
@@ -658,23 +647,16 @@ describe('QuoteRequestPageComponent', () => {
     }
   });
 
-  it('permite escribir las fechas climáticas en formato colombiano', () => {
-    fillWeatherForm(component);
-    fixture.detectChanges();
-    const start = fixture.nativeElement.querySelector('#weather-start-date') as HTMLInputElement;
-    const end = fixture.nativeElement.querySelector('#weather-end-date') as HTMLInputElement;
-    const startDate = futureDay(10);
-    const endDate = futureDay(20);
-    enterValue(
-      start,
-      `${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()}`,
+  it('no habilita clima mediante el parámetro de producto de la URL', () => {
+    vi.spyOn(TestBed.inject(ActivatedRoute).snapshot.queryParamMap, 'get').mockReturnValue(
+      'parametric-weather',
     );
-    enterValue(end, `${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`);
-
-    component.submit();
-
-    expect(gateway.lastRequest?.productData['startDate']).toBe(isoDate(startDate));
-    expect(gateway.lastRequest?.productData['endDate']).toBe(isoDate(endDate));
+    const climateFixture = TestBed.createComponent(QuoteRequestPageComponent);
+    climateFixture.detectChanges();
+    expect(climateFixture.componentInstance.selectedProduct()).toBeNull();
+    expect(climateFixture.nativeElement.querySelector('#weather-location')).toBeNull();
+    climateFixture.componentInstance.submit();
+    expect(gateway.submitCalls).toBe(0);
   });
 });
 

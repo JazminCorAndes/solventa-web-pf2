@@ -10,6 +10,7 @@ import {
   DashboardQuote,
   DashboardSnapshot,
   DashboardSubscription,
+  PolicyIndemnification,
 } from '../../core/dashboard/dashboard.models';
 import { isPremiumPeriodicity, PremiumPeriodicity } from '../../core/offers/offer.models';
 
@@ -185,6 +186,35 @@ function coverageDate(value: unknown): string {
     : invalid();
 }
 
+function indemnification(value: unknown): PolicyIndemnification | null {
+  if (value === null) return null;
+  const fields = record(value);
+  const currency = text(fields['moneda']);
+  if (fields['simulada'] !== true || !/^[A-Z]{3}$/.test(currency)) invalid();
+  if (fields['estado'] === 'pagada') {
+    return {
+      status: 'pagada',
+      amount: money({ monto: fields['monto'], moneda: currency }, true),
+      paidAt: date(fields['pagadaEn']),
+      reference: text(fields['referencia']),
+      simulated: true,
+    };
+  }
+  if (
+    !['pendiente', 'rechazada'].includes(String(fields['estado'])) ||
+    fields['monto'] !== null ||
+    fields['pagadaEn'] !== null ||
+    fields['referencia'] !== null
+  ) {
+    invalid();
+  }
+  return {
+    status: fields['estado'] === 'pendiente' ? 'pendiente' : 'rechazada',
+    currency,
+    simulated: true,
+  };
+}
+
 function policy(value: unknown): DashboardPolicy {
   const fields = record(value);
   const startDate = coverageDate(fields['fechaInicio']);
@@ -200,6 +230,9 @@ function policy(value: unknown): DashboardPolicy {
     endDate,
     status: text(fields['estado']),
     simulated: true,
+    ...('indemnizacion' in fields
+      ? { indemnification: indemnification(fields['indemnizacion']) }
+      : {}),
   };
 }
 
