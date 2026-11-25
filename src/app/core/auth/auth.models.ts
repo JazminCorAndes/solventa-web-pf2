@@ -24,6 +24,7 @@ export interface AuthUser {
   email: string;
   role: 'client' | 'partner' | 'advisor' | 'administrator';
   partnerIds?: string[];
+  permissions?: string[];
   documentType?: DocumentType;
   nationalId?: string;
   phone?: string;
@@ -52,4 +53,26 @@ export function isPartnerIds(value: unknown): value is string[] {
     value.every((id) => typeof id === 'string' && id.trim().length > 0) &&
     new Set(value).size === value.length
   );
+}
+
+export function canReviewClaims(user: AuthUser | null): boolean {
+  return (
+    user?.role === 'administrator' ||
+    (user?.role === 'advisor' && user.permissions?.includes('siniestros:revisar') === true)
+  );
+}
+
+export function canReadOperationalReports(user: AuthUser | null): boolean {
+  return (
+    user?.role === 'administrator' ||
+    (user?.role === 'advisor' && user.permissions?.includes('reportes:operativos') === true)
+  );
+}
+
+export function exceptionPartnerIds(user: AuthUser | null): string[] {
+  if (user?.role !== 'advisor') return [];
+  const prefix = 'open_finance:resolver:';
+  return (user.permissions ?? [])
+    .filter((permission) => permission.startsWith(prefix) && permission.length > prefix.length)
+    .map((permission) => permission.slice(prefix.length));
 }

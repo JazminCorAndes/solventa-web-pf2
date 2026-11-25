@@ -32,6 +32,7 @@ interface UserResponse {
   correo: string;
   rol: 'cliente' | 'socio' | 'asesor' | 'administrador';
   socios?: string[];
+  permisos?: string[];
   tipoDocumento?: DocumentType;
   identificacion?: string;
   telefono?: string;
@@ -325,17 +326,17 @@ function toUser(user: UserResponse): AuthUser {
   ) {
     throw new AuthenticationUnavailableError();
   }
-  if (
-    (user.rol === 'socio' || user.rol === 'asesor') &&
-    (!isPartnerIds(user.socios) || (user.rol === 'socio' && user.socios.length === 0))
-  ) {
+  if (user.rol === 'socio' && (!isPartnerIds(user.socios) || user.socios.length === 0)) {
     throw new AuthenticationUnavailableError();
   }
   if (
-    user.rol === 'administrador' &&
+    (user.rol === 'administrador' || user.rol === 'asesor') &&
     user.socios !== undefined &&
     (!isPartnerIds(user.socios) || user.socios.length !== 0)
   ) {
+    throw new AuthenticationUnavailableError();
+  }
+  if (user.permisos !== undefined && !isPartnerIds(user.permisos)) {
     throw new AuthenticationUnavailableError();
   }
   return {
@@ -350,7 +351,8 @@ function toUser(user: UserResponse): AuthUser {
           : user.rol === 'asesor'
             ? 'advisor'
             : 'client',
-    ...(user.rol === 'socio' || user.rol === 'asesor' ? { partnerIds: [...user.socios!] } : {}),
+    ...(user.rol === 'socio' ? { partnerIds: [...user.socios!] } : {}),
+    ...(user.permisos !== undefined ? { permissions: [...user.permisos] } : {}),
     documentType: user.tipoDocumento,
     nationalId: user.identificacion,
     phone: user.telefono,

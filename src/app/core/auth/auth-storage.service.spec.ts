@@ -65,17 +65,24 @@ describe('BrowserAuthStorage', () => {
     expect(storage.read()).toBeNull();
   });
 
-  it.each([[], ['BANCO-001'], ['BANCO-001', 'BANCO-002']].map((partnerIds) => ({ partnerIds })))(
-    'restaura el rol asesor con socios %j sin convertirlo en cliente',
+  it.each([undefined, []].map((partnerIds) => ({ partnerIds })))(
+    'restaura el asesor interno sin membresía comercial %j',
     ({ partnerIds }) => {
-      const user = { ...TEST_USER, role: 'advisor' as const, partnerIds };
+      const user = {
+        ...TEST_USER,
+        role: 'advisor' as const,
+        partnerIds,
+        permissions: ['siniestros:revisar'],
+      };
       storage.write({ ...STORED, user });
       expect(storage.read()?.user).toEqual(user);
     },
   );
 
   it.each(
-    [undefined, null, [''], [12], ['BANCO-001', 'BANCO-001']].map((partnerIds) => ({ partnerIds })),
+    [null, [''], [12], ['BANCO-001'], ['BANCO-001', 'BANCO-001']].map((partnerIds) => ({
+      partnerIds,
+    })),
   )('descarta un contexto asesor malformado %j', ({ partnerIds }) => {
     sessionStorage.setItem(
       'solventa.auth.refresh',

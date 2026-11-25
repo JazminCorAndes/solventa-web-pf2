@@ -243,17 +243,17 @@ describe('HttpAuthGateway', () => {
       },
     );
 
-    it('preserva el rol asesor y sus socios sin convertirlo en cliente o socio', async () => {
+    it('preserva al asesor interno con permiso explícito sin membresía comercial', async () => {
       const result = firstValueFrom(
         gateway.login({ email: 'asesor@example.com', password: 'secret' }),
       );
       const request = await flushChallenge();
       request.flush({
         ...TOKEN_RESPONSE,
-        usuario: { ...USER_RESPONSE, rol: 'asesor', socios: ['BANCO-001'] },
+        usuario: { ...USER_RESPONSE, rol: 'asesor', permisos: ['siniestros:revisar'] },
       });
       await expect(result).resolves.toMatchObject({
-        session: { user: { role: 'advisor', partnerIds: ['BANCO-001'] } },
+        session: { user: { role: 'advisor', permissions: ['siniestros:revisar'] } },
       });
     });
     let privateKey: CryptoKey;
@@ -286,14 +286,15 @@ describe('HttpAuthGateway', () => {
     });
 
     describe('contexto asesor en renovación y sesión actual', () => {
-      it.each([[], ['BANCO-001'], ['BANCO-001', 'BANCO-002']].map((socios) => ({ socios })))(
-        'conserva los socios autorizados %j en ambos contratos',
+      it.each([undefined, []].map((socios) => ({ socios })))(
+        'conserva permisos del asesor sin socios comerciales %j',
         async ({ socios }) => {
-          const usuario = { ...USER_RESPONSE, rol: 'asesor', socios };
+          const permisos = ['siniestros:revisar', 'open_finance:resolver:BANCO-001'];
+          const usuario = { ...USER_RESPONSE, rol: 'asesor', socios, permisos };
           const refreshed = firstValueFrom(gateway.refresh('test-refresh'));
           http.expectOne(`${SESSIONS}/renovar`).flush({ ...TOKEN_RESPONSE, usuario });
           await expect(refreshed).resolves.toMatchObject({
-            session: { user: { role: 'advisor', partnerIds: socios } },
+            session: { user: { role: 'advisor', permissions: permisos } },
           });
           const current = firstValueFrom(gateway.currentSession());
           http.expectOne(`${SESSIONS}/actual`).flush({
@@ -301,13 +302,13 @@ describe('HttpAuthGateway', () => {
             expiraEn: TOKEN_RESPONSE.expiraEn,
           });
           await expect(current).resolves.toMatchObject({
-            user: { role: 'advisor', partnerIds: socios },
+            user: { role: 'advisor', permissions: permisos },
           });
         },
       );
 
       it.each(
-        [undefined, null, [''], [12], ['BANCO-001', 'BANCO-001']].map((socios) => ({ socios })),
+        [null, [''], [12], ['BANCO-001'], ['BANCO-001', 'BANCO-001']].map((socios) => ({ socios })),
       )('rechaza membresías malformadas %j sin fabricar contexto', async ({ socios }) => {
         const usuario = { ...USER_RESPONSE, rol: 'asesor', socios };
         const refreshed = firstValueFrom(gateway.refresh('test-refresh'));

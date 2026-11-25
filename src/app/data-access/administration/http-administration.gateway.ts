@@ -17,11 +17,15 @@ import {
 import { EVIDENCE_MIMES } from '../../core/claims/claim-evidence.models';
 import { CLAIM_UUID, isClaimRecord, isTimestamp } from '../../core/claims/claim.models';
 import { ClaimState, isClaimState } from '../../core/claims/claim-status.models';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Injectable()
 export class HttpAdministrationGateway implements AdministrationGateway {
   private readonly http = inject(HttpClient);
-  private readonly base = `${environment.apiBaseUrl}/v1/administracion`;
+  private readonly auth = inject(AuthService);
+  private get base(): string {
+    return `${environment.apiBaseUrl}/v1/${this.auth.user()?.role === 'advisor' ? 'asesor' : 'administracion'}`;
+  }
 
   queue(queue: ReviewQueue): Observable<ReviewQueueItem[]> {
     return defer(() => {

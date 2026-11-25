@@ -1,21 +1,23 @@
 import { effect, inject, Injectable, signal } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { ADVISOR_PROFILING_GATEWAY } from './advisor-profiling.gateway';
+import { PARTNER_PROFILING_GATEWAY } from './advisor-profiling.gateway';
 import {
   MortgageProfilingInput,
   MortgageProfilingRecord,
   MortgageProfilingRequest,
   MortgageProfilingError,
 } from './advisor-profiling.models';
-import { ADVISOR_PROFILING_STORAGE } from './advisor-profiling-storage.service';
+import { PARTNER_PROFILING_STORAGE } from './advisor-profiling-storage.service';
 import { AuthService } from '../auth/auth.service';
 import { isPartnerIds } from '../auth/auth.models';
+import { PartnerContextService } from '../partners/partner-context.service';
 
 @Injectable({ providedIn: 'root' })
-export class AdvisorProfilingService {
-  private readonly gateway = inject(ADVISOR_PROFILING_GATEWAY);
-  private readonly storage = inject(ADVISOR_PROFILING_STORAGE);
+export class PartnerProfilingService {
+  private readonly gateway = inject(PARTNER_PROFILING_GATEWAY);
+  private readonly storage = inject(PARTNER_PROFILING_STORAGE);
   private readonly auth = inject(AuthService);
+  private readonly partners = inject(PartnerContextService);
   private ownerId = this.auth.user()?.id ?? null;
   private fingerprint: string | null = null;
   private readonly operationState = signal(this.storage.read());
@@ -30,9 +32,10 @@ export class AdvisorProfilingService {
     this.synchronizeOwner();
     const user = this.auth.user();
     if (
-      user?.role !== 'advisor' ||
+      user?.role !== 'partner' ||
       !isPartnerIds(user.partnerIds) ||
-      !user.partnerIds.includes(input.partnerId)
+      !user.partnerIds.includes(input.partnerId) ||
+      !this.authorizedPartnerIds().includes(input.partnerId)
     ) {
       return throwError(() => new MortgageProfilingError('unauthorized_partner'));
     }
@@ -62,9 +65,30 @@ export class AdvisorProfilingService {
     this.operationState.set(null);
   }
 
+  authorizedPartnerIds(): string[] {
+    const user = this.auth.user();
+    const context = this.partners.context();
+    if (
+      user?.role !== 'partner' ||
+      !isPartnerIds(user.partnerIds) ||
+      context?.usuario.id !== user.id ||
+      !context.alcances.includes('perfilamientos:crear') ||
+      !context.alcances.includes('clientes:consultar')
+    ) {
+      return [];
+    }
+    const partnerIds = user.partnerIds;
+    return context.socios
+      .filter(
+        (partner) =>
+          partnerIds.includes(partner.socioId) && partner.productos.includes('mortgage-life'),
+      )
+      .map((partner) => partner.socioId);
+  }
+
   private synchronizeOwner(): void {
     const user = this.auth.user();
-    const ownerId = user?.role === 'advisor' ? user.id : null;
+    const ownerId = user?.role === 'partner' ? user.id : null;
     const pending = this.storage.read();
     if (
       ownerId !== this.ownerId ||
@@ -72,7 +96,9 @@ export class AdvisorProfilingService {
       (pending &&
         (pending.ownerId !== ownerId ||
           !isPartnerIds(user?.partnerIds) ||
-          !user.partnerIds.includes(pending.partnerId)))
+          !user.partnerIds.includes(pending.partnerId) ||
+          (this.partners.context() !== null &&
+            !this.authorizedPartnerIds().includes(pending.partnerId))))
     ) {
       this.reset();
     }

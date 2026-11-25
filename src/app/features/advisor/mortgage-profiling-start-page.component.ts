@@ -5,6 +5,7 @@ import {
   DestroyRef,
   effect,
   inject,
+  input,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -18,7 +19,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { finalize, map, Subject, switchMap, take, takeUntil } from 'rxjs';
-import { AdvisorProfilingService } from '../../core/advisor-profiling/advisor-profiling.service';
+import { PartnerProfilingService } from '../../core/advisor-profiling/advisor-profiling.service';
 import {
   MortgageProfilingError,
   MortgageProfilingErrorCode,
@@ -26,10 +27,11 @@ import {
   MortgageProfilingRecord,
   MORTGAGE_UUID_PATTERN,
 } from '../../core/advisor-profiling/advisor-profiling.models';
-import { DocumentType, isPartnerIds } from '../../core/auth/auth.models';
+import { DocumentType } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { documentNumberFilter, documentNumberValidator } from '../../core/market/document-number';
 import { InputFilterDirective } from '../../shared/input-filter/input-filter.directive';
+import { ClientInformationResult } from '../../data-access/partners/http-client-information.gateway';
 
 @Component({
   selector: 'app-mortgage-profiling-start-page',
@@ -50,8 +52,10 @@ import { InputFilterDirective } from '../../shared/input-filter/input-filter.dir
   styleUrl: './mortgage-profiling-start-page.component.scss',
 })
 export class MortgageProfilingStartPageComponent {
+  readonly consultation = input<ClientInformationResult | null>(null);
+  readonly consultationOwnerId = input<string | null>(null);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly profiling = inject(AdvisorProfilingService);
+  private readonly profiling = inject(PartnerProfilingService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly selectedPartnerId = signal<string | null>(null);
@@ -59,6 +63,7 @@ export class MortgageProfilingStartPageComponent {
   private requestGeneration = 0;
   private formOwnerId = this.auth.user()?.id ?? null;
   private formPartnerId: string | null = null;
+  private formConsultationId: string | null = null;
 
   readonly processing = signal(false);
   readonly attempted = signal(false);
@@ -68,6 +73,7 @@ export class MortgageProfilingStartPageComponent {
   readonly result = computed(() => {
     const result = this.resultState();
     return result &&
+      this.hasConsultation() &&
       this.auth.user()?.id === this.resultOwnerId &&
       this.authorizedPartnerIds().includes(result.partnerId)
       ? result
@@ -75,12 +81,23 @@ export class MortgageProfilingStartPageComponent {
   });
   readonly pendingOperation = this.profiling.pendingOperation;
   readonly authorizedPartnerIds = computed(() => {
-    const user = this.auth.user();
-    return user?.role === 'advisor' && isPartnerIds(user.partnerIds) ? user.partnerIds : [];
+    return this.profiling.authorizedPartnerIds();
+  });
+  readonly hasConsultation = computed(() => {
+    const consultation = this.consultation();
+    return (
+      consultation?.estado === 'completada' &&
+      this.consultationOwnerId() === this.auth.user()?.id &&
+      consultation.productoId === 'mortgage-life' &&
+      this.authorizedPartnerIds().includes(consultation.socioId)
+    );
   });
   readonly partnerId = computed(() => {
     const ids = this.authorizedPartnerIds();
-    const selected = this.selectedPartnerId() ?? this.pendingOperation()?.partnerId;
+    const selected =
+      this.consultation()?.socioId ??
+      this.selectedPartnerId() ??
+      this.pendingOperation()?.partnerId;
     return ids.length === 1 ? ids[0] : selected && ids.includes(selected) ? selected : null;
   });
   readonly form = this.formBuilder.nonNullable.group({
@@ -123,8 +140,8 @@ export class MortgageProfilingStartPageComponent {
   submit(): void {
     this.synchronizeFormContext();
     const partnerId = this.partnerId();
-    if (!partnerId) {
-      this.errorCode.set('advisor_context_unavailable');
+    if (!partnerId || !this.hasConsultation()) {
+      this.errorCode.set('partner_context_unavailable');
       return;
     }
     if (this.processing() || this.result()) {
@@ -143,13 +160,15 @@ export class MortgageProfilingStartPageComponent {
     const input = this.buildInput(partnerId);
     const userId = this.auth.user()?.id;
     const generation = ++this.requestGeneration;
+    const consultationId = this.consultation()?.operationId;
     const contextIsCurrent = () => {
       const user = this.auth.user();
       return (
         user?.id === userId &&
-        user?.role === 'advisor' &&
-        isPartnerIds(user.partnerIds) &&
-        user.partnerIds.includes(partnerId)
+        user?.role === 'partner' &&
+        this.consultation()?.operationId === consultationId &&
+        this.hasConsultation() &&
+        this.authorizedPartnerIds().includes(partnerId)
       );
     };
     this.auth
@@ -190,6 +209,7 @@ export class MortgageProfilingStartPageComponent {
 
   selectPartner(partnerId: string): void {
     if (
+      !this.consultation() &&
       !this.processing() &&
       !this.result() &&
       !this.pendingOperation() &&
@@ -207,12 +227,20 @@ export class MortgageProfilingStartPageComponent {
   startAnother(): void {
     if (this.processing()) return;
     this.resetFormState();
+    const consultation = this.consultation();
+    if (consultation && this.hasConsultation()) {
+      this.form.patchValue({
+        customerId: consultation.clienteId,
+        consentId: consultation.consentimientoId,
+        consentVersion: consultation.consentimientoVersion,
+      });
+    }
   }
 
-  private resetFormState(): void {
+  private resetFormState(discardOperation = true): void {
     this.requestGeneration++;
     this.contextInvalidated.next();
-    this.profiling.reset();
+    if (discardOperation) this.profiling.reset();
     this.selectedPartnerId.set(null);
     this.resultOwnerId = null;
     this.resultState.set(null);
@@ -237,16 +265,30 @@ export class MortgageProfilingStartPageComponent {
 
   private synchronizeFormContext(): void {
     const user = this.auth.user();
-    const ownerId = user?.role === 'advisor' ? user.id : null;
+    const ownerId = user?.role === 'partner' ? user.id : null;
     if (
       ownerId !== this.formOwnerId ||
       (this.formPartnerId && !this.authorizedPartnerIds().includes(this.formPartnerId))
     ) {
-      this.resetFormState();
+      this.resetFormState(
+        ownerId !== this.formOwnerId || !user?.partnerIds?.includes(this.formPartnerId ?? ''),
+      );
     }
     this.formOwnerId = ownerId;
     this.formPartnerId = this.partnerId();
     if (this.formPartnerId) this.selectedPartnerId.set(this.formPartnerId);
+    const consultation = this.consultation();
+    if (consultation?.operationId !== this.formConsultationId) {
+      if (this.formConsultationId) this.resetFormState(false);
+      this.formConsultationId = consultation?.operationId ?? null;
+      if (consultation && this.hasConsultation()) {
+        this.form.patchValue({
+          customerId: consultation.clienteId,
+          consentId: consultation.consentimientoId,
+          consentVersion: consultation.consentimientoVersion,
+        });
+      }
+    }
   }
 
   /** Al deshabilitar el formulario cada control emite; revalidar entonces lo reactivaría. */
@@ -261,10 +303,12 @@ export class MortgageProfilingStartPageComponent {
 
   private buildInput(partnerId: string): MortgageProfilingInput {
     const value = this.form.getRawValue();
+    const consultation = this.consultation()!;
     return {
       partnerId,
+      consultationId: consultation.operationId,
       customer: {
-        id: value.customerId.trim().toLowerCase(),
+        id: consultation.clienteId,
         documentType: value.documentType,
         documentNumber: value.documentNumber.trim(),
         birthDate: value.birthDate,
@@ -276,8 +320,8 @@ export class MortgageProfilingStartPageComponent {
         termMonths: value.termMonths ?? 0,
       },
       consent: {
-        id: value.consentId.trim().toLowerCase(),
-        version: value.consentVersion ?? 0,
+        id: consultation.consentimientoId,
+        version: consultation.consentimientoVersion,
       },
     };
   }

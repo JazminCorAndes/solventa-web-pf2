@@ -35,7 +35,7 @@ import {
   AdvisorExceptionErrorCode,
 } from '../../core/advisor-exceptions/advisor-exceptions.models';
 import { isApplicationFilter } from '../../data-access/advisor-exceptions/exception-application';
-import { isPartnerIds } from '../../core/auth/auth.models';
+import { exceptionPartnerIds } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 
 type ExceptionLoadResult =
@@ -83,7 +83,7 @@ export class AdvisorExceptionsPageComponent {
 
   readonly authorizedPartnerIds = computed(() => {
     const user = this.auth.user();
-    return user?.role === 'advisor' && isPartnerIds(user.partnerIds) ? user.partnerIds : [];
+    return exceptionPartnerIds(user);
   });
   readonly isAdvisor = computed(() => this.auth.user()?.role === 'advisor');
   readonly exceptionId = computed(() => this.routeState().exceptionId);
@@ -264,8 +264,7 @@ export class AdvisorExceptionsPageComponent {
       !socioId ||
       !user ||
       user.role !== 'advisor' ||
-      !isPartnerIds(user.partnerIds) ||
-      !user.partnerIds.includes(socioId)
+      !this.authorizedPartnerIds().includes(socioId)
     ) {
       this.resolveErrorCode.set('socio_no_autorizado');
       return;
@@ -357,6 +356,7 @@ export class AdvisorExceptionsPageComponent {
     const user = this.auth.user();
     return JSON.stringify([
       user?.role === 'advisor' ? user.id : null,
+      this.authorizedPartnerIds(),
       this.selectedSocioId(),
       this.exceptionId(),
       this.exceptionId() ? null : this.routeState().requestedApplication,

@@ -1,7 +1,7 @@
 import { appConfig } from './app.config';
 import { AUTH_GATEWAY } from './core/auth/auth.gateway';
 import { ADVISOR_EXCEPTIONS_GATEWAY } from './core/advisor-exceptions/advisor-exceptions.gateway';
-import { ADVISOR_PROFILING_GATEWAY } from './core/advisor-profiling/advisor-profiling.gateway';
+import { PARTNER_PROFILING_GATEWAY } from './core/advisor-profiling/advisor-profiling.gateway';
 import { CLAIM_GATEWAY } from './core/claims/claim.gateway';
 import { CLAIM_STATUS_GATEWAY } from './core/claims/claim-status.gateway';
 import { CLAIM_EVIDENCE_GATEWAY } from './core/claims/claim-evidence.gateway';
@@ -17,7 +17,7 @@ import { SUBSCRIPTION_GATEWAY } from './core/subscriptions/subscription.gateway'
 import { SIMULATED_PAYMENT_GATEWAY } from './core/payments/simulated-payment.gateway';
 import { HttpAuthGateway } from './data-access/auth/http-auth.gateway';
 import { HttpAdvisorExceptionsGateway } from './data-access/advisor-exceptions/http-advisor-exceptions.gateway';
-import { HttpAdvisorProfilingGateway } from './data-access/advisor-profiling/http-advisor-profiling.gateway';
+import { HttpPartnerProfilingGateway } from './data-access/advisor-profiling/http-advisor-profiling.gateway';
 import { HttpClaimGateway } from './data-access/claims/http-claim.gateway';
 import { HttpClaimStatusGateway } from './data-access/claims/http-claim-status.gateway';
 import { HttpClaimEvidenceGateway } from './data-access/claims/http-claim-evidence.gateway';
@@ -36,7 +36,7 @@ describe('HTTP-only application registration', () => {
   const gateways = [
     [AUTH_GATEWAY, HttpAuthGateway],
     [ADVISOR_EXCEPTIONS_GATEWAY, HttpAdvisorExceptionsGateway],
-    [ADVISOR_PROFILING_GATEWAY, HttpAdvisorProfilingGateway],
+    [PARTNER_PROFILING_GATEWAY, HttpPartnerProfilingGateway],
     [CLAIM_GATEWAY, HttpClaimGateway],
     [CLAIM_STATUS_GATEWAY, HttpClaimStatusGateway],
     [CLAIM_EVIDENCE_GATEWAY, HttpClaimEvidenceGateway],

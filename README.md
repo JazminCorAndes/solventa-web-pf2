@@ -30,8 +30,25 @@ y cierre de sesión. El backend las aprovisiona mediante la CLI privada `create-
 el registro público no permite elegir ese rol. No hay credenciales en la web.
 El portal `/administracion/colas/revision` tiene navegación propia y guards de rol
 en la entrada y en sus rutas hijas; no accede al portal cliente ni suplanta asesores
-o membresías de socios. El backend exige además scope `administrador` y sesión JWT
-activa; el guard de interfaz no sustituye esa autorización.
+o membresías de socios. El backend exige sesión JWT activa; el guard de interfaz
+no sustituye esa autorización.
+
+El asesor es personal interno de operación, no un distribuidor. Su inicio es
+`/asesor/colas/revision` con permiso `siniestros:revisar`; reutiliza el expediente,
+evidencias, decisiones e historial existentes, sin duplicar pantallas. Consume
+las mismas rutas de revisión bajo `/v1/asesor/*`. El administrador conserva su
+portal propio y sus privilegios; el socio no entra en ninguno por cambiar la URL.
+Las decisiones rutinarias de productos paramétricos siguen siendo automáticas.
+
+Login, renovación y sesión actual entregan `usuario.permisos` (opcional; ausencia
+equivale a ningún permiso). No se leen claims del JWT en la interfaz. Un asesor
+sin revisión pero con `open_finance:resolver:{socioId}` inicia en excepciones y
+solo ve esos socios; no usa membresías comerciales. Con `reportes:operativos`
+inicia en reportes si no tiene las capacidades anteriores. Sin capacidad interna
+se muestra acceso no disponible. Riesgo/suscripción no se concede por ser asesor
+de siniestros. Los reportes operativos se conservan en `/asesor/reportes` para
+asesores autorizados y `/administracion/reportes` para administradores, nunca
+como consolidado del distribuidor.
 
 Las bandejas `revision`, `inspeccion` y `fraude` consultan
 `GET /v1/administracion/colas-revision/{cola}/asignaciones`. El detalle consume
@@ -646,36 +663,46 @@ se intenta solo GET de datos. No hay fallback ni POST ante 401/403/503 de recupe
 Un error de lectura retira el resultado anterior; recuperar una operación no
 habilita otra consulta ni genera un UUID nuevo.
 
-### Perfilamiento hipotecario del asesor (HU46)
+### Perfilamiento hipotecario del socio (HU46)
 
-La ruta `/asesor/perfilamientos/nuevo` requiere una sesión con `usuario.rol: "asesor"`.
-Login, renovación y `GET /v1/sesiones/actual` conservan `usuario.socios`; Angular lo
-mapea a `advisor` y `partnerIds` sin leer claims del JWT ni crear un alcance público.
-El asesor no entra en las rutas de cliente o socio. Un único socio se muestra como
-contexto de la operación; con varios se exige selección explícita. Sin socios válidos
-se bloquea el formulario y no se envía una operación. La renovación vuelve a validar
-rol, identidad y pertenencia antes del envío. El backend autoriza cada petición.
+La ruta `/app/socios/perfilamientos/nuevo` reutiliza la consulta consentida y el
+formulario hipotecario existente. Requiere rol backend `socio`, contexto validado
+de `/v1/socios/actual`, alcances `clientes:consultar` y `perfilamientos:crear`, y
+producto `mortgage-life` habilitado para el socio elegido. Con varias organizaciones
+se exige selección entre las autorizadas. El asesor interno no origina cotizaciones.
+Los modelos locales conservan `partner`/`partnerIds` para el actor comercial y
+`advisor`/`permissions` para el interno; se rechazan sesiones internas con socios
+comerciales. Los servicios y gateways de hipoteca se llaman `PartnerProfiling*`;
+sus archivos mantienen la ubicación anterior para minimizar el refactor.
+
+El formulario se habilita solo tras una consulta de información completada del
+mismo actor, socio y producto. Precarga cliente y consentimiento desde ese
+resultado; no pide UUID de consulta a ciegas ni lista clientes globales. La consulta
+existente se recupera por su operación en la URL, usando las APIs acotadas del socio.
+La renovación vuelve a validar rol, identidad, permisos de contexto y producto.
 
 En modo `backend`, el adaptador usa `POST /v1/perfilamientos-hipotecarios`, con
 `API-Version: 1` y el mismo UUID en `operationId` e `Idempotency-Key`. El cuerpo incluye
-`socioId`, `productoId: "mortgage-life"`, `cliente: { clienteId, tipoDocumento,
+`socioId`, `consultaInformacionId` (operación de la consulta consentida),
+`productoId: "mortgage-life"`, `cliente: { clienteId, tipoDocumento,
 numeroDocumento, telefono, fechaNacimiento }`, `credito: { referencia, monto, plazoMeses }`,
 `consentimientoId` y `consentimientoVersion`. El identificador corresponde a un cliente
-registrado; el backend obtiene su nombre/correo y valida el consentimiento. El formulario
-no concede consentimiento ni crea cuentas.
+registrado; el backend valida la consulta contra actor, socio, cliente, producto y
+consentimiento. La web no envía `actorId` ni `asesorId`; el actor se deriva de la
+sesión. El formulario no concede consentimiento ni crea cuentas.
 
 La respuesta 201 tiene `estado: "completada"`, `operationId`, `socioId`, `clienteId`,
 `productoId`, `perfilamientoReferencia`, `solicitudId`, `cotizacionId` y `recibidaEn`.
 Angular valida sus identificadores/contexto y muestra un comprobante con referencias.
 Los reintentos con los mismos datos conservan operación y cuerpo; un replay repite el
-POST y recupera el resultado persistido. No existe un GET de recuperación del asesor
+POST y recupera el resultado persistido. No existe un GET de recuperación hipotecaria
 en este consumidor.
 
 El cuerpo y su comparación permanecen en memoria. En `sessionStorage` solo quedan
-UUID de operación, identificador del asesor y socio; no se guardan datos del cliente,
+UUID de operación, identificador del usuario socio y organización; no se guardan datos del cliente,
 crédito, consentimiento ni su fingerprint. Se descartan registros del formato anterior.
 Logout, invalidez de sesión, cambio de actor/rol o retirada del socio borran la operación;
-renovar la sesión del mismo asesor no la borra si el socio sigue autorizado, aunque
+renovar la sesión del mismo socio no la borra si la organización sigue autorizada, aunque
 añada otros socios. Al perder ese contexto, la pantalla cancela su petición pendiente,
 borra los datos del formulario y desmarca la verificación del consentimiento; una
 respuesta tardía no restaura esos datos ni modifica el estado de un envío nuevo.
@@ -688,7 +715,11 @@ que no conserva. La acción explícita «Iniciar otro perfilamiento» descarta e
 pendiente; no debe usarse como reintento de una operación cuyo resultado se desconoce.
 
 Las pruebas usan dobles de sesión/HTTP, fuera del runtime; la aplicación no tiene fallback local.
-El contrato de referencia es el BFF integrado en `af676d0` de `backend-solventa`.
+Esta adaptación depende del contrato de separación de roles acordado con
+`Migue765/backend-solventa`: capacidades internas por `usuario.permisos`, revisión
+en `/v1/asesor/*` y originación hipotecaria con `consultaInformacionId`. La
+integración y la validación CI siguen pendientes hasta publicar los PR compatibles;
+este cambio no acredita despliegue ni validación end-to-end.
 Las pruebas controladas no acreditan un despliegue ni una ejecución productiva.
 
 Esta integración HU46 no cierra SOL-205/HU49: no muestra una oferta hipotecaria

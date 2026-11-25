@@ -16,6 +16,12 @@ export const partnerGuard: CanActivateFn = (route) => {
       if (typeof scope === 'string' && !context.alcances.includes(scope)) {
         throw new PartnerAccessError('forbidden');
       }
+      if (
+        route.data['mortgageMode'] === true &&
+        !context.alcances.includes('perfilamientos:crear')
+      ) {
+        throw new PartnerAccessError('forbidden');
+      }
       return true;
     }),
     catchError((error: unknown) => {

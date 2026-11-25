@@ -8,16 +8,17 @@ import {
   MortgageProfilingError,
   MortgageProfilingRecord,
 } from '../../core/advisor-profiling/advisor-profiling.models';
-import { AdvisorProfilingService } from '../../core/advisor-profiling/advisor-profiling.service';
-import { AuthUser } from '../../core/auth/auth.models';
+import { PartnerProfilingService } from '../../core/advisor-profiling/advisor-profiling.service';
+import { AuthUser, isPartnerIds } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { MortgageProfilingStartPageComponent } from './mortgage-profiling-start-page.component';
+import { ClientInformationResult } from '../../data-access/partners/http-client-information.gateway';
 
 describe('MortgageProfilingStartPageComponent', () => {
   let fixture: ComponentFixture<MortgageProfilingStartPageComponent>;
   let component: MortgageProfilingStartPageComponent;
   let response: Observable<MortgageProfilingRecord>;
-  const start = vi.fn<AdvisorProfilingService['start']>(() => response);
+  const start = vi.fn<PartnerProfilingService['start']>(() => response);
   const reset = vi.fn();
   const pendingOperation = signal(null);
   const user = signal<AuthUser | null>(null);
@@ -37,7 +38,7 @@ describe('MortgageProfilingStartPageComponent', () => {
     id: 'advisor-test',
     name: 'Asesor de prueba',
     email: 'asesor@example.com',
-    role: 'advisor',
+    role: 'partner',
     partnerIds: ['BANCO-001'],
   };
   const validValue = {
@@ -52,6 +53,19 @@ describe('MortgageProfilingStartPageComponent', () => {
     consentId: '11111111-1111-4111-8111-111111111111',
     consentVersion: 1,
     consentVerified: true,
+  };
+  const consultation: ClientInformationResult = {
+    operationId: '77777777-7777-4777-8777-777777777777',
+    socioId: 'BANCO-001',
+    clienteId: completed.customerId,
+    productoId: 'mortgage-life',
+    finalidad: 'cotizacion',
+    estado: 'completada',
+    consentimientoId: validValue.consentId,
+    consentimientoVersion: 1,
+    datos: {},
+    evidenciaFuentes: [],
+    consultadaEn: '2026-10-20T12:00:00Z',
   };
 
   beforeEach(async () => {
@@ -69,11 +83,26 @@ describe('MortgageProfilingStartPageComponent', () => {
         }),
       ],
       providers: [
-        { provide: AdvisorProfilingService, useValue: { start, reset, pendingOperation } },
+        {
+          provide: PartnerProfilingService,
+          useValue: {
+            start,
+            reset,
+            pendingOperation,
+            authorizedPartnerIds: () => {
+              const current = user();
+              return current?.role === 'partner' && isPartnerIds(current.partnerIds)
+                ? current.partnerIds
+                : [];
+            },
+          },
+        },
         { provide: AuthService, useValue: { user, getAccessToken } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(MortgageProfilingStartPageComponent);
+    fixture.componentRef.setInput('consultation', consultation);
+    fixture.componentRef.setInput('consultationOwnerId', advisor.id);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
@@ -150,26 +179,29 @@ describe('MortgageProfilingStartPageComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('SOC-CO-001');
   });
 
-  it('requiere selección explícita con varios socios y rechaza un socio ajeno', () => {
+  it('mantiene el socio de la consulta consentida aunque existan varios socios autorizados', () => {
     fixture.destroy();
     user.set({ ...advisor, partnerIds: ['BANCO-001', 'BANCO-002'] });
     fixture = TestBed.createComponent(MortgageProfilingStartPageComponent);
+    fixture.componentRef.setInput('consultation', consultation);
+    fixture.componentRef.setInput('consultationOwnerId', advisor.id);
     component = fixture.componentInstance;
     component.form.setValue(validValue);
     fixture.detectChanges();
     component.selectPartner('OTRO-SOCIO');
-    component.submit();
-    expect(component.partnerId()).toBeNull();
-    expect(start).not.toHaveBeenCalled();
+    expect(component.partnerId()).toBe('BANCO-001');
     component.selectPartner('BANCO-002');
     component.submit();
-    expect(start.mock.calls[0][0]).toMatchObject({ partnerId: 'BANCO-002' });
+    expect(start.mock.calls[0][0]).toMatchObject({
+      partnerId: 'BANCO-001',
+      consultationId: consultation.operationId,
+    });
   });
 
   it.each([
     null,
     { ...advisor, role: 'client' as const },
-    { ...advisor, role: 'partner' as const },
+    { ...advisor, role: 'advisor' as const },
     { ...advisor, partnerIds: [] },
     { ...advisor, partnerIds: undefined },
     { ...advisor, partnerIds: [''] },
@@ -184,7 +216,7 @@ describe('MortgageProfilingStartPageComponent', () => {
     expect(component.result()).toBeNull();
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
     expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain(
-      es.mortgageProfiling.errors.advisor_context_unavailable,
+      es.mortgageProfiling.errors.partner_context_unavailable,
     );
   });
 
@@ -247,7 +279,7 @@ describe('MortgageProfilingStartPageComponent', () => {
         ...advisor,
         id: change === 'actor' ? 'otro-asesor' : advisor.id,
         partnerIds: change === 'partner' ? ['OTRO-SOCIO'] : advisor.partnerIds,
-        role: change === 'role' ? 'client' : 'advisor',
+        role: change === 'role' ? 'client' : 'partner',
       });
       component.submit();
       fixture.detectChanges();
@@ -278,6 +310,12 @@ describe('MortgageProfilingStartPageComponent', () => {
     expect(component.processing()).toBe(false);
     expect(component.form.controls.consentVerified.value).toBe(false);
     response = current;
+    fixture.componentRef.setInput('consultationOwnerId', 'otro-asesor');
+    fixture.componentRef.setInput('consultation', {
+      ...consultation,
+      operationId: '88888888-8888-4888-8888-888888888888',
+    });
+    fixture.detectChanges();
     component.form.setValue(validValue);
     component.submit();
     expect(start).toHaveBeenCalledTimes(2);

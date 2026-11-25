@@ -7,21 +7,22 @@ export interface PendingMortgageProfilingOperation {
   operationId: string;
 }
 
-export interface AdvisorProfilingStorage {
+export interface PartnerProfilingStorage {
   read(): PendingMortgageProfilingOperation | null;
   write(operation: PendingMortgageProfilingOperation): void;
   clear(): void;
 }
 
-export const ADVISOR_PROFILING_STORAGE = new InjectionToken<AdvisorProfilingStorage>(
-  'ADVISOR_PROFILING_STORAGE',
+export const PARTNER_PROFILING_STORAGE = new InjectionToken<PartnerProfilingStorage>(
+  'PARTNER_PROFILING_STORAGE',
 );
 
-const STORAGE_KEY = 'solventa.advisor.mortgage-profiling-operation';
+const STORAGE_KEY = 'solventa.partner.mortgage-profiling-operation';
 
 @Injectable()
-export class BrowserAdvisorProfilingStorage implements AdvisorProfilingStorage {
+export class BrowserPartnerProfilingStorage implements PartnerProfilingStorage {
   read(): PendingMortgageProfilingOperation | null {
+    sessionStorage.removeItem('solventa.advisor.mortgage-profiling-operation');
     const storedJson = sessionStorage.getItem(STORAGE_KEY);
     if (!storedJson) {
       return null;
