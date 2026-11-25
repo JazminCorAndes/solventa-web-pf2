@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { delay, Observable, of, throwError } from 'rxjs';
-import { AdvisorProfilingGateway } from '../../../app/core/advisor-profiling/advisor-profiling.gateway';
+import { PartnerProfilingGateway } from '../../../app/core/advisor-profiling/advisor-profiling.gateway';
 import {
   MortgageProfilingError,
   MortgageProfilingRecord,
@@ -9,7 +9,7 @@ import {
 } from '../../../app/core/advisor-profiling/advisor-profiling.models';
 
 @Injectable()
-export class MockAdvisorProfilingGateway implements AdvisorProfilingGateway {
+export class MockPartnerProfilingGateway implements PartnerProfilingGateway {
   private readonly operations = new Map<
     string,
     { fingerprint: string; record: MortgageProfilingRecord }

@@ -111,6 +111,21 @@ describe('AdministrationPageComponent', () => {
       resultado: 'aprobado',
       motivo: 'Revisión documentada',
     });
+
+    it('reutiliza revisión para asesor autorizado y bloquea al perder el permiso', async () => {
+      user.set({ ...USER, role: 'advisor', permissions: ['siniestros:revisar'] });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(component.portalPath()).toBe('/asesor');
+      expect(component.canDecide()).toBe(true);
+      user.set({ ...USER, role: 'advisor', permissions: ['reportes:operativos'] });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(component.claim()).toBeNull();
+      expect(component.loadError()).toBe('forbidden');
+      component.submit();
+      expect(gateway.decide).not.toHaveBeenCalled();
+    });
     expect(component.canDecide()).toBe(false);
   });
 

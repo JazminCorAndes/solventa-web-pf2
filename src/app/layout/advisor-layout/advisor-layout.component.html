@@ -18,7 +18,7 @@
   >
     <div class="sidenav-shell">
       <div class="sidenav-header">
-        <a routerLink="/asesor/perfilamientos/nuevo" (click)="keyboard.closeForNavigation()">
+        <a [routerLink]="homeUrl()" (click)="keyboard.closeForNavigation()">
           <app-brand [compact]="true" />
         </a>
         @if (isHandset()) {
@@ -40,47 +40,51 @@
 
       <span class="nav-section">{{ 'navigation.mainSection' | transloco }}</span>
       <mat-nav-list>
-        <a
-          mat-list-item
-          routerLink="/asesor/perfilamientos/nuevo"
-          routerLinkActive="active-link"
-          (click)="keyboard.closeForNavigation()"
-        >
-          <app-icon matListItemIcon name="home" />
-          <span matListItemTitle>{{ 'navigation.dashboard' | transloco }}</span>
-        </a>
-        <button mat-list-item type="button" disabled>
-          <app-icon matListItemIcon name="user" />
-          <span matListItemTitle>{{ 'advisorNavigation.clients' | transloco }}</span>
-        </button>
-        <a
-          mat-list-item
-          routerLink="/asesor/excepciones"
-          routerLinkActive="active-link"
-          (click)="keyboard.closeForNavigation()"
-        >
-          <app-icon matListItemIcon name="policy" />
-          <span matListItemTitle>{{ 'advisorNavigation.exceptions' | transloco }}</span>
-        </a>
-        <a
-          mat-list-item
-          routerLink="/asesor/reportes"
-          routerLinkActive="active-link"
-          data-testid="advisor-nav-reports"
-          (click)="keyboard.closeForNavigation()"
-        >
-          <app-icon matListItemIcon name="shield" />
-          <span matListItemTitle>{{ 'advisorNavigation.reports' | transloco }}</span>
-        </a>
-        <a
-          mat-list-item
-          routerLink="/asesor/perfilamientos/nuevo"
-          routerLinkActive="active-link"
-          (click)="keyboard.closeForNavigation()"
-        >
-          <app-icon matListItemIcon name="policy" />
-          <span matListItemTitle>{{ 'navigation.quotes' | transloco }}</span>
-        </a>
+        @if (canReview()) {
+          <a
+            mat-list-item
+            routerLink="/asesor/colas/revision"
+            routerLinkActive="active-link"
+            (click)="keyboard.closeForNavigation()"
+          >
+            <app-icon matListItemIcon name="home" />
+            <span matListItemTitle>{{ 'administration.queues.revision' | transloco }}</span>
+          </a>
+          @for (queue of ['inspeccion', 'fraude']; track queue) {
+            <a
+              mat-list-item
+              [routerLink]="['/asesor/colas', queue]"
+              routerLinkActive="active-link"
+              (click)="keyboard.closeForNavigation()"
+            >
+              <app-icon matListItemIcon name="shield" />
+              <span matListItemTitle>{{ 'administration.queues.' + queue | transloco }}</span>
+            </a>
+          }
+        }
+        @if (canResolveExceptions()) {
+          <a
+            mat-list-item
+            routerLink="/asesor/excepciones"
+            routerLinkActive="active-link"
+            (click)="keyboard.closeForNavigation()"
+          >
+            <app-icon matListItemIcon name="policy" />
+            <span matListItemTitle>{{ 'advisorNavigation.exceptions' | transloco }}</span>
+          </a>
+        }
+        @if (canReadReports()) {
+          <a
+            mat-list-item
+            routerLink="/asesor/reportes"
+            routerLinkActive="active-link"
+            data-testid="advisor-nav-reports"
+            (click)="keyboard.closeForNavigation()"
+          >
+            <app-icon matListItemIcon name="shield" />
+            <span matListItemTitle>{{ 'advisorNavigation.reports' | transloco }}</span>
+          </a>
+        }
       </mat-nav-list>
 
       <div class="sidenav-footer">

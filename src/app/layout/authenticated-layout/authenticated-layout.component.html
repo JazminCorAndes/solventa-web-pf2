@@ -86,6 +86,17 @@
             <span matListItemTitle>{{ 'navigation.consent' | transloco }}</span>
           </a>
         } @else {
+          @if (canStartMortgage()) {
+            <a
+              mat-list-item
+              routerLink="/app/socios/perfilamientos/nuevo"
+              routerLinkActive="active-link"
+              (click)="keyboard.closeForNavigation()"
+            >
+              <app-icon matListItemIcon name="policy" />
+              <span matListItemTitle>{{ 'mortgageProfiling.title' | transloco }}</span>
+            </a>
+          }
           @if (partners.context()?.alcances?.includes('clientes:consultar')) {
             <a
               mat-list-item

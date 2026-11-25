@@ -4,6 +4,9 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { HttpAdministrationGateway } from './http-administration.gateway';
+import { AuthService } from '../../core/auth/auth.service';
+import { AuthUser } from '../../core/auth/auth.models';
+import { signal } from '@angular/core';
 
 const ID = '11111111-1111-4111-8111-111111111111';
 const KEY = '22222222-2222-4222-8222-222222222222';
@@ -46,15 +49,41 @@ const EVIDENCE = {
 describe('HttpAdministrationGateway', () => {
   let gateway: HttpAdministrationGateway;
   let http: HttpTestingController;
+  const user = signal<AuthUser | null>(null);
 
   beforeEach(() => {
+    user.set({ id: ID, name: 'Admin', email: 'admin@example.com', role: 'administrator' });
     TestBed.configureTestingModule({
-      providers: [HttpAdministrationGateway, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        HttpAdministrationGateway,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthService, useValue: { user } },
+      ],
     });
     gateway = TestBed.inject(HttpAdministrationGateway);
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+
+  it('usa la ruta del asesor sin cambiar el contrato de la cola', async () => {
+    user.set({
+      id: ID,
+      name: 'Asesor',
+      email: 'asesor@example.com',
+      role: 'advisor',
+      permissions: ['siniestros:revisar'],
+    });
+    const result = firstValueFrom(gateway.queue('revision'));
+    http
+      .expectOne(`${environment.apiBaseUrl}/v1/asesor/colas-revision/revision/asignaciones`)
+      .flush({
+        tipo: 'cola',
+        destino: 'revision',
+        asignaciones: [],
+      });
+    expect(await result).toEqual([]);
+  });
 
   it('consulta la cola confirmada y rechaza respuestas de otra cola', async () => {
     const result = firstValueFrom(gateway.queue('revision'));

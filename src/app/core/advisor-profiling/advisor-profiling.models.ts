@@ -5,6 +5,7 @@ export const MORTGAGE_UUID_PATTERN =
 
 export interface MortgageProfilingInput {
   partnerId: string;
+  consultationId: string;
   customer: {
     id: string;
     documentType: DocumentType;
@@ -52,7 +53,7 @@ export type MortgageProfilingErrorCode =
   | 'operation_in_progress'
   | 'operation_retryable'
   | 'rate_limited'
-  | 'advisor_context_unavailable'
+  | 'partner_context_unavailable'
   | 'unexpected';
 
 export class MortgageProfilingError extends Error {

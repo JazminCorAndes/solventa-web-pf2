@@ -9,6 +9,12 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { homeUrl } from '../../core/auth/auth.guards';
+import {
+  canReadOperationalReports,
+  canReviewClaims,
+  exceptionPartnerIds,
+} from '../../core/auth/auth.models';
 import { BrandComponent } from '../../shared/brand/brand.component';
 import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
 import { ThemeToggleComponent } from '../../shared/theme-toggle/theme-toggle.component';
@@ -41,6 +47,10 @@ export class AdvisorLayoutComponent {
   private readonly transloco = inject(TranslocoService);
 
   readonly user = this.auth.user;
+  readonly homeUrl = computed(() => homeUrl(this.user()));
+  readonly canReview = computed(() => canReviewClaims(this.user()));
+  readonly canReadReports = computed(() => canReadOperationalReports(this.user()));
+  readonly canResolveExceptions = computed(() => exceptionPartnerIds(this.user()).length > 0);
   readonly language = signal(this.transloco.getActiveLang() || 'es');
   readonly userInitials = computed(() => {
     const name = this.user()?.name.trim() ?? '';

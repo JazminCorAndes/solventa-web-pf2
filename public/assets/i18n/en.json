@@ -1048,7 +1048,7 @@
   },
   "advisorNavigation": {
     "portal": "Advisor portal",
-    "portalType": "Distribution partners",
+    "portalType": "Internal claim operations",
     "title": "Advisor portal",
     "clients": "Customers",
     "exceptions": "Open Finance exceptions",
@@ -1134,7 +1134,7 @@
       "reason": "Enter a non-empty reason containing 3 to 500 characters."
     },
     "errors": {
-      "advisor_context_unavailable": "This page is available only to advisors with authorized partners in their session.",
+      "advisor_context_unavailable": "This page requires an internal risk or underwriting permission to resolve this partner's exceptions.",
       "sesion_invalida": "Your session is invalid. Sign in again.",
       "socio_no_autorizado": "You are not authorized to view or resolve exceptions for this partner.",
       "actor_no_autorizado": "The actor is no longer authorized for this operation.",
@@ -1215,7 +1215,7 @@
       "operation_in_progress": "This operation is still in progress. Retry with the same identifier.",
       "operation_retryable": "The operation has no confirmed result. Retry with the same identifier.",
       "rate_limited": "The partner has reached the request limit. Wait before retrying the same operation.",
-      "advisor_context_unavailable": "You cannot submit a profiling request: this web session does not have the authorized advisor and partner context.",
+      "partner_context_unavailable": "Profiling requires an authorized partner session and a completed consented consultation for this customer and product.",
       "unexpected": "Profiling could not be started. You can retry without creating another operation."
     }
   },

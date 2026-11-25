@@ -1,22 +1,23 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { firstValueFrom, of, throwError } from 'rxjs';
-import { ADVISOR_PROFILING_GATEWAY, AdvisorProfilingGateway } from './advisor-profiling.gateway';
+import { PARTNER_PROFILING_GATEWAY, PartnerProfilingGateway } from './advisor-profiling.gateway';
 import {
   MortgageProfilingError,
   MortgageProfilingInput,
   MortgageProfilingRequest,
 } from './advisor-profiling.models';
-import { AdvisorProfilingService } from './advisor-profiling.service';
+import { PartnerProfilingService } from './advisor-profiling.service';
 import {
-  ADVISOR_PROFILING_STORAGE,
-  AdvisorProfilingStorage,
+  PARTNER_PROFILING_STORAGE,
+  PartnerProfilingStorage,
   PendingMortgageProfilingOperation,
 } from './advisor-profiling-storage.service';
 import { AuthService } from '../auth/auth.service';
 import { AuthUser } from '../auth/auth.models';
+import { PartnerContext, PartnerContextService } from '../partners/partner-context.service';
 
-class TestStorage implements AdvisorProfilingStorage {
+class TestStorage implements PartnerProfilingStorage {
   value: PendingMortgageProfilingOperation | null = null;
 
   read(): PendingMortgageProfilingOperation | null {
@@ -32,18 +33,19 @@ class TestStorage implements AdvisorProfilingStorage {
   }
 }
 
-describe('AdvisorProfilingService', () => {
+describe('PartnerProfilingService', () => {
   const requests: MortgageProfilingRequest[] = [];
   const storage = new TestStorage();
   const advisor: AuthUser = {
     id: 'advisor-test',
     name: 'Asesor de prueba',
     email: 'asesor@example.com',
-    role: 'advisor',
+    role: 'partner',
     partnerIds: ['SOC-CO-001', 'OTRO-SOCIO'],
   };
   const user = signal<AuthUser | null>(null);
-  const gateway: AdvisorProfilingGateway = {
+  const context = signal<PartnerContext | null>(null);
+  const gateway: PartnerProfilingGateway = {
     start: (request) => {
       requests.push(request);
       return of({
@@ -61,6 +63,7 @@ describe('AdvisorProfilingService', () => {
   };
   const input: MortgageProfilingInput = {
     partnerId: 'SOC-CO-001',
+    consultationId: '77777777-7777-4777-8777-777777777777',
     customer: {
       id: '44444444-4444-4444-8444-444444444444',
       documentType: 'cc',
@@ -76,12 +79,25 @@ describe('AdvisorProfilingService', () => {
     requests.length = 0;
     storage.clear();
     user.set(advisor);
+    context.set({
+      apiVersion: '1',
+      usuario: {
+        id: advisor.id,
+        nombre: advisor.name,
+        correo: advisor.email,
+        rol: 'socio',
+        socios: advisor.partnerIds!,
+      },
+      socios: advisor.partnerIds!.map((socioId) => ({ socioId, productos: ['mortgage-life'] })),
+      alcances: ['clientes:consultar', 'perfilamientos:crear'],
+    });
     TestBed.configureTestingModule({
       providers: [
-        AdvisorProfilingService,
-        { provide: ADVISOR_PROFILING_GATEWAY, useValue: gateway },
-        { provide: ADVISOR_PROFILING_STORAGE, useValue: storage },
+        PartnerProfilingService,
+        { provide: PARTNER_PROFILING_GATEWAY, useValue: gateway },
+        { provide: PARTNER_PROFILING_STORAGE, useValue: storage },
         { provide: AuthService, useValue: { user } },
+        { provide: PartnerContextService, useValue: { context } },
       ],
     });
     vi.spyOn(globalThis.crypto, 'randomUUID')
@@ -92,7 +108,7 @@ describe('AdvisorProfilingService', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('conserva el operationId al reintentar los mismos datos', async () => {
-    const service = TestBed.inject(AdvisorProfilingService);
+    const service = TestBed.inject(PartnerProfilingService);
 
     await firstValueFrom(service.start(input));
     await firstValueFrom(service.start(input));
@@ -104,7 +120,7 @@ describe('AdvisorProfilingService', () => {
   });
 
   it('rechaza cambios de datos sin cambiar UUID hasta reiniciar explícitamente', async () => {
-    const service = TestBed.inject(AdvisorProfilingService);
+    const service = TestBed.inject(PartnerProfilingService);
 
     await firstValueFrom(service.start(input));
     await expect(
@@ -123,11 +139,11 @@ describe('AdvisorProfilingService', () => {
     const start = vi.spyOn(gateway, 'start');
     start.mockReturnValueOnce(throwError(() => new MortgageProfilingError('service_unavailable')));
     await expect(
-      firstValueFrom(TestBed.inject(AdvisorProfilingService).start(input)),
+      firstValueFrom(TestBed.inject(PartnerProfilingService).start(input)),
     ).rejects.toMatchObject({ code: 'service_unavailable' });
     const pending = storage.read();
 
-    const restored = TestBed.runInInjectionContext(() => new AdvisorProfilingService());
+    const restored = TestBed.runInInjectionContext(() => new PartnerProfilingService());
     await firstValueFrom(restored.start(input));
     expect(start.mock.calls[1][0]).toEqual(start.mock.calls[0][0]);
     expect(storage.read()).toEqual(pending);
@@ -141,7 +157,7 @@ describe('AdvisorProfilingService', () => {
   ])(
     'exige reinicio explícito al cambiar el contexto de una operación pendiente %#',
     async (changed) => {
-      const service = TestBed.inject(AdvisorProfilingService);
+      const service = TestBed.inject(PartnerProfilingService);
       await firstValueFrom(service.start(input));
       await expect(firstValueFrom(service.start(changed))).rejects.toMatchObject({
         code: 'idempotency_conflict',
@@ -153,7 +169,7 @@ describe('AdvisorProfilingService', () => {
   );
 
   it('guarda solo UUID, actor y socio, sin cuerpo ni fingerprint del cliente', async () => {
-    await firstValueFrom(TestBed.inject(AdvisorProfilingService).start(input));
+    await firstValueFrom(TestBed.inject(PartnerProfilingService).start(input));
     expect(storage.value).toEqual({
       ownerId: advisor.id,
       partnerId: input.partnerId,
@@ -182,7 +198,7 @@ describe('AdvisorProfilingService', () => {
       partnerId: input.partnerId,
       operationId: '66666666-6666-4666-8666-666666666666',
     };
-    const service = TestBed.inject(AdvisorProfilingService);
+    const service = TestBed.inject(PartnerProfilingService);
     await firstValueFrom(service.start(input));
     await firstValueFrom(
       service.start({ ...input, credit: { ...input.credit, amount: 320000000 } }),
@@ -197,10 +213,13 @@ describe('AdvisorProfilingService', () => {
     expect(requests[2].operationId).not.toBe(requests[0].operationId);
   });
 
-  it('no reutiliza la operación de otro asesor', async () => {
-    const service = TestBed.inject(AdvisorProfilingService);
+  it('no reutiliza la operación de otro usuario socio', async () => {
+    const service = TestBed.inject(PartnerProfilingService);
     await firstValueFrom(service.start(input));
     user.set({ ...advisor, id: 'otro-asesor' });
+    context.update(
+      (value) => value && { ...value, usuario: { ...value.usuario, id: 'otro-asesor' } },
+    );
     await firstValueFrom(service.start(input));
     expect(requests[1].operationId).not.toBe(requests[0].operationId);
     expect(storage.value?.ownerId).toBe('otro-asesor');
@@ -209,7 +228,7 @@ describe('AdvisorProfilingService', () => {
   it.each(['logout', 'client', 'revoked'])(
     'limpia metadatos al invalidar el contexto: %s',
     async (change) => {
-      const service = TestBed.inject(AdvisorProfilingService);
+      const service = TestBed.inject(PartnerProfilingService);
       await firstValueFrom(service.start(input));
       TestBed.tick();
       user.set(
@@ -217,7 +236,7 @@ describe('AdvisorProfilingService', () => {
           ? null
           : {
               ...advisor,
-              role: change === 'client' ? 'client' : 'advisor',
+              role: change === 'client' ? 'client' : 'partner',
               partnerIds: [],
             },
       );
@@ -226,8 +245,8 @@ describe('AdvisorProfilingService', () => {
     },
   );
 
-  it('conserva la operación al renovar la sesión del mismo asesor', async () => {
-    const service = TestBed.inject(AdvisorProfilingService);
+  it('conserva la operación al renovar la sesión del mismo socio', async () => {
+    const service = TestBed.inject(PartnerProfilingService);
     await firstValueFrom(service.start(input));
     TestBed.tick();
     const pending = storage.read();
@@ -237,4 +256,28 @@ describe('AdvisorProfilingService', () => {
     await firstValueFrom(service.start(input));
     expect(requests[1].operationId).toBe(requests[0].operationId);
   });
+
+  it.each(['advisor', 'scope', 'product', 'owner'])(
+    'rechaza originación sin autorización comercial: %s',
+    async (change) => {
+      const service = TestBed.inject(PartnerProfilingService);
+      if (change === 'advisor') user.set({ ...advisor, role: 'advisor' });
+      else
+        context.update(
+          (value) =>
+            value && {
+              ...value,
+              alcances: change === 'scope' ? [] : value.alcances,
+              socios:
+                change === 'product' ? [{ socioId: input.partnerId, productos: [] }] : value.socios,
+              usuario: { ...value.usuario, id: change === 'owner' ? 'otro-usuario' : advisor.id },
+            },
+        );
+      await expect(firstValueFrom(service.start(input))).rejects.toMatchObject({
+        code: 'unauthorized_partner',
+      });
+      expect(requests).toHaveLength(0);
+      expect(storage.read()).toBeNull();
+    },
+  );
 });

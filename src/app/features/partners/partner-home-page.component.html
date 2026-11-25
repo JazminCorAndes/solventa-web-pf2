@@ -59,6 +59,15 @@
           @if (partner.productos.length && (totals.canCreateQuote || totals.canQueryClients)) {
             <mat-card-actions>
               @if (totals.canCreateQuote) {
+                @if (totals.canQueryClients && partner.productos.includes('mortgage-life')) {
+                  <a
+                    mat-stroked-button
+                    routerLink="/app/socios/perfilamientos/nuevo"
+                    [queryParams]="{ socio: partner.socioId }"
+                  >
+                    {{ 'mortgageProfiling.title' | transloco }}
+                  </a>
+                }
                 <a
                   mat-stroked-button
                   routerLink="/app/socios/cotizaciones/solicitar"

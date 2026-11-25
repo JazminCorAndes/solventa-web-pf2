@@ -30,7 +30,7 @@
             {{ 'administration.assignmentStates.' + item.estado | transloco }} ·
             {{ item.asignadaEn | date: 'medium' }}
           </p>
-          <a mat-button [routerLink]="['/administracion/siniestros', item.siniestroId]">
+          <a mat-button [routerLink]="[portalPath() + '/siniestros', item.siniestroId]">
             {{ 'administration.open' | transloco }}
           </a>
         </mat-card-content>

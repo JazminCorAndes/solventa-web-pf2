@@ -2,7 +2,12 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { catchError, map, of } from 'rxjs';
-import { AuthUser } from './auth.models';
+import {
+  AuthUser,
+  canReadOperationalReports,
+  canReviewClaims,
+  exceptionPartnerIds,
+} from './auth.models';
 
 export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
@@ -44,7 +49,7 @@ export const portalGuard: CanActivateFn = (route, state) => {
   );
 };
 
-export const advisorGuard: CanActivateFn = (_route, state) => {
+export const advisorGuard: CanActivateFn = (route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   return auth.getAccessToken().pipe(
@@ -54,7 +59,9 @@ export const advisorGuard: CanActivateFn = (_route, state) => {
           queryParams: { returnUrl: state.url },
         });
       }
-      return auth.user()?.role === 'advisor' ? true : router.createUrlTree([homeUrl(auth.user())]);
+      return auth.user()?.role === 'advisor' && route.data['advisorHome'] !== true
+        ? true
+        : router.createUrlTree([homeUrl(auth.user())]);
     }),
     catchError(() => of(router.createUrlTree(['/acceso-no-disponible']))),
   );
@@ -78,9 +85,32 @@ export const administratorGuard: CanActivateFn = (_route, state) => {
   );
 };
 
+export const internalPermissionGuard: CanActivateFn = (route) => {
+  const user = inject(AuthService).user();
+  const permission: unknown = route.data['internalPermission'];
+  const allowed =
+    permission === 'siniestros:revisar'
+      ? canReviewClaims(user)
+      : permission === 'reportes:operativos'
+        ? canReadOperationalReports(user)
+        : permission === 'open_finance:resolver'
+          ? exceptionPartnerIds(user).length > 0
+          : false;
+  return allowed
+    ? true
+    : inject(Router).createUrlTree(['/acceso-no-disponible'], {
+        queryParams: { reason: 'forbidden' },
+      });
+};
+
 export function homeUrl(user: AuthUser | null): string {
   if (user?.role === 'administrator') return '/administracion/colas/revision';
-  if (user?.role === 'advisor') return '/asesor/perfilamientos/nuevo';
+  if (user?.role === 'advisor') {
+    if (canReviewClaims(user)) return '/asesor/colas/revision';
+    if (exceptionPartnerIds(user).length) return '/asesor/excepciones';
+    if (canReadOperationalReports(user)) return '/asesor/reportes';
+    return '/acceso-no-disponible';
+  }
   return user?.role === 'partner' ? '/app/socios' : '/app/dashboard';
 }
 
@@ -94,7 +124,9 @@ export function safePostLoginUrl(
       : homeUrl(user);
   }
   if (user?.role === 'advisor') {
-    return requestedUrl?.startsWith('/asesor/') && !requestedUrl.includes('\\')
+    return requestedUrl?.startsWith('/asesor/') &&
+      !requestedUrl.startsWith('/asesor/perfilamientos') &&
+      !requestedUrl.includes('\\')
       ? requestedUrl
       : homeUrl(user);
   }

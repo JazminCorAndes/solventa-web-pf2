@@ -45,6 +45,14 @@ export class AuthenticatedLayoutComponent {
   readonly user = this.auth.user;
   readonly partners = inject(PartnerContextService);
   readonly isPartner = computed(() => this.user()?.role === 'partner');
+  readonly canStartMortgage = computed(() => {
+    const context = this.partners.context();
+    return (
+      context?.alcances.includes('clientes:consultar') === true &&
+      context.alcances.includes('perfilamientos:crear') &&
+      context.socios.some((partner) => partner.productos.includes('mortgage-life'))
+    );
+  });
   readonly homeUrl = computed(() => homeUrl(this.user()));
   readonly language = signal(this.transloco.getActiveLang() || 'es');
   readonly userInitials = computed(() => {

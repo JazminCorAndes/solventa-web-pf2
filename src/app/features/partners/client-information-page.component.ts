@@ -46,6 +46,7 @@ import {
 } from '../../data-access/partners/http-client-information.gateway';
 import { UUID_PATTERN } from '../../data-access/quotes/http-partner-quote.gateway';
 import { InputFilterDirective } from '../../shared/input-filter/input-filter.directive';
+import { MortgageProfilingStartPageComponent } from '../advisor/mortgage-profiling-start-page.component';
 
 interface ConsultationScope {
   context: string;
@@ -58,6 +59,7 @@ interface ConsultationScope {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    MortgageProfilingStartPageComponent,
     InputFilterDirective,
     MatButtonModule,
     MatCardModule,
@@ -76,6 +78,22 @@ interface ConsultationScope {
         </button>
         <h1>{{ 'clientInformation.title' | transloco }}</h1>
         <p>{{ 'clientInformation.subtitle' | transloco }}</p>
+        @if (mortgageMode && context(); as partnerContext) {
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'mortgageProfiling.selectPartner' | transloco }}</mat-label>
+            <mat-select
+              [value]="partner()?.socioId"
+              [disabled]="loading()"
+              (selectionChange)="selectMortgagePartner($event.value)"
+            >
+              @for (organization of partnerContext.socios; track organization.socioId) {
+                @if (organization.productos.includes('mortgage-life')) {
+                  <mat-option [value]="organization.socioId">{{ organization.socioId }}</mat-option>
+                }
+              }
+            </mat-select>
+          </mat-form-field>
+        }
       </header>
 
       <mat-card appearance="outlined">
@@ -278,6 +296,12 @@ interface ConsultationScope {
           </form>
         </mat-card-content>
       </mat-card>
+      @if (canStartMortgage() && result(); as information) {
+        <app-mortgage-profiling-start-page
+          [consultation]="information"
+          [consultationOwnerId]="context()?.usuario.id ?? null"
+        />
+      }
     </section>
   `,
   styles: `
@@ -358,6 +382,13 @@ export class ClientInformationPageComponent {
   private routeClient: string | null | undefined;
   private requestGeneration = 0;
   readonly context = inject(PartnerContextService).context;
+  readonly mortgageMode = this.route.snapshot.data?.['mortgageMode'] === true;
+  readonly canStartMortgage = computed(
+    () =>
+      this.context()?.alcances.includes('perfilamientos:crear') === true &&
+      this.result()?.productoId === 'mortgage-life' &&
+      this.result()?.socioId === this.partner()?.socioId,
+  );
   readonly loading = signal(false);
   readonly errorKey = signal<string | null>(null);
   readonly result = signal<ClientInformationResult | null>(null);
@@ -382,7 +413,12 @@ export class ClientInformationPageComponent {
         : null;
   });
   private readonly contextKey = computed(() =>
-    JSON.stringify([this.context()?.usuario.id ?? null, this.partner()?.socioId ?? null]),
+    JSON.stringify([
+      this.context()?.usuario.id ?? null,
+      this.partner()?.socioId ?? null,
+      this.context()?.alcances,
+      this.partner()?.productos,
+    ]),
   );
 
   constructor() {
@@ -459,7 +495,9 @@ export class ClientInformationPageComponent {
       return;
     }
     const partner = this.partner();
-    const productId = partner?.productos[0];
+    const productId = this.mortgageMode
+      ? partner?.productos.find((product) => product === 'mortgage-life')
+      : partner?.productos[0];
     if (!partner || !productId) {
       this.errorKey.set('clientInformation.errors.forbidden');
       return;
@@ -600,6 +638,22 @@ export class ClientInformationPageComponent {
   backToClients(): void {
     void this.router.navigate(['/app/socios/clientes'], {
       queryParams: { socio: this.partner()?.socioId },
+    });
+  }
+
+  selectMortgagePartner(socioId: string): void {
+    if (
+      this.loading() ||
+      !this.context()?.socios.some(
+        (partner) => partner.socioId === socioId && partner.productos.includes('mortgage-life'),
+      )
+    )
+      return;
+    this.resetState();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { socio: socioId, operacion: null, cliente: null },
+      queryParamsHandling: 'merge',
     });
   }
 

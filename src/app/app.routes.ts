@@ -4,6 +4,7 @@ import {
   advisorGuard,
   authGuard,
   guestGuard,
+  internalPermissionGuard,
   portalGuard,
 } from './core/auth/auth.guards';
 import { partnerGuard } from './core/partners/partner.guard';
@@ -19,6 +20,16 @@ export const routes: Routes = [
         (component) => component.AdministrationLayoutComponent,
       ),
     children: [
+      {
+        path: 'reportes',
+        canActivate: [internalPermissionGuard],
+        data: { internalPermission: 'reportes:operativos' },
+        loadComponent: () =>
+          import('./features/advisor/operational-reports-page.component').then(
+            (component) => component.OperationalReportsPageComponent,
+          ),
+        title: 'Reportes operativos | Solventa',
+      },
       {
         path: 'colas/:queue',
         loadComponent: () =>
@@ -97,6 +108,16 @@ export const routes: Routes = [
             (component) => component.ConsentPageComponent,
           ),
         title: 'Consentimiento | Solventa',
+      },
+      {
+        path: 'socios/perfilamientos/nuevo',
+        canActivate: [partnerGuard],
+        data: { partnerScope: 'clientes:consultar', mortgageMode: true, partnerMode: true },
+        loadComponent: () =>
+          import('./features/partners/client-information-page.component').then(
+            (component) => component.ClientInformationPageComponent,
+          ),
+        title: 'Perfilamiento hipotecario del socio | Solventa',
       },
       {
         path: 'socios/clientes',
@@ -292,7 +313,29 @@ export const routes: Routes = [
       ),
     children: [
       {
+        path: 'colas/:queue',
+        canActivate: [internalPermissionGuard],
+        data: { internalPermission: 'siniestros:revisar' },
+        loadComponent: () =>
+          import('./features/administration/administration-page.component').then(
+            (component) => component.AdministrationPageComponent,
+          ),
+        title: 'Bandeja de siniestros | Solventa',
+      },
+      {
+        path: 'siniestros/:claimId',
+        canActivate: [internalPermissionGuard],
+        data: { internalPermission: 'siniestros:revisar' },
+        loadComponent: () =>
+          import('./features/administration/administration-page.component').then(
+            (component) => component.AdministrationPageComponent,
+          ),
+        title: 'Revisión de siniestro | Solventa',
+      },
+      {
         path: 'excepciones/:exceptionId',
+        canActivate: [internalPermissionGuard],
+        data: { internalPermission: 'open_finance:resolver' },
         loadComponent: () =>
           import('./features/advisor/advisor-exceptions-page.component').then(
             (component) => component.AdvisorExceptionsPageComponent,
@@ -301,6 +344,8 @@ export const routes: Routes = [
       },
       {
         path: 'excepciones',
+        canActivate: [internalPermissionGuard],
+        data: { internalPermission: 'open_finance:resolver' },
         loadComponent: () =>
           import('./features/advisor/advisor-exceptions-page.component').then(
             (component) => component.AdvisorExceptionsPageComponent,
@@ -309,6 +354,8 @@ export const routes: Routes = [
       },
       {
         path: 'reportes',
+        canActivate: [internalPermissionGuard],
+        data: { internalPermission: 'reportes:operativos' },
         loadComponent: () =>
           import('./features/advisor/operational-reports-page.component').then(
             (component) => component.OperationalReportsPageComponent,
@@ -316,14 +363,14 @@ export const routes: Routes = [
         title: 'Reportes operativos | Solventa',
       },
       {
-        path: 'perfilamientos/nuevo',
+        path: '',
+        pathMatch: 'full',
+        data: { advisorHome: true },
         loadComponent: () =>
-          import('./features/advisor/mortgage-profiling-start-page.component').then(
-            (component) => component.MortgageProfilingStartPageComponent,
+          import('./features/administration/administration-page.component').then(
+            (component) => component.AdministrationPageComponent,
           ),
-        title: 'Iniciar perfilamiento hipotecario | Solventa',
       },
-      { path: '', pathMatch: 'full', redirectTo: 'perfilamientos/nuevo' },
     ],
   },
   { path: '', pathMatch: 'full', redirectTo: 'iniciar-sesion' },

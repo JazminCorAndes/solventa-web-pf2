@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   DestroyRef,
   inject,
   OnInit,
@@ -17,7 +18,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { finalize, take } from 'rxjs';
+import { finalize, Subject, take, takeUntil } from 'rxjs';
+import { AuthService } from '../../core/auth/auth.service';
+import { canReadOperationalReports } from '../../core/auth/auth.models';
 import { OPERATIONAL_REPORT_GATEWAY } from '../../core/reports/operational-report.gateway';
 import {
   OperationalReport,
@@ -65,6 +68,9 @@ export class OperationalReportsPageComponent implements OnInit {
   private readonly gateway = inject(OPERATIONAL_REPORT_GATEWAY);
   private readonly destroyRef = inject(DestroyRef);
   private readonly i18n = inject(TranslocoService);
+  private readonly auth = inject(AuthService);
+  private readonly contextInvalidated = new Subject<void>();
+  private context = this.contextKey();
 
   readonly options = signal<ReportOptions | null>(null);
   readonly state = signal<ReportState>('loading-options');
@@ -106,6 +112,24 @@ export class OperationalReportsPageComponent implements OnInit {
     return this.i18n.getActiveLang() === 'en' ? 'en-US' : 'es-CO';
   }
 
+  constructor() {
+    effect(() => {
+      const context = this.contextKey();
+      if (context === this.context) return;
+      this.context = context;
+      this.contextInvalidated.next();
+      this.options.set(null);
+      this.report.set(null);
+      this.download.set('idle');
+      this.state.set(canReadOperationalReports(this.auth.user()) ? 'options-error' : 'forbidden');
+    });
+  }
+
+  private contextKey(): string {
+    const user = this.auth.user();
+    return JSON.stringify([user?.id, user?.role, canReadOperationalReports(user)]);
+  }
+
   ngOnInit(): void {
     // Un cambio en los filtros invalida el reporte mostrado: nunca se descarga otro distinto.
     this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -119,11 +143,15 @@ export class OperationalReportsPageComponent implements OnInit {
   }
 
   loadOptions(): void {
+    if (!canReadOperationalReports(this.auth.user())) {
+      this.state.set('forbidden');
+      return;
+    }
     this.state.set('loading-options');
     this.options.set(null);
     this.gateway
       .options()
-      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .pipe(take(1), takeUntil(this.contextInvalidated), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (options) => {
           this.options.set(options);
@@ -141,7 +169,12 @@ export class OperationalReportsPageComponent implements OnInit {
   }
 
   query(): void {
-    if (!this.options() || this.state() === 'loading' || this.state() === 'forbidden') {
+    if (
+      !canReadOperationalReports(this.auth.user()) ||
+      !this.options() ||
+      this.state() === 'loading' ||
+      this.state() === 'forbidden'
+    ) {
       return;
     }
     const filters = this.filters();
@@ -155,7 +188,7 @@ export class OperationalReportsPageComponent implements OnInit {
     this.unavailableSource.set(null);
     this.gateway
       .report(filters, cutOff)
-      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .pipe(take(1), takeUntil(this.contextInvalidated), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (report) => {
           this.report.set(report);
@@ -178,7 +211,11 @@ export class OperationalReportsPageComponent implements OnInit {
   /** Descarga exactamente el reporte confirmado en pantalla: mismo corte, filtros y huella. */
   downloadReport(): void {
     const report = this.report();
-    if (!report || this.download() === 'downloading') {
+    if (
+      !canReadOperationalReports(this.auth.user()) ||
+      !report ||
+      this.download() === 'downloading'
+    ) {
       return;
     }
     this.download.set('downloading');
@@ -186,6 +223,7 @@ export class OperationalReportsPageComponent implements OnInit {
       .download(report.filters, report.cutOff, report.fingerprint)
       .pipe(
         take(1),
+        takeUntil(this.contextInvalidated),
         takeUntilDestroyed(this.destroyRef),
         finalize(() => {
           if (this.download() === 'downloading') {

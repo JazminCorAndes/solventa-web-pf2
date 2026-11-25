@@ -8,21 +8,22 @@ import { firstValueFrom } from 'rxjs';
 import es from '../../../../public/assets/i18n/es.json';
 import { environment } from '../../../environments/environment';
 import { routes } from '../../app.routes';
-import { ADVISOR_PROFILING_GATEWAY } from '../../core/advisor-profiling/advisor-profiling.gateway';
+import { PARTNER_PROFILING_GATEWAY } from '../../core/advisor-profiling/advisor-profiling.gateway';
 import {
-  ADVISOR_PROFILING_STORAGE,
-  BrowserAdvisorProfilingStorage,
+  PARTNER_PROFILING_STORAGE,
+  BrowserPartnerProfilingStorage,
 } from '../../core/advisor-profiling/advisor-profiling-storage.service';
 import { AUTH_GATEWAY } from '../../core/auth/auth.gateway';
 import { AUTH_STORAGE } from '../../core/auth/auth-storage.service';
 import { authInterceptor } from '../../core/auth/auth.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
 import { TestAuthStorage } from '../../core/auth/auth.testing';
-import { HttpAdvisorProfilingGateway } from '../../data-access/advisor-profiling/http-advisor-profiling.gateway';
+import { HttpPartnerProfilingGateway } from '../../data-access/advisor-profiling/http-advisor-profiling.gateway';
 import { HttpAuthGateway } from '../../data-access/auth/http-auth.gateway';
 import { DASHBOARD_GATEWAY } from '../../core/dashboard/dashboard.gateway';
 import { HttpDashboardGateway } from '../../data-access/dashboard/http-dashboard.gateway';
 import { MortgageProfilingStartPageComponent } from './mortgage-profiling-start-page.component';
+import { PartnerContextService } from '../../core/partners/partner-context.service';
 
 const API = environment.apiBaseUrl;
 const ENDPOINT = `${API}/v1/perfilamientos-hipotecarios`;
@@ -30,7 +31,7 @@ const ADVISOR = {
   id: '11111111-1111-4111-8111-111111111111',
   nombre: 'Asesor de prueba',
   correo: 'asesor@example.com',
-  rol: 'asesor',
+  rol: 'socio',
   socios: ['BANCO-001'],
 };
 const VALID = {
@@ -47,11 +48,40 @@ const VALID = {
   consentVerified: true,
 };
 
-describe('HU46 con sesión asesor y HTTP controlado', () => {
+describe('HU46 con sesión socio, consulta consentida y HTTP controlado', () => {
   let fixture: ComponentFixture<MortgageProfilingStartPageComponent>;
   let page: MortgageProfilingStartPageComponent;
   let http: HttpTestingController;
   let auth: AuthService;
+  const CONSULTATION_ID = '77777777-7777-4777-8777-777777777777';
+
+  async function loadContext(socios: string[]) {
+    const loaded = firstValueFrom(TestBed.inject(PartnerContextService).load());
+    http.expectOne(`${API}/v1/socios/actual`).flush({
+      apiVersion: '1',
+      usuario: { ...ADVISOR, socios },
+      socios: socios.map((socioId) => ({ socioId, productos: ['mortgage-life'] })),
+      alcances: ['clientes:consultar', 'perfilamientos:crear'],
+    });
+    await loaded;
+  }
+
+  function setConsultation(socioId = 'BANCO-001') {
+    fixture.componentRef.setInput('consultationOwnerId', ADVISOR.id);
+    fixture.componentRef.setInput('consultation', {
+      operationId: CONSULTATION_ID,
+      socioId,
+      clienteId: VALID.customerId,
+      productoId: 'mortgage-life',
+      finalidad: 'cotizacion',
+      estado: 'completada',
+      consentimientoId: VALID.consentId,
+      consentimientoVersion: VALID.consentVersion,
+      datos: {},
+      evidenciaFuentes: [],
+      consultadaEn: '2026-10-24T12:00:00Z',
+    });
+  }
 
   function grant(socios: string[]) {
     return {
@@ -87,7 +117,7 @@ describe('HU46 con sesión asesor y HTTP controlado', () => {
         id: ADVISOR.id,
         name: ADVISOR.nombre,
         email: ADVISOR.correo,
-        role: 'advisor',
+        role: 'partner',
         partnerIds: ['SOCIO-OBSOLETO'],
       },
       refreshToken: 'synthetic-stored-refresh',
@@ -107,8 +137,8 @@ describe('HU46 con sesión asesor y HTTP controlado', () => {
         provideHttpClientTesting(),
         { provide: AUTH_GATEWAY, useClass: HttpAuthGateway },
         { provide: AUTH_STORAGE, useValue: storage },
-        { provide: ADVISOR_PROFILING_GATEWAY, useClass: HttpAdvisorProfilingGateway },
-        { provide: ADVISOR_PROFILING_STORAGE, useClass: BrowserAdvisorProfilingStorage },
+        { provide: PARTNER_PROFILING_GATEWAY, useClass: HttpPartnerProfilingGateway },
+        { provide: PARTNER_PROFILING_STORAGE, useClass: BrowserPartnerProfilingStorage },
         { provide: DASHBOARD_GATEWAY, useClass: HttpDashboardGateway },
       ],
     }).compileComponents();
@@ -117,8 +147,10 @@ describe('HU46 con sesión asesor y HTTP controlado', () => {
     const restored = firstValueFrom(auth.synchronizeSession());
     http.expectOne(`${API}/v1/sesiones/renovar`).flush(grant(['BANCO-001']));
     await restored;
+    await loadContext(['BANCO-001']);
     fixture = TestBed.createComponent(MortgageProfilingStartPageComponent);
     page = fixture.componentInstance;
+    setConsultation();
     fixture.detectChanges();
   });
 
@@ -130,6 +162,9 @@ describe('HU46 con sesión asesor y HTTP controlado', () => {
     page.submit();
     const first = http.expectOne(ENDPOINT);
     const body = first.request.body;
+    expect(body.consultaInformacionId).toBe(CONSULTATION_ID);
+    expect(body.asesorId).toBeUndefined();
+    expect(body.actorId).toBeUndefined();
     expect(first.request.headers.get('Authorization')).toBe('Bearer synthetic-advisor-access');
     expect(first.request.headers.get('API-Version')).toBe('1');
     expect(first.request.headers.get('Idempotency-Key')).toBe(body.operationId);
@@ -172,7 +207,10 @@ describe('HU46 con sesión asesor y HTTP controlado', () => {
 
   it('bloquea sin efectos HTTP al perder sus socios en la renovación', async () => {
     const renewed = firstValueFrom(auth.renewAccessToken());
-    http.expectOne(`${API}/v1/sesiones/renovar`).flush(grant([]));
+    http.expectOne(`${API}/v1/sesiones/renovar`).flush({
+      ...grant([]),
+      usuario: { ...ADVISOR, rol: 'asesor', socios: [], permisos: ['siniestros:revisar'] },
+    });
     await renewed;
     fixture.detectChanges();
     page.form.setValue(VALID);
@@ -181,7 +219,7 @@ describe('HU46 con sesión asesor y HTTP controlado', () => {
     expect(page.result()).toBeNull();
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
     expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain(
-      es.mortgageProfiling.errors.advisor_context_unavailable,
+      es.mortgageProfiling.errors.partner_context_unavailable,
     );
     http.expectNone(() => true);
   });
@@ -202,6 +240,9 @@ describe('HU46 con sesión asesor y HTTP controlado', () => {
     expect(page.pendingOperation()).toBeNull();
     page.submit();
     http.expectNone(() => true);
+    await loadContext(['BANCO-002']);
+    setConsultation('BANCO-002');
+    fixture.detectChanges();
     page.form.setValue(VALID);
     page.submit();
     const current = http.expectOne(ENDPOINT);
@@ -211,12 +252,12 @@ describe('HU46 con sesión asesor y HTTP controlado', () => {
     expect(page.result()?.partnerId).toBe('BANCO-002');
   });
 
-  it('mantiene al asesor en sus rutas sin activar HTTP de cliente ni contexto de socio', async () => {
-    const harness = await RouterTestingHarness.create();
-    for (const url of ['/asesor/perfilamientos/nuevo', '/app/dashboard', '/app/socios']) {
-      await harness.navigateByUrl(url);
-      expect(TestBed.inject(Router).url).toBe('/asesor/perfilamientos/nuevo');
-    }
+  it('bloquea la originación al retirar la consulta consentida', () => {
+    fixture.componentRef.setInput('consultation', null);
+    fixture.detectChanges();
+    page.form.setValue(VALID);
+    page.submit();
+    expect(page.result()).toBeNull();
     http.expectNone(() => true);
   });
 
@@ -228,7 +269,7 @@ describe('HU46 con sesión asesor y HTTP controlado', () => {
     });
     await renewed;
     const harness = await RouterTestingHarness.create();
-    const navigation = harness.navigateByUrl('/asesor/perfilamientos/nuevo');
+    const navigation = harness.navigateByUrl('/asesor/colas/revision');
     const dashboard = await vi.waitFor(() => http.expectOne(`${API}/v1/clientes/me/dashboard`));
     dashboard.flush({}, { status: 503, statusText: 'Unavailable' });
     await navigation;

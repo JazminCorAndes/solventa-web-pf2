@@ -196,7 +196,7 @@ describe('Partner navigation through production routes', () => {
 
   it('no concede al socio acceso al portal asesor ni envía operaciones hipotecarias', async () => {
     await login();
-    const navigation = harness.navigateByUrl('/asesor/perfilamientos/nuevo');
+    const navigation = harness.navigateByUrl('/asesor/colas/revision');
     const request = await vi.waitFor(() => http.expectOne(`${API}/v1/socios/actual`));
     request.flush(CONTEXT);
     await navigation;
