@@ -312,6 +312,10 @@ El progreso indica bytes reconocidos, no evidencia confirmada. Solo una carga
 `POST /:id/cargas/:cargaId/confirmacion`. Los errores conservan archivo y operación
 para reintentar; no generan otra clave automáticamente. Cambiar de actor o salir
 del detalle oculta la selección y cancela peticiones pendientes.
+Seleccionar un PDF o JPEG no acredita que esté adjunto. Si el backend devuelve
+`formato_invalido`, el panel muestra que no quedó adjunto, sin atribuir la causa
+a una contraseña ni presentar éxito. El frontend no abre ni descifra PDF:
+su admisión, incluidos los cifrados, depende de la validación del backend.
 `GET /:id/evidencias/:evidenciaId/contenido` se descarga como blob por el interceptor
 Bearer existente y se verifica su tamaño, MIME y SHA-256; no se publica una URL
 del backend ni se persisten bytes o tokens en el almacenamiento de evidencias.
@@ -1247,7 +1251,10 @@ del backend lo habilita. La solicitud conserva aerolínea sin espacios externos,
 número de vuelo en mayúsculas y fecha de calendario, junto a la cobertura seleccionada;
 continúa por ofertas, suscripción, pago de prima y emisión existentes.
 
-El seguro climático permite lluvia intensa (`heavy-rain`) o sequía (`drought`), con
+El seguro `parametric-weather` (paramétrico climático) se retira de las opciones de
+cotización; tampoco se habilita mediante un enlace directo con ese producto.
+Esto no modifica el seguro de vuelos ni las pólizas climáticas ya emitidas.
+El contrato climático histórico permite lluvia intensa (`heavy-rain`) o sequía (`drought`), con
 municipio y departamento en texto de hasta 120 caracteres y valor asegurado de
 1 a 1.000.000.000 COP. Las fechas de vuelo y clima deben ser posteriores a hoy.
 La fecha final climática no puede preceder al inicio y el periodo admite hasta

@@ -1230,7 +1230,7 @@
       "rejected": "The server definitively rejected starting this upload. Remove the selection to choose another file.",
       "session": "Your session expired. Sign in to continue.",
       "access": "You cannot access these files. Check your account and claim number.",
-      "unreadable": "We could not read this {{format}} file. Use a valid file; PDFs must not be password protected.",
+      "unreadable": "The server could not validate this {{format}} file. It was not attached. Remove this selection and try again with the original file.",
       "integrity": "The received file does not match your selection. Retry with the original file.",
       "location": "The file includes location data without consent for this claim. Remove it and choose a copy without location data.",
       "incomplete": "The upload is incomplete. Retry to check progress and continue.",

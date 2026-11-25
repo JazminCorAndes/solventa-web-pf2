@@ -9,12 +9,12 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     login(syntheticUser.correo, password);
   });
 
-  it('ofrece vuelos y clima paramétrico en el selector', () => {
+  it('ofrece vuelos sin seguro paramétrico climático en el selector', () => {
     openQuote(products[0]);
     cy.get('mat-select').click();
-    cy.get('mat-option').should('have.length', products.length);
+    cy.get('mat-option').should('have.length', products.length - 1);
     cy.contains('mat-option', /^\s*parametric\s*$/).should('be.visible');
-    cy.contains('mat-option', 'parametric-weather').should('be.visible');
+    cy.contains('mat-option', 'parametric-weather').should('not.exist');
   });
 
   it('omite cotizaciones compradas y vencidas sin consultar sus detalles', () => {
@@ -73,7 +73,16 @@ describe('UI determinista: productos y consentimiento (sin persistencia real)', 
     cy.get('@expiredDetails.all').should('have.length', 0);
   });
 
-  for (const product of products) {
+  it('no permite cotizar clima mediante un enlace directo', () => {
+    openQuote(products[0]);
+    cy.visit('/app/cotizaciones/solicitar?producto=parametric-weather');
+    cy.get('.product-copy strong').should('contain.text', 'Selecciona un seguro');
+    cy.get('#weather-location').should('not.exist');
+    cy.get('button[type=submit]').should('be.disabled');
+    cy.get('@quote.all').should('have.length', 0);
+  });
+
+  for (const product of products.filter((product) => product.id !== 'parametric-weather')) {
     it(`${product.id}: obligatorios y contrato completo al solicitar`, () => {
       openQuote(product);
       if (Object.keys(product.fields).length || product.id === 'travel') {

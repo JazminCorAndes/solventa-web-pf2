@@ -1230,7 +1230,7 @@
       "rejected": "El servidor rechazó definitivamente el inicio de esta carga. Retira la selección para elegir otro archivo.",
       "session": "Tu sesión venció. Inicia sesión para continuar.",
       "access": "No tienes acceso a estos archivos. Revisa tu cuenta y el número de siniestro.",
-      "unreadable": "No pudimos leer este archivo {{format}}. Usa uno válido; si es PDF, debe estar sin contraseña.",
+      "unreadable": "El servidor no pudo validar este archivo {{format}}. No quedó adjunto. Retira esta selección y vuelve a intentarlo con el archivo original.",
       "integrity": "El archivo recibido no coincide con el seleccionado. Reintenta con el archivo original.",
       "location": "El archivo incluye ubicación sin consentimiento para este siniestro. Retíralo y elige una copia sin datos de ubicación.",
       "incomplete": "La carga está incompleta. Reintenta para consultar el avance y continuar.",
