@@ -244,7 +244,7 @@ function evidence(value: unknown, claimId: string): AdministrativeEvidence {
         };
   if (
     ubicacion &&
-    (typeof ubicacion.consentimiento !== 'boolean' ||
+    (ubicacion.consentimiento !== true ||
       typeof ubicacion.latitud !== 'number' ||
       !Number.isFinite(ubicacion.latitud) ||
       Math.abs(ubicacion.latitud) > 90 ||
@@ -267,8 +267,7 @@ function evidence(value: unknown, claimId: string): AdministrativeEvidence {
       ubicacion === null
         ? null
         : {
-            consentimiento:
-              typeof ubicacion.consentimiento === 'boolean' ? ubicacion.consentimiento : invalid(),
+            consentimiento: true,
             latitud: typeof ubicacion.latitud === 'number' ? ubicacion.latitud : invalid(),
             longitud: typeof ubicacion.longitud === 'number' ? ubicacion.longitud : invalid(),
             fecha: date(ubicacion.fecha),

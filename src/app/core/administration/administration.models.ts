@@ -46,14 +46,8 @@ export interface AdministrativeClaim {
   evidencias: AdministrativeEvidence[];
 }
 
-export interface AdministrativeEvidence extends Omit<ClaimEvidence, 'ubicacion'> {
+export interface AdministrativeEvidence extends ClaimEvidence {
   autorId: string;
-  ubicacion: {
-    consentimiento: boolean;
-    latitud: number;
-    longitud: number;
-    fecha: string;
-  } | null;
 }
 
 export interface ReviewInput {

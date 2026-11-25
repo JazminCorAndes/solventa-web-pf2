@@ -115,7 +115,7 @@ describe('HttpAdministrationGateway', () => {
     await rejected;
   });
 
-  it('separa aviso registrado, evidencia sin consentimiento y estado vigente', async () => {
+  it('separa aviso registrado, evidencia con consentimiento y estado vigente', async () => {
     const result = firstValueFrom(gateway.claim(ID));
     http.expectOne(`${BASE}/siniestros/${ID}`).flush({
       siniestro: {
@@ -131,13 +131,13 @@ describe('HttpAdministrationGateway', () => {
       evidencias: [
         {
           ...EVIDENCE,
-          ubicacion: { consentimiento: false, latitud: 4, longitud: -74, fecha: TIME },
+          ubicacion: { consentimiento: true, latitud: 4, longitud: -74, fecha: TIME },
         },
       ],
     });
     const detail = await result;
     expect(detail.siniestro.estado).toBe('registrado');
-    expect(detail.evidencias[0].ubicacion?.consentimiento).toBe(false);
+    expect(detail.evidencias[0].ubicacion?.consentimiento).toBe(true);
     const history = firstValueFrom(gateway.history(ID));
     http.expectOne(`${BASE}/siniestros/${ID}/decisiones`).flush({
       siniestroId: ID,
