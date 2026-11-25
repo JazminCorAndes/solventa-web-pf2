@@ -23,6 +23,14 @@ import emptyReal from './testing/dashboard-empty-real.json';
 import policyIntegration from './testing/dashboard-policies-integration.json';
 
 const URL = `${environment.apiBaseUrl}/v1/clientes/me/dashboard`;
+const PAID_INDEMNIFICATION = {
+  estado: 'pagada',
+  monto: '350000.00',
+  moneda: 'COP',
+  pagadaEn: '2026-11-25T05:30:00Z',
+  referencia: 'SIM-INDEMNIZACION-001',
+  simulada: true,
+};
 const EMPTY_RESPONSE = {
   ...DASHBOARD_RESPONSE,
   cotizaciones: [],
@@ -200,6 +208,102 @@ describe('HttpDashboardGateway', () => {
     http.expectOne(URL).flush(policyIntegration.empty);
     await expect(result).resolves.toEqual(EMPTY_DASHBOARD);
   });
+
+  it('preserves each confirmed indemnification without replacing validity or premium payments', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(URL).flush({
+      ...DASHBOARD_RESPONSE,
+      polizas: ['350000.00', '600000.00'].map((monto, index) => ({
+        ...DASHBOARD_RESPONSE.polizas[0],
+        id: `policy-${index}`,
+        tipo: 'parametric',
+        indemnizacion: { ...PAID_INDEMNIFICATION, monto, referencia: `SIM-${index}` },
+      })),
+    });
+    const snapshot = await result;
+    expect(snapshot.policies.map((item) => item.indemnification)).toEqual(
+      ['350000.00', '600000.00'].map((amount, index) => ({
+        status: 'pagada',
+        amount: { amount, currency: 'COP' },
+        paidAt: PAID_INDEMNIFICATION.pagadaEn,
+        reference: `SIM-${index}`,
+        simulated: true,
+      })),
+    );
+    expect(snapshot.policies[0].status).toBe('vigente');
+    expect(snapshot.policies[0].endDate).toBe(DASHBOARD_RESPONSE.polizas[0].fechaFin);
+    expect(snapshot.payments).toEqual(DASHBOARD_SNAPSHOT.payments);
+  });
+
+  it.each(['pendiente', 'rechazada'])(
+    'does not invent a payment for indemnification %s',
+    async (estado) => {
+      const result = firstValueFrom(gateway.load());
+      http.expectOne(URL).flush({
+        ...DASHBOARD_RESPONSE,
+        polizas: [
+          {
+            ...DASHBOARD_RESPONSE.polizas[0],
+            indemnizacion: {
+              ...PAID_INDEMNIFICATION,
+              estado,
+              monto: null,
+              pagadaEn: null,
+              referencia: null,
+            },
+          },
+        ],
+      });
+      expect((await result).policies[0].indemnification).toEqual({
+        status: estado,
+        currency: 'COP',
+        simulated: true,
+      });
+    },
+  );
+
+  it('distinguishes no indemnification from an older response without that information', async () => {
+    const result = firstValueFrom(gateway.load());
+    http.expectOne(URL).flush({
+      ...DASHBOARD_RESPONSE,
+      polizas: [
+        { ...DASHBOARD_RESPONSE.polizas[0], indemnizacion: null },
+        { ...DASHBOARD_RESPONSE.polizas[0], id: 'legacy-policy' },
+      ],
+    });
+    const policies = (await result).policies;
+    expect(policies[0].indemnification).toBeNull();
+    expect(policies[1]).not.toHaveProperty('indemnification');
+  });
+
+  it.each([
+    { monto: null },
+    { monto: '0.00' },
+    { monto: '-1.00' },
+    { moneda: 'cop' },
+    { pagadaEn: null },
+    { pagadaEn: 'invalid' },
+    { referencia: '' },
+    { simulada: false },
+    { estado: 'desconocido' },
+    { estado: 'pendiente', monto: null, pagadaEn: null },
+    { estado: 'rechazada', pagadaEn: null, referencia: null },
+  ])(
+    'rejects inconsistent indemnification instead of displaying a paid result %j',
+    async (fields) => {
+      const result = firstValueFrom(gateway.load());
+      http.expectOne(URL).flush({
+        ...DASHBOARD_RESPONSE,
+        polizas: [
+          {
+            ...DASHBOARD_RESPONSE.polizas[0],
+            indemnizacion: { ...PAID_INDEMNIFICATION, ...fields },
+          },
+        ],
+      });
+      await expect(result).rejects.toThrow('The dashboard response is invalid.');
+    },
+  );
 
   it.each([populatedReal, emptyReal])(
     'rejects the captured legacy policy-unavailable contract',
