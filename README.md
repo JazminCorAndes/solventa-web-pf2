@@ -353,6 +353,10 @@ El progreso indica bytes reconocidos, no evidencia confirmada. Solo una carga
 `POST /:id/cargas/:cargaId/confirmacion`. Los errores conservan archivo y operación
 para reintentar; no generan otra clave automáticamente. Cambiar de actor o salir
 del detalle oculta la selección y cancela peticiones pendientes.
+Seleccionar un PDF o JPEG no acredita que esté adjunto. Si el backend devuelve
+`formato_invalido`, el panel muestra que no quedó adjunto, sin atribuir la causa
+a una contraseña ni presentar éxito. El frontend no abre ni descifra PDF:
+su admisión, incluidos los cifrados, depende de la validación del backend.
 `GET /:id/evidencias/:evidenciaId/contenido` se descarga como blob por el interceptor
 Bearer existente y se verifica su tamaño, MIME y SHA-256; no se publica una URL
 del backend ni se persisten bytes o tokens en el almacenamiento de evidencias.
@@ -724,6 +728,20 @@ El resumen no reconstruye ni reactiva solicitudes históricas: el enlace para co
 usa el flujo existente, con consentimiento y perfilamiento, sin cambiar la solicitud
 activa al consultar el historial. Al salir o cambiar de usuario se descarta el resumen
 y se cancela su petición pendiente.
+
+El detalle de póliza consulta ese mismo dashboard autenticado y presenta la
+indemnización separada de la vigencia y de la prima. El campo `indemnizacion`
+admite `null` (sin registro) o `{ estado, monto, moneda, pagadaEn, referencia,
+simulada: true }`. Solo `estado: "pagada"` permite mostrar **Indemnización pagada**:
+requiere monto decimal positivo, moneda ISO de tres letras, fecha de pago y referencia.
+Los estados `pendiente` y `rechazada` requieren `monto`, `pagadaEn` y `referencia`
+nulos y nunca se presentan como pagados. Un campo ausente se muestra como información
+no disponible; una respuesta incoherente o un error HTTP activa el error y reintento
+existentes. Actualizar vuelve a consultar el servidor, sin evaluar eventos ni iniciar pagos.
+El panel identifica expresamente el pago simulado: no representa una transferencia bancaria.
+Desplegar primero el backend con este contrato; comprobar dos pólizas del mismo vuelo con
+sus importes por oferta y repetir el evento sin duplicados requiere la prueba integrada,
+no queda acreditado por las pruebas unitarias del consumidor.
 
 Las pruebas HTTP y de componentes conservan además las capturas literales históricas
 `src/app/data-access/dashboard/testing/dashboard-{populated,empty}-real.json`.
@@ -1269,8 +1287,15 @@ En vuelos, `coverageType` admite `delay-cancellation`, `missed-connection` y
 `comprehensive`. El backend mantiene las solicitudes antiguas sin ese campo como
 retraso o cancelación. La pérdida de conexión está sujeta a las causas y exclusiones
 del plan, no a cualquier vuelo perdido por el pasajero.
+El producto `parametric` vuelve a estar disponible en el flujo normal cuando el catálogo
+del backend lo habilita. La solicitud conserva aerolínea sin espacios externos,
+número de vuelo en mayúsculas y fecha de calendario, junto a la cobertura seleccionada;
+continúa por ofertas, suscripción, pago de prima y emisión existentes.
 
-El seguro climático permite lluvia intensa (`heavy-rain`) o sequía (`drought`), con
+El seguro `parametric-weather` (paramétrico climático) se retira de las opciones de
+cotización; tampoco se habilita mediante un enlace directo con ese producto.
+Esto no modifica el seguro de vuelos ni las pólizas climáticas ya emitidas.
+El contrato climático histórico permite lluvia intensa (`heavy-rain`) o sequía (`drought`), con
 municipio y departamento en texto de hasta 120 caracteres y valor asegurado de
 1 a 1.000.000.000 COP. Las fechas de vuelo y clima deben ser posteriores a hoy.
 La fecha final climática no puede preceder al inicio y el periodo admite hasta

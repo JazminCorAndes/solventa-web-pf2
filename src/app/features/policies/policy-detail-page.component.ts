@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import { PolicyDocumentPanelComponent } from './policy-document-panel.component';
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -14,6 +14,7 @@ import { SvgIconComponent } from '../../shared/svg-icon/svg-icon.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     PolicyDocumentPanelComponent,
+    CurrencyPipe,
     DatePipe,
     MatButtonModule,
     MatProgressSpinnerModule,

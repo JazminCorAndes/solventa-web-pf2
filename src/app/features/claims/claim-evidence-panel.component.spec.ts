@@ -107,6 +107,47 @@ describe('ClaimEvidencePanelComponent private downloads', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:private-evidence');
   });
 
+  it.each([
+    { mimeType: 'application/pdf', name: 'recibo.pdf', format: 'PDF' },
+    { mimeType: 'image/jpeg', name: 'recibo.jpeg', format: 'JPG' },
+  ])(
+    'explica el rechazo de $format sin confundir selección con adjunto confirmado',
+    async ({ mimeType, name, format }) => {
+      const service = fixture.componentInstance.evidence;
+      const base = `${environment.apiBaseUrl}/v1/siniestros`;
+      const load = service.load();
+      http.expectOne(`${base}/configuracion-evidencias`).flush({
+        maxCantidad: 4,
+        maxChunkBytes: 1024,
+        maxVideoSeconds: 60,
+        formatos: [{ mimeType, maxBytes: 1048576 }],
+      });
+      http.expectOne(`${base}/${evidence.siniestroId}/evidencias`).flush({ evidencias: [] });
+      await load;
+      const bytes = new Uint8Array([1, 2, 3, 4]);
+      const file = new File([bytes], name, { type: mimeType });
+      Object.defineProperty(file, 'arrayBuffer', { value: async () => bytes.buffer });
+      await service.select([file]);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain(es.claimEvidence.states.selected);
+      const upload = service.upload(service.files()[0].key);
+      http
+        .expectOne(`${base}/${evidence.siniestroId}/cargas`)
+        .flush({ code: 'formato_invalido' }, { status: 422, statusText: 'Unprocessable Entity' });
+      await upload;
+      fixture.detectChanges();
+      const root = fixture.nativeElement as HTMLElement;
+      const error = root.querySelector('[data-testid="evidence-file-error"]')!;
+      expect(error.textContent).toContain(`El servidor no pudo validar este archivo ${format}`);
+      expect(error.textContent).toContain('No quedó adjunto');
+      expect(error.textContent).not.toContain('contraseña');
+      expect(root.textContent).toContain(es.claimEvidence.states.error);
+      expect(root.querySelector('[data-testid="evidence-download"]')).toBeNull();
+      expect(root.querySelector('[data-testid="evidence-remove"]')).not.toBeNull();
+      expect(service.evidences()).toEqual([]);
+    },
+  );
+
   it.each(['actor', 'claim'] as const)(
     'no descarga una respuesta tardía después de cambiar %s',
     async (change) => {

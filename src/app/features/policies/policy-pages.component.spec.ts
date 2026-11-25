@@ -8,11 +8,12 @@ import { By } from '@angular/platform-browser';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { signal } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { TranslocoTestingModule } from '@jsverse/transloco';
+import { TranslocoService, TranslocoTestingModule } from '@jsverse/transloco';
 import es from '../../../../public/assets/i18n/es.json';
 import en from '../../../../public/assets/i18n/en.json';
 import { DASHBOARD_SNAPSHOT } from '../../core/dashboard/dashboard.testing';
 import { DashboardService } from '../../core/dashboard/dashboard.service';
+import { PolicyIndemnification } from '../../core/dashboard/dashboard.models';
 import { PolicyDetailPageComponent } from './policy-detail-page.component';
 import { PolicyListPageComponent } from './policy-list-page.component';
 import { PolicyDocumentPanelComponent } from './policy-document-panel.component';
@@ -86,6 +87,71 @@ describe('Policy pages', () => {
     expect(text(fixture)).toContain(es.policies.notFound);
     expect(fixture.nativeElement.querySelector('.actions-card')).toBeNull();
   });
+
+  it.each(['es', 'en'])(
+    'shows only the confirmed indemnification, separately from validity (%s)',
+    async (lang) => {
+      snapshot.set({
+        ...DASHBOARD_SNAPSHOT,
+        policies: [
+          {
+            ...DASHBOARD_SNAPSHOT.policies[0],
+            type: 'parametric',
+            indemnification: {
+              status: 'pagada',
+              amount: { amount: '350000.00', currency: 'COP' },
+              paidAt: '2026-11-25T05:30:00Z',
+              reference: 'SIM-PAYMENT-001',
+              simulated: true,
+            },
+          },
+        ],
+      });
+      await configure(PolicyDetailPageComponent, DASHBOARD_SNAPSHOT.policies[0].id);
+      TestBed.inject(TranslocoService).setActiveLang(lang);
+      const fixture = TestBed.createComponent(PolicyDetailPageComponent);
+      fixture.detectChanges();
+      const panel = fixture.nativeElement.querySelector('[data-testid="policy-indemnification"]');
+      const translations = lang === 'en' ? en : es;
+      expect(panel.textContent).toContain(translations.policies.indemnification.paid);
+      expect(panel.textContent).toContain(translations.policies.indemnification.simulated);
+      expect(panel.textContent).toContain('COP');
+      expect(panel.textContent).toContain(lang === 'en' ? '350,000.00' : '350.000,00');
+      expect(panel.textContent).toContain('2026');
+      expect(panel.textContent).toContain('SIM-PAYMENT-001');
+      expect(panel.querySelectorAll('dd')).toHaveLength(3);
+      expect(fixture.nativeElement.querySelector('.hero-copy').textContent).toContain(
+        translations.policies.states.active,
+      );
+      panel.querySelector('button').click();
+      expect(dashboard.load).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it.each([
+    { indemnification: null, key: 'none' },
+    { indemnification: undefined, key: 'unavailable' },
+    { indemnification: { status: 'pendiente', currency: 'COP', simulated: true }, key: 'pending' },
+    { indemnification: { status: 'rechazada', currency: 'COP', simulated: true }, key: 'rejected' },
+  ] satisfies {
+    indemnification: PolicyIndemnification | null | undefined;
+    key: 'none' | 'unavailable' | 'pending' | 'rejected';
+  }[])(
+    'does not confuse premium confirmation with indemnification $key',
+    async ({ indemnification, key }) => {
+      snapshot.set({
+        ...DASHBOARD_SNAPSHOT,
+        policies: [{ ...DASHBOARD_SNAPSHOT.policies[0], type: 'parametric', indemnification }],
+      });
+      await configure(PolicyDetailPageComponent, DASHBOARD_SNAPSHOT.policies[0].id);
+      const fixture = TestBed.createComponent(PolicyDetailPageComponent);
+      fixture.detectChanges();
+      const panel = fixture.nativeElement.querySelector('[data-testid="policy-indemnification"]');
+      expect(panel.textContent).toContain(es.policies.indemnification[key]);
+      expect(panel.textContent).not.toContain(es.policies.indemnification.paid);
+      expect(panel.querySelector('dl')).toBeNull();
+    },
+  );
 
   it('updates the document and actions when the router reuses the policy detail', async () => {
     const first = DASHBOARD_SNAPSHOT.policies[0];
