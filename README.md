@@ -23,6 +23,47 @@ Actions se ejecuta automáticamente. Un colaborador solicita Jenkins con un come
 Los reportes HTML/XML se conservan en Jenkins privado. No se exige un porcentaje mínimo nuevo.
 Consulta [la guía de CI](docs/ci.md) para ver alcance, nombres y lectura de resultados.
 
+## Administración interna de siniestros
+
+Las cuentas internas con rol `administrador` usan el mismo login cifrado, renovación
+y cierre de sesión. El backend las aprovisiona mediante la CLI privada `create-admin`;
+el registro público no permite elegir ese rol. No hay credenciales en la web.
+El portal `/administracion/colas/revision` tiene navegación propia y guards de rol
+en la entrada y en sus rutas hijas; no accede al portal cliente ni suplanta asesores
+o membresías de socios. El backend exige además scope `administrador` y sesión JWT
+activa; el guard de interfaz no sustituye esa autorización.
+
+Las bandejas `revision`, `inspeccion` y `fraude` consultan
+`GET /v1/administracion/colas-revision/{cola}/asignaciones`. El detalle consume
+`GET /v1/administracion/siniestros/{id}` para el aviso registrado y sus evidencias,
+y `GET .../{id}/decisiones` para el estado vigente, asignación e historial.
+No se interpreta `estado: registrado` del aviso como estado vigente. Las evidencias
+se descargan mediante `GET .../{id}/evidencias/{evidenciaId}/contenido` con Bearer,
+comprobando tamaño y MIME; no se usan enlaces públicos ni tokens internos.
+Las coordenadas sin consentimiento no se muestran.
+
+Se permite registrar `aprobado`, `rechazado` o `inspeccion` únicamente cuando el
+estado consultado es `en_revision` y existe asignación activa a la cola `revision`.
+Inspección y fraude se presentan como consulta, sin inventar operaciones periciales.
+`POST .../{id}/decisiones/revision` envía sólo resultado y motivo (10–1000 caracteres
+tras recortar extremos), con `Idempotency-Key` UUID. El servidor obtiene al revisor
+de su sesión. Un error de red, 5xx o respuesta inválida conserva el mismo UUID y
+cuerpo para reintentar o reconciliar con el historial; nunca anuncia un éxito vacío.
+El intento se conserva en memoria al navegar, ligado a cuenta y siniestro, no en
+almacenamiento persistente. Un conflicto exige volver a consultar antes de decidir.
+Tras una confirmación se consulta otra vez el estado; no se aprueban nuevas pólizas,
+se ejecutan pagos ni se modifica el estado de forma optimista.
+
+Contrato acordado con backend: `contracts/openapi/administracion-siniestros-web-v1.yaml`,
+referenciado desde `bff-web-v1.yaml` en `Migue765/backend-solventa`. Requiere integrar
+ese backend antes de estar disponible. Este cambio no despliega ni aprovisiona
+cuentas en producción. Su PR también incorpora el patrón `/v1/administracion/*`
+en la regla ALB `bff_web_claims` de Terraform: aplicar esa actualización revisada
+es una dependencia de disponibilidad, no basta con publicar la web o imágenes.
+Las pruebas de contrato, navegación y reintentos se incluyen
+para CI; queda pendiente la validación end-to-end en un entorno autorizado con el
+backend integrado y datos persistidos.
+
 ## Documento de póliza en PDF
 
 La vista web conserva el aviso de alcance legal, sin controles de firma o aceptación

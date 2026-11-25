@@ -30,7 +30,7 @@ interface UserResponse {
   id: string;
   nombre: string;
   correo: string;
-  rol: 'cliente' | 'socio' | 'asesor';
+  rol: 'cliente' | 'socio' | 'asesor' | 'administrador';
   socios?: string[];
   tipoDocumento?: DocumentType;
   identificacion?: string;
@@ -318,7 +318,7 @@ function parseRetryAfter(error: HttpErrorResponse): number | null {
 function toUser(user: UserResponse): AuthUser {
   if (
     !user ||
-    (user.rol !== 'cliente' && user.rol !== 'socio' && user.rol !== 'asesor') ||
+    !['cliente', 'socio', 'asesor', 'administrador'].includes(user.rol) ||
     typeof user.id !== 'string' ||
     typeof user.nombre !== 'string' ||
     typeof user.correo !== 'string'
@@ -326,8 +326,15 @@ function toUser(user: UserResponse): AuthUser {
     throw new AuthenticationUnavailableError();
   }
   if (
-    user.rol !== 'cliente' &&
+    (user.rol === 'socio' || user.rol === 'asesor') &&
     (!isPartnerIds(user.socios) || (user.rol === 'socio' && user.socios.length === 0))
+  ) {
+    throw new AuthenticationUnavailableError();
+  }
+  if (
+    user.rol === 'administrador' &&
+    user.socios !== undefined &&
+    (!isPartnerIds(user.socios) || user.socios.length !== 0)
   ) {
     throw new AuthenticationUnavailableError();
   }
@@ -335,8 +342,15 @@ function toUser(user: UserResponse): AuthUser {
     id: user.id,
     name: user.nombre,
     email: user.correo,
-    role: user.rol === 'socio' ? 'partner' : user.rol === 'asesor' ? 'advisor' : 'client',
-    ...(user.rol !== 'cliente' ? { partnerIds: [...user.socios!] } : {}),
+    role:
+      user.rol === 'administrador'
+        ? 'administrator'
+        : user.rol === 'socio'
+          ? 'partner'
+          : user.rol === 'asesor'
+            ? 'advisor'
+            : 'client',
+    ...(user.rol === 'socio' || user.rol === 'asesor' ? { partnerIds: [...user.socios!] } : {}),
     documentType: user.tipoDocumento,
     nationalId: user.identificacion,
     phone: user.telefono,
